@@ -119,11 +119,10 @@ export default function Home() {
   const roomCapacity = useCallback((r: RoomWithDetails) =>
     (r.pro_size ?? 1) + (r.con_size ?? 1), []);
 
-  const viewers = useCallback((r: RoomWithDetails) =>
-    Math.max(
-      r.viewer_count ?? 0,
-      r.participants.filter((p) => !p.left_at).length
-    ), []);
+  // Real connected-viewer count, written by the host's client from LiveKit's
+  // authoritative participant list. Never padded with enrolled-but-possibly-
+  // stale participant rows — better to show a true 0 than a fabricated 3.
+  const viewers = useCallback((r: RoomWithDetails) => r.viewer_count ?? 0, []);
 
   // Public listings exclude rooms that are private AND don't allow spectators
   const publiclyListable = useCallback((r: RoomWithDetails) => {

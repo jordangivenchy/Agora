@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, use } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
@@ -385,6 +385,68 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       if (insertErr) throw insertErr;
     }
   }
+
+  /* ── Activity heartbeat + authoritative inactivity close ──────────
+     DebateVideo's 1s monitoring loop calls reportSelfActivity with my
+     LiveKit VAD state. Writes are throttled (~15s heartbeat, ~10s while
+     speaking) so realtime traffic stays light no matter how long the
+     debate runs. requestInactiveClose asks the close_inactive_room RPC
+     to end the room — the RPC re-validates the DB timestamps itself,
+     so a client can only *suggest* closure, never force it. */
+  const selfActivityRef = useRef({ lastBeat: 0, lastSpokeWrite: 0, lastMuted: null as boolean | null });
+  const reportSelfActivity = useCallback(
+    async (speaking: boolean, micMuted: boolean) => {
+      if (!currentUser || !myParticipation || myParticipation.role !== "debater") return;
+      const now = Date.now();
+      const s = selfActivityRef.current;
+      const needBeat = now - s.lastBeat > 15_000 || s.lastMuted !== micMuted;
+      const needSpeak = speaking && now - s.lastSpokeWrite > 10_000;
+      if (!needBeat && !needSpeak) return;
+      s.lastBeat = now;
+      s.lastMuted = micMuted;
+      if (speaking) s.lastSpokeWrite = now;
+
+      const patch: Record<string, unknown> = {
+        last_seen_at: new Date().toISOString(),
+        mic_muted: micMuted,
+      };
+      if (speaking) patch.last_spoke_at = new Date().toISOString();
+      const { error: hbErr } = await supabase
+        .from("debate_participants")
+        .update(patch)
+        .eq("id", myParticipation.id);
+      if (hbErr) console.warn("activity heartbeat failed", hbErr);
+    },
+    [currentUser, myParticipation, supabase]
+  );
+
+  // Host-only: persist LiveKit's real connected count so room cards show
+  // live viewer numbers. RLS ("Hosts can update their rooms") means only
+  // the host's client can write it — other clients can't fake counts.
+  const reportViewerCount = useCallback(
+    async (count: number) => {
+      if (!currentUser || !room || currentUser.id !== room.host_id) return;
+      const { error: vcErr } = await supabase
+        .from("debate_rooms")
+        .update({ viewer_count: count })
+        .eq("id", roomId);
+      if (vcErr) console.warn("viewer_count update failed", vcErr);
+    },
+    [currentUser, room, roomId, supabase]
+  );
+
+  const closeAttemptRef = useRef(0);
+  const requestInactiveClose = useCallback(async () => {
+    const now = Date.now();
+    if (now - closeAttemptRef.current < 10_000) return; // retry at most every 10s
+    closeAttemptRef.current = now;
+    const { data, error: closeErr } = await supabase.rpc("close_inactive_room", {
+      p_room: roomId,
+    });
+    if (closeErr) console.warn("close_inactive_room failed", closeErr);
+    // If it closed, the rooms realtime subscription redirects everyone home.
+    else if (data) fetchRoom();
+  }, [roomId, supabase, fetchRoom]);
 
   // Toggle my raised hand. Optimistic local flip for instant feedback; the
   // DB write follows and the realtime subscription reconciles every client.
@@ -888,8 +950,12 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
             conDebater={conDebater}
             spectators={spectators}
             timeLimitSeconds={room!.time_limit_seconds}
+            roomLive={room!.status === "live"}
             myHandRaisedAt={myParticipation?.hand_raised_at ?? null}
             onToggleHand={toggleHand}
+            onSelfActivity={reportSelfActivity}
+            onRequestClose={requestInactiveClose}
+            onReportViewerCount={reportViewerCount}
             onLeaveStage={leaveStage}
             onToggleChat={() => setChatOpen(!chatOpen)}
             onToggleNotes={() => setNotesOpen(!notesOpen)}
