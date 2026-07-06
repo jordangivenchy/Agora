@@ -184,12 +184,7 @@ export default function Navbar({
     >
       {/* Logo */}
       <a href="/" className="flex items-center gap-2.5 shrink-0 no-underline">
-        <span
-          className="text-[22px] font-bold tracking-tight"
-          style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
-        >
-          <span style={{ color: "var(--accent-blue)" }}>A</span>goraSphere
-        </span>
+        <img src="/logo.png" alt="AgoraSphere" className="h-[22px] w-auto" />
       </a>
 
       {/* Search */}

@@ -189,12 +189,7 @@ export default function WelcomePage() {
 
       <main className="relative flex flex-col items-center w-full" style={{ maxWidth: "420px" }}>
         {/* Brand */}
-        <span
-          className="text-[22px] font-bold tracking-tight mb-7"
-          style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
-        >
-          <span style={{ color: "var(--accent-blue)" }}>A</span>goraSphere
-        </span>
+        <img src="/logo.png" alt="AgoraSphere" className="h-[22px] w-auto mb-7" />
 
         <div
           className="w-full"

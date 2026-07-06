@@ -161,12 +161,7 @@ export default function LoginPage() {
       <main className="relative flex flex-col items-center w-full" style={{ maxWidth: "400px" }}>
         {/* Brand */}
         <a href="/" className="no-underline mb-8 flex items-center gap-2.5">
-          <span
-            className="text-[26px] font-bold tracking-tight"
-            style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
-          >
-            <span style={{ color: "var(--accent-blue)" }}>A</span>goraSphere
-          </span>
+          <img src="/logo.png" alt="AgoraSphere" className="h-[26px] w-auto" />
         </a>
 
         {/* Card */}
