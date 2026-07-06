@@ -5,7 +5,7 @@
    mvp-adapter.js swaps its demo data for the rooms fetched here and routes
    clicks to the real app (rooms, login, create modal). */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import CreateRoomModal from "@/components/CreateRoomModal";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
@@ -58,7 +58,7 @@ function fmtViewers(n: number): string {
 }
 
 export default function Home() {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
   const [booted, setBooted] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -72,12 +72,11 @@ export default function Home() {
     }
   }, []);
 
-  /* Fetch real rooms + auth, expose to the MVP scripts, then boot them. */
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  /* Fetch real rooms + auth + platform stats, expose to the MVP scripts.
+     Called on boot, on realtime changes, and every 30s as a live tracker. */
+  const loadData = useCallback(async () => {
       try {
-        const [{ data: auth }, { data: roomsData }] = await Promise.all([
+        const [{ data: auth }, { data: roomsData }, { count: memberCount }] = await Promise.all([
           supabase.auth.getUser(),
           supabase
             .from("debate_rooms")
@@ -85,6 +84,7 @@ export default function Home() {
             .in("status", ["live", "created", "scheduled"])
             .order("created_at", { ascending: false })
             .limit(24),
+          supabase.from("users").select("*", { count: "exact", head: true }),
         ]);
 
         const rooms = roomsData ?? [];
@@ -136,22 +136,49 @@ export default function Home() {
           };
         });
 
-        if (cancelled) return;
         const user = auth?.user;
-        (window as unknown as Record<string, unknown>).__AGORA_DATA__ = {
+        const liveRooms = rooms.filter((r) => r.status === "live");
+        const data = {
           debates,
           user: user ? { name: user.user_metadata?.name ?? user.email ?? "U" } : null,
+          stats: {
+            activeRooms: rooms.length,
+            members: memberCount ?? 0,
+            watching: liveRooms.reduce((sum, r) => sum + (r.viewer_count ?? 0), 0),
+          },
         };
+        const w = window as unknown as Record<string, unknown>;
+        w.__AGORA_DATA__ = data;
+        // Live update path: if the MVP engine is already running, push the
+        // fresh data straight into it.
+        if (typeof w.__agoraApplyData === "function") {
+          (w.__agoraApplyData as (d: unknown) => void)(data);
+        }
         setBooted(true);
       } catch (e) {
-        console.error("home boot failed", e);
+        console.error("home data load failed", e);
         // Boot anyway so the MVP demo data renders and the page isn't blank.
-        (window as unknown as Record<string, unknown>).__AGORA_DATA__ = { debates: [], user: null };
+        (window as unknown as Record<string, unknown>).__AGORA_DATA__ ??= { debates: [], user: null };
         setBooted(true);
       }
-    })();
-    return () => { cancelled = true; };
   }, [supabase]);
+
+  /* Boot + live tracking: realtime DB changes and a 30s heartbeat both
+     re-run loadData, so viewer counts and member totals stay current. */
+  useEffect(() => {
+    loadData();
+    const channel = supabase
+      .channel("mvp-home-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "debate_participants" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "users" }, loadData)
+      .subscribe();
+    const heartbeat = setInterval(loadData, 30000);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(heartbeat);
+    };
+  }, [loadData, supabase]);
 
   /* Load the MVP engine once, after the DOM above is in place. */
   useEffect(() => {

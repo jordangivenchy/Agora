@@ -5438,3 +5438,11 @@ body { background: transparent; }
 /* ── Override: pointer-tracking spotlight glare on the sidebar removed ── */
 .sidebar::before,
 .sidebar::after { display: none !important; }
+
+/* ── Override: solid (non-transparent) sidebar ── */
+.sidebar {
+  background: #101014 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.sidebar-edge-blur, .sidebar-edge-tint { display: none !important; }
