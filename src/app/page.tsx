@@ -8,6 +8,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import CreateRoomModal from "@/components/CreateRoomModal";
+import DashboardModal from "@/components/DashboardModal";
+import DebatesPage from "@/components/DebatesPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import "./mvp-home.css";
 
@@ -60,6 +62,8 @@ function fmtViewers(n: number): string {
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [showDebates, setShowDebates] = useState(false);
   const [booted, setBooted] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
 
@@ -218,14 +222,17 @@ export default function Home() {
 
   useEffect(() => {
     const onCreate = () => setShowCreate(true);
+    const onDashboard = () => setShowDashboard(true);
     const onLogout = async () => {
       await supabase.auth.signOut();
       window.location.reload();
     };
     window.addEventListener("agora:create", onCreate);
+    window.addEventListener("agora:dashboard", onDashboard);
     window.addEventListener("agora:logout", onLogout);
     return () => {
       window.removeEventListener("agora:create", onCreate);
+      window.removeEventListener("agora:dashboard", onDashboard);
       window.removeEventListener("agora:logout", onLogout);
     };
   }, [supabase]);
@@ -234,6 +241,15 @@ export default function Home() {
     <>
       <div ref={hostRef} />
       <CreateRoomModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <DashboardModal
+        open={showDashboard}
+        onClose={() => setShowDashboard(false)}
+        onOpenDebates={() => {
+          setShowDashboard(false);
+          setShowDebates(true);
+        }}
+      />
+      <DebatesPage open={showDebates} onClose={() => setShowDebates(false)} />
     </>
   );
 }

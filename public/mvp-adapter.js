@@ -100,10 +100,16 @@
   if (!window.__agoraCreateHooked) {
     window.__agoraCreateHooked = true;
     document.addEventListener('click', function (e) {
-      if (e.target && e.target.closest && e.target.closest('#searchBtn')) {
+      if (!e.target || !e.target.closest) return;
+      if (e.target.closest('#searchBtn')) {
         e.stopPropagation();
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('agora:create'));
+      } else if (e.target.closest('.dashboard-btn')) {
+        // Open the app's real DashboardModal instead of the MVP's demo one.
+        e.stopPropagation();
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('agora:dashboard'));
       }
     }, true);
   }
