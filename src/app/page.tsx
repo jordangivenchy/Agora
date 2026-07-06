@@ -10,6 +10,9 @@ import { createClient } from "@/lib/supabase-browser";
 import CreateRoomModal from "@/components/CreateRoomModal";
 import DashboardModal from "@/components/DashboardModal";
 import DebatesPage from "@/components/DebatesPage";
+import TrendingPage from "@/components/TrendingPage";
+import CommunitiesPage from "@/components/CommunitiesPage";
+import NewsPage from "@/components/NewsPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import "./mvp-home.css";
 
@@ -64,6 +67,8 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showDebates, setShowDebates] = useState(false);
+  const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
+  const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
   const [booted, setBooted] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
 
@@ -221,18 +226,24 @@ export default function Home() {
   }, [booted]);
 
   useEffect(() => {
-    const onCreate = () => setShowCreate(true);
+    const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
     const onDashboard = () => setShowDashboard(true);
+    const onTab = (e: Event) => {
+      const tab = (e as CustomEvent).detail;
+      if (tab === "trending" || tab === "communities" || tab === "news") setActiveTab(tab);
+    };
     const onLogout = async () => {
       await supabase.auth.signOut();
       window.location.reload();
     };
     window.addEventListener("agora:create", onCreate);
     window.addEventListener("agora:dashboard", onDashboard);
+    window.addEventListener("agora:tab", onTab);
     window.addEventListener("agora:logout", onLogout);
     return () => {
       window.removeEventListener("agora:create", onCreate);
       window.removeEventListener("agora:dashboard", onDashboard);
+      window.removeEventListener("agora:tab", onTab);
       window.removeEventListener("agora:logout", onLogout);
     };
   }, [supabase]);
@@ -240,7 +251,22 @@ export default function Home() {
   return (
     <>
       <div ref={hostRef} />
-      <CreateRoomModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
+      <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
+      <NewsPage
+        open={activeTab === "news"}
+        onClose={() => setActiveTab(null)}
+        onStartDebate={(motion, topic) => {
+          setCreatePrefill({ motion, topic });
+          setShowCreate(true);
+        }}
+      />
+      <CreateRoomModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        initialMotion={createPrefill?.motion}
+        initialTopic={createPrefill?.topic}
+      />
       <DashboardModal
         open={showDashboard}
         onClose={() => setShowDashboard(false)}

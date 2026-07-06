@@ -9,7 +9,33 @@ import { useRouter } from "next/navigation";
 interface Props {
   open: boolean;
   onClose: () => void;
+  /* Optional prefill (e.g. "Start debate" from the News tab). */
+  initialMotion?: string;
+  initialTopic?: string;
 }
+
+/* Agora Stoa format variants — each maps onto the base room shape the
+   create_room RPC understands; the variant itself is stored in room_meta
+   (best-effort: skipped silently until the migration has run). */
+const FORMAT_VARIANTS: { key: string | null; label: string; desc: string; pro?: number; con?: number; isNew?: boolean }[] = [
+  { key: null, label: "Classic", desc: "Standard debate" },
+  { key: "steelman", label: "Steelman round", desc: "Argue their side first", pro: 1, con: 1, isNew: true },
+  { key: "blitz", label: "Blitz ⚡", desc: "90-second bursts", pro: 1, con: 1, isNew: true },
+  { key: "town-hall", label: "Town hall", desc: "Audience Q&A", pro: 1, con: 1, isNew: true },
+  { key: "fishbowl", label: "Fishbowl", desc: "Tap in, swap seats", pro: 2, con: 2, isNew: true },
+  { key: "devils-advocate", label: "Devil's advocate", desc: "Random side assigned", pro: 1, con: 1, isNew: true },
+  { key: "1v20", label: "1v20 panel", desc: "Jubilee-style gauntlet", pro: 1, con: 4, isNew: true },
+];
+
+const CURRICULA: { key: string; label: string; desc: string }[] = [
+  { key: "agora-general", label: "Agora General", desc: "Clarity · evidence · rebuttal · delivery · conduct" },
+  { key: "nsda-ld", label: "NSDA Lincoln-Douglas", desc: "30-pt speaker scale · values clash" },
+  { key: "nsda-pf", label: "NSDA Public Forum", desc: "Evidence · teamwork · final focus" },
+  { key: "bp", label: "British Parliamentary", desc: "Matter · manner · method (WUDC)" },
+  { key: "oxford", label: "Oxford Union", desc: "Audience swing decides winner" },
+  { key: "mun", label: "MUN Delegate", desc: "Position papers · blocs · resolutions" },
+  { key: "moot-court", label: "Moot Court", desc: "Precedent · judicial questioning" },
+];
 
 type TimeLimitChoice = "none" | "2" | "5" | "10" | "custom";
 
@@ -33,7 +59,7 @@ function defaultScheduleValue() {
   return toLocalInputValue(d);
 }
 
-export default function CreateRoomModal({ open, onClose }: Props) {
+export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic }: Props) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -45,6 +71,19 @@ export default function CreateRoomModal({ open, onClose }: Props) {
   // Time limit
   const [timeChoice, setTimeChoice] = useState<TimeLimitChoice>("none");
   const [customMinutes, setCustomMinutes] = useState<number>(3);
+
+  // Agora Stoa: format variant + AI scoring curriculum
+  const [formatVariant, setFormatVariant] = useState<string | null>(null);
+  const [curriculum, setCurriculum] = useState("agora-general");
+
+  // Prefill (News → "Start debate")
+  useEffect(() => {
+    if (open && initialMotion) {
+      setMotion(initialMotion);
+      if (initialTopic) setTopicKey(initialTopic);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialMotion, initialTopic]);
 
   // Team sizes
   const [proSize, setProSize] = useState(1);
@@ -83,6 +122,8 @@ export default function CreateRoomModal({ open, onClose }: Props) {
       setAllowSpectators(false);
       setScheduleEnabled(false);
       setScheduleAt(defaultScheduleValue());
+      setFormatVariant(null);
+      setCurriculum("agora-general");
       setError("");
       setCreatedInvite(null);
       setCopied(false);
@@ -210,6 +251,14 @@ export default function CreateRoomModal({ open, onClose }: Props) {
         setError("Room creation failed — no room ID returned.");
         setLoading(false);
         return;
+      }
+
+      // Best-effort: persist format variant + curriculum. Silently skipped
+      // when the Agora Stoa migration hasn't been run yet.
+      if (formatVariant || curriculum !== "agora-general") {
+        await supabase
+          .from("room_meta")
+          .insert({ room_id: roomId, format_variant: formatVariant, curriculum });
       }
 
       // For private rooms, show the invite code first; user presses Continue.
@@ -544,6 +593,43 @@ export default function CreateRoomModal({ open, onClose }: Props) {
               </div>
             </FieldGroup>
 
+            {/* Format variant (Agora Stoa) */}
+            <FieldGroup label="Format">
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))" }}>
+                {FORMAT_VARIANTS.map((f) => (
+                  <button
+                    key={f.key ?? "classic"}
+                    type="button"
+                    onClick={() => {
+                      setFormatVariant(f.key);
+                      if (f.pro) setProSize(f.pro);
+                      if (f.con) setConSize(f.con);
+                      if (f.key === "devils-advocate") setStance(Math.random() < 0.5 ? "PRO" : "CON");
+                      if (f.key === "blitz") { setTimeChoice("2"); }
+                    }}
+                    className="cursor-pointer text-left rounded-lg px-2.5 py-2 transition-all"
+                    style={{
+                      background: formatVariant === f.key ? "rgba(74,158,255,0.12)" : "rgba(255,255,255,0.03)",
+                      border: formatVariant === f.key ? "1px solid var(--accent-blue)" : "1px solid var(--border)",
+                    }}
+                  >
+                    <span className="block text-[12px]" style={{ color: "var(--text-primary)" }}>
+                      {f.label}
+                      {f.isNew && (
+                        <span
+                          className="ml-1.5 text-[8px] font-medium px-1.5 py-px rounded-full align-middle"
+                          style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
+                        >
+                          NEW
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-[10px]" style={{ color: "var(--text-muted)" }}>{f.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </FieldGroup>
+
             {/* Team sizes */}
             <FieldGroup label={`Debaters — ${proSize}v${conSize} · ${proSize + conSize} total`}>
               <div
@@ -625,6 +711,48 @@ export default function CreateRoomModal({ open, onClose }: Props) {
                     <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>min</span>
                   </div>
                 )}
+              </div>
+            </FieldGroup>
+
+            {/* AI scoring curriculum (Agora Stoa) */}
+            <FieldGroup label="Scoring curriculum — how the AI judges this debate">
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))" }}>
+                {CURRICULA.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setCurriculum(c.key)}
+                    className="cursor-pointer text-left rounded-lg px-2.5 py-2 flex items-center gap-2 transition-all"
+                    style={{
+                      background: curriculum === c.key ? "rgba(74,158,255,0.1)" : "rgba(255,255,255,0.03)",
+                      border: curriculum === c.key ? "1px solid var(--accent-blue)" : "1px solid var(--border)",
+                    }}
+                  >
+                    <span
+                      className="shrink-0"
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        border: curriculum === c.key ? "3.5px solid var(--accent-blue)" : "1.5px solid rgba(255,255,255,0.25)",
+                      }}
+                    />
+                    <span>
+                      <span className="block text-[12px]" style={{ color: "var(--text-primary)" }}>{c.label}</span>
+                      <span className="block text-[10px]" style={{ color: "var(--text-muted)" }}>{c.desc}</span>
+                    </span>
+                  </button>
+                ))}
+                <div
+                  className="text-left rounded-lg px-2.5 py-2 flex items-center gap-2"
+                  style={{ border: "1px dashed rgba(217,162,56,0.5)", opacity: 0.85 }}
+                >
+                  <span className="text-[13px]" style={{ color: "#f4d47c" }}>+</span>
+                  <span>
+                    <span className="block text-[12px]" style={{ color: "#f4d47c" }}>Custom curriculum</span>
+                    <span className="block text-[10px]" style={{ color: "var(--text-muted)" }}>Upload your team's rubric — coach tier, coming soon</span>
+                  </span>
+                </div>
               </div>
             </FieldGroup>
 
