@@ -5434,3 +5434,7 @@ body { background: transparent; }
 .dash-node-card-status.pending     { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.15); }
 .dash-energy-bar { margin-top: 10px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
 .dash-energy-fill { height: 100%; border-radius: 2px; background: linear-gradient(to right, #4a9eff, #a29bfe); }
+
+/* ── Override: pointer-tracking spotlight glare on the sidebar removed ── */
+.sidebar::before,
+.sidebar::after { display: none !important; }
