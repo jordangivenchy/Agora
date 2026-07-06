@@ -492,27 +492,18 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <div class="glass-channel-list" id="subsChannelList"></div>
       </div>
 
-      <!-- Dashboard (hero nav item) -->
+      <!-- Dashboard (hero nav item) — bar-chart preview, multicolor -->
       <a class="sidebar-link dashboard-btn" href="#" data-nav-id="dashboard">
-        <div class="dash-stars" aria-hidden="true"></div>
-        <div class="dash-carousel-wrapper" aria-hidden="true">
-          <div class="dash-carousel-inner">
-            <div class="dash-card" style="--index:0;--color-card:142,249,252"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:1;--color-card:142,252,204"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:2;--color-card:142,252,157"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:3;--color-card:215,252,142"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:4;--color-card:252,252,142"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:5;--color-card:252,208,142"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:6;--color-card:252,142,142"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:7;--color-card:252,142,239"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:8;--color-card:204,142,252"><div class="dash-card-img"></div></div>
-            <div class="dash-card" style="--index:9;--color-card:142,202,252"><div class="dash-card-img"></div></div>
-          </div>
-          <div class="dash-carousel-vignette"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55);">Dashboard</span>
+          <span style="color:rgba(162,155,254,0.7);font-size:11px;">→</span>
         </div>
-        <div class="dashboard-electric"></div>
-        <div class="nav-inner">
-          <span class="nav-label">Dashboard</span>
+        <div style="display:flex;gap:6px;margin-top:10px;align-items:flex-end;">
+          <div style="width:24px;height:22px;border-radius:6px;background:linear-gradient(180deg,rgba(142,249,252,0.6),rgba(142,249,252,0.22));border:0.5px solid rgba(142,249,252,0.35);"></div>
+          <div style="width:24px;height:35px;border-radius:6px;background:linear-gradient(180deg,rgba(142,252,157,0.6),rgba(142,252,157,0.22));border:0.5px solid rgba(142,252,157,0.35);"></div>
+          <div style="width:24px;height:28px;border-radius:6px;background:linear-gradient(180deg,rgba(252,252,142,0.6),rgba(252,252,142,0.22));border:0.5px solid rgba(252,252,142,0.35);"></div>
+          <div style="width:24px;height:40px;border-radius:6px;background:linear-gradient(180deg,rgba(252,208,142,0.6),rgba(252,208,142,0.22));border:0.5px solid rgba(252,208,142,0.35);"></div>
+          <div style="width:24px;height:32px;border-radius:6px;background:linear-gradient(180deg,rgba(204,142,252,0.6),rgba(204,142,252,0.22));border:0.5px solid rgba(204,142,252,0.35);"></div>
         </div>
       </a>
 

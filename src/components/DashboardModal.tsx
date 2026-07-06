@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase-browser";
 
 interface Props {
   open: boolean;
@@ -30,6 +31,31 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
   const [angle, setAngle] = useState(0);
   const [activeKey, setActiveKey] = useState<NodeKey | null>(null);
   const rafRef = useRef<number | null>(null);
+  const [supabase] = useState(() => createClient());
+  const [profile, setProfile] = useState<{ username: string; avatarUrl: string | null } | null>(null);
+
+  // Load the signed-in user's profile for the sphere center
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+      if (!user) return;
+      const { data: row } = await supabase
+        .from("users")
+        .select("username, avatar_url")
+        .eq("id", user.id)
+        .single();
+      setProfile({
+        username:
+          row?.username ??
+          user.user_metadata?.name ??
+          user.email?.split("@")[0] ??
+          "You",
+        avatarUrl: row?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+      });
+    })();
+  }, [open, supabase]);
 
   // Orbit animation
   useEffect(() => {
@@ -159,6 +185,58 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
               animation: "spherePulse 4s ease-in-out infinite",
             }}
           />
+
+          {/* Profile at the sphere's center */}
+          {profile && (
+            <div
+              className="absolute flex flex-col items-center"
+              style={{ zIndex: 6, pointerEvents: "none" }}
+            >
+              {profile.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.username}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "2px solid rgba(255,255,255,0.25)",
+                    boxShadow: "0 0 24px rgba(108,92,231,0.35)",
+                  }}
+                />
+              ) : (
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #60a5fa, #2563eb)",
+                    color: "#eff6ff",
+                    fontSize: 24,
+                    fontWeight: 600,
+                    border: "2px solid rgba(255,255,255,0.25)",
+                    boxShadow: "0 0 24px rgba(108,92,231,0.35)",
+                  }}
+                >
+                  {profile.username.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <p
+                className="mt-2 m-0"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "rgba(255,255,255,0.85)",
+                  textShadow: "0 1px 8px rgba(0,0,0,0.6)",
+                }}
+              >
+                @{profile.username}
+              </p>
+            </div>
+          )}
 
           {/* Orbital ring */}
           <div
