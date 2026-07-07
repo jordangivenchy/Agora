@@ -33,7 +33,34 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   const [supabase] = useState(() => createClient());
   const [items, setItems] = useState<SeedNewsItem[]>(SEED_NEWS);
   const [daily, setDaily] = useState(SEED_DAILY_MOTION);
+  const [dailyId, setDailyId] = useState<string | null>(null);
   const [voted, setVoted] = useState<"pro" | "con" | null>(null);
+  const [liveNow, setLiveNow] = useState(0);
+
+  /* Vote is local immediately; persisted via RPC when the daily motion is a
+     real news_topics row (i.e. after the migration seeds one). */
+  const castVote = (side: "pro" | "con") => {
+    if (voted) return;
+    setVoted(side);
+    if (dailyId) supabase.rpc("vote_news_topic", { p_topic_id: dailyId, p_side: side });
+  };
+
+  /* Live debates on the platform right now → jump to the Explore live list. */
+  const watchLive = () => {
+    onClose();
+    (document.querySelector('[data-nav-id="explore"]') as HTMLElement | null)?.click();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { count } = await supabase
+        .from("debate_rooms")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "live");
+      setLiveNow(count ?? 0);
+    })();
+  }, [open, supabase]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +73,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
       if (error || !data?.length) return; // migration not run or table empty — keep seeds
       const dailyRow = data.find((d) => d.is_daily_motion);
       if (dailyRow) {
+        setDailyId(dailyRow.id);
         setDaily({
           motion: dailyRow.suggested_motion,
           proVotes: dailyRow.pro_votes,
@@ -138,7 +166,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
               </div>
               <span className="text-[11px]" style={{ color: "#9a9aa2" }}>
                 {pct.total.toLocaleString()} votes
-                {daily.liveCount > 0 && <> · <span style={{ color: "#f09595" }}>● {daily.liveCount} debates live</span></>}
+                {liveNow > 0 && <> · <span style={{ color: "#f09595" }}>● {liveNow} debate{liveNow === 1 ? "" : "s"} live</span></>}
               </span>
             </div>
             <div className="flex gap-2.5 flex-wrap">
@@ -150,19 +178,28 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 ⚔ Debate this now
               </button>
               <button
-                onClick={() => setVoted("pro")}
+                onClick={() => castVote("pro")}
                 className="cursor-pointer text-[12px] px-4 py-1.5 rounded-lg"
                 style={{ border: voted === "pro" ? "0.5px solid #d9a238" : "0.5px solid #3a3a42", color: voted === "pro" ? "#f4d47c" : "#e5e5ec", background: "transparent" }}
               >
                 Vote PRO
               </button>
               <button
-                onClick={() => setVoted("con")}
+                onClick={() => castVote("con")}
                 className="cursor-pointer text-[12px] px-4 py-1.5 rounded-lg"
                 style={{ border: voted === "con" ? "0.5px solid #2c5382" : "0.5px solid #3a3a42", color: voted === "con" ? "#85b7eb" : "#e5e5ec", background: "transparent" }}
               >
                 Vote CON
               </button>
+              {liveNow > 0 && (
+                <button
+                  onClick={watchLive}
+                  className="cursor-pointer text-[12px] px-4 py-1.5 rounded-lg"
+                  style={{ border: "0.5px solid #3a3a42", color: "#e5e5ec", background: "transparent" }}
+                >
+                  ▶ Watch live
+                </button>
+              )}
             </div>
           </div>
         </div>

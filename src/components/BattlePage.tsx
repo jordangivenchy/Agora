@@ -154,6 +154,28 @@ export default function BattlePage({ open, onClose }: Props) {
     setTimeout(() => { window.location.href = `/rooms/${roomId}`; }, 1400);
   }, [supabase, topicKey, motion, stance, aiRating]);
 
+  const [listening, setListening] = useState(false);
+
+  /* Real voice input via the browser's speech recognition — dictates the
+     question into the Agora box (the always-on "Hey, Agora" hotword loop
+     lives in the battle room itself). */
+  const dictate = useCallback(() => {
+    type SR = { new (): { lang: string; onresult: (e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void; onend: () => void; onerror: () => void; start: () => void } };
+    const w = window as unknown as { SpeechRecognition?: SR; webkitSpeechRecognition?: SR };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) {
+      setAgoraLog((log) => [...log, { from: "agora", text: "Voice input isn't supported in this browser — type your question instead." }]);
+      return;
+    }
+    const rec = new Ctor();
+    rec.lang = "en-US";
+    rec.onresult = (e) => setAgoraDraft(e.results[0][0].transcript);
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    setListening(true);
+    rec.start();
+  }, []);
+
   const askAgora = useCallback((q: string) => {
     const question = q.trim();
     if (!question) return;
@@ -357,13 +379,20 @@ export default function BattlePage({ open, onClose }: Props) {
             className="flex gap-2 items-center"
             onSubmit={(e) => { e.preventDefault(); askAgora(agoraDraft); }}
           >
-            <span
+            <button
+              type="button"
+              onClick={dictate}
               className="flex items-center justify-center shrink-0 cursor-pointer"
-              title="Voice activation works in the battle room"
-              style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#8b8b94", fontSize: 13 }}
+              title={listening ? "Listening…" : "Dictate your question"}
+              style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: listening ? "rgba(240,96,94,0.2)" : "rgba(20,20,26,0.85)",
+                border: listening ? "0.5px solid #f0605e" : "0.5px solid #34343c",
+                color: listening ? "#f0605e" : "#8b8b94", fontSize: 13,
+              }}
             >
               🎙
-            </span>
+            </button>
             <input
               value={agoraDraft}
               onChange={(e) => setAgoraDraft(e.target.value)}

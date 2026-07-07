@@ -86,14 +86,56 @@
     if (msgBtn) msgBtn.style.display = 'none';
   }
 
+  /* Avatar dropdown → real destinations */
   document.querySelectorAll('.avatar-menu-item').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      if (a.getAttribute('href') === '#logout') {
-        window.dispatchEvent(new CustomEvent('agora:logout'));
-      }
+      var href = a.getAttribute('href');
+      if (href === '#logout') window.dispatchEvent(new CustomEvent('agora:logout'));
+      else if (href === '#profile' || href === '#settings') window.dispatchEvent(new CustomEvent('agora:profile'));
+      else if (href === '#stats') window.dispatchEvent(new CustomEvent('agora:dashboard'));
+      else if (href === '#debates') window.dispatchEvent(new CustomEvent('agora:debates'));
     });
   });
+
+  /* Messages has no backend yet — remove rather than leave dead. */
+  var msgWrap = document.getElementById('nav-messages-btn');
+  if (msgWrap) msgWrap.style.display = 'none';
+
+  /* Subscriptions has no backend yet — remove rather than leave dead. */
+  var subsLink = document.querySelector('[data-nav-id="subscriptions"]');
+  if (subsLink) subsLink.style.setProperty('display', 'none', 'important');
+
+  /* Real friends replace the demo list; hide the section (and its demo
+     "add" button) when the user has no friends yet. */
+  if (Array.isArray(D0.friends)) {
+    FRIENDS.length = 0;
+    D0.friends.forEach(function (f) {
+      FRIENDS.push({ name: f.name, status: 'online', tag: '', tagLabel: '' });
+    });
+    var fs = document.getElementById('friendsSection');
+    if (FRIENDS.length === 0) {
+      if (fs) fs.style.display = 'none';
+    } else if (typeof renderFriends === 'function') {
+      try { renderFriends(); } catch (err) { if (fs) fs.style.display = 'none'; }
+    }
+  }
+
+  /* "View all →" opens the Explore page; leaderboard link opens Dashboard. */
+  document.querySelectorAll('.view-all').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var explore = document.querySelector('[data-nav-id="explore"]');
+      if (explore) explore.click();
+    });
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.elo-explore-link')) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('agora:dashboard'));
+    }
+  }, true);
 
   /* Create button opens the real CreateRoomModal (document-level capture
      fires before the MVP's own target listener, so we can intercept). */

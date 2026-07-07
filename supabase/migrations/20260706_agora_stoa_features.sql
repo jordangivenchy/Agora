@@ -120,3 +120,25 @@ create policy "room hosts write their room meta"
       where r.id = room_id and r.host_id = auth.uid()
     )
   );
+
+-- ── Clip video storage ──────────────────────────────────────────────────────
+insert into storage.buckets (id, name, public)
+values ('clips', 'clips', true)
+on conflict (id) do nothing;
+
+create policy "clip videos are publicly readable"
+  on storage.objects for select using (bucket_id = 'clips');
+create policy "authenticated users upload clips to their folder"
+  on storage.objects for insert with check (
+    bucket_id = 'clips' and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- ── News topic voting ───────────────────────────────────────────────────────
+create or replace function public.vote_news_topic(p_topic_id uuid, p_side text)
+returns void language sql security definer as $$
+  update public.news_topics
+  set pro_votes = pro_votes + (case when p_side = 'pro' then 1 else 0 end),
+      con_votes = con_votes + (case when p_side = 'con' then 1 else 0 end)
+  where id = p_topic_id;
+$$;

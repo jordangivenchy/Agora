@@ -53,7 +53,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   const [search, setSearch] = useState("");
   const [dbCommunities, setDbCommunities] = useState<DbCommunity[]>([]);
   const [migrated, setMigrated] = useState(true);
-  const [joinedSeeds, setJoinedSeeds] = useState<Record<string, boolean>>({ "c-3": true });
+  const [joinedSeeds, setJoinedSeeds] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState("topic-circle");
@@ -109,6 +109,36 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       load();
     },
     [supabase, userId, load]
+  );
+
+  /* Joining a suggested community makes it real: it's created in the
+     database on first join (when the migration has run), so suggestions
+     graduate into actual communities instead of staying cosmetic. */
+  const joinSeed = useCallback(
+    async (seed: { id: string; name: string; kind: string }) => {
+      if (joinedSeeds[seed.id]) {
+        setJoinedSeeds((m) => ({ ...m, [seed.id]: false }));
+        return;
+      }
+      setJoinedSeeds((m) => ({ ...m, [seed.id]: true }));
+      if (!migrated || !userId) return;
+      const { data: existing } = await supabase
+        .from("communities").select("id").eq("name", seed.name).maybeSingle();
+      let communityId = existing?.id;
+      if (!communityId) {
+        const { data: created } = await supabase
+          .from("communities")
+          .insert({ name: seed.name, kind: seed.kind, created_by: userId })
+          .select("id")
+          .single();
+        communityId = created?.id;
+      }
+      if (communityId) {
+        await supabase.from("community_members").insert({ community_id: communityId, user_id: userId });
+        load();
+      }
+    },
+    [supabase, userId, migrated, joinedSeeds, load]
   );
 
   const createCommunity = useCallback(async () => {
@@ -281,25 +311,17 @@ export default function CommunitiesPage({ open, onClose }: Props) {
               <p className="m-0 mb-2.5 text-[11px]" style={{ color: "#9a9aa2" }}>
                 {c.members.toLocaleString()} members · <span style={{ color: c.activity.color }}>{c.activity.text}</span>
               </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setJoinedSeeds((m) => ({ ...m, [c.id]: !m[c.id] }))}
-                  className="flex-1 cursor-pointer text-[11px] py-1.5 rounded-lg text-center"
-                  style={
-                    joinedSeeds[c.id]
-                      ? { background: "rgba(30,30,38,0.8)", border: "0.5px solid #3a5a3a", color: "#97c459" }
-                      : { background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0" }
-                  }
-                >
-                  {joinedSeeds[c.id] ? "✓ Joined" : "Join"}
-                </button>
-                <button
-                  className="cursor-pointer text-[11px] py-1.5 px-3 rounded-lg"
-                  style={{ border: "0.5px solid #3a3a42", color: "#c0c0c8", background: "transparent" }}
-                >
-                  Preview
-                </button>
-              </div>
+              <button
+                onClick={() => joinSeed(c)}
+                className="w-full cursor-pointer text-[11px] py-1.5 rounded-lg text-center"
+                style={
+                  joinedSeeds[c.id]
+                    ? { background: "rgba(30,30,38,0.8)", border: "0.5px solid #3a5a3a", color: "#97c459" }
+                    : { background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0" }
+                }
+              >
+                {joinedSeeds[c.id] ? "✓ Joined" : "Join"}
+              </button>
             </div>
           ))}
         </div>

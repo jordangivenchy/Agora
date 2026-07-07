@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import CreateRoomModal from "@/components/CreateRoomModal";
 import DashboardModal from "@/components/DashboardModal";
+import UserProfileModal from "@/components/UserProfileModal";
 import DebatesPage from "@/components/DebatesPage";
 import TrendingPage from "@/components/TrendingPage";
 import BattlePage from "@/components/BattlePage";
@@ -69,6 +70,7 @@ export default function Home() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showDebates, setShowDebates] = useState(false);
   const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | "battle" | null>(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
   const [booted, setBooted] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -86,7 +88,7 @@ export default function Home() {
      Called on boot, on realtime changes, and every 30s as a live tracker. */
   const loadData = useCallback(async () => {
       try {
-        const [{ data: auth }, { data: roomsData }, { count: memberCount }] = await Promise.all([
+        const [{ data: auth }, { data: roomsData }, { count: memberCount }, { data: friendRows }] = await Promise.all([
           supabase.auth.getUser(),
           supabase
             .from("debate_rooms")
@@ -95,6 +97,7 @@ export default function Home() {
             .order("created_at", { ascending: false })
             .limit(24),
           supabase.from("users").select("*", { count: "exact", head: true }),
+          supabase.rpc("get_friends"),
         ]);
 
         const rooms = roomsData ?? [];
@@ -150,7 +153,8 @@ export default function Home() {
         const liveRooms = rooms.filter((r) => r.status === "live");
         const data = {
           debates,
-          user: user ? { name: user.user_metadata?.name ?? user.email ?? "U" } : null,
+          user: user ? { id: user.id, name: user.user_metadata?.name ?? user.email ?? "U" } : null,
+          friends: (friendRows ?? []).map((f: { username: string }) => ({ name: f.username })),
           stats: {
             activeRooms: rooms.length,
             members: memberCount ?? 0,
@@ -241,6 +245,12 @@ export default function Home() {
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
     const onDashboard = () => setShowDashboard(true);
+    const onDebates = () => setShowDebates(true);
+    const onProfile = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const w = window as unknown as { __AGORA_DATA__?: { user?: { id?: string } } };
+      setProfileUserId(typeof detail === "string" && detail ? detail : w.__AGORA_DATA__?.user?.id ?? null);
+    };
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
       if (tab === "trending" || tab === "communities" || tab === "news" || tab === "battle") setActiveTab(tab);
@@ -252,11 +262,15 @@ export default function Home() {
     };
     window.addEventListener("agora:create", onCreate);
     window.addEventListener("agora:dashboard", onDashboard);
+    window.addEventListener("agora:debates", onDebates);
+    window.addEventListener("agora:profile", onProfile);
     window.addEventListener("agora:tab", onTab);
     window.addEventListener("agora:logout", onLogout);
     return () => {
       window.removeEventListener("agora:create", onCreate);
       window.removeEventListener("agora:dashboard", onDashboard);
+      window.removeEventListener("agora:debates", onDebates);
+      window.removeEventListener("agora:profile", onProfile);
       window.removeEventListener("agora:tab", onTab);
       window.removeEventListener("agora:logout", onLogout);
     };
@@ -291,6 +305,11 @@ export default function Home() {
         }}
       />
       <DebatesPage open={showDebates} onClose={() => setShowDebates(false)} />
+      <UserProfileModal
+        userId={profileUserId}
+        onClose={() => setProfileUserId(null)}
+        onOpenProfile={(id) => setProfileUserId(id)}
+      />
     </>
   );
 }
