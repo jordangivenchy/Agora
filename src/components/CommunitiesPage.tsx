@@ -168,8 +168,8 @@ export default function CommunitiesPage({ open, onClose }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="⌕ Find a club, school, or team…"
-            className="text-[12px] px-4 py-1.5 rounded-full outline-none"
-            style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#e5e5ec", width: 260 }}
+            className="text-[12px] px-4 py-1.5 rounded-full outline-none flex-1"
+            style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#e5e5ec", minWidth: 200, maxWidth: 420 }}
           />
           <button
             onClick={() => setCreating((v) => !v)}
@@ -178,7 +178,6 @@ export default function CommunitiesPage({ open, onClose }: Props) {
           >
             + Create community
           </button>
-          <img src="/logo.png" alt="AgoraSphere" className="h-[20px] w-auto ml-auto" />
         </div>
 
         {creating && (

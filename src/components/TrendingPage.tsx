@@ -119,7 +119,11 @@ export default function TrendingPage({ open, onClose }: Props) {
               </div>
             </>
           )}
-          <img src="/logo.png" alt="AgoraSphere" className="h-[20px] w-auto ml-auto" />
+          {!activeShort && (
+            <span className="text-[11px] ml-auto whitespace-nowrap" style={{ color: "#6b6b74" }}>
+              <span style={{ color: "#f09595" }}>●</span> updated in real time
+            </span>
+          )}
         </div>
 
         {activeShort ? (

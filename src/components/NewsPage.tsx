@@ -105,7 +105,9 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
         <div className="flex items-center gap-3.5 mb-4">
           <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into motions</span>
-          <img src="/logo.png" alt="AgoraSphere" className="h-[20px] w-auto ml-auto" />
+          <span className="text-[12px] ml-auto whitespace-nowrap" style={{ color: "#8b8b94" }}>
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          </span>
         </div>
 
         {/* Today's Motion */}
