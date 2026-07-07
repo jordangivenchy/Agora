@@ -1315,3 +1315,43 @@ body {
 .av-c8 { background: #c87941; }
 .av-c9 { background: #9c84ef; }
 .av-c10 { background: #3ba3d0; }
+
+/* ── Stage (debate room) — Agora academic restyle ── */
+.stage-shell {
+  background-color: #040405 !important;
+  background-image:
+    radial-gradient(1px 1px at 8% 12%, rgba(255,255,255,0.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 44% 6%, rgba(255,215,130,0.45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 79% 16%, rgba(160,190,255,0.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 21% 64%, rgba(255,255,255,0.32) 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 71%, rgba(160,190,255,0.4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 56% 88%, rgba(255,215,130,0.35) 50%, transparent 50%),
+    linear-gradient(160deg, rgba(20,32,58,0.35) 0%, transparent 40%, rgba(12,20,38,0.3) 100%) !important;
+}
+.stage-header {
+  border-bottom: 1px solid rgba(96,165,250,0.18) !important;
+  background: linear-gradient(180deg, rgba(14,20,34,0.55), transparent) !important;
+}
+.stage-eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #60a5fa;
+  text-transform: uppercase;
+  margin: 0 0 3px;
+}
+.ar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(24,48,82,0.75);
+  border: 1px solid rgba(96,165,250,0.35);
+  color: #9cc4f0;
+}
+.ar-badge .side-pro { color: #7fe3bd; font-weight: 700; }
+.ar-badge .side-con { color: #f7b699; font-weight: 700; }

@@ -9,6 +9,7 @@ import DebateVideo from "@/components/DebateVideo";
 import SentimentBar from "@/components/SidePickerPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NotesPopout from "@/components/NotesPanel";
+import AgoraAssistant from "@/components/AgoraAssistant";
 import type { User } from "@supabase/supabase-js";
 
 type ParticipantWithUser = DebateParticipant & {
@@ -35,6 +36,22 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   );
 
   const [room, setRoom] = useState<DebateRoom | null>(null);
+  // Agora Stoa metadata: rated battles carry a scoring curriculum.
+  const [roomMeta, setRoomMeta] = useState<{ format_variant: string | null; curriculum: string | null } | null>(null);
+
+  // Rated-battle metadata (best-effort: table exists once the Agora Stoa
+  // migration has run; quietly absent otherwise).
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("room_meta")
+        .select("format_variant, curriculum")
+        .eq("room_id", roomId)
+        .maybeSingle();
+      if (data) setRoomMeta(data);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
   const [participants, setParticipants] = useState<ParticipantWithUser[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [livekitToken, setLivekitToken] = useState<string | null>(null);
@@ -635,9 +652,20 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       <div className="stage-container">
         {/* Header — back arrow removed; leave via disconnect button */}
         <div className="stage-header">
+          <p className="stage-eyebrow">Motion before the house</p>
           <h1 className="stage-title">{room!.motion}</h1>
           <div className="stage-meta">
             {room!.status === "live" && <span className="live-badge-stage">LIVE</span>}
+            {roomMeta?.curriculum && (
+              <>
+                <span className="ar-badge" title={`Rated battle · ${roomMeta.curriculum} curriculum`}>
+                  <span className="side-pro">PRO</span> AR 1200
+                  <span style={{ color: "rgba(255,255,255,0.25)" }}>·</span>
+                  <span className="side-con">CON</span> AR 1200
+                  <span style={{ color: "rgba(156,196,240,0.6)" }}>provisional</span>
+                </span>
+              </>
+            )}
             {isScheduled && (
               <span
                 style={{
@@ -1028,6 +1056,8 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         roomId={roomId}
         userId={currentUser?.id}
       />
+
+      <AgoraAssistant />
     </div>
   );
 }
