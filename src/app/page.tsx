@@ -11,6 +11,7 @@ import CreateRoomModal from "@/components/CreateRoomModal";
 import DashboardModal from "@/components/DashboardModal";
 import DebatesPage from "@/components/DebatesPage";
 import TrendingPage from "@/components/TrendingPage";
+import BattlePage from "@/components/BattlePage";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
@@ -67,7 +68,7 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showDebates, setShowDebates] = useState(false);
-  const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
+  const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | "battle" | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
   const [booted, setBooted] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -242,7 +243,7 @@ export default function Home() {
     const onDashboard = () => setShowDashboard(true);
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
-      if (tab === "trending" || tab === "communities" || tab === "news") setActiveTab(tab);
+      if (tab === "trending" || tab === "communities" || tab === "news" || tab === "battle") setActiveTab(tab);
       else if (tab === "close") setActiveTab(null);
     };
     const onLogout = async () => {
@@ -265,6 +266,7 @@ export default function Home() {
     <>
       <div ref={hostRef} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
+      <BattlePage open={activeTab === "battle"} onClose={() => setActiveTab(null)} />
       <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
       <NewsPage
         open={activeTab === "news"}

@@ -451,6 +451,23 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         </div>
       </a>
 
+      <!-- Battle (1v1 matchmaking) -->
+      <a class="sidebar-link" href="#" data-nav-id="battle">
+        <span class="nav-hover-shimmer"></span>
+        <span class="nav-light-slit"></span>
+        <div class="nav-light-beam"><div class="nav-light-beam-cone"></div><div class="nav-light-beam-center"></div><div class="nav-light-beam-glow"></div></div>
+        <div class="nav-light-shadow"><div class="nav-light-shadow-right"></div></div>
+        <span class="nav-sparkle" style="--delay:0.6s;--dur:4.1s;left:26%;top:38%;--sx:5px;"></span>
+        <span class="nav-sparkle" style="--delay:1.4s;--dur:3.7s;left:64%;top:64%;--sx:-5px;"></span>
+        <span class="nav-sparkle" style="--delay:2.2s;--dur:4.5s;left:86%;top:28%;--sx:4px;"></span>
+        <div class="nav-inner">
+          <span class="nav-icon-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l13 13"/><path d="M15 19l4-4"/><path d="M17 21l2-2"/><path d="M20 4L7 17"/><path d="M9 19l-4-4"/><path d="M7 21l-2-2"/></svg>
+          </span>
+          <span class="nav-label">Battle</span>
+        </div>
+      </a>
+
       <!-- Explore -->
       <a class="sidebar-link" href="#" data-page="explore" data-nav-id="explore" id="exploreNavLink">
         <span class="nav-hover-shimmer"></span>

@@ -112,7 +112,7 @@
         window.dispatchEvent(new CustomEvent('agora:dashboard'));
       } else {
         // Sidebar tabs that open real React pages.
-        var tab = e.target.closest('[data-nav-id="trending"], [data-nav-id="communities"], [data-nav-id="news"]');
+        var tab = e.target.closest('[data-nav-id="trending"], [data-nav-id="communities"], [data-nav-id="news"], [data-nav-id="battle"]');
         if (tab) {
           e.stopPropagation();
           e.preventDefault();
