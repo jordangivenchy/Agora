@@ -117,6 +117,10 @@
           e.stopPropagation();
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('agora:tab', { detail: tab.getAttribute('data-nav-id') }));
+        } else if (e.target.closest('[data-nav-id="home"], [data-nav-id="explore"], .nav-logo')) {
+          // Navigating to an MVP-rendered page closes any open React tab.
+          // No preventDefault — the MVP engine handles the page switch.
+          window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'close' }));
         }
       }
     }, true);

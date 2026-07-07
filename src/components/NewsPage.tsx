@@ -91,19 +91,18 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] overflow-y-auto"
+      className="fixed overflow-y-auto"
       style={{
-        background: "#040405",
-        backgroundImage:
-          "radial-gradient(1px 1px at 9% 11%, rgba(255,255,255,0.5) 50%, transparent 50%), radial-gradient(1px 1px at 45% 5%, rgba(255,215,130,0.5) 50%, transparent 50%), radial-gradient(1px 1px at 82% 14%, rgba(160,190,255,0.5) 50%, transparent 50%), radial-gradient(1px 1px at 20% 72%, rgba(255,255,255,0.35) 50%, transparent 50%), radial-gradient(1px 1px at 87% 78%, rgba(255,215,130,0.4) 50%, transparent 50%)",
+        top: "var(--nav-height)",
+        left: "calc(var(--sidebar-width) + 12px)",
+        right: 0,
+        bottom: 0,
+        zIndex: 50,
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
       <div className="max-w-[900px] mx-auto px-6 py-5">
         <div className="flex items-center gap-3.5 mb-4">
-          <button onClick={onClose} className="text-[13px] cursor-pointer bg-transparent border-none" style={{ color: "#9a9aa2" }}>
-            ← Home
-          </button>
           <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into motions</span>
           <img src="/logo.png" alt="AgoraSphere" className="h-[20px] w-auto ml-auto" />

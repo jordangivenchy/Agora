@@ -225,12 +225,25 @@ export default function Home() {
     document.body.appendChild(three);
   }, [booted]);
 
+  /* Keep the MVP shell in sync with the active React tab: hide the MVP's
+     main content while a tab panel is open, and move the sidebar's active
+     highlight onto the open tab. Nav and sidebar stay interactive. */
+  useEffect(() => {
+    const main = document.querySelector(".main") as HTMLElement | null;
+    if (main) main.style.display = activeTab ? "none" : "";
+    document.querySelectorAll(".sidebar-link[data-nav-id]").forEach((el) => {
+      const id = el.getAttribute("data-nav-id");
+      el.classList.toggle("active", activeTab ? id === activeTab : id === "home");
+    });
+  }, [activeTab, booted]);
+
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
     const onDashboard = () => setShowDashboard(true);
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
       if (tab === "trending" || tab === "communities" || tab === "news") setActiveTab(tab);
+      else if (tab === "close") setActiveTab(null);
     };
     const onLogout = async () => {
       await supabase.auth.signOut();

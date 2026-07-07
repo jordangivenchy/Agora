@@ -74,24 +74,28 @@ export default function TrendingPage({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] overflow-y-auto"
+      className="fixed overflow-y-auto"
       style={{
-        background: "#040405",
-        backgroundImage:
-          "radial-gradient(1px 1px at 7% 12%, rgba(255,255,255,0.5) 50%, transparent 50%), radial-gradient(1px 1px at 42% 6%, rgba(255,215,130,0.5) 50%, transparent 50%), radial-gradient(1px 1px at 78% 15%, rgba(160,190,255,0.5) 50%, transparent 50%), radial-gradient(1px 1px at 22% 68%, rgba(255,255,255,0.35) 50%, transparent 50%), radial-gradient(1px 1px at 88% 74%, rgba(255,215,130,0.4) 50%, transparent 50%), radial-gradient(1px 1px at 55% 90%, rgba(160,190,255,0.4) 50%, transparent 50%)",
+        top: "var(--nav-height)",
+        left: "calc(var(--sidebar-width) + 12px)",
+        right: 0,
+        bottom: 0,
+        zIndex: 50,
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
       <div className="max-w-[1200px] mx-auto px-6 py-5">
         {/* Header */}
         <div className="flex items-center gap-4 mb-5">
-          <button
-            onClick={() => (activeShort ? setActiveShort(null) : onClose())}
-            className="text-[13px] cursor-pointer bg-transparent border-none"
-            style={{ color: "#9a9aa2" }}
-          >
-            ← {activeShort ? "Back to Trending" : "Home"}
-          </button>
+          {activeShort && (
+            <button
+              onClick={() => setActiveShort(null)}
+              className="text-[13px] cursor-pointer bg-transparent border-none"
+              style={{ color: "#9a9aa2" }}
+            >
+              ← Back to Trending
+            </button>
+          )}
           {!activeShort && (
             <>
               <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
