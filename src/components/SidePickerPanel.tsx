@@ -84,7 +84,7 @@ export default function SentimentBar({ roomId, currentUser }: Props) {
           className={`sent-vote-btn sent-pro${mySide === "PRO" ? " active" : ""}`}
           onClick={() => vote("PRO")}
           title="Vote PRO"
-          style={mySide === "PRO" ? { boxShadow: "0 0 0 2px #23a559" } : undefined}
+          style={mySide === "PRO" ? { boxShadow: "0 0 0 2px #e2b96b" } : undefined}
         >
           +
         </button>
@@ -100,7 +100,7 @@ export default function SentimentBar({ roomId, currentUser }: Props) {
           className={`sent-vote-btn sent-con${mySide === "CON" ? " active" : ""}`}
           onClick={() => vote("CON")}
           title="Vote CON"
-          style={mySide === "CON" ? { boxShadow: "0 0 0 2px #ed4245" } : undefined}
+          style={mySide === "CON" ? { boxShadow: "0 0 0 2px #4a9eff" } : undefined}
         >
           +
         </button>

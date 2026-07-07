@@ -176,20 +176,23 @@ export default function BattlePage({ open, onClose }: Props) {
     rec.start();
   }, []);
 
-  const askAgora = useCallback((q: string) => {
+  const askAgora = useCallback(async (q: string) => {
     const question = q.trim();
     if (!question) return;
-    setAgoraLog((log) => [
-      ...log,
-      { from: "you", text: question },
-      {
-        from: "agora",
-        text:
-          "I'm Agora — during a battle I listen for \"Hey, Agora\" and answer both debaters out loud and in chat, with sources. My live knowledge pipeline connects at launch; this lobby is a preview of how I'll respond.",
-      },
-    ]);
     setAgoraDraft("");
-  }, []);
+    setAgoraLog((log) => [...log, { from: "you", text: question }]);
+    try {
+      const res = await fetch("/api/agora", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, motion: motion.trim() || undefined }),
+      });
+      const data = await res.json();
+      setAgoraLog((log) => [...log, { from: "agora", text: data.answer ?? "Something went wrong — try again." }]);
+    } catch {
+      setAgoraLog((log) => [...log, { from: "agora", text: "I couldn't reach my knowledge engine — check your connection and try again." }]);
+    }
+  }, [motion]);
 
   if (!open) return null;
 

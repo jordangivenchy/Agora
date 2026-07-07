@@ -652,8 +652,14 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       <div className="stage-container">
         {/* Header — back arrow removed; leave via disconnect button */}
         <div className="stage-header">
-          <p className="stage-eyebrow">Motion before the house</p>
-          <h1 className="stage-title">{room!.motion}</h1>
+          <a href="/" title="AgoraSphere home" style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="AgoraSphere" style={{ height: 16, width: "auto" }} />
+          </a>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="stage-eyebrow">Motion before the house</p>
+            <h1 className="stage-title" style={{ flex: "unset" }}>{room!.motion}</h1>
+          </div>
           <div className="stage-meta">
             {room!.status === "live" && <span className="live-badge-stage">LIVE</span>}
             {roomMeta?.curriculum && (
@@ -863,7 +869,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                   <span
                     style={{
                       fontSize: "11px",
-                      color: entry.stance === "PRO" ? "#23a559" : "#ed4245",
+                      color: entry.stance === "PRO" ? "#e2b96b" : "#4a9eff",
                       fontWeight: 600,
                     }}
                   >
@@ -1008,7 +1014,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                       >
                         <span
                           className="join-btn-label"
-                          style={{ color: s === "PRO" ? "#23a559" : "#ed4245" }}
+                          style={{ color: s === "PRO" ? "#e2b96b" : "#4a9eff" }}
                         >
                           {s}
                         </span>
@@ -1057,7 +1063,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         userId={currentUser?.id}
       />
 
-      <AgoraAssistant />
+      <AgoraAssistant motion={room?.motion} />
     </div>
   );
 }
