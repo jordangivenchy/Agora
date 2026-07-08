@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 
@@ -338,7 +338,10 @@ export default function DebatesPage({ open, onClose }: Props) {
 
         {/* Content */}
         {isSignedIn === false && (
-          <EmptyState title="Sign in to view your debates" sub="We only track debates for signed-in users." />
+          <EmptyState
+            title={<><a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to view your debates</>}
+            sub="We only track debates for signed-in users."
+          />
         )}
 
         {isSignedIn && loading && <EmptyState title="Loading debates…" sub="" />}
@@ -440,7 +443,7 @@ function StatCard({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function EmptyState({ title, sub }: { title: string; sub: string }) {
+function EmptyState({ title, sub }: { title: ReactNode; sub: string }) {
   return (
     <div
       className="text-center"

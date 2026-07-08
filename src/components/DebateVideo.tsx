@@ -36,6 +36,9 @@ interface Props {
   /** My hand_raised_at (null = lowered). DB-backed via the room page. */
   myHandRaisedAt: string | null;
   onToggleHand: () => void;
+  /** False for signed-out guests — hides the raise-hand control, since a
+      guest has no participation row to store the raise on. */
+  canRaiseHand?: boolean;
   /** True while the debate is live — activity monitoring only runs then. */
   roomLive: boolean;
   /** Reports my own VAD/mic state every second (page throttles DB writes). */
@@ -63,6 +66,7 @@ export default function DebateVideo({
   timeLimitSeconds,
   myHandRaisedAt,
   onToggleHand,
+  canRaiseHand = true,
   roomLive,
   onSelfActivity,
   onRequestClose,
@@ -93,6 +97,7 @@ export default function DebateVideo({
         timeLimitSeconds={timeLimitSeconds}
         myHandRaisedAt={myHandRaisedAt}
         onToggleHand={onToggleHand}
+        canRaiseHand={canRaiseHand}
         roomLive={roomLive}
         onSelfActivity={onSelfActivity}
         onRequestClose={onRequestClose}
@@ -149,6 +154,7 @@ function DebateStage({
   timeLimitSeconds,
   myHandRaisedAt,
   onToggleHand,
+  canRaiseHand = true,
   roomLive,
   onSelfActivity,
   onRequestClose,
@@ -168,6 +174,7 @@ function DebateStage({
   timeLimitSeconds: number | null;
   myHandRaisedAt: string | null;
   onToggleHand: () => void;
+  canRaiseHand?: boolean;
   roomLive: boolean;
   onSelfActivity: (speaking: boolean, micMuted: boolean) => void;
   onRequestClose: () => void;
@@ -691,19 +698,21 @@ function DebateStage({
           </>
         )}
 
-        {/* Raise hand — everyone, spectators especially. Stays raised until
-            the user explicitly lowers it. */}
-        <button
-          className={`ctrl-btn btn-hand ${myHandRaised ? "state-hand" : ""}`}
-          onClick={onToggleHand}
-          title={myHandRaised ? "Lower your hand" : "Raise your hand"}
-          aria-pressed={myHandRaised}
-        >
-          ✋
-          <span className="hand-btn-label">
-            {myHandRaised ? "Lower hand" : "Raise hand"}
-          </span>
-        </button>
+        {/* Raise hand — signed-in members only (guests have no participation
+            row to store the raise on). Stays raised until explicitly lowered. */}
+        {canRaiseHand && (
+          <button
+            className={`ctrl-btn btn-hand ${myHandRaised ? "state-hand" : ""}`}
+            onClick={onToggleHand}
+            title={myHandRaised ? "Lower your hand" : "Raise your hand"}
+            aria-pressed={myHandRaised}
+          >
+            ✋
+            <span className="hand-btn-label">
+              {myHandRaised ? "Lower hand" : "Raise hand"}
+            </span>
+          </button>
+        )}
 
         <button
           className={`ctrl-btn ${notesOpen ? "state-notes-open" : ""}`}

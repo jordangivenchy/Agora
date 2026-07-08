@@ -78,7 +78,7 @@ export default function JoinPrivateRoomModal({ open, onClose }: Props) {
           // Debate already started — spectator is the only way in. Flip the
           // selection so their next click on Join goes through.
           setChoice({ role: "spectator", stance: null });
-          setError("This debate is already live — you can join as a spectator. Press Join again.");
+          setError("This debate is already live — you can join the audience. Press Join again.");
         } else if (msg.includes("not_authenticated")) {
           setError("Please sign in first, then try the code again.");
         } else if (msg.includes("invalid_or_expired_code")) {
@@ -86,7 +86,7 @@ export default function JoinPrivateRoomModal({ open, onClose }: Props) {
         } else if (msg.includes("invite_code_required")) {
           setError("Enter the 6-character code.");
         } else if (msg.includes("stance_slot_taken")) {
-          setError(`That ${choice.role === "debater" ? choice.stance : ""} slot is already taken — pick the other side or Spectator.`);
+          setError(`That ${choice.role === "debater" ? choice.stance : ""} slot is already taken — pick the other side or Audience.`);
         } else if (msg.includes("stance_required")) {
           setError("Pick PRO or CON to join as a debater.");
         } else {
@@ -259,7 +259,7 @@ export default function JoinPrivateRoomModal({ open, onClose }: Props) {
             onClick={() => setChoice({ role: "debater", stance: "CON" })}
           />
           <RoleButton
-            label="Spectator"
+            label="Audience"
             active={isSpec}
             color="var(--accent-blue)"
             onClick={() => setChoice({ role: "spectator", stance: null })}

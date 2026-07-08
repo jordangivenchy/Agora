@@ -22,7 +22,10 @@ export async function POST(request: NextRequest) {
       ttl: "1h",
     });
 
-    const canPublish = role === "debater";
+    // Guest identities (signed-out audience) are always subscribe-only,
+    // regardless of the role the client claims.
+    const isGuest = typeof userId === "string" && userId.startsWith("guest-");
+    const canPublish = role === "debater" && !isGuest;
 
     at.addGrant({
       room: roomId,

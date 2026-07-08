@@ -219,13 +219,30 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
           >
             Profile
           </h2>
-          <button
-            onClick={onClose}
+          <div className="flex items-center gap-3">
+            {profile && (
+              <a
+                href={`/users/${profile.username}`}
+                title="Open profile page"
+                className="no-underline"
+                style={{
+                  color: "var(--text-muted)",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Open page ↗
+              </a>
+            )}
+            <button
+              onClick={onClose}
             className="text-xl leading-none cursor-pointer"
             style={{ color: "var(--text-muted)", background: "none", border: "none" }}
           >
             &times;
-          </button>
+            </button>
+          </div>
         </div>
 
         {loadingProfile && (
