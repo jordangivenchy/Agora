@@ -319,9 +319,20 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label style={labelStyle} htmlFor="password">
-                Password
-              </label>
+              <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }} htmlFor="password">
+                  Password
+                </label>
+                {mode === "signin" && (
+                  <a
+                    href="/forgot-password"
+                    className="no-underline transition-colors"
+                    style={{ fontSize: "11.5px", color: "var(--text-muted)", fontWeight: 500 }}
+                  >
+                    Forgot password?
+                  </a>
+                )}
+              </div>
               <input
                 id="password"
                 type="password"
