@@ -131,13 +131,40 @@ export default function AgoraAssistant({ motion }: Props) {
         }
       }
     };
+    // Browsers stop continuous sessions periodically — restart while enabled.
+    // Throttled: an instantly-dying session (mic permission denied, no mic)
+    // would otherwise restart in a tight loop and freeze the tab.
+    let lastStart = Date.now();
+    let rapidDeaths = 0;
+    let denied = false;
     rec.onend = () => {
-      // Auto-restart while enabled (browsers stop continuous sessions periodically)
-      if (hotwordRef.current && hotwordRec.current === rec) {
-        try { rec.start(); } catch { /* already restarting */ }
+      if (!hotwordRef.current || hotwordRec.current !== rec || denied) return;
+      const lifetime = Date.now() - lastStart;
+      rapidDeaths = lifetime < 1000 ? rapidDeaths + 1 : 0;
+      if (rapidDeaths >= 3) {
+        hotwordRef.current = false;
+        hotwordRec.current = null;
+        setHotword(false);
+        setLog((l) => [...l, { from: "agora", text: "I can't keep the microphone open — check that mic access is allowed for this site (the icon in the address bar), then try hands-free again." }]);
+        return;
       }
+      setTimeout(() => {
+        if (hotwordRef.current && hotwordRec.current === rec) {
+          lastStart = Date.now();
+          try { rec.start(); } catch { /* already restarting */ }
+        }
+      }, 500);
     };
-    rec.onerror = () => { /* onend handles restart */ };
+    rec.onerror = ((e: { error?: string }) => {
+      if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+        denied = true;
+        hotwordRef.current = false;
+        hotwordRec.current = null;
+        setHotword(false);
+        setLog((l) => [...l, { from: "agora", text: "Microphone access was denied — allow it from the icon in the address bar to use hands-free listening. You can still type or use the dictation button." }]);
+      }
+    }) as () => void;
+    lastStart = Date.now();
     rec.start();
   }, []);
 
