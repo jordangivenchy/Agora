@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, use } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant, Stance, QueueEntry } from "@/types/database";
 import DebateVideo from "@/components/DebateVideo";
+import { sortAudience } from "@/lib/audienceOrder";
 import SentimentBar from "@/components/SidePickerPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NotesPopout from "@/components/NotesPanel";
@@ -54,6 +55,10 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   }, [roomId]);
   const [participants, setParticipants] = useState<ParticipantWithUser[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Signed-out visitors can watch public rooms as audience-only guests. They
+  // never get a debate_participants row (RLS requires auth) — just a
+  // subscribe-only LiveKit token under a throwaway guest identity.
+  const [guestId, setGuestId] = useState<string | null>(null);
   const [livekitToken, setLivekitToken] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueueWithUser[]>([]);
   const [joining, setJoining] = useState(false);
@@ -198,14 +203,18 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   ]);
 
   /* ── Auto-spectate (?spectate=1) ──────────────────────────────
-     Coming from a "Join as Spectator" card: enroll directly as a spectator
-     without showing the join screen. Private rooms are excluded — the
-     private-room effect above already handles their spectator flow. */
+     Coming from a "Join Audience" card: signed-in users enroll directly as
+     audience without showing the join screen. Private rooms are excluded —
+     the private-room effect above already handles their spectator flow.
+     Signed-out visitors are NOT auto-joined: they fall through to the join
+     screen so they can choose "Join Audience" (as a guest) or sign in. */
   useEffect(() => {
     if (autoSpectate !== "pending") return;
     if (!room || !userLoaded || !participantsLoaded) return;
 
     // Signed out, already in the room, or private room → nothing to auto-do.
+    // Signed-out visitors get the join screen and its explicit audience/sign-in
+    // choice rather than being dropped straight into the stream.
     if (!currentUser || myParticipation || room.is_private) {
       setAutoSpectate("done");
       return;
@@ -216,7 +225,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       .then(() => fetchParticipants())
       .catch((e) => {
         console.error("auto-spectate failed", e);
-        setError("Could not join as spectator. Please try again.");
+        setError("Could not join the audience. Please try again.");
       })
       .finally(() => setAutoSpectate("done"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -273,6 +282,40 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
+  /* ── Guest audience join ──────────────────────────────────────
+     Signed-out visitors can watch public rooms. No Supabase row is written
+     (RLS requires auth) — they connect to LiveKit under a `guest-` identity
+     whose token the server locks to subscribe-only, so a guest can never
+     publish audio/video even with a tampered request. */
+  async function joinAsGuest() {
+    if (currentUser || !room || room.is_private) return;
+    setJoining(true);
+    setError("");
+    try {
+      const id = `guest-${Math.random().toString(36).slice(2, 10)}`;
+      const res = await fetch("/api/livekit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          userId: id,
+          username: `Guest-${id.slice(6, 10)}`,
+          role: "spectator",
+        }),
+      });
+      if (!res.ok) throw new Error(`livekit ${res.status}`);
+      const data = await res.json();
+      if (!data.token) throw new Error("no token in response");
+      setGuestId(id);
+      setLivekitToken(data.token);
+    } catch (e) {
+      console.error("joinAsGuest failed", e);
+      setError("Could not join the audience. Please try again.");
+    } finally {
+      setJoining(false);
+    }
+  }
+
   async function joinRoom(role: "debater" | "spectator", stance?: Stance) {
     if (!currentUser) {
       setError("You must be signed in to join");
@@ -282,7 +325,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
     // Once a debate is live, only the host may (re)take a debater seat.
     // Everyone else joins as a spectator so the debate isn't interrupted.
     if (role === "debater" && room?.status === "live" && currentUser.id !== room.host_id) {
-      setError("This debate is already live — you can join as a spectator.");
+      setError("This debate is already live — you can join the audience.");
       return;
     }
 
@@ -403,6 +446,68 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
+  /* ── Activity heartbeat + authoritative inactivity close ──────────
+     DebateVideo's 1s monitoring loop calls reportSelfActivity with my
+     LiveKit VAD state. Writes are throttled (~15s heartbeat, ~10s while
+     speaking) so realtime traffic stays light no matter how long the
+     debate runs. requestInactiveClose asks the close_inactive_room RPC
+     to end the room — the RPC re-validates the DB timestamps itself,
+     so a client can only *suggest* closure, never force it. */
+  const selfActivityRef = useRef({ lastBeat: 0, lastSpokeWrite: 0, lastMuted: null as boolean | null });
+  const reportSelfActivity = useCallback(
+    async (speaking: boolean, micMuted: boolean) => {
+      if (!currentUser || !myParticipation || myParticipation.role !== "debater") return;
+      const now = Date.now();
+      const s = selfActivityRef.current;
+      const needBeat = now - s.lastBeat > 15_000 || s.lastMuted !== micMuted;
+      const needSpeak = speaking && now - s.lastSpokeWrite > 10_000;
+      if (!needBeat && !needSpeak) return;
+      s.lastBeat = now;
+      s.lastMuted = micMuted;
+      if (speaking) s.lastSpokeWrite = now;
+
+      const patch: Record<string, unknown> = {
+        last_seen_at: new Date().toISOString(),
+        mic_muted: micMuted,
+      };
+      if (speaking) patch.last_spoke_at = new Date().toISOString();
+      const { error: hbErr } = await supabase
+        .from("debate_participants")
+        .update(patch)
+        .eq("id", myParticipation.id);
+      if (hbErr) console.warn("activity heartbeat failed", hbErr);
+    },
+    [currentUser, myParticipation, supabase]
+  );
+
+  // Host-only: persist LiveKit's real connected count so room cards show
+  // live viewer numbers. RLS ("Hosts can update their rooms") means only
+  // the host's client can write it — other clients can't fake counts.
+  const reportViewerCount = useCallback(
+    async (count: number) => {
+      if (!currentUser || !room || currentUser.id !== room.host_id) return;
+      const { error: vcErr } = await supabase
+        .from("debate_rooms")
+        .update({ viewer_count: count })
+        .eq("id", roomId);
+      if (vcErr) console.warn("viewer_count update failed", vcErr);
+    },
+    [currentUser, room, roomId, supabase]
+  );
+
+  const closeAttemptRef = useRef(0);
+  const requestInactiveClose = useCallback(async () => {
+    const now = Date.now();
+    if (now - closeAttemptRef.current < 10_000) return; // retry at most every 10s
+    closeAttemptRef.current = now;
+    const { data, error: closeErr } = await supabase.rpc("close_inactive_room", {
+      p_room: roomId,
+    });
+    if (closeErr) console.warn("close_inactive_room failed", closeErr);
+    // If it closed, the rooms realtime subscription redirects everyone home.
+    else if (data) fetchRoom();
+  }, [roomId, supabase, fetchRoom]);
+
   // Toggle my raised hand. Optimistic local flip for instant feedback; the
   // DB write follows and the realtime subscription reconciles every client.
   async function toggleHand() {
@@ -425,7 +530,12 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   }
 
   async function leaveStage() {
-    if (!currentUser || !myParticipation) return;
+    // Guests have no participation row to clean up — just disconnect and go.
+    if (!currentUser || !myParticipation) {
+      setIsLeaving(true);
+      router.push("/");
+      return;
+    }
 
     // Host leaving ends the debate
     if (currentUser.id === room?.host_id) {
@@ -508,7 +618,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   //   - participants are loaded (so we know if user is in room)
   //   - if they ARE in the room, until the livekit token arrives
   // This prevents the join-screen flash on room creation / rejoining.
-  const isInRoom = !!myParticipation;
+  const isInRoom = !!myParticipation || (!!guestId && !!livekitToken);
   const ready =
     !!room &&
     userLoaded &&
@@ -589,7 +699,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
               animation: "fadeSlideIn 0.3s ease",
             }}
           >
-            Joining as spectator…
+            Joining audience…
           </span>
         )}
       </div>
@@ -598,17 +708,9 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
 
   const topic = TOPICS.find((t) => t.key === room!.topic_key);
   const debaters = participants.filter((p) => p.role === "debater");
-  // Audience queue: raised hands first (oldest raise first — fairest), then
-  // everyone else in join order.
-  const spectators = participants
-    .filter((p) => p.role === "spectator")
-    .sort((a, b) => {
-      if (a.hand_raised_at && b.hand_raised_at)
-        return a.hand_raised_at.localeCompare(b.hand_raised_at);
-      if (a.hand_raised_at) return -1;
-      if (b.hand_raised_at) return 1;
-      return (a.joined_at || "").localeCompare(b.joined_at || "");
-    });
+  // Audience line: raised hands first (oldest raise first), then everyone
+  // else by longest time in the audience. See sortAudience for the full policy.
+  const spectators = sortAudience(participants.filter((p) => p.role === "spectator"));
   const proDebater = debaters.find((d) => d.stance === "PRO");
   const conDebater = debaters.find((d) => d.stance === "CON");
   const isHost = currentUser?.id === room!.host_id;
@@ -917,13 +1019,18 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL!}
             isDebater={myParticipation?.role === "debater"}
             hostId={room!.host_id}
-            currentUserId={currentUser?.id || ""}
+            currentUserId={currentUser?.id || guestId || ""}
+            canRaiseHand={!!currentUser}
             proDebater={proDebater}
             conDebater={conDebater}
             spectators={spectators}
             timeLimitSeconds={room!.time_limit_seconds}
+            roomLive={room!.status === "live"}
             myHandRaisedAt={myParticipation?.hand_raised_at ?? null}
             onToggleHand={toggleHand}
+            onSelfActivity={reportSelfActivity}
+            onRequestClose={requestInactiveClose}
+            onReportViewerCount={reportViewerCount}
             onLeaveStage={leaveStage}
             onToggleChat={() => setChatOpen(!chatOpen)}
             onToggleNotes={() => setNotesOpen(!notesOpen)}
@@ -940,9 +1047,46 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
             {error && <div className="join-error">{error}</div>}
 
             {!currentUser ? (
-              <p style={{ fontSize: "12px", color: "rgba(238,238,245,0.25)" }}>
-                Sign in to join this debate
-              </p>
+              room!.is_private ? (
+                <p style={{ fontSize: "12px", color: "rgba(238,238,245,0.25)" }}>
+                  <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to join this debate
+                </p>
+              ) : (
+                /* Signed-out visitor on a public room — audience-only entry */
+                <>
+                  <button
+                    disabled={joining}
+                    onClick={joinAsGuest}
+                    className="flex items-center gap-2 cursor-pointer transition-all disabled:opacity-60"
+                    style={{
+                      padding: "12px 26px",
+                      borderRadius: 100,
+                      background: "var(--accent-blue)",
+                      border: "none",
+                      color: "#fff",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!joining)
+                        e.currentTarget.style.background = "var(--accent-purple-light)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "var(--accent-blue)";
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    {joining ? "Joining…" : "Join Audience"}
+                  </button>
+                  <p style={{ fontSize: "12px", color: "rgba(238,238,245,0.25)" }}>
+                    <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to debate, chat, or raise your hand
+                  </p>
+                </>
+              )
             ) : room!.status === "live" && !isHost ? (
               /* Debate in progress — spectator-only entry */
               <>
@@ -968,7 +1112,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                       color: "#fca5a5",
                     }}
                   >
-                    Debate in progress — join as a spectator
+                    Debate in progress — join the audience
                   </span>
                 </div>
 
@@ -998,7 +1142,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
                     <circle cx="12" cy="12" r="3" />
                   </svg>
-                  {joining ? "Joining…" : "Join as Spectator"}
+                  {joining ? "Joining…" : "Join Audience"}
                 </button>
               </>
             ) : (
@@ -1032,7 +1176,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                       fontFamily: "'DM Mono', monospace",
                     }}
                   >
-                    Both slots full — joining as spectator adds you to queue
+                    Both slots full — join the audience to watch
                   </p>
                 )}
 
@@ -1041,7 +1185,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                   disabled={joining}
                   onClick={() => joinRoom("spectator")}
                 >
-                  Watch as Spectator
+                  Join Audience
                 </button>
               </>
             )}

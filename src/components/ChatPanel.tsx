@@ -161,7 +161,7 @@ export default function ChatPanel({ roomId, currentUser, isOpen, onClose }: Prop
                 padding: "4px",
               }}
             >
-              Sign in to chat
+              <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to chat
             </div>
           </div>
         )}

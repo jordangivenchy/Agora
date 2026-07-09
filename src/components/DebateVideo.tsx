@@ -12,12 +12,16 @@ import {
   type TrackReference,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { Track, RoomEvent } from "livekit-client";
+import { Track, RoomEvent, type Participant } from "livekit-client";
 import type { DebateParticipant } from "@/types/database";
+import { uniqueViewerCount } from "@/lib/viewerCount";
 
 type ParticipantWithUser = DebateParticipant & {
   user: { username: string; avatar_url: string | null };
 };
+
+/** Live connection/VAD state for a debater tile. */
+type TilePresence = "speaking" | "silent" | "disconnected";
 
 interface Props {
   token: string;
@@ -32,6 +36,17 @@ interface Props {
   /** My hand_raised_at (null = lowered). DB-backed via the room page. */
   myHandRaisedAt: string | null;
   onToggleHand: () => void;
+  /** False for signed-out guests — hides the raise-hand control, since a
+      guest has no participation row to store the raise on. */
+  canRaiseHand?: boolean;
+  /** True while the debate is live — activity monitoring only runs then. */
+  roomLive: boolean;
+  /** Reports my own VAD/mic state every second (page throttles DB writes). */
+  onSelfActivity: (speaking: boolean, micMuted: boolean) => void;
+  /** Asks the server-authoritative RPC to close the room for inactivity. */
+  onRequestClose: () => void;
+  /** Host-only: persists LiveKit's connected count to the room row. */
+  onReportViewerCount: (count: number) => void;
   onLeaveStage: () => void;
   onToggleChat: () => void;
   onToggleNotes: () => void;
@@ -51,6 +66,11 @@ export default function DebateVideo({
   timeLimitSeconds,
   myHandRaisedAt,
   onToggleHand,
+  canRaiseHand = true,
+  roomLive,
+  onSelfActivity,
+  onRequestClose,
+  onReportViewerCount,
   onLeaveStage,
   onToggleChat,
   onToggleNotes,
@@ -77,6 +97,11 @@ export default function DebateVideo({
         timeLimitSeconds={timeLimitSeconds}
         myHandRaisedAt={myHandRaisedAt}
         onToggleHand={onToggleHand}
+        canRaiseHand={canRaiseHand}
+        roomLive={roomLive}
+        onSelfActivity={onSelfActivity}
+        onRequestClose={onRequestClose}
+        onReportViewerCount={onReportViewerCount}
         onLeaveStage={onLeaveStage}
         onToggleChat={onToggleChat}
         onToggleNotes={onToggleNotes}
@@ -129,6 +154,11 @@ function DebateStage({
   timeLimitSeconds,
   myHandRaisedAt,
   onToggleHand,
+  canRaiseHand = true,
+  roomLive,
+  onSelfActivity,
+  onRequestClose,
+  onReportViewerCount,
   onLeaveStage,
   onToggleChat,
   onToggleNotes,
@@ -144,6 +174,11 @@ function DebateStage({
   timeLimitSeconds: number | null;
   myHandRaisedAt: string | null;
   onToggleHand: () => void;
+  canRaiseHand?: boolean;
+  roomLive: boolean;
+  onSelfActivity: (speaking: boolean, micMuted: boolean) => void;
+  onRequestClose: () => void;
+  onReportViewerCount: (count: number) => void;
   onLeaveStage: () => void;
   onToggleChat: () => void;
   onToggleNotes: () => void;
@@ -387,6 +422,124 @@ function DebateStage({
   // queue reorders, instead of snapping.
   const audienceRef = useFlipList();
 
+  // Host reports the real connected count (LiveKit's participant list is the
+  // server's truth: dead sockets are dropped, duplicate identities replaced).
+  // Debounced 2s to coalesce join/leave bursts; only written when changed.
+  const lastReportedViewersRef = useRef(-1);
+  useEffect(() => {
+    if (!isHost) return;
+    const count = uniqueViewerCount(participants.map((p) => p.identity));
+    if (count === lastReportedViewersRef.current) return;
+    const t = setTimeout(() => {
+      lastReportedViewersRef.current = count;
+      onReportViewerCount(count);
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [participants, isHost, onReportViewerCount]);
+
+  /* ── Voice-activity & connection monitoring ────────────────────────
+     A 1-second local loop reads LiveKit's server-side VAD
+     (participant.isSpeaking) and connection state for both debaters.
+     It drives the presence dots, the inactivity countdown, and the
+     reconnect window — and asks the page to request an authoritative
+     close when a rule trips. */
+  const [presence, setPresence] = useState<{ pro: TilePresence; con: TilePresence }>({
+    pro: "silent",
+    con: "silent",
+  });
+  const [inactivityDeadline, setInactivityDeadline] = useState<number | null>(null);
+  const [reconnect, setReconnect] = useState<{ stance: "PRO" | "CON"; deadline: number } | null>(null);
+
+  const lastSpeechRef = useRef(Date.now());
+  const absentSinceRef = useRef<{ pro: number | null; con: number | null }>({ pro: null, con: null });
+
+  const proId = proDebater?.user_id;
+  const conId = conDebater?.user_id;
+
+  // Fresh silence clock whenever the pairing (re)forms or the room goes live.
+  useEffect(() => {
+    lastSpeechRef.current = Date.now();
+    absentSinceRef.current = { pro: null, con: null };
+  }, [proId, conId, roomLive]);
+
+  // Cancel the countdown the instant LiveKit's VAD reports debater speech —
+  // no waiting for the next 1s tick.
+  useEffect(() => {
+    if (!room) return;
+    const onSpeakers = (speakers: Participant[]) => {
+      if (speakers.some((s) => s.identity === proId || s.identity === conId)) {
+        lastSpeechRef.current = Date.now();
+        setInactivityDeadline(null);
+      }
+    };
+    room.on(RoomEvent.ActiveSpeakersChanged, onSpeakers);
+    return () => {
+      room.off(RoomEvent.ActiveSpeakersChanged, onSpeakers);
+    };
+  }, [room, proId, conId]);
+
+  useEffect(() => {
+    if (!room || !roomLive) {
+      setInactivityDeadline(null);
+      setReconnect(null);
+      return;
+    }
+    const iv = setInterval(() => {
+      const now = Date.now();
+      const findLk = (uid?: string): Participant | undefined => {
+        if (!uid) return undefined;
+        if (room.localParticipant?.identity === uid) return room.localParticipant;
+        for (const p of room.remoteParticipants.values()) {
+          if (p.identity === uid) return p;
+        }
+        return undefined;
+      };
+      const proLk = findLk(proId);
+      const conLk = findLk(conId);
+
+      if (proLk?.isSpeaking || conLk?.isSpeaking) lastSpeechRef.current = now;
+
+      // Report my own VAD/mic state — the page throttles the DB writes.
+      const me = room.localParticipant;
+      if (me && isDebater) onSelfActivity(!!me.isSpeaking, !me.isMicrophoneEnabled);
+
+      const tilePresence = (seated: boolean, lk?: Participant): TilePresence =>
+        !seated || !lk ? "disconnected" : lk.isSpeaking ? "speaking" : "silent";
+      setPresence({
+        pro: tilePresence(!!proId, proLk),
+        con: tilePresence(!!conId, conLk),
+      });
+
+      // Seat has a DB debater but no LiveKit connection → they dropped.
+      const a = absentSinceRef.current;
+      a.pro = proId && !proLk ? (a.pro ?? now) : null;
+      a.con = conId && !conLk ? (a.con ?? now) : null;
+
+      let deadline: number | null = null;
+      let rec: { stance: "PRO" | "CON"; deadline: number } | null = null;
+
+      if (proId && conId) {
+        if (a.pro !== null && a.con !== null) {
+          // Both debaters gone — close (10s grace for blips).
+          if (now - Math.max(a.pro, a.con) > 10_000) onRequestClose();
+        } else if (a.pro !== null || a.con !== null) {
+          // One side dropped — 2-minute reconnect window.
+          const since = (a.pro ?? a.con)!;
+          rec = { stance: a.pro !== null ? "PRO" : "CON", deadline: since + 120_000 };
+          if (now - since > 120_000) onRequestClose();
+        } else {
+          // Both connected — shared silence clock.
+          const silence = now - lastSpeechRef.current;
+          if (silence > 90_000) onRequestClose();
+          else if (silence > 60_000) deadline = lastSpeechRef.current + 90_000;
+        }
+      }
+      setInactivityDeadline(deadline);
+      setReconnect(rec);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [room, roomLive, proId, conId, isDebater, onSelfActivity, onRequestClose]);
+
   function promptLeave() { setShowLeaveModal(true); }
   function confirmLeave() { setShowLeaveModal(false); onLeaveStage(); }
 
@@ -396,6 +549,26 @@ function DebateStage({
     <>
       {/* Toast (turn changes, "not your turn" messages, etc.) */}
       {toast && <div className="turn-message-toast">{toast}</div>}
+
+      {/* Inactivity countdown — cancelled the instant anyone speaks */}
+      {roomLive && inactivityDeadline && !reconnect && (
+        <div className="inactivity-banner">
+          <span className="inactivity-dot" />
+          No activity detected. This debate will end in{" "}
+          <strong>{Math.max(0, Math.ceil((inactivityDeadline - Date.now()) / 1000))}s</strong>
+          &nbsp;— say something to keep it going.
+        </div>
+      )}
+
+      {/* Reconnect window when one debater drops */}
+      {roomLive && reconnect && (
+        <div className="inactivity-banner is-reconnect">
+          <span className="inactivity-dot" />
+          {reconnect.stance} debater disconnected — waiting{" "}
+          <strong>{formatTime(Math.max(0, (reconnect.deadline - Date.now()) / 1000))}</strong>
+          &nbsp;for them to reconnect.
+        </div>
+      )}
 
       {/* Shared floor timer — same values on every client */}
       {hasTimer && bothPresent && currentTurn && (
@@ -441,6 +614,7 @@ function DebateStage({
             cameraOff={proCameraOff}
             isActiveTurn={hasTimer && bothPresent && currentTurn === "PRO"}
             handRaised={!!proDebater?.hand_raised_at}
+            presence={presence.pro}
           />
           <SpeakerTile
             debater={conDebater}
@@ -452,6 +626,7 @@ function DebateStage({
             cameraOff={conCameraOff}
             isActiveTurn={hasTimer && bothPresent && currentTurn === "CON"}
             handRaised={!!conDebater?.hand_raised_at}
+            presence={presence.con}
           />
         </div>
       </div>
@@ -523,19 +698,21 @@ function DebateStage({
           </>
         )}
 
-        {/* Raise hand — everyone, spectators especially. Stays raised until
-            the user explicitly lowers it. */}
-        <button
-          className={`ctrl-btn btn-hand ${myHandRaised ? "state-hand" : ""}`}
-          onClick={onToggleHand}
-          title={myHandRaised ? "Lower your hand" : "Raise your hand"}
-          aria-pressed={myHandRaised}
-        >
-          ✋
-          <span className="hand-btn-label">
-            {myHandRaised ? "Lower hand" : "Raise hand"}
-          </span>
-        </button>
+        {/* Raise hand — signed-in members only (guests have no participation
+            row to store the raise on). Stays raised until explicitly lowered. */}
+        {canRaiseHand && (
+          <button
+            className={`ctrl-btn btn-hand ${myHandRaised ? "state-hand" : ""}`}
+            onClick={onToggleHand}
+            title={myHandRaised ? "Lower your hand" : "Raise your hand"}
+            aria-pressed={myHandRaised}
+          >
+            ✋
+            <span className="hand-btn-label">
+              {myHandRaised ? "Lower hand" : "Raise hand"}
+            </span>
+          </button>
+        )}
 
         <button
           className={`ctrl-btn ${notesOpen ? "state-notes-open" : ""}`}
@@ -669,6 +846,7 @@ function SpeakerTile({
   cameraOff,
   isActiveTurn,
   handRaised,
+  presence,
 }: {
   debater?: ParticipantWithUser;
   track?: TrackReference;
@@ -679,6 +857,7 @@ function SpeakerTile({
   cameraOff: boolean;
   isActiveTurn: boolean;
   handRaised: boolean;
+  presence: TilePresence;
 }) {
   const isHost = debater?.user_id === hostId;
   const isLocal = debater?.user_id === currentUserId;
@@ -689,8 +868,13 @@ function SpeakerTile({
   // Render video only if track exists AND publication is not muted
   const showVideo = !!track && track.publication?.isMuted !== true;
 
+  const isSpeaking = !!debater && presence === "speaking";
+  const isDisconnected = !!debater && presence === "disconnected";
+
   return (
-    <div className={`speaker-tile${isLocal ? " is-local" : ""}${isActiveTurn ? " is-active-turn" : ""}`}>
+    <div
+      className={`speaker-tile${isLocal ? " is-local" : ""}${isActiveTurn ? " is-active-turn" : ""}${isSpeaking ? " speaking" : ""}`}
+    >
       <div className={`tile-wash ${washClass}`} />
       <div className="tile-grid" />
       <div className={`tile-stance ${stanceClass}`}>{stance}</div>
@@ -734,7 +918,16 @@ function SpeakerTile({
             {isLocal && <span className="tile-you">You</span>}
           </span>
           <span className="tile-role">
-            {debater ? (isHost ? "Host" : "Speaker") : "Empty"}
+            {debater && <span className={`presence-dot presence-${presence}`} />}
+            {!debater
+              ? "Empty"
+              : isDisconnected
+                ? "Disconnected"
+                : isSpeaking
+                  ? "Speaking"
+                  : isHost
+                    ? "Host · silent"
+                    : "Silent"}
           </span>
         </div>
         {debater && !isMicOn && (

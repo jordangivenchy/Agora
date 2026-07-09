@@ -1,0 +1,3557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgoraSphere — Live Debate Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0d0f1a;
+  --bg-secondary: #131627;
+  --bg-tertiary: #1a1e33;
+  --bg-sidebar: #0f1120;
+  --accent-purple: #6c5ce7;
+  --accent-purple-light: #a29bfe;
+  --accent-blue: #4a9eff;
+  --teal: #00cec9;
+  --danger: #e84040;
+  --gold: #e2b96b;
+  --pro-color: #00b894;
+  --con-color: #e84040;
+  --text-primary: #eeeef5;
+  --text-muted: rgba(238,238,245,0.5);
+  --text-dim: rgba(238,238,245,0.25);
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.14);
+  --nav-height: 60px;
+  --sidebar-width: 220px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ─── ANIMATIONS ─── */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes pulse-sidebar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+@keyframes modalIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modalPanelIn {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes voteBarFill {
+  from { width: 0; }
+}
+@keyframes argFeedIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── TOP NAV ─── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--nav-height);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 100;
+  gap: 16px;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav-logo img {
+  height: 34px;
+  width: auto;
+  display: block;
+  mix-blend-mode: screen;
+}
+
+.nav-search {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.nav-search input {
+  width: 100%;
+  height: 38px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 0 90px 0 18px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.nav-search input::placeholder { color: var(--text-muted); }
+.nav-search input:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.12);
+}
+
+.nav-search-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--accent-purple);
+  border: none;
+  border-radius: 100px;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.2s;
+}
+.nav-search-btn:hover { background: #7c6ef7; }
+
+/* Search clear indicator */
+.search-active-indicator {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-purple-light);
+  display: none;
+  animation: pulse-live 1.5s ease-in-out infinite;
+}
+.nav-search.has-query .search-active-indicator { display: block; }
+.nav-search.has-query input { padding-left: 28px; }
+
+.nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+.btn-ghost:hover { color: var(--text-primary); }
+
+.btn-signup {
+  background: var(--accent-purple);
+  border: none;
+  border-radius: 100px;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-signup:hover { background: #7c6ef7; }
+
+.nav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-hover);
+  cursor: pointer;
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 4px;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  width: var(--sidebar-width);
+  height: calc(100vh - var(--nav-height));
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 90;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-nav { padding: 12px 0; }
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 44px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-left: 3px solid transparent;
+}
+.sidebar-link:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.sidebar-link.active {
+  color: var(--text-primary);
+  background: rgba(108,92,231,0.08);
+  border-left-color: var(--accent-purple);
+}
+.sidebar-link .link-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+.sidebar-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+.sidebar-section-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  padding: 8px 16px 4px;
+}
+
+.live-channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-width: 0;
+}
+.live-channel:hover { background: var(--bg-tertiary); }
+
+.channel-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: white;
+}
+
+.channel-info { flex: 1; min-width: 0; }
+.channel-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.channel-topic {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+  animation: pulse-sidebar 2s ease-in-out infinite;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ─── MAIN CONTENT ─── */
+.main {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--nav-height);
+  padding: 28px 24px 60px;
+  min-height: calc(100vh - var(--nav-height));
+}
+
+/* ─── CAROUSEL ─── */
+.carousel-section { margin-bottom: 40px; }
+
+.carousel-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  height: 380px;
+  border-radius: 12px;
+}
+
+.carousel-track {
+  display: flex;
+  align-items: center;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-item {
+  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.carousel-bg { position: absolute; inset: 0; z-index: 0; }
+
+.carousel-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 1;
+}
+
+.carousel-live-badge {
+  position: absolute;
+  top: 14px; left: 14px;
+  z-index: 10;
+  background: var(--danger);
+  color: white;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.5px;
+}
+
+.carousel-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: white;
+  animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+.carousel-viewers {
+  position: absolute;
+  top: 14px; right: 240px;
+  z-index: 10;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.carousel-lower-third {
+  position: absolute;
+  bottom: 0; left: 0; right: 230px;
+  padding: 20px 24px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  z-index: 10;
+}
+
+.carousel-motion {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  line-height: 1.3;
+  max-width: 400px;
+}
+
+/* Phase 2: watch button on carousel */
+.carousel-watch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  background: rgba(108,92,231,0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(162,155,254,0.3);
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.carousel-watch-btn:hover { background: rgba(108,92,231,1); transform: translateY(-1px); }
+
+.carousel-panel {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 228px;
+  background: rgba(13,15,26,0.75);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(255,255,255,0.08);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 18px;
+  gap: 10px;
+}
+
+.panel-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.2);
+}
+
+.panel-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+}
+
+.panel-viewers {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.panel-topic {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--accent-purple-light);
+  text-align: center;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(162,155,254,0.4);
+}
+
+.panel-stance {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  padding: 4px 22px;
+  border-radius: 8px;
+  letter-spacing: 2px;
+  margin: 4px 0;
+}
+.panel-stance.pro {
+  background: rgba(0,184,148,0.15);
+  border: 1.5px solid rgba(0,184,148,0.35);
+  color: #00b894;
+}
+.panel-stance.anti {
+  background: rgba(232,64,64,0.15);
+  border: 1.5px solid rgba(232,64,64,0.35);
+  color: var(--danger);
+}
+
+.panel-factcheck { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+
+.fact-chip {
+  border-radius: 100px;
+  font-size: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  padding: 3px 9px;
+  border: 1px solid;
+}
+.fact-chip.verified { background: rgba(0,206,201,0.12); border-color: rgba(0,206,201,0.25); color: var(--teal); }
+.fact-chip.disputed { background: rgba(232,64,64,0.12); border-color: rgba(232,64,64,0.25); color: var(--danger); }
+.fact-chip.checking { background: rgba(226,185,107,0.12); border-color: rgba(226,185,107,0.25); color: var(--gold); }
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  background: rgba(13,15,26,0.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border-hover);
+  color: white;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+.carousel-arrow:hover { background: rgba(108,92,231,0.3); border-color: var(--accent-purple); }
+.carousel-arrow.left { left: 12px; }
+.carousel-arrow.right { right: 12px; }
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.carousel-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.3s, width 0.3s;
+}
+.carousel-dot.active {
+  background: var(--accent-purple-light);
+  width: 20px;
+  border-radius: 3px;
+}
+
+/* ─── BROWSE SECTION ─── */
+.browse-section { margin-bottom: 0; }
+
+.browse-heading {
+  font-family: 'Syne', sans-serif;
+  font-size: 48px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-purple-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 18px;
+  line-height: 1.1;
+}
+
+.category-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.category-row::-webkit-scrollbar { display: none; }
+
+/* ─── CATEGORY BUTTONS ─── */
+.category-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 172px;
+  height: 58px;
+  background: #1a2040;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  gap: 3px;
+  text-align: left;
+}
+.category-btn:hover {
+  background: #20274f;
+  border-color: rgba(255,255,255,0.18);
+}
+.category-btn:focus-visible {
+  outline: 2px solid var(--accent-purple-light);
+  outline-offset: 2px;
+}
+
+.btn-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn-live-line {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.category-btn.trending .btn-live-line {
+  color: #fd9644;
+}
+
+/* Active state — color injected via JS inline style */
+.category-btn.active {
+  transform: scale(1.03);
+}
+
+/* ─── TOPIC STRIP ─── */
+.topic-strip {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+              opacity 0.25s ease,
+              padding 0.3s ease,
+              margin 0.3s ease;
+  padding: 0 0;
+  margin: 0;
+  pointer-events: none;
+}
+.topic-strip.visible {
+  max-height: 80px;
+  opacity: 1;
+  padding: 14px 2px;
+  margin: 16px 0 0;
+  pointer-events: auto;
+}
+
+.topic-strip-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  gap: 16px;
+  border-left: 3px solid var(--topic-strip-accent, var(--accent-purple));
+}
+
+.strip-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.strip-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.strip-info { min-width: 0; }
+
+.strip-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  display: block;
+  line-height: 1.2;
+}
+
+.strip-desc {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 320px;
+}
+
+.strip-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.strip-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 4px 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.strip-live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: pulse-live 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.strip-hot-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.strip-hot-motion {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-rising {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.strip-rising-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.strip-trend-up   { color: #00b894; font-size: 10px; }
+.strip-trend-down { color: var(--danger); font-size: 10px; }
+
+.strip-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.strip-explore {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.strip-explore:hover { color: var(--text-muted); }
+
+/* ─── CONTENT LOWER (two-column) ─── */
+.content-lower {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 28px;
+}
+
+.debates-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.elo-col {
+  width: 288px;
+  flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--nav-height) + 20px);
+}
+
+/* ─── SECTION HEADER ─── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: color 0.3s;
+}
+
+.view-all {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.view-all:hover { color: var(--accent-purple-light); }
+
+/* Phase 2: search result count badge */
+.search-result-count {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 2px 10px;
+  display: none;
+}
+.search-result-count.visible { display: inline-block; }
+
+/* ─── DEBATE GRID ─── */
+.debate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  transition: opacity 0.15s ease;
+}
+.debate-grid.fading { opacity: 0; }
+
+.debate-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.debate-card:hover {
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(108,92,231,0.15);
+}
+.debate-card:focus-visible {
+  outline: 2px solid var(--accent-purple-light);
+  outline-offset: 2px;
+}
+
+.card-thumb {
+  height: 150px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.card-thumb-icon { font-size: 32px; opacity: 0.3; z-index: 1; }
+
+.card-live-badge {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: var(--danger);
+  color: white;
+  font-family: 'Syne', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.5px;
+  z-index: 2;
+}
+
+.card-live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: white;
+  animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+.card-viewers {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: rgba(0,0,0,0.5);
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Phase 2: watch overlay on hover */
+.card-watch-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(108,92,231,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 3;
+}
+.debate-card:hover .card-watch-overlay { opacity: 1; }
+
+.card-watch-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  background: rgba(108,92,231,0.8);
+  backdrop-filter: blur(4px);
+  padding: 8px 20px;
+  border-radius: 100px;
+  border: 1px solid rgba(162,155,254,0.4);
+}
+
+.card-body { padding: 12px; }
+
+.card-motion {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+  min-height: 35px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-debaters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mini-avatar {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.debater-names {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-elo {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-purple-light);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.card-elo-diamond { color: var(--text-dim); font-size: 10px; }
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-tag {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 2px 8px;
+}
+
+.card-secondary-tag {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 100px;
+  padding: 2px 7px;
+}
+
+/* Phase 2: voted badge on card */
+.card-voted-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 100px;
+  border: 1px solid;
+}
+.card-voted-badge.pro { color: var(--pro-color); border-color: rgba(0,184,148,0.3); background: rgba(0,184,148,0.1); }
+.card-voted-badge.con { color: var(--con-color); border-color: rgba(232,64,64,0.3); background: rgba(232,64,64,0.1); }
+
+.card-progress {
+  height: 3px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 0 0 10px 10px;
+  margin: 0 -12px -12px;
+  overflow: hidden;
+}
+
+.card-progress-bar {
+  height: 100%;
+  background: var(--accent-purple);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Phase 2: vote bar on cards */
+.card-vote-bar {
+  height: 3px;
+  display: flex;
+  overflow: hidden;
+  margin-top: 4px;
+  border-radius: 100px;
+}
+.card-vote-bar-pro {
+  background: var(--pro-color);
+  height: 100%;
+  transition: width 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.card-vote-bar-con {
+  background: var(--con-color);
+  height: 100%;
+  transition: width 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+  flex: 1;
+}
+.card-vote-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+.card-vote-pct {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+.card-vote-pct.pro { color: rgba(0,184,148,0.7); }
+.card-vote-pct.con { color: rgba(232,64,64,0.7); }
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  text-align: center;
+  gap: 8px;
+}
+
+.empty-icon { font-size: 40px; margin-bottom: 4px; }
+
+.empty-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.empty-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+/* Phase 2: search empty state */
+.search-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 8px;
+  text-align: center;
+}
+.search-empty-icon { font-size: 32px; opacity: 0.5; }
+.search-empty-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.search-empty-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.upcoming-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-top: 20px;
+}
+
+.upcoming-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; width: 100%; max-width: 520px; }
+
+.upcoming-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.upcoming-card:hover { border-color: var(--border-hover); }
+
+.upcoming-time-pill {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--gold);
+  background: rgba(226,185,107,0.1);
+  border: 1px solid rgba(226,185,107,0.2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  text-align: center;
+  line-height: 1.4;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.upcoming-info { min-width: 0; text-align: left; }
+
+.upcoming-motion {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upcoming-debaters {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* ─── ELO MODULE ─── */
+.elo-module {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: opacity 0.15s ease;
+}
+.elo-module.fading { opacity: 0; }
+
+.elo-module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.elo-module-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.elo-scope-toggle {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 2px;
+}
+
+.scope-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  border-radius: 100px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.scope-btn:hover { color: var(--text-muted); }
+.scope-btn.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.scope-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.elo-list { padding: 8px 0; }
+
+.elo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.elo-row:hover { background: rgba(255,255,255,0.03); }
+
+.elo-rank {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.elo-rank.gold   { color: #f9ca24; }
+.elo-rank.silver { color: #b2bec3; }
+.elo-rank.bronze { color: #fd9644; }
+
+.elo-avatar-sm {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.elo-info { flex: 1; min-width: 0; }
+
+.elo-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.elo-specialty {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.elo-score-col {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.elo-score {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-purple-light);
+}
+.elo-score-diamond { color: var(--text-dim); font-size: 9px; }
+
+.elo-trend {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  line-height: 1;
+  margin-top: 1px;
+}
+.elo-trend.up   { color: #00b894; }
+.elo-trend.down { color: var(--danger); }
+.elo-trend.flat { color: var(--text-dim); }
+
+.elo-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.elo-module-footer {
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elo-explore-link {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.elo-explore-link:hover { color: var(--accent-purple-light); }
+
+.elo-total-count {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════
+   PHASE 2: DEBATE ROOM MODAL
+   ═══════════════════════════════════════════════ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8,9,18,0.88);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalIn 0.2s ease;
+  overflow-y: auto;
+}
+.modal-overlay.closing {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.debate-room {
+  width: 100%;
+  max-width: 1060px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  animation: modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+}
+
+/* Room header */
+.room-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.room-live-badge {
+  background: var(--danger);
+  color: white;
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.room-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-motion {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.room-viewers-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 5px 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.room-close-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.room-close-btn:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); border-color: var(--border-hover); }
+
+/* Room body — 3 columns */
+.room-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Stream area */
+.room-stream {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  height: 280px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.room-stream-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.room-stream-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.room-debater-split {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.room-debater-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  position: relative;
+}
+
+.room-debater-side::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  opacity: 0.15;
+}
+
+.room-debater-avatar {
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: white;
+  border: 3px solid rgba(255,255,255,0.25);
+  position: relative;
+  z-index: 1;
+}
+
+.room-debater-name-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.room-stance-badge {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  position: relative;
+  z-index: 1;
+}
+.room-stance-badge.pro {
+  background: rgba(0,184,148,0.2);
+  border: 1px solid rgba(0,184,148,0.4);
+  color: var(--pro-color);
+}
+.room-stance-badge.con {
+  background: rgba(232,64,64,0.2);
+  border: 1px solid rgba(232,64,64,0.4);
+  color: var(--con-color);
+}
+
+.room-vs-divider {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-hover);
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+/* Vote section */
+.room-vote-section {
+  grid-column: 1;
+  grid-row: 2;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.room-vote-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.room-vote-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.room-vote-count {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.room-vote-bar-wrap {
+  position: relative;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.04);
+}
+
+.room-vote-bar-pro {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0,184,148,0.5), rgba(0,184,148,0.25));
+  transition: width 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 10px;
+  position: relative;
+  animation: voteBarFill 0.7s ease;
+}
+
+.room-vote-bar-con {
+  flex: 1;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(232,64,64,0.25), rgba(232,64,64,0.5));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+}
+
+.room-vote-bar-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+.room-vote-bar-label.pro { color: var(--pro-color); }
+.room-vote-bar-label.con { color: var(--con-color); }
+
+.room-vote-pct-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.room-vote-pct-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.room-vote-pct-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.room-vote-pct-dot.pro { background: var(--pro-color); }
+.room-vote-pct-dot.con { background: var(--con-color); }
+
+.room-vote-pct-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+.room-vote-pct-item.pro .room-vote-pct-num { color: var(--pro-color); }
+.room-vote-pct-item.con .room-vote-pct-num { color: var(--con-color); }
+
+/* Vote buttons */
+.room-vote-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.room-vote-btn {
+  height: 44px;
+  border-radius: 8px;
+  border: 1.5px solid;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  letter-spacing: 0.5px;
+}
+.room-vote-btn:hover { transform: translateY(-2px); }
+.room-vote-btn:active { transform: translateY(0); }
+.room-vote-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.room-vote-btn.pro {
+  background: rgba(0,184,148,0.12);
+  border-color: rgba(0,184,148,0.4);
+  color: var(--pro-color);
+}
+.room-vote-btn.pro:hover:not(:disabled) {
+  background: rgba(0,184,148,0.22);
+  box-shadow: 0 4px 16px rgba(0,184,148,0.2);
+}
+.room-vote-btn.pro.voted {
+  background: rgba(0,184,148,0.2);
+  border-color: var(--pro-color);
+  opacity: 1;
+}
+
+.room-vote-btn.con {
+  background: rgba(232,64,64,0.12);
+  border-color: rgba(232,64,64,0.4);
+  color: var(--con-color);
+}
+.room-vote-btn.con:hover:not(:disabled) {
+  background: rgba(232,64,64,0.22);
+  box-shadow: 0 4px 16px rgba(232,64,64,0.2);
+}
+.room-vote-btn.con.voted {
+  background: rgba(232,64,64,0.2);
+  border-color: var(--con-color);
+  opacity: 1;
+}
+
+.room-vote-note {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ELO stakes */
+.room-elo-stakes {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: rgba(108,92,231,0.06);
+  border: 1px solid rgba(108,92,231,0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.room-elo-stakes-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.room-elo-stakes-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-purple-light);
+}
+
+/* Argument feed (right column, full height) */
+.room-feed-col {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.room-feed-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.room-feed-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.room-feed-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+.room-feed-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feed-arg {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 3px solid;
+  background: rgba(255,255,255,0.03);
+  animation: argFeedIn 0.3s ease;
+}
+.feed-arg.pro { border-left-color: var(--pro-color); }
+.feed-arg.con { border-left-color: var(--con-color); }
+
+.feed-arg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.feed-arg-avatar {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 7px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.feed-arg-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feed-arg-stance {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 100px;
+}
+.feed-arg-stance.pro { color: var(--pro-color); background: rgba(0,184,148,0.12); }
+.feed-arg-stance.con { color: var(--con-color); background: rgba(232,64,64,0.12); }
+
+.feed-arg-time {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.feed-arg-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.feed-arg-reactions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.feed-reaction-btn {
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.feed-reaction-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+.feed-reaction-btn.active { color: var(--accent-purple-light); }
+
+/* ═══════════════════════════════════════════════
+   PHASE 2: TOAST NOTIFICATIONS
+   ═══════════════════════════════════════════════ */
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-hover);
+  border-radius: 10px;
+  padding: 11px 16px;
+  max-width: 320px;
+  animation: toastIn 0.25s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.removing { animation: toastOut 0.2s ease forwards; }
+
+.toast-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.toast-content { flex: 1; min-width: 0; }
+
+.toast-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.toast-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.toast-close:hover { color: var(--text-primary); }
+
+.toast.pro-vote { border-color: rgba(0,184,148,0.3); }
+.toast.con-vote { border-color: rgba(232,64,64,0.3); }
+.toast.info     { border-color: rgba(108,92,231,0.3); }
+
+/* ═══════════════════════════════════════════════
+   MODULE 1 — SPACE BACKGROUND
+   ═══════════════════════════════════════════════ */
+:root {
+  --agora-purple-1:#6d28d9;--agora-purple-2:#7c3aed;--agora-purple-3:#8b5cf6;
+  --agora-purple-4:#a855f7;--agora-purple-5:#c084fc;--agora-purple-6:#ddd6fe;
+  --agora-bg-0:#020103;--agora-bg-1:#05030b;--agora-bg-2:#0b0714;--agora-bg-3:#12091d;
+  --agora-grid:rgba(255,255,255,.035);--agora-grid-strong:rgba(192,132,252,.06);
+  --agora-aurora-a:rgba(124,58,237,.18);--agora-aurora-b:rgba(168,85,247,.14);--agora-aurora-c:rgba(192,132,252,.09);
+}
+@keyframes agora-stars-drift-slow{from{transform:translateY(0)}to{transform:translateY(-2000px)}}
+@keyframes agora-stars-drift-medium{from{transform:translateY(0)}to{transform:translateY(-2200px)}}
+@keyframes agora-stars-drift-fast{from{transform:translateY(0)}to{transform:translateY(-2400px)}}
+@keyframes agora-aurora-float{0%,100%{transform:translate3d(0,0,0) scale(1);opacity:.8}50%{transform:translate3d(2%,-3%,0) scale(1.08);opacity:1}}
+@keyframes agora-aurora-float-alt{0%,100%{transform:translate3d(0,0,0) scale(1);opacity:.7}50%{transform:translate3d(-2%,2%,0) scale(1.12);opacity:.95}}
+
+.agora-space-bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:linear-gradient(to bottom,var(--agora-bg-3) 0%,var(--agora-bg-2) 18%,var(--agora-bg-1) 42%,var(--agora-bg-0) 100%)}
+.agora-space-bg__base{position:absolute;inset:0;background:radial-gradient(circle at 50% 28%,rgba(168,85,247,.12),transparent 26%),radial-gradient(circle at 20% 12%,rgba(124,58,237,.08),transparent 22%),radial-gradient(circle at 78% 18%,rgba(192,132,252,.06),transparent 18%)}
+.agora-space-bg__aurora{position:absolute;border-radius:9999px;filter:blur(120px);mix-blend-mode:screen}
+.agora-space-bg__aurora--one{width:760px;height:760px;left:50%;top:16%;transform:translateX(-50%);background:radial-gradient(circle,var(--agora-aurora-a) 0%,transparent 68%);animation:agora-aurora-float 16s ease-in-out infinite}
+.agora-space-bg__aurora--two{width:460px;height:460px;left:10%;top:8%;background:radial-gradient(circle,var(--agora-aurora-b) 0%,transparent 72%);animation:agora-aurora-float-alt 20s ease-in-out infinite}
+.agora-space-bg__aurora--three{width:380px;height:380px;right:8%;top:22%;background:radial-gradient(circle,var(--agora-aurora-c) 0%,transparent 75%);animation:agora-aurora-float 22s ease-in-out infinite reverse}
+.agora-space-bg__grid{position:absolute;inset:0;background:linear-gradient(var(--agora-grid) 1px,transparent 1px),linear-gradient(90deg,var(--agora-grid-strong) 1px,transparent 1px);background-size:40px 40px;mask-image:radial-gradient(circle at center,black 38%,transparent 82%);opacity:.85}
+.agora-space-bg__vignette{position:absolute;inset:0;background:radial-gradient(circle at center,transparent 45%,rgba(0,0,0,.25) 78%,rgba(0,0,0,.65) 100%)}
+.agora-space-bg__stars,.agora-space-bg__stars::after{position:absolute;top:0;left:0;display:block;content:"";background:transparent}
+.agora-space-bg__stars::after{top:2000px}
+.agora-space-bg__stars--tiny,.agora-space-bg__stars--tiny::after{width:1px;height:1px;box-shadow:88px 120px rgba(255,255,255,.9),164px 340px rgba(221,214,254,.9),270px 180px rgba(192,132,252,.7),348px 680px rgba(255,255,255,.75),420px 1120px rgba(168,85,247,.65),520px 260px rgba(255,255,255,.85),640px 890px rgba(221,214,254,.8),720px 1500px rgba(192,132,252,.7),812px 470px rgba(255,255,255,.7),930px 1320px rgba(168,85,247,.6),1040px 300px rgba(255,255,255,.75),1110px 860px rgba(221,214,254,.78),1240px 240px rgba(192,132,252,.75),1310px 1420px rgba(255,255,255,.72),1410px 620px rgba(168,85,247,.55),90px 1780px rgba(255,255,255,.8),210px 1560px rgba(221,214,254,.75),330px 1710px rgba(192,132,252,.72),470px 1880px rgba(255,255,255,.72),590px 1640px rgba(168,85,247,.58),710px 1820px rgba(255,255,255,.78),860px 1600px rgba(221,214,254,.8),1010px 1760px rgba(192,132,252,.7),1170px 1690px rgba(255,255,255,.7),1320px 1860px rgba(168,85,247,.58),1420px 1730px rgba(255,255,255,.7);animation:agora-stars-drift-slow 80s linear infinite;opacity:.9}
+.agora-space-bg__stars--small,.agora-space-bg__stars--small::after{width:2px;height:2px;box-shadow:120px 200px rgba(255,255,255,.95),240px 540px rgba(221,214,254,.88),360px 130px rgba(168,85,247,.8),510px 730px rgba(255,255,255,.82),640px 1210px rgba(192,132,252,.76),790px 350px rgba(255,255,255,.88),940px 910px rgba(221,214,254,.85),1080px 420px rgba(168,85,247,.76),1220px 1110px rgba(255,255,255,.8),1360px 600px rgba(192,132,252,.72),180px 1460px rgba(255,255,255,.84),430px 1700px rgba(221,214,254,.82),720px 1560px rgba(168,85,247,.74),980px 1810px rgba(255,255,255,.84),1270px 1680px rgba(192,132,252,.74);animation:agora-stars-drift-medium 120s linear infinite;opacity:.78}
+.agora-space-bg__stars--medium,.agora-space-bg__stars--medium::after{width:3px;height:3px;border-radius:9999px;box-shadow:200px 320px rgba(255,255,255,.95),540px 920px rgba(192,132,252,.82),860px 220px rgba(221,214,254,.92),1140px 730px rgba(168,85,247,.78),1320px 1260px rgba(255,255,255,.82),320px 1520px rgba(221,214,254,.88),920px 1710px rgba(192,132,252,.8),1240px 1640px rgba(255,255,255,.86);animation:agora-stars-drift-fast 170s linear infinite;opacity:.62;filter:blur(.2px)}
+.agora-top-blur{position:fixed;inset:0 0 auto 0;height:120px;z-index:40;pointer-events:none;background:linear-gradient(to bottom,rgba(3,1,8,.82),transparent);backdrop-filter:blur(10px);mask-image:linear-gradient(to bottom,black,transparent)}
+@media(prefers-reduced-motion:reduce){
+  .agora-space-bg__stars--tiny,.agora-space-bg__stars--small,.agora-space-bg__stars--medium,
+  .agora-space-bg__aurora--one,.agora-space-bg__aurora--two,.agora-space-bg__aurora--three{animation:none!important}
+}
+
+/* ═══════════════════════════════════════════════
+   MODULE 2 — ANIMATED SHINY CTA BUTTON
+   ═══════════════════════════════════════════════ */
+@property --agora-cta-angle{syntax:"<angle>";initial-value:0deg;inherits:false}
+@keyframes agora-cta-border-spin{from{--agora-cta-angle:0deg}to{--agora-cta-angle:360deg}}
+@keyframes agora-cta-sheen{0%{transform:translateX(-140%) skewX(-18deg);opacity:0}20%{opacity:.15}50%{opacity:.35}100%{transform:translateX(180%) skewX(-18deg);opacity:0}}
+@keyframes agora-cta-glow-shift{0%,100%{filter:saturate(1) brightness(1)}50%{filter:saturate(1.15) brightness(1.08)}}
+
+:root {
+  --agora-cta-bg:#06030b;--agora-cta-border-a:#7c3aed;--agora-cta-border-b:#8b5cf6;
+  --agora-cta-border-c:#a855f7;--agora-cta-border-d:#c084fc;
+  --agora-cta-glow:rgba(168,85,247,.35);--agora-cta-text:#ffffff;--agora-cta-text-soft:rgba(255,255,255,.82);
+}
+.agora-shiny-cta{--agora-cta-angle:0deg;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;overflow:hidden;isolation:isolate;cursor:pointer;user-select:none;border:2px solid transparent;border-radius:9999px;padding:1rem 2.5rem;min-height:58px;color:var(--agora-cta-text);font-family:'DM Sans',sans-serif;background:linear-gradient(180deg,rgba(16,10,28,.96),rgba(6,3,11,.98)) padding-box,conic-gradient(from var(--agora-cta-angle),transparent 0%,transparent 8%,var(--agora-cta-border-a) 14%,var(--agora-cta-border-b) 24%,var(--agora-cta-border-c) 34%,var(--agora-cta-border-d) 42%,transparent 52%,transparent 100%) border-box;box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 10px 30px rgba(0,0,0,.38),0 0 32px rgba(124,58,237,.10);transition:transform 180ms ease,box-shadow 220ms ease,filter 220ms ease;animation:agora-cta-border-spin 2.8s linear infinite,agora-cta-glow-shift 3.6s ease-in-out infinite}
+.agora-shiny-cta::before{content:"";position:absolute;inset:1px;border-radius:inherit;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.08) .6px,transparent .7px),linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));background-size:4px 4px,auto;opacity:.18;z-index:0;pointer-events:none}
+.agora-shiny-cta::after{content:"";position:absolute;top:-20%;bottom:-20%;width:40%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.02) 30%,rgba(221,214,254,.18) 50%,rgba(255,255,255,.02) 70%,transparent 100%);transform:translateX(-140%) skewX(-18deg);z-index:1;pointer-events:none}
+.agora-shiny-cta:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 0 0 1px rgba(255,255,255,.05) inset,0 14px 40px rgba(0,0,0,.44),0 0 48px var(--agora-cta-glow)}
+.agora-shiny-cta:hover::after{animation:agora-cta-sheen 1.2s ease}
+.agora-shiny-cta:active{transform:translateY(0) scale(.985)}
+.agora-shiny-cta:focus-visible{outline:none;box-shadow:0 0 0 1px rgba(255,255,255,.06) inset,0 0 0 4px rgba(168,85,247,.18),0 0 48px rgba(168,85,247,.28)}
+.agora-shiny-cta__text{position:relative;z-index:2;display:inline-flex;align-items:center;gap:.5rem;font-weight:600;letter-spacing:-.01em;color:var(--agora-cta-text)}
+.agora-shiny-cta__icon{width:1rem;height:1rem;transition:transform 180ms ease;color:var(--agora-cta-text-soft)}
+.agora-shiny-cta:hover .agora-shiny-cta__icon{transform:translateX(3px)}
+.agora-shiny-cta--compact{padding:.44rem 1.05rem;min-height:34px;font-size:.8rem;letter-spacing:.01em;box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 4px 16px rgba(0,0,0,.32),0 0 20px rgba(124,58,237,.12)}
+
+/* ─── SEARCH SHELL ─── */
+.agora-search-shell{position:relative;display:flex;align-items:center;width:min(480px,100%);padding:.28rem .28rem .28rem .28rem;border-radius:9999px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(17,10,29,.88),rgba(7,4,12,.92));backdrop-filter:blur(18px);box-shadow:0 0 0 1px rgba(255,255,255,.02) inset,0 8px 32px rgba(0,0,0,.28),0 0 36px rgba(124,58,237,.08)}
+.agora-search-shell::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(120deg,rgba(255,255,255,.07),rgba(168,85,247,.16),rgba(255,255,255,.04));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:0}
+
+/* override original nav-search rules when shell is active */
+.nav-search.agora-search-shell{max-width:480px;height:auto;background:none;border:none;box-shadow:none;border-radius:9999px}
+.nav-search.agora-search-shell input{flex:1;min-width:0;background:transparent!important;border:none!important;border-radius:0;box-shadow:none!important;height:32px;padding:0 .5rem 0 1rem;font-size:.84rem;color:white;width:auto}
+.nav-search.agora-search-shell input:focus{border:none!important;box-shadow:none!important}
+.nav-search.agora-search-shell input::placeholder{color:rgba(255,255,255,.45)}
+.nav-search.agora-search-shell.has-query input{padding-left:1.75rem}
+.nav-search.agora-search-shell .search-active-indicator{left:18px}
+.nav-search.agora-search-shell .nav-search-btn{position:relative;right:auto;top:auto;transform:none;flex-shrink:0;margin-right:2px}
+
+/* ═══════════════════════════════════════════════
+   COHERENCE PASS — readability against starfield
+   ═══════════════════════════════════════════════ */
+body { background: var(--agora-bg-0); }
+.nav {
+  background: rgba(5,3,11,.78);
+  backdrop-filter: blur(22px);
+  border-bottom-color: rgba(255,255,255,.06);
+  /* position:fixed already set above — do not override */
+  z-index: 100;
+}
+.sidebar {
+  background: rgba(9,7,18,.94);
+  border-right-color: rgba(255,255,255,.06);
+  /* position:fixed already set above — do not override */
+  z-index: 90;
+}
+.main {
+  /* margin-top and margin-left already set above — preserve them */
+  position: relative;
+  z-index: 1;
+}
+
+/* lift card opacity so they read cleanly against the starfield */
+.debate-card { background: rgba(19,22,39,.94); }
+.elo-module { background: rgba(19,22,39,.94); }
+.topic-strip-inner { background: rgba(19,22,39,.9); }
+.upcoming-card { background: rgba(19,22,39,.9); }
+.carousel-panel { background: rgba(10,12,22,.9); }
+.debate-room { background: rgba(19,22,39,.97); }
+.room-header { background: rgba(10,12,22,.97); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1100px) {
+  .elo-col { width: 256px; }
+  .debate-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .hamburger { display: block; }
+  .carousel-panel { display: none; }
+  .carousel-viewers { right: 12px; }
+  .carousel-lower-third { right: 0; }
+  .browse-heading { font-size: 36px; }
+  .content-lower { flex-direction: column; }
+  .elo-col { width: 100%; position: static; }
+  .strip-right { display: none; }
+  .strip-desc { max-width: 200px; }
+
+  .room-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+  }
+  .room-feed-col {
+    grid-column: 1;
+    grid-row: 3;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 280px;
+  }
+  .room-vote-section {
+    grid-column: 1;
+    grid-row: 2;
+    border-right: none;
+  }
+  .room-stream {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav-search { display: none; }
+  .carousel-stage { height: 260px; }
+  .browse-heading { font-size: 28px; }
+  .debate-grid { grid-template-columns: 1fr; }
+  .category-btn { width: 152px; }
+  .modal-overlay { padding: 0; }
+  .debate-room { border-radius: 0; max-height: 100vh; }
+  .toast-container { left: 12px; right: 12px; bottom: 12px; }
+  .toast { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── SPACE BACKGROUND ─── -->
+<div class="agora-space-bg" aria-hidden="true">
+  <div class="agora-space-bg__base"></div>
+  <div class="agora-space-bg__aurora agora-space-bg__aurora--one"></div>
+  <div class="agora-space-bg__aurora agora-space-bg__aurora--two"></div>
+  <div class="agora-space-bg__aurora agora-space-bg__aurora--three"></div>
+  <div class="agora-space-bg__stars agora-space-bg__stars--tiny"></div>
+  <div class="agora-space-bg__stars agora-space-bg__stars--small"></div>
+  <div class="agora-space-bg__stars agora-space-bg__stars--medium"></div>
+  <div class="agora-space-bg__grid"></div>
+  <div class="agora-space-bg__vignette"></div>
+</div>
+<div class="agora-top-blur" aria-hidden="true"></div>
+
+<!-- ─── TOP NAV ─── -->
+<nav class="nav">
+  <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+  <a class="nav-logo" href="#">
+    <img src="AGORALOGO.svg" alt="AgoraSphere">
+  </a>
+  <div class="nav-search agora-search-shell" id="navSearchWrap">
+    <div class="search-active-indicator"></div>
+    <input type="text" id="searchInput" placeholder="Search a topic, debater, or motion…" aria-label="Search" autocomplete="off">
+    <button class="nav-search-btn" id="searchBtn"><span>✦</span> ask</button>
+  </div>
+  <button class="agora-shiny-cta agora-shiny-cta--compact" type="button" aria-label="Create debate">
+    <span class="agora-shiny-cta__text">+ Create</span>
+  </button>
+  <div class="nav-auth">
+    <button class="btn-ghost">Log in</button>
+    <button class="btn-signup">Sign up</button>
+    <div class="nav-avatar"></div>
+  </div>
+</nav>
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar" id="sidebar">
+  <nav class="sidebar-nav">
+    <a class="sidebar-link active" href="#"><span class="link-icon">🏠</span> Home</a>
+    <a class="sidebar-link" href="#"><span class="link-icon">🔥</span> Popular</a>
+    <a class="sidebar-link" href="#"><span class="link-icon">≡</span> Explore</a>
+    <a class="sidebar-link" href="#"><span class="link-icon">♡</span> Subscriptions</a>
+  </nav>
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section-label">Live Now</div>
+  <div id="sidebarChannels"></div>
+  <div class="sidebar-footer">© 2025 AgoraSphere</div>
+</aside>
+
+<!-- ─── MAIN CONTENT ─── -->
+<main class="main">
+
+  <!-- CAROUSEL -->
+  <section class="carousel-section">
+    <div class="carousel-stage" id="carouselStage">
+      <div class="carousel-track" id="carouselTrack"></div>
+      <button class="carousel-arrow left" id="arrowLeft" aria-label="Previous">◀</button>
+      <button class="carousel-arrow right" id="arrowRight" aria-label="Next">▶</button>
+    </div>
+    <div class="carousel-dots" id="carouselDots"></div>
+  </section>
+
+  <!-- BROWSE -->
+  <section class="browse-section">
+    <div class="browse-heading">Browse</div>
+    <div class="category-row" id="categoryRow" role="group" aria-label="Browse by topic"></div>
+    <div class="topic-strip" id="topicStrip" aria-live="polite"></div>
+  </section>
+
+  <!-- TWO-COLUMN LOWER -->
+  <div class="content-lower">
+    <div class="debates-col">
+      <div class="section-header">
+        <div class="section-title" id="gridTitle">Live Debates</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="search-result-count" id="searchResultCount"></span>
+          <a class="view-all" href="#">View all →</a>
+        </div>
+      </div>
+      <div class="debate-grid" id="debateGrid"></div>
+    </div>
+    <div class="elo-col">
+      <div class="elo-module" id="eloModule"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════
+     PHASE 2: DEBATE ROOM MODAL
+     ═══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="debateModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Debate Room">
+  <div class="debate-room" id="debateRoomPanel">
+    <!-- injected by renderDebateRoom() -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PHASE 2: TOAST CONTAINER
+     ═══════════════════════════════════════════════ -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA REGISTRY
+// ═══════════════════════════════════════════════
+
+const TOPICS = {
+  'politics-law': {
+    label: 'Politics (Law)',
+    emoji: '⚖️',
+    accent: '#4a9eff',
+    accentRgb: '74,158,255',
+    description: 'Constitutional law, civil rights, court rulings, criminal justice, regulation',
+  },
+  'politics-ethics': {
+    label: 'Politics (Ethics)',
+    emoji: '🙏',
+    accent: '#fd79a8',
+    accentRgb: '253,121,168',
+    description: 'Censorship, moral legitimacy, fairness, surveillance, distributive justice',
+  },
+  'sports': {
+    label: 'Sports',
+    emoji: '🏆',
+    accent: '#fd9644',
+    accentRgb: '253,150,68',
+    description: 'Athlete ethics, governance, performance enhancement, sports economics',
+  },
+  'culture': {
+    label: 'Culture',
+    emoji: '🎭',
+    accent: '#e056b8',
+    accentRgb: '224,86,184',
+    description: 'Media, identity, representation, art, social norms, pop culture',
+  },
+  'economics': {
+    label: 'Economics',
+    emoji: '💰',
+    accent: '#00b894',
+    accentRgb: '0,184,148',
+    description: 'Labor markets, trade policy, inequality, monetary policy, UBI, housing',
+  },
+  'science-tech': {
+    label: 'Science & Tech',
+    emoji: '🔬',
+    accent: '#00cec9',
+    accentRgb: '0,206,201',
+    description: 'AI, biotech, privacy, automation, energy, scientific consensus',
+  },
+  'foreign-policy': {
+    label: 'Foreign Policy',
+    emoji: '🌍',
+    accent: '#6c5ce7',
+    accentRgb: '108,92,231',
+    description: 'War, diplomacy, sanctions, alliances, borders, international law',
+  },
+  'philosophy': {
+    label: 'Philosophy',
+    emoji: '📚',
+    accent: '#fdcb6e',
+    accentRgb: '253,203,110',
+    description: 'Ethics, epistemology, free will, consciousness, truth, personhood',
+  },
+};
+
+const DEBATERS = [
+  { id: 'destiny',       name: 'Destiny',        initials: 'D', color: '#00b894', globalElo: 2847, trendDir: 'up',   trendDelta: 23,  topicKeys: ['politics-law','politics-ethics','foreign-policy','science-tech'], specialty: 'politics-law'   },
+  { id: 'hasanabi',      name: 'HasanAbi',        initials: 'H', color: '#e17055', globalElo: 2634, trendDir: 'up',   trendDelta: 41,  topicKeys: ['politics-ethics','economics','foreign-policy'],                    specialty: 'politics-ethics' },
+  { id: 'legaleagle',    name: 'LegalEagle',      initials: 'L', color: '#e2b96b', globalElo: 2591, trendDir: 'flat', trendDelta: 0,   topicKeys: ['politics-law','politics-ethics'],                                  specialty: 'politics-law'   },
+  { id: 'philosophytube',name: 'PhilosophyTube',  initials: 'P', color: '#fd79a8', globalElo: 2487, trendDir: 'up',   trendDelta: 18,  topicKeys: ['philosophy','politics-ethics','culture'],                          specialty: 'philosophy'     },
+  { id: 'cosmOsdebate',  name: 'CosmosDebate',    initials: 'C', color: '#4a9eff', globalElo: 2341, trendDir: 'up',   trendDelta: 56,  topicKeys: ['science-tech','foreign-policy','economics'],                       specialty: 'science-tech'   },
+  { id: 'techrealist',   name: 'TechRealist',     initials: 'T', color: '#00cec9', globalElo: 2298, trendDir: 'down', trendDelta: -12, topicKeys: ['science-tech','economics'],                                        specialty: 'science-tech'   },
+  { id: 'econdebater',   name: 'EconDebater',     initials: 'E', color: '#55efc4', globalElo: 2187, trendDir: 'up',   trendDelta: 34,  topicKeys: ['economics','foreign-policy'],                                      specialty: 'economics'      },
+  { id: 'politicsnow',   name: 'PoliticsNow',     initials: 'N', color: '#6c5ce7', globalElo: 2156, trendDir: 'up',   trendDelta: 67,  topicKeys: ['politics-law','politics-ethics','foreign-policy'],                 specialty: 'politics-law'   },
+  { id: 'sciencematters',name: 'ScienceMatters',  initials: 'S', color: '#74b9ff', globalElo: 2089, trendDir: 'flat', trendDelta: 0,   topicKeys: ['science-tech'],                                                   specialty: 'science-tech'   },
+  { id: 'cairosmind',    name: 'KairosMind',      initials: 'K', color: '#a29bfe', globalElo: 1987, trendDir: 'up',   trendDelta: 89,  topicKeys: ['philosophy','politics-ethics','culture'],                          specialty: 'philosophy'     },
+  { id: 'sneako',        name: 'Sneako',           initials: 'S', color: '#b2bec3', globalElo: 1834, trendDir: 'down', trendDelta: -31, topicKeys: ['politics-ethics','culture','foreign-policy'],                     specialty: 'politics-ethics' },
+  { id: 'greenfuture',   name: 'GreenFuture',     initials: 'G', color: '#55efc4', globalElo: 1756, trendDir: 'up',   trendDelta: 44,  topicKeys: ['science-tech','economics'],                                        specialty: 'science-tech'   },
+  { id: 'electionwatch', name: 'ElectionWatch',   initials: 'E', color: '#4a9eff', globalElo: 1698, trendDir: 'flat', trendDelta: 0,   topicKeys: ['politics-law'],                                                   specialty: 'politics-law'   },
+];
+
+const DEBATES = [
+  {
+    motion: 'Social media causes teen depression',
+    debater1: 'Destiny', debater2: 'KairosMind',
+    color1: '#00b894', color2: '#6c5ce7',
+    elo: 847, viewers: '4.2K', viewersNum: 4200, progress: 75,
+    topicKey: 'politics-ethics',
+    secondaryTopics: ['science-tech', 'culture'],
+    subTags: ['social media', 'mental health'],
+    gradient: 'linear-gradient(135deg, #0d1b3e 0%, #1e0533 100%)',
+    icon: '📱',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'Affirmative action is constitutional',
+    debater1: 'LegalEagle', debater2: 'SocraticDebates',
+    color1: '#e2b96b', color2: '#4a9eff',
+    elo: 923, viewers: '1.8K', viewersNum: 1800, progress: 40,
+    topicKey: 'politics-law',
+    secondaryTopics: ['politics-ethics'],
+    subTags: ['civil rights', 'equal protection'],
+    gradient: 'linear-gradient(135deg, #1a1000 0%, #002d3d 100%)',
+    icon: '⚖️',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'UBI would destroy work ethic',
+    debater1: 'EconDebater', debater2: 'FuturePolicy',
+    color1: '#e17055', color2: '#00cec9',
+    elo: 761, viewers: '3.1K', viewersNum: 3100, progress: 55,
+    topicKey: 'economics',
+    secondaryTopics: ['politics-ethics'],
+    subTags: ['UBI', 'labor'],
+    gradient: 'linear-gradient(135deg, #0d2b1a 0%, #2d1a00 100%)',
+    icon: '💰',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'Nuclear is greener than solar',
+    debater1: 'ScienceMatters', debater2: 'GreenFuture',
+    color1: '#4a9eff', color2: '#00b894',
+    elo: 812, viewers: '892', viewersNum: 892, progress: 20,
+    topicKey: 'science-tech',
+    secondaryTopics: ['economics'],
+    subTags: ['energy', 'climate'],
+    gradient: 'linear-gradient(135deg, #001a2e 0%, #002214 100%)',
+    icon: '⚛️',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'Free trade hurts American workers',
+    debater1: 'TradeRealist', debater2: 'GlobalMarket',
+    color1: '#fd79a8', color2: '#e2b96b',
+    elo: 688, viewers: '2.4K', viewersNum: 2400, progress: 85,
+    topicKey: 'economics',
+    secondaryTopics: ['foreign-policy'],
+    subTags: ['trade', 'labor', 'globalization'],
+    gradient: 'linear-gradient(135deg, #2d0a1a 0%, #1a1500 100%)',
+    icon: '🌍',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'Democracy is failing in the West',
+    debater1: 'PoliticsNow', debater2: 'CivicDebater',
+    color1: '#6c5ce7', color2: '#e17055',
+    elo: 904, viewers: '5.7K', viewersNum: 5700, progress: 30,
+    topicKey: 'politics-ethics',
+    secondaryTopics: ['politics-law', 'foreign-policy'],
+    subTags: ['democracy', 'governance'],
+    gradient: 'linear-gradient(135deg, #0d0a2e 0%, #2e0d0d 100%)',
+    icon: '🗳️',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'AI will eliminate more jobs than it creates',
+    debater1: 'TechRealist', debater2: 'AIOptimist',
+    color1: '#00cec9', color2: '#a29bfe',
+    elo: 776, viewers: '1.2K', viewersNum: 1200, progress: 65,
+    topicKey: 'science-tech',
+    secondaryTopics: ['economics'],
+    subTags: ['AI', 'automation'],
+    gradient: 'linear-gradient(135deg, #001e2e 0%, #0d001a 100%)',
+    icon: '🤖',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+  {
+    motion: 'The US should adopt ranked choice voting',
+    debater1: 'ElectionWatch', debater2: 'VotingRights',
+    color1: '#4a9eff', color2: '#fd79a8',
+    elo: 834, viewers: '987', viewersNum: 987, progress: 50,
+    topicKey: 'politics-law',
+    secondaryTopics: ['politics-ethics'],
+    subTags: ['electoral reform', 'voting'],
+    gradient: 'linear-gradient(135deg, #001a3d 0%, #1a001a 100%)',
+    icon: '✅',
+    debater1Stance: 'PRO',
+    debater2Stance: 'CON',
+  },
+];
+
+const UPCOMING = [
+  { motion: 'Should AI systems be granted legal personhood?',         topicKey: 'science-tech',    secondaryTopics: ['philosophy','politics-law'],   scheduledAt: 'Today · 4:00 PM ET',  debater1: 'TechRealist',  color1: '#00cec9', debater2: 'LegalEagle',     color2: '#e2b96b' },
+  { motion: 'Universal healthcare is economically viable in the US',  topicKey: 'economics',       secondaryTopics: ['politics-ethics'],              scheduledAt: 'Today · 6:30 PM ET',  debater1: 'EconDebater',  color1: '#55efc4', debater2: 'FuturePolicy',   color2: '#4a9eff' },
+  { motion: 'NATO expansion destabilizes more than it secures',       topicKey: 'foreign-policy',  secondaryTopics: ['politics-law'],                 scheduledAt: 'Tomorrow · 2:00 PM',  debater1: 'CosmosDebate', color1: '#4a9eff', debater2: 'GlobalMarket',   color2: '#6c5ce7' },
+  { motion: 'Affirmative action violates equal protection',           topicKey: 'politics-law',    secondaryTopics: ['politics-ethics'],              scheduledAt: 'Tomorrow · 5:00 PM',  debater1: 'LegalEagle',   color1: '#e2b96b', debater2: 'CivicDebater',   color2: '#fd79a8' },
+  { motion: 'Social media platforms should be public utilities',      topicKey: 'politics-ethics', secondaryTopics: ['politics-law','culture'],       scheduledAt: 'Thu · 7:00 PM ET',    debater1: 'Sneako',       color1: '#b2bec3', debater2: 'PhilosophyTube', color2: '#fd79a8' },
+  { motion: 'Colonialism explains more than it obscures in history',  topicKey: 'philosophy',      secondaryTopics: ['foreign-policy','culture'],     scheduledAt: 'Fri · 3:00 PM ET',    debater1: 'KairosMind',   color1: '#a29bfe', debater2: 'PhilosophyTube', color2: '#fd79a8' },
+  { motion: 'The Olympics should ban political protests',             topicKey: 'sports',          secondaryTopics: ['politics-ethics'],              scheduledAt: 'Fri · 5:00 PM ET',    debater1: 'SportsDebater',color1: '#fd9644', debater2: 'CivicVoice',     color2: '#4a9eff' },
+  { motion: 'Cancel culture strengthens accountability norms',        topicKey: 'culture',         secondaryTopics: ['politics-ethics'],              scheduledAt: 'Sat · 1:00 PM ET',    debater1: 'Sneako',       color1: '#b2bec3', debater2: 'KairosMind',     color2: '#a29bfe' },
+];
+
+const SIDEBAR_CHANNELS = [
+  { name: 'Destiny',       topic: 'AI in Government',      color: '#00b894', initial: 'D', topicKey: 'science-tech'    },
+  { name: 'HasanAbi',      topic: 'Universal Basic Income',color: '#e17055', initial: 'H', topicKey: 'economics'       },
+  { name: 'Sneako',        topic: 'Immigration Policy',    color: '#b2bec3', initial: 'S', topicKey: 'foreign-policy'  },
+  { name: 'CosmosDebate',  topic: 'Nuclear Energy',        color: '#4a9eff', initial: 'C', topicKey: 'science-tech'    },
+  { name: 'PhilosophyTube',topic: 'Free Speech Limits',    color: '#fd79a8', initial: 'P', topicKey: 'philosophy'      },
+  { name: 'LegalEagle',    topic: 'Affirmative Action',    color: '#e2b96b', initial: 'L', topicKey: 'politics-law'    },
+];
+
+const CAROUSEL_DATA = [
+  { debater: 'Destiny',       initials: 'D', color: '#00b894', viewersDisplay: '13.4K', viewersNum: 13400, motion: 'How AI Should Be Used in Government',  stance: 'ANTI', factCheck: { type: 'verified', label: 'verified'       }, gradient: 'linear-gradient(135deg,#0d1b4b 0%,#1a0533 50%,#2d1b69 100%)', topicKey: 'science-tech', debateIndex: 6    },
+  { debater: 'HasanAbi',      initials: 'H', color: '#e17055', viewersDisplay: '8.2K',  viewersNum: 8200,  motion: 'Universal Basic Income Now',           stance: 'PRO',  factCheck: { type: 'disputed', label: 'disputed claim'  }, gradient: 'linear-gradient(135deg,#0a2e1a 0%,#0d3b2e 50%,#1a4d3a 100%)', topicKey: 'economics',    debateIndex: 2    },
+  { debater: 'CosmosDebate',  initials: 'C', color: '#4a9eff', viewersDisplay: '2.1K',  viewersNum: 2100,  motion: 'Nuclear Energy is the Future',         stance: 'PRO',  factCheck: { type: 'verified', label: 'verified'       }, gradient: 'linear-gradient(135deg,#1a0a00 0%,#2d1500 50%,#3d2200 100%)', topicKey: 'science-tech', debateIndex: 3    },
+  { debater: 'PhilosophyTube',initials: 'P', color: '#fd79a8', viewersDisplay: '4.7K',  viewersNum: 4700,  motion: 'Free Speech Has No Absolute Limits',   stance: 'ANTI', factCheck: { type: 'checking', label: 'checking\u2026' }, gradient: 'linear-gradient(135deg,#0d0a2e 0%,#1a1040 50%,#2a1a5a 100%)', topicKey: 'philosophy',   debateIndex: 5    },
+];
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: ARGUMENT DATA
+// ═══════════════════════════════════════════════
+
+const DEBATE_ARGS = [
+  // 0: Social media causes teen depression
+  [
+    { side: 'pro', debater: 'Destiny',   color: '#00b894', time: '14:32', text: 'Instagram\'s internal research showed a 13% increase in self-harm ideation among heavy users. The causal link is clear.' },
+    { side: 'con', debater: 'KairosMind',color: '#6c5ce7', time: '14:35', text: 'Correlation ≠ causation. Depression rates were already climbing before social media. We need to control for confounds.' },
+    { side: 'pro', debater: 'Destiny',   color: '#00b894', time: '14:41', text: 'Social comparison algorithms are deliberately engineered to maximize engagement regardless of psychological harm.' },
+    { side: 'con', debater: 'KairosMind',color: '#6c5ce7', time: '14:44', text: 'The same teens who suffer offline isolation show worse outcomes. This is a social problem, not a platform problem.' },
+    { side: 'pro', debater: 'Destiny',   color: '#00b894', time: '14:50', text: 'Platforms profit from outrage cycles. The incentive structure is fundamentally misaligned with user wellbeing.' },
+    { side: 'con', debater: 'KairosMind',color: '#6c5ce7', time: '14:53', text: 'Blaming platforms obscures the real policy levers: school counseling, family support, economic security.' },
+  ],
+  // 1: Affirmative action is constitutional
+  [
+    { side: 'pro', debater: 'LegalEagle',      color: '#e2b96b', time: '11:15', text: 'Grutter v. Bollinger upheld race-conscious admissions for educational diversity under strict scrutiny. Compelling interest exists.' },
+    { side: 'con', debater: 'SocraticDebates', color: '#4a9eff', time: '11:19', text: 'SFFA v. Harvard overturned Grutter. The Court found no workable end point — programs violate the Equal Protection Clause.' },
+    { side: 'pro', debater: 'LegalEagle',      color: '#e2b96b', time: '11:25', text: 'The majority opinion left open race-neutral alternatives that achieve equivalent diversity outcomes.' },
+    { side: 'con', debater: 'SocraticDebates', color: '#4a9eff', time: '11:29', text: 'The 14th Amendment is colorblind. State actors cannot use race as a sorting mechanism, full stop.' },
+    { side: 'pro', debater: 'LegalEagle',      color: '#e2b96b', time: '11:34', text: 'Historical injustice requires targeted remediation. Abstract colorblindness perpetuates structural inequity.' },
+    { side: 'con', debater: 'SocraticDebates', color: '#4a9eff', time: '11:38', text: 'Redistribution via race risks stigmatizing beneficiaries and entrenching identity politics in legal frameworks.' },
+  ],
+  // 2: UBI would destroy work ethic
+  [
+    { side: 'pro', debater: 'EconDebater', color: '#e17055', time: '09:10', text: 'Mankiw\'s labor supply analysis: guaranteed income reduces the marginal utility of labor. Hours worked decline meaningfully.' },
+    { side: 'con', debater: 'FuturePolicy', color: '#00cec9', time: '09:13', text: 'Finland\'s 2017 pilot showed no significant drop in employment rates. People found purpose in work beyond money.' },
+    { side: 'pro', debater: 'EconDebater', color: '#e17055', time: '09:19', text: 'A small pilot in a high-trust welfare state generalizes poorly to the US labor market.' },
+    { side: 'con', debater: 'FuturePolicy', color: '#00cec9', time: '09:23', text: 'Stockton\'s SEED program: full-time employment rose among recipients. UBI enabled job-seeking, not idleness.' },
+    { side: 'pro', debater: 'EconDebater', color: '#e17055', time: '09:28', text: 'Neither pilot was truly universal or unconditional at scale. Cherry-picked selection effects dominate.' },
+    { side: 'con', debater: 'FuturePolicy', color: '#00cec9', time: '09:32', text: 'The "work ethic" framing is a moral panic. People derive identity from contribution regardless of cash transfers.' },
+  ],
+  // 3: Nuclear is greener than solar
+  [
+    { side: 'pro', debater: 'ScienceMatters', color: '#4a9eff', time: '16:05', text: 'Lifecycle CO₂: nuclear ~12g/kWh vs solar ~40g/kWh. Nuclear wins on carbon intensity per unit of energy.' },
+    { side: 'con', debater: 'GreenFuture',    color: '#00b894', time: '16:09', text: 'Solar costs have dropped 90% in a decade. Nuclear construction timelines average 14 years with massive cost overruns.' },
+    { side: 'pro', debater: 'ScienceMatters', color: '#4a9eff', time: '16:14', text: 'Solar\'s intermittency requires storage or gas backup, which inflates the true carbon cost per reliable kWh.' },
+    { side: 'con', debater: 'GreenFuture',    color: '#00b894', time: '16:18', text: 'Battery storage costs have also plummeted. Grid-scale projects are now cost-competitive with baseload nuclear.' },
+    { side: 'pro', debater: 'ScienceMatters', color: '#4a9eff', time: '16:24', text: 'Land use: nuclear occupies ~3 km² per GW. Utility solar requires ~75 km². Density matters for biodiversity.' },
+    { side: 'con', debater: 'GreenFuture',    color: '#00b894', time: '16:27', text: 'Waste storage: spent nuclear fuel remains hazardous for 10,000 years. No permanent disposal solution exists.' },
+  ],
+  // 4: Free trade hurts American workers
+  [
+    { side: 'pro', debater: 'TradeRealist', color: '#fd79a8', time: '13:20', text: 'Autor, Dorn & Hanson quantified the China shock: 2.4M US manufacturing jobs lost, with no reemployment in affected regions.' },
+    { side: 'con', debater: 'GlobalMarket', color: '#e2b96b', time: '13:24', text: 'Lower consumer prices from trade save the median household $1,500/year. The gains are real but diffuse.' },
+    { side: 'pro', debater: 'TradeRealist', color: '#fd79a8', time: '13:30', text: 'Diffuse gains vs. concentrated geographic losses create political instability. The aggregate GDP figure hides devastation.' },
+    { side: 'con', debater: 'GlobalMarket', color: '#e2b96b', time: '13:34', text: 'The solution is redistribution policy, not protectionism. Trade adjustment assistance has structural merit.' },
+    { side: 'pro', debater: 'TradeRealist', color: '#fd79a8', time: '13:39', text: 'TAA programs historically reach less than 10% of displaced workers. The policy theory doesn\'t survive contact with reality.' },
+    { side: 'con', debater: 'GlobalMarket', color: '#e2b96b', time: '13:42', text: 'Tariffs are a tax on domestic consumers and exporters. Protectionism invites retaliation that costs more jobs net.' },
+  ],
+  // 5: Democracy is failing in the West
+  [
+    { side: 'pro', debater: 'PoliticsNow',  color: '#6c5ce7', time: '20:05', text: 'Freedom House data: democratic backsliding in 73 countries including Hungary, Poland, and the US for 15 consecutive years.' },
+    { side: 'con', debater: 'CivicDebater', color: '#e17055', time: '20:09', text: 'Western institutions survived Trump, Brexit, Orbán. Democratic resilience is precisely the story being missed.' },
+    { side: 'pro', debater: 'PoliticsNow',  color: '#6c5ce7', time: '20:15', text: 'Courts are being captured, electoral systems gamed, and media ecosystems fragmented beyond repair.' },
+    { side: 'con', debater: 'CivicDebater', color: '#e17055', time: '20:19', text: 'Independent judiciaries blocked most democratic erosion attempts. The checks and balances worked as designed.' },
+    { side: 'pro', debater: 'PoliticsNow',  color: '#6c5ce7', time: '20:25', text: 'Trust in democratic institutions is at all-time lows across OECD nations. Legitimacy crisis is real.' },
+    { side: 'con', debater: 'CivicDebater', color: '#e17055', time: '20:28', text: 'Low trust reflects healthy skepticism, not failure. High trust in government correlates with authoritarianism.' },
+  ],
+  // 6: AI will eliminate more jobs than it creates
+  [
+    { side: 'pro', debater: 'TechRealist', color: '#00cec9', time: '15:00', text: 'McKinsey: 375 million workers face displacement by 2030. Cognitive task automation is qualitatively different from prior waves.' },
+    { side: 'con', debater: 'AIOptimist',  color: '#a29bfe', time: '15:04', text: 'Every technological revolution created net employment. The Luddite fallacy resurfaces with each new wave of automation.' },
+    { side: 'pro', debater: 'TechRealist', color: '#00cec9', time: '15:10', text: 'Speed of displacement is unprecedented. Past transitions took decades; AI is restructuring cognitive labor in years.' },
+    { side: 'con', debater: 'AIOptimist',  color: '#a29bfe', time: '15:14', text: 'AI augments human workers. Radiologists using AI diagnose faster and more accurately — they aren\'t replaced.' },
+    { side: 'pro', debater: 'TechRealist', color: '#00cec9', time: '15:20', text: 'Augmentation works at the frontier. Routine clerical, legal research, and customer service roles are already hollowing out.' },
+    { side: 'con', debater: 'AIOptimist',  color: '#a29bfe', time: '15:24', text: 'New industries emerge: AI trainers, auditors, ethicists, and the countless roles we haven\'t yet imagined.' },
+  ],
+  // 7: Ranked choice voting
+  [
+    { side: 'pro', debater: 'ElectionWatch', color: '#4a9eff', time: '18:10', text: 'RCV eliminates the spoiler effect and allows voters to express true preferences without strategic compromise.' },
+    { side: 'con', debater: 'VotingRights',  color: '#fd79a8', time: '18:14', text: 'Maine 2018: 8,000 ballots exhausted. Voters who ranked only one candidate were disenfranchised in later rounds.' },
+    { side: 'pro', debater: 'ElectionWatch', color: '#4a9eff', time: '18:20', text: 'Ballot exhaustion reflects voter choice. Mandating preference ranking also works, as in Australian federal elections.' },
+    { side: 'con', debater: 'VotingRights',  color: '#fd79a8', time: '18:24', text: 'Complexity disproportionately affects low-literacy and elderly voters. Simple systems maximize participation equity.' },
+    { side: 'pro', debater: 'ElectionWatch', color: '#4a9eff', time: '18:30', text: 'Alaska 2022 showed higher turnout and cross-partisan support under RCV. The participation data refutes the complexity claim.' },
+    { side: 'con', debater: 'VotingRights',  color: '#fd79a8', time: '18:33', text: 'Delayed results undermine trust. When winner isn\'t known election night, conspiracy theories fill the vacuum.' },
+  ],
+];
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: VOTE DATA STATE
+//  voteCounts[i] = { pro: number, con: number }
+//  userVotes[i]  = 'pro' | 'con' | null
+// ═══════════════════════════════════════════════
+
+const INITIAL_VOTES = [
+  { pro: 3814, con: 2109 },  // social media depression
+  { pro: 1024, con: 1387 },  // affirmative action
+  { pro: 2180, con: 2910 },  // UBI
+  { pro: 748,  con: 512  },  // nuclear vs solar
+  { pro: 1870, con: 1340 },  // free trade
+  { pro: 4210, con: 2890 },  // democracy failing
+  { pro: 1023, con: 672  },  // AI jobs
+  { pro: 631,  con: 578  },  // ranked choice
+];
+
+let voteCounts = INITIAL_VOTES.map(v => ({ pro: v.pro, con: v.con }));
+let userVotes  = new Array(DEBATES.length).fill(null);
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+
+let currentSlide    = 0;
+let autoPlayTimer   = null;
+let activeTopicKey  = 'all';
+let eloScope        = 'global';  // 'global' | 'topic'
+let searchQuery     = '';
+let modalOpenIndex  = -1;
+
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+
+function getTopicDebateCount(key) {
+  if (key === 'all') return DEBATES.length;
+  return DEBATES.filter(d => d.topicKey === key || (d.secondaryTopics && d.secondaryTopics.includes(key))).length;
+}
+
+function getTopicViewerSum(key) {
+  if (key === 'all') return DEBATES.reduce((s, d) => s + d.viewersNum, 0);
+  return DEBATES.filter(d => d.topicKey === key || (d.secondaryTopics && d.secondaryTopics.includes(key)))
+    .reduce((s, d) => s + d.viewersNum, 0);
+}
+
+function getTrendingTopicKey() {
+  let best = null, bestSum = -1;
+  Object.keys(TOPICS).forEach(k => {
+    const s = getTopicViewerSum(k);
+    if (s > bestSum) { bestSum = s; best = k; }
+  });
+  return best;
+}
+
+function getHotMotion(key) {
+  const pool = key === 'all'
+    ? DEBATES
+    : DEBATES.filter(d => d.topicKey === key || (d.secondaryTopics && d.secondaryTopics.includes(key)));
+  if (!pool.length) return null;
+  return pool.reduce((a, b) => a.viewersNum > b.viewersNum ? a : b);
+}
+
+function getRisingDebater(key) {
+  const pool = key === 'all'
+    ? DEBATERS.filter(d => d.trendDir === 'up')
+    : DEBATERS.filter(d => d.trendDir === 'up' && d.topicKeys.includes(key));
+  if (!pool.length) return null;
+  return pool.reduce((a, b) => b.trendDelta > a.trendDelta ? b : a);
+}
+
+function getFilteredDebates(key) {
+  if (key === 'all') return DEBATES;
+  return DEBATES.filter(d => d.topicKey === key || (d.secondaryTopics && d.secondaryTopics.includes(key)));
+}
+
+function getFilteredUpcoming(key) {
+  if (key === 'all') return UPCOMING.slice(0, 3);
+  return UPCOMING.filter(u => u.topicKey === key || (u.secondaryTopics && u.secondaryTopics.includes(key)));
+}
+
+function trendIcon(dir, delta) {
+  if (dir === 'up')   return `<span class="elo-trend up">▲ ${delta}</span>`;
+  if (dir === 'down') return `<span class="elo-trend down">▼ ${Math.abs(delta)}</span>`;
+  return `<span class="elo-trend flat">—</span>`;
+}
+
+function rankClass(i) {
+  if (i === 0) return 'gold';
+  if (i === 1) return 'silver';
+  if (i === 2) return 'bronze';
+  return '';
+}
+
+function fmtNumber(n) {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
+function getVotePct(index) {
+  const v = voteCounts[index];
+  const total = v.pro + v.con;
+  if (!total) return { pro: 50, con: 50 };
+  return { pro: Math.round(v.pro / total * 100), con: Math.round(v.con / total * 100) };
+}
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: SEARCH
+// ═══════════════════════════════════════════════
+
+function getSearchResults(query) {
+  if (!query.trim()) return null;
+  const q = query.toLowerCase();
+  return DEBATES.map((d, i) => ({ d, i })).filter(({ d }) =>
+    d.motion.toLowerCase().includes(q) ||
+    d.debater1.toLowerCase().includes(q) ||
+    d.debater2.toLowerCase().includes(q) ||
+    (TOPICS[d.topicKey]?.label || '').toLowerCase().includes(q) ||
+    (d.subTags || []).some(t => t.toLowerCase().includes(q))
+  );
+}
+
+// ═══════════════════════════════════════════════
+//  CAROUSEL
+// ═══════════════════════════════════════════════
+
+function renderCarousel() {
+  const track = document.getElementById('carouselTrack');
+  const dots  = document.getElementById('carouselDots');
+
+  track.innerHTML = CAROUSEL_DATA.map((c, i) => `
+    <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
+      <div class="carousel-bg" style="background:${c.gradient};"></div>
+      <div class="carousel-bg-grid"></div>
+      <div class="carousel-live-badge"><div class="carousel-live-dot"></div> LIVE</div>
+      <div class="carousel-viewers">👁 ${c.viewersDisplay} viewers</div>
+      <div class="carousel-lower-third">
+        <div class="carousel-motion">"${c.motion}"</div>
+        <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
+      </div>
+      <div class="carousel-panel">
+        <div class="panel-avatar" style="background:${c.color};">${c.initials}</div>
+        <div class="panel-name">${c.debater}</div>
+        <div class="panel-viewers">👁 ${c.viewersDisplay} viewers</div>
+        <div class="panel-topic">${c.motion}</div>
+        <div class="panel-stance ${c.stance.toLowerCase()}">${c.stance}</div>
+        <div class="panel-factcheck">
+          <div class="fact-chip ${c.factCheck.type}">${c.factCheck.type === 'verified' ? '✓' : c.factCheck.type === 'disputed' ? '⚠' : '⟳'} ${c.factCheck.label}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  dots.innerHTML = CAROUSEL_DATA.map((_, i) =>
+    `<div class="carousel-dot${i === 0 ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
+  ).join('');
+
+  dots.querySelectorAll('.carousel-dot').forEach(dot => {
+    dot.addEventListener('click', () => { goToSlide(parseInt(dot.dataset.index)); resetAutoPlay(); });
+    dot.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { goToSlide(parseInt(dot.dataset.index)); resetAutoPlay(); }});
+  });
+
+  // Phase 2: wire carousel watch buttons
+  track.querySelectorAll('.carousel-watch-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.debateIndex);
+      if (!isNaN(idx)) openDebateModal(idx);
+    });
+  });
+}
+
+function goToSlide(index) {
+  currentSlide = (index + CAROUSEL_DATA.length) % CAROUSEL_DATA.length;
+  document.getElementById('carouselTrack').style.transform = `translateX(-${currentSlide * 100}%)`;
+  document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+}
+
+function startAutoPlay() {
+  autoPlayTimer = setInterval(() => goToSlide(currentSlide + 1), 5000);
+}
+
+function resetAutoPlay() {
+  clearInterval(autoPlayTimer);
+  startAutoPlay();
+}
+
+// ═══════════════════════════════════════════════
+//  SIDEBAR CHANNELS
+// ═══════════════════════════════════════════════
+
+function renderSidebarChannels() {
+  const container = document.getElementById('sidebarChannels');
+  container.innerHTML = SIDEBAR_CHANNELS.map(ch => `
+    <div class="live-channel" data-topic="${ch.topicKey}" role="button" tabindex="0" aria-label="Watch ${ch.name}">
+      <div class="channel-avatar" style="background:${ch.color};">${ch.initial}</div>
+      <div class="channel-info">
+        <div class="channel-name">${ch.name}</div>
+        <div class="channel-topic">${ch.topic}</div>
+      </div>
+      <div class="live-dot"></div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.live-channel').forEach(el => {
+    el.addEventListener('click', () => setActiveTopic(el.dataset.topic));
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') setActiveTopic(el.dataset.topic); });
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  TOPIC BUTTONS
+// ═══════════════════════════════════════════════
+
+function renderTopicButtons() {
+  const row = document.getElementById('categoryRow');
+  const trendingKey = getTrendingTopicKey();
+
+  row.innerHTML = Object.entries(TOPICS).map(([key, t]) => {
+    const count     = getTopicDebateCount(key);
+    const isTrend   = key === trendingKey;
+    const isActive  = key === activeTopicKey;
+    const liveText  = count > 0 ? `${count} live${isTrend ? ' 🔥' : ''}` : 'no live';
+
+    const activeStyle = isActive
+      ? `background:rgba(${t.accentRgb},0.12);border-color:${t.accent};box-shadow:0 0 0 1px ${t.accent}40,0 4px 24px ${t.accent}28;`
+      : '';
+
+    return `
+      <button
+        class="category-btn${isActive ? ' active' : ''}${isTrend ? ' trending' : ''}"
+        data-topic="${key}"
+        aria-pressed="${isActive}"
+        style="${activeStyle}"
+      >
+        <span class="btn-label" style="${isActive ? `color:${t.accent};` : ''}">${t.emoji} ${t.label}</span>
+        <span class="btn-live-line" style="${isActive ? `color:${t.accent};opacity:0.7;` : ''}">${liveText}</span>
+      </button>
+    `;
+  }).join('');
+
+  row.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.topic;
+      setActiveTopic(key === activeTopicKey ? 'all' : key);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  TOPIC STRIP
+// ═══════════════════════════════════════════════
+
+function renderTopicStrip() {
+  const strip = document.getElementById('topicStrip');
+
+  if (activeTopicKey === 'all') {
+    strip.classList.remove('visible');
+    strip.innerHTML = '';
+    return;
+  }
+
+  const t       = TOPICS[activeTopicKey];
+  const count   = getTopicDebateCount(activeTopicKey);
+  const hot     = getHotMotion(activeTopicKey);
+  const rising  = getRisingDebater(activeTopicKey);
+
+  const hotHTML = hot
+    ? `<div class="strip-divider"></div>
+       <div style="display:flex;align-items:center;gap:5px;min-width:0;">
+         <span class="strip-hot-label">hot</span>
+         <span class="strip-hot-motion">"${hot.motion}"</span>
+       </div>`
+    : '';
+
+  const risingHTML = rising
+    ? `<div class="strip-divider"></div>
+       <div class="strip-rising">
+         <span style="font-size:10px;color:var(--text-dim);">rising</span>
+         <span class="strip-rising-name">◆ ${rising.name}</span>
+         <span class="strip-trend-up">▲</span>
+       </div>`
+    : '';
+
+  strip.innerHTML = `
+    <div class="topic-strip-inner" style="--topic-strip-accent:${t.accent};">
+      <div class="strip-left">
+        <span class="strip-emoji">${t.emoji}</span>
+        <div class="strip-info">
+          <span class="strip-label" style="color:${t.accent};">${t.label}</span>
+          <span class="strip-desc">${t.description}</span>
+        </div>
+      </div>
+      <div class="strip-right">
+        <div class="strip-stat-pill">
+          <div class="strip-live-dot"></div>
+          <span style="color:var(--text-muted);">${count} live</span>
+        </div>
+        ${hotHTML}
+        ${risingHTML}
+        <div class="strip-divider"></div>
+        <a class="strip-explore" href="#">Explore ${t.label} →</a>
+      </div>
+    </div>
+  `;
+
+  requestAnimationFrame(() => strip.classList.add('visible'));
+}
+
+// ═══════════════════════════════════════════════
+//  DEBATE GRID  (Phase 2: vote bars + watch overlay)
+// ═══════════════════════════════════════════════
+
+function buildDebateCard(d, realIndex) {
+  const pct     = getVotePct(realIndex);
+  const voted   = userVotes[realIndex];
+  const t       = TOPICS[d.topicKey];
+
+  const votedBadgeHTML = voted
+    ? `<span class="card-voted-badge ${voted}">✓ voted ${voted.toUpperCase()}</span>`
+    : '';
+
+  const primaryTag = activeTopicKey !== 'all' && d.topicKey !== activeTopicKey
+    ? `<span class="card-secondary-tag">${TOPICS[d.topicKey]?.emoji || ''} ${TOPICS[d.topicKey]?.label || d.topicKey}</span>`
+    : `<span class="card-tag">${TOPICS[d.topicKey]?.label || d.topicKey}</span>`;
+
+  return `
+    <div class="debate-card" tabindex="0" role="button" aria-label="${d.motion}" data-debate-index="${realIndex}">
+      <div class="card-thumb" style="background:${d.gradient};">
+        <div class="card-live-badge"><div class="card-live-dot"></div> LIVE</div>
+        <div class="card-viewers">👁 ${d.viewers}</div>
+        <div class="card-thumb-icon">${d.icon}</div>
+        <div class="card-watch-overlay"><span class="card-watch-label">▶ Watch Live</span></div>
+      </div>
+      <div class="card-body">
+        <div class="card-motion">"${d.motion}"</div>
+        <div class="card-meta">
+          <div class="card-debaters">
+            <div class="mini-avatar" style="background:${d.color1};">${d.debater1[0]}</div>
+            <div class="mini-avatar" style="background:${d.color2};margin-left:-6px;">${d.debater2[0]}</div>
+            <div class="debater-names">${d.debater1} vs ${d.debater2}</div>
+          </div>
+          <div class="card-elo"><span class="card-elo-diamond">◆</span> ${d.elo}</div>
+        </div>
+        <div class="card-footer">
+          ${primaryTag}
+          ${votedBadgeHTML}
+        </div>
+        <div class="card-vote-labels">
+          <span class="card-vote-pct pro">PRO ${pct.pro}%</span>
+          <span class="card-vote-pct con">CON ${pct.con}%</span>
+        </div>
+        <div class="card-vote-bar">
+          <div class="card-vote-bar-pro" style="width:${pct.pro}%;"></div>
+          <div class="card-vote-bar-con" style="width:${pct.con}%;"></div>
+        </div>
+      </div>
+      <div class="card-progress">
+        <div class="card-progress-bar" style="width:${d.progress}%;"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDebateGrid() {
+  const grid  = document.getElementById('debateGrid');
+  const title = document.getElementById('gridTitle');
+  const countBadge = document.getElementById('searchResultCount');
+
+  // Search mode overrides topic filter
+  if (searchQuery.trim()) {
+    const results = getSearchResults(searchQuery);
+    title.textContent = 'Search Results';
+    countBadge.textContent = `${results.length} found`;
+    countBadge.classList.add('visible');
+
+    grid.classList.add('fading');
+    setTimeout(() => {
+      if (results.length === 0) {
+        grid.innerHTML = `
+          <div class="search-empty-state">
+            <div class="search-empty-icon">🔍</div>
+            <div class="search-empty-title">No debates match "${searchQuery}"</div>
+            <div class="search-empty-sub">Try a different keyword, debater name, or topic.</div>
+          </div>
+        `;
+      } else {
+        grid.innerHTML = results.map(({ d, i }) => buildDebateCard(d, i)).join('');
+        attachCardListeners(grid);
+      }
+      grid.classList.remove('fading');
+    }, 100);
+    return;
+  }
+
+  countBadge.classList.remove('visible');
+  const t = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
+  title.textContent = t ? `${t.emoji} ${t.label} · Live Now` : 'Live Debates';
+
+  const filtered = getFilteredDebates(activeTopicKey);
+
+  grid.classList.add('fading');
+  setTimeout(() => {
+    if (filtered.length === 0) {
+      const upcomingInTopic = getFilteredUpcoming(activeTopicKey);
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">${t ? t.emoji : '🎙️'}</div>
+          <div class="empty-title">No live debates in ${t ? t.label : 'this topic'} right now</div>
+          <div class="empty-sub">Check back soon — this arena heats up fast.</div>
+          ${upcomingInTopic.length ? `
+            <div class="upcoming-label">Scheduled · Up Next</div>
+            <div class="upcoming-list">
+              ${upcomingInTopic.map(u => `
+                <div class="upcoming-card" tabindex="0" role="button">
+                  <div class="upcoming-time-pill">${u.scheduledAt.replace(' · ', '<br>')}</div>
+                  <div class="upcoming-info">
+                    <div class="upcoming-motion">"${u.motion}"</div>
+                    <div class="upcoming-debaters">
+                      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${u.color1};margin-right:4px;vertical-align:middle;"></span>${u.debater1}
+                      <span style="color:var(--text-dim);margin:0 4px;">vs</span>
+                      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${u.color2};margin-right:4px;vertical-align:middle;"></span>${u.debater2}
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <a href="#" style="margin-top:12px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text-dim);text-decoration:none;">See all upcoming →</a>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      grid.innerHTML = filtered.map(d => {
+        const realIndex = DEBATES.indexOf(d);
+        return buildDebateCard(d, realIndex);
+      }).join('');
+      attachCardListeners(grid);
+    }
+    grid.classList.remove('fading');
+  }, 150);
+}
+
+function attachCardListeners(grid) {
+  grid.querySelectorAll('.debate-card').forEach(card => {
+    const idx = parseInt(card.dataset.debateIndex);
+    card.addEventListener('click',   () => openDebateModal(idx));
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openDebateModal(idx); });
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  ELO MODULE
+// ═══════════════════════════════════════════════
+
+function renderELOModule() {
+  const mod = document.getElementById('eloModule');
+  const t   = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
+
+  const topicBtnDisabled = activeTopicKey === 'all' ? 'disabled' : '';
+  const topicBtnTitle    = activeTopicKey === 'all' ? 'Select a topic to filter' : '';
+
+  let pool;
+  if (eloScope === 'topic' && activeTopicKey !== 'all') {
+    pool = DEBATERS.filter(d => d.topicKeys.includes(activeTopicKey))
+      .sort((a, b) => b.globalElo - a.globalElo)
+      .slice(0, 4);
+  } else {
+    pool = [...DEBATERS].sort((a, b) => b.globalElo - a.globalElo).slice(0, 4);
+  }
+
+  const listHTML = pool.length > 0
+    ? pool.map((d, i) => `
+        <div class="elo-row" tabindex="0" role="button" aria-label="${d.name}, ELO ${d.globalElo}">
+          <div class="elo-rank ${rankClass(i)}">#${i + 1}</div>
+          <div class="elo-avatar-sm" style="background:${d.color};">${d.initials}</div>
+          <div class="elo-info">
+            <div class="elo-name">${d.name}</div>
+            <div class="elo-specialty">${TOPICS[d.specialty]?.label || d.specialty}</div>
+          </div>
+          <div class="elo-score-col">
+            <div class="elo-score"><span class="elo-score-diamond">◆</span> ${d.globalElo.toLocaleString()}</div>
+            ${trendIcon(d.trendDir, d.trendDelta)}
+          </div>
+        </div>
+      `).join('')
+    : `<div class="elo-empty">No ranked debaters in ${t?.label || 'this topic'} yet.<br><span style="color:var(--text-dim);">Be the first to compete. →</span></div>`;
+
+  const moduleTitle = eloScope === 'topic' && t
+    ? `${t.emoji} Top in ${t.label}`
+    : 'Top Debaters';
+
+  mod.innerHTML = `
+    <div class="elo-module-header">
+      <div class="elo-module-title">${moduleTitle}</div>
+      <div class="elo-scope-toggle" role="group" aria-label="ELO scope">
+        <button class="scope-btn${eloScope === 'global' ? ' active' : ''}" data-scope="global">Global</button>
+        <button class="scope-btn${eloScope === 'topic'  ? ' active' : ''}" data-scope="topic" ${topicBtnDisabled} title="${topicBtnTitle}">This Topic</button>
+      </div>
+    </div>
+    <div class="elo-list">${listHTML}</div>
+    <div class="elo-module-footer">
+      <a class="elo-explore-link" href="#">View full rankings →</a>
+      <span class="elo-total-count">${DEBATERS.length} ranked</span>
+    </div>
+  `;
+
+  mod.querySelectorAll('.scope-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      eloScope = btn.dataset.scope;
+      mod.classList.add('fading');
+      setTimeout(() => {
+        renderELOModule();
+        mod.classList.remove('fading');
+      }, 120);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  TOPIC STATE CONTROLLER
+// ═══════════════════════════════════════════════
+
+function setActiveTopic(key) {
+  activeTopicKey = key;
+  eloScope = 'global';
+
+  try {
+    localStorage.setItem('agora_topic', key);
+    const url = new URL(window.location);
+    if (key === 'all') { url.searchParams.delete('topic'); }
+    else               { url.searchParams.set('topic', key); }
+    history.replaceState(null, '', url);
+  } catch (_) {}
+
+  renderTopicButtons();
+  renderTopicStrip();
+  renderDebateGrid();
+  renderELOModule();
+}
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: DEBATE ROOM MODAL
+// ═══════════════════════════════════════════════
+
+function openDebateModal(index) {
+  if (index < 0 || index >= DEBATES.length) return;
+  modalOpenIndex = index;
+  const modal = document.getElementById('debateModal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  renderDebateRoom(index);
+  modal.focus();
+}
+
+function closeDebateModal() {
+  const modal = document.getElementById('debateModal');
+  modal.classList.add('closing');
+  setTimeout(() => {
+    modal.style.display = 'none';
+    modal.classList.remove('closing');
+    document.body.style.overflow = '';
+    modalOpenIndex = -1;
+  }, 180);
+}
+
+function renderDebateRoom(index) {
+  const d    = DEBATES[index];
+  const pct  = getVotePct(index);
+  const vc   = voteCounts[index];
+  const args = DEBATE_ARGS[index] || [];
+  const voted = userVotes[index];
+  const total  = vc.pro + vc.con;
+  const t      = TOPICS[d.topicKey];
+
+  const panel = document.getElementById('debateRoomPanel');
+
+  const argFeedHTML = args.map(a => `
+    <div class="feed-arg ${a.side}">
+      <div class="feed-arg-header">
+        <div class="feed-arg-avatar" style="background:${a.color};">${a.debater[0]}</div>
+        <div class="feed-arg-name">${a.debater}</div>
+        <span class="feed-arg-stance ${a.side}">${a.side.toUpperCase()}</span>
+        <span class="feed-arg-time">${a.time}</span>
+      </div>
+      <div class="feed-arg-text">${a.text}</div>
+      <div class="feed-arg-reactions">
+        <button class="feed-reaction-btn" data-arg-reaction="up" title="Strong argument">👍 <span class="react-count">${Math.floor(Math.random()*120)+8}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="down" title="Weak argument">👎 <span class="react-count">${Math.floor(Math.random()*30)+2}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Fire argument">🔥 <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
+      </div>
+    </div>
+  `).join('');
+
+  panel.innerHTML = `
+    <!-- HEADER -->
+    <div class="room-header">
+      <div class="room-live-badge"><div class="carousel-live-dot"></div> LIVE</div>
+      <div class="room-header-info">
+        <div class="room-motion">"${d.motion}"</div>
+        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ◆ ${d.elo} ELO stakes &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
+      </div>
+      <div class="room-viewers-pill">👁 ${d.viewers} viewers</div>
+      <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">✕</button>
+    </div>
+
+    <!-- BODY: stream + vote | argument feed -->
+    <div class="room-body">
+
+      <!-- STREAM -->
+      <div class="room-stream">
+        <div class="room-stream-bg" style="background:${d.gradient};"></div>
+        <div class="room-stream-grid"></div>
+        <div class="room-debater-split">
+          <div class="room-debater-side" style="background:${d.color1}18;">
+            <div class="room-debater-avatar" style="background:${d.color1};">${d.debater1[0]}</div>
+            <div class="room-debater-name-label">${d.debater1}</div>
+            <span class="room-stance-badge pro">PRO</span>
+          </div>
+          <div class="room-debater-side" style="background:${d.color2}18;">
+            <div class="room-debater-avatar" style="background:${d.color2};">${d.debater2[0]}</div>
+            <div class="room-debater-name-label">${d.debater2}</div>
+            <span class="room-stance-badge con">CON</span>
+          </div>
+          <div class="room-vs-divider">VS</div>
+        </div>
+      </div>
+
+      <!-- VOTE SECTION -->
+      <div class="room-vote-section">
+        <div class="room-vote-header">
+          <span class="room-vote-title">Audience Vote</span>
+          <span class="room-vote-count" id="roomVoteCount">${fmtNumber(total)} votes</span>
+        </div>
+
+        <div class="room-vote-bar-wrap">
+          <div class="room-vote-bar-pro" id="roomBarPro" style="width:${pct.pro}%;">
+            <span class="room-vote-bar-label pro">${pct.pro}%</span>
+          </div>
+          <div class="room-vote-bar-con" id="roomBarCon">
+            <span class="room-vote-bar-label con">${pct.con}%</span>
+          </div>
+        </div>
+
+        <div class="room-vote-pct-row">
+          <div class="room-vote-pct-item pro">
+            <div class="room-vote-pct-dot pro"></div>
+            <span>PRO</span>
+            <span class="room-vote-pct-num" id="roomProPct">${pct.pro}%</span>
+            <span style="font-size:10px;color:var(--text-dim);">(${fmtNumber(vc.pro)})</span>
+          </div>
+          <div class="room-vote-pct-item con">
+            <span style="font-size:10px;color:var(--text-dim);">(${fmtNumber(vc.con)})</span>
+            <span class="room-vote-pct-num" id="roomConPct">${pct.con}%</span>
+            <span>CON</span>
+            <div class="room-vote-pct-dot con"></div>
+          </div>
+        </div>
+
+        <div class="room-vote-buttons">
+          <button
+            class="room-vote-btn pro${voted === 'pro' ? ' voted' : ''}"
+            id="roomVotePro"
+            ${voted ? 'disabled' : ''}
+            aria-label="Vote PRO on this motion"
+          >
+            ${voted === 'pro' ? '✓ Voted PRO' : '👍 PRO'}
+          </button>
+          <button
+            class="room-vote-btn con${voted === 'con' ? ' voted' : ''}"
+            id="roomVoteCon"
+            ${voted ? 'disabled' : ''}
+            aria-label="Vote CON on this motion"
+          >
+            ${voted === 'con' ? '✓ Voted CON' : '👎 CON'}
+          </button>
+        </div>
+
+        <div class="room-vote-note" id="roomVoteNote">
+          ${voted ? `You voted ${voted.toUpperCase()}. Votes are locked for this session.` : 'Cast your vote to influence the debate ranking.'}
+        </div>
+
+        <div class="room-elo-stakes">
+          <span class="room-elo-stakes-label">◆ ELO at stake</span>
+          <span class="room-elo-stakes-val">${d.elo} points</span>
+        </div>
+      </div>
+
+      <!-- ARGUMENT FEED -->
+      <div class="room-feed-col">
+        <div class="room-feed-header">
+          <span class="room-feed-title">Live Arguments</span>
+          <div class="room-feed-live-dot"></div>
+        </div>
+        <div class="room-feed-list" id="roomFeedList">
+          ${argFeedHTML}
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  // Wire close button
+  document.getElementById('roomCloseBtn').addEventListener('click', closeDebateModal);
+
+  // Wire vote buttons
+  const btnPro = document.getElementById('roomVotePro');
+  const btnCon = document.getElementById('roomVoteCon');
+  if (btnPro) btnPro.addEventListener('click', () => castVote(index, 'pro'));
+  if (btnCon) btnCon.addEventListener('click', () => castVote(index, 'con'));
+
+  // Wire reaction buttons (toggle active state + increment count)
+  panel.querySelectorAll('.feed-reaction-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const span = btn.querySelector('.react-count');
+      if (span) {
+        const n = parseInt(span.textContent);
+        span.textContent = btn.classList.contains('active') ? n + 1 : n - 1;
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: VOTING
+// ═══════════════════════════════════════════════
+
+function castVote(index, side) {
+  if (userVotes[index]) return;  // already voted
+
+  userVotes[index] = side;
+  voteCounts[index][side] += 1;
+
+  // Update modal vote display
+  const pct = getVotePct(index);
+  const vc  = voteCounts[index];
+  const total = vc.pro + vc.con;
+
+  const barPro = document.getElementById('roomBarPro');
+  const barCon = document.getElementById('roomBarCon');
+  if (barPro) {
+    barPro.style.width = pct.pro + '%';
+    barPro.querySelector('.room-vote-bar-label').textContent = pct.pro + '%';
+  }
+  if (barCon) {
+    barCon.querySelector('.room-vote-bar-label').textContent = pct.con + '%';
+  }
+
+  const proPctEl = document.getElementById('roomProPct');
+  const conPctEl = document.getElementById('roomConPct');
+  if (proPctEl) proPctEl.textContent = pct.pro + '%';
+  if (conPctEl) conPctEl.textContent = pct.con + '%';
+
+  const countEl = document.getElementById('roomVoteCount');
+  if (countEl) countEl.textContent = fmtNumber(total) + ' votes';
+
+  const noteEl = document.getElementById('roomVoteNote');
+  if (noteEl) noteEl.textContent = `You voted ${side.toUpperCase()}. Votes are locked for this session.`;
+
+  const btnPro = document.getElementById('roomVotePro');
+  const btnCon = document.getElementById('roomVoteCon');
+  if (btnPro) {
+    btnPro.disabled  = true;
+    btnPro.classList.toggle('voted', side === 'pro');
+    btnPro.textContent = side === 'pro' ? '✓ Voted PRO' : '👍 PRO';
+  }
+  if (btnCon) {
+    btnCon.disabled  = true;
+    btnCon.classList.toggle('voted', side === 'con');
+    btnCon.textContent = side === 'con' ? '✓ Voted CON' : '👎 CON';
+  }
+
+  // Show toast
+  const d = DEBATES[index];
+  showToast(
+    side === 'pro' ? 'pro-vote' : 'con-vote',
+    side === 'pro' ? '👍' : '👎',
+    `You voted ${side.toUpperCase()}`,
+    `"${d.motion.substring(0, 45)}${d.motion.length > 45 ? '…' : ''}"`
+  );
+
+  // Update card vote bar in the grid (if visible)
+  const card = document.querySelector(`.debate-card[data-debate-index="${index}"]`);
+  if (card) {
+    const barProEl = card.querySelector('.card-vote-bar-pro');
+    const pctEls   = card.querySelectorAll('.card-vote-pct');
+    if (barProEl) barProEl.style.width = pct.pro + '%';
+    if (pctEls[0]) pctEls[0].textContent = `PRO ${pct.pro}%`;
+    if (pctEls[1]) pctEls[1].textContent = `CON ${pct.con}%`;
+
+    // Add voted badge
+    const footer = card.querySelector('.card-footer');
+    if (footer) {
+      const existing = footer.querySelector('.card-voted-badge');
+      if (!existing) {
+        const badge = document.createElement('span');
+        badge.className = `card-voted-badge ${side}`;
+        badge.textContent = `✓ voted ${side.toUpperCase()}`;
+        footer.appendChild(badge);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: TOAST SYSTEM
+// ═══════════════════════════════════════════════
+
+let toastIdCounter = 0;
+
+function showToast(type, icon, title, sub, duration = 3500) {
+  const container = document.getElementById('toastContainer');
+  const id = ++toastIdCounter;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.dataset.id = id;
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-content">
+      <div class="toast-title">${title}</div>
+      ${sub ? `<div class="toast-sub">${sub}</div>` : ''}
+    </div>
+    <button class="toast-close" aria-label="Dismiss">✕</button>
+  `;
+
+  toast.querySelector('.toast-close').addEventListener('click', () => dismissToast(id));
+  container.appendChild(toast);
+
+  setTimeout(() => dismissToast(id), duration);
+}
+
+function dismissToast(id) {
+  const toast = document.querySelector(`.toast[data-id="${id}"]`);
+  if (!toast) return;
+  toast.classList.add('removing');
+  setTimeout(() => toast.remove(), 200);
+}
+
+// ═══════════════════════════════════════════════
+//  PHASE 2: SEARCH HANDLING
+// ═══════════════════════════════════════════════
+
+function handleSearchInput(query) {
+  searchQuery = query;
+  const wrap = document.getElementById('navSearchWrap');
+  if (query.trim()) {
+    wrap.classList.add('has-query');
+  } else {
+    wrap.classList.remove('has-query');
+  }
+  renderDebateGrid();
+}
+
+// ═══════════════════════════════════════════════
+//  EVENT HANDLERS
+// ═══════════════════════════════════════════════
+
+document.getElementById('arrowLeft').addEventListener('click', () => { goToSlide(currentSlide - 1); resetAutoPlay(); });
+document.getElementById('arrowRight').addEventListener('click', () => { goToSlide(currentSlide + 1); resetAutoPlay(); });
+
+// Category row scroll on wheel
+document.getElementById('categoryRow').addEventListener('wheel', e => {
+  if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
+    e.preventDefault();
+    document.getElementById('categoryRow').scrollLeft += e.deltaY;
+  }
+}, { passive: false });
+
+// Hamburger
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// Sidebar nav links
+document.querySelectorAll('.sidebar-link').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+  });
+});
+
+// Phase 2: Search input (debounced)
+let searchDebounceTimer = null;
+document.getElementById('searchInput').addEventListener('input', e => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => handleSearchInput(e.target.value), 220);
+});
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    e.target.value = '';
+    handleSearchInput('');
+  }
+});
+
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const q = document.getElementById('searchInput').value;
+  handleSearchInput(q);
+});
+
+// Phase 2: Modal close on overlay click / Escape key
+document.getElementById('debateModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('debateModal')) closeDebateModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modalOpenIndex >= 0) closeDebateModal();
+});
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+
+function init() {
+  try {
+    const urlParam = new URLSearchParams(window.location.search).get('topic');
+    const stored   = localStorage.getItem('agora_topic');
+    const restored = (urlParam && TOPICS[urlParam]) ? urlParam
+                   : (stored  && TOPICS[stored])   ? stored
+                   : 'all';
+    activeTopicKey = restored;
+  } catch (_) {
+    activeTopicKey = 'all';
+  }
+
+  renderCarousel();
+  renderSidebarChannels();
+  renderTopicButtons();
+  renderTopicStrip();
+  renderDebateGrid();
+  renderELOModule();
+  startAutoPlay();
+
+  // Phase 2: welcome toast after a short delay
+  setTimeout(() => {
+    showToast('info', '🔴', 'Live debates in progress', '8 debates live now — click any card to watch', 5000);
+  }, 1200);
+}
+
+init();
+</script>
+</body>
+</html>

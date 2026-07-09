@@ -32,6 +32,8 @@ export interface DebateRoom {
   scheduled_start: string | null;
   started_at: string | null;
   ended_at: string | null;
+  // Why the room ended: 'inactive' | 'participant_left' | null (host ended).
+  close_reason: string | null;
   viewer_count: number;
   created_at: string;
   // Team sizes (new)
@@ -57,6 +59,12 @@ export interface DebateParticipant {
   // When the user raised their hand (null = lowered). Ordering the audience
   // queue oldest-first makes it fair; re-raising gets a fresh timestamp.
   hand_raised_at: string | null;
+  // Activity heartbeat (debaters): written every ~15s while connected,
+  // last_spoke_at while LiveKit VAD reports speech. Drives the
+  // server-authoritative inactivity closure.
+  last_seen_at: string | null;
+  last_spoke_at: string | null;
+  mic_muted: boolean;
   // Joined
   user?: User;
 }

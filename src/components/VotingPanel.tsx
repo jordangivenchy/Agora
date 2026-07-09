@@ -115,7 +115,9 @@ export default function VotingPanel({ roomId, currentUser }: Props) {
           You voted {myVote}
         </div>
       ) : (
-        <p className="text-xs text-text-muted text-center py-2">Sign in to vote</p>
+        <p className="text-xs text-text-muted text-center py-2">
+          <a href="/login" className="font-bold hover:text-text-primary">Sign in</a> to vote
+        </p>
       )}
     </div>
   );

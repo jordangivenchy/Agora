@@ -270,7 +270,7 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard, onO
         {loaded && !meId && (
           <div className="px-3 pb-3 text-center">
             <p className="text-xs" style={{ color: "var(--text-dim)" }}>
-              Sign in to see your friends
+              <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to see your friends
             </p>
           </div>
         )}

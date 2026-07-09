@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agora Sphere — Debate, Verified.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #18181f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0eff8;
+    --muted: rgba(240,239,248,0.45);
+    --dim: rgba(240,239,248,0.25);
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --accent3: #00cec9;
+    --gold: #e2b96b;
+    --danger: #e17055;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 20px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(10,10,15,0.7);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent2); }
+  nav ul { list-style: none; display: flex; gap: 36px; }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--accent);
+    color: white !important;
+    padding: 10px 22px;
+    border-radius: 6px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px !important;
+    letter-spacing: 0.02em !important;
+    transition: background 0.2s, transform 0.1s !important;
+  }
+  .nav-cta:hover { background: #7c6ff0 !important; transform: translateY(-1px); }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 120px 48px 80px;
+    position: relative;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+    width: 900px; height: 900px;
+    background: radial-gradient(ellipse, rgba(108,92,231,0.18) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid rgba(162,155,254,0.2);
+    padding: 6px 14px; border-radius: 100px;
+    margin-bottom: 32px;
+    animation: fadein 0.8s ease both;
+  }
+  .pulse-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 2s ease infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(52px, 8vw, 96px);
+    line-height: 0.95;
+    letter-spacing: -3px;
+    margin-bottom: 28px;
+    animation: fadein 0.9s 0.1s ease both;
+  }
+  h1 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent2);
+    letter-spacing: -1px;
+  }
+  .hero-sub {
+    max-width: 560px;
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 44px;
+    animation: fadein 1s 0.2s ease both;
+  }
+  .hero-actions {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    animation: fadein 1s 0.3s ease both;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 15px 34px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary:hover { background: #7c6ff0; transform: translateY(-2px); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border2);
+    padding: 15px 34px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
+
+  /* live debate ticker */
+  .live-ticker {
+    margin-top: 72px;
+    width: 100%; max-width: 780px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadein 1s 0.5s ease both;
+  }
+  .ticker-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .live-badge {
+    background: #e17055;
+    color: white;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 3px 7px; border-radius: 4px;
+    font-family: 'Syne', sans-serif;
+  }
+  .debate-row {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .debate-row:last-child { border-bottom: none; }
+  .debater {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .debater-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600; font-size: 13px;
+  }
+  .debater-score {
+    font-size: 11px;
+    color: var(--accent2);
+  }
+  .debater.right { text-align: right; }
+  .vs-badge {
+    font-size: 10px; letter-spacing: 0.1em;
+    color: var(--dim);
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+  }
+  .fact-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; letter-spacing: 0.05em;
+    padding: 3px 8px; border-radius: 4px;
+    margin-top: 4px;
+  }
+  .fact-chip.verified { background: rgba(0,206,201,0.1); color: var(--accent3); border: 1px solid rgba(0,206,201,0.2); }
+  .fact-chip.disputed { background: rgba(225,112,85,0.1); color: var(--danger); border: 1px solid rgba(225,112,85,0.2); }
+  .fact-chip.checking { background: rgba(226,185,107,0.1); color: var(--gold); border: 1px solid rgba(226,185,107,0.2); }
+
+  /* ─── SECTION COMMON ─── */
+  section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 16px;
+  }
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 1.0;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+  h2 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent2);
+  }
+  .section-sub {
+    font-size: 16px; color: var(--muted);
+    max-width: 520px; line-height: 1.7;
+    margin-bottom: 56px;
+  }
+
+  /* ─── HOW IT WORKS ─── */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .step {
+    background: var(--bg2);
+    padding: 36px 32px;
+    position: relative;
+  }
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 48px;
+    line-height: 1; letter-spacing: -2px;
+    color: rgba(108,92,231,0.2);
+    margin-bottom: 20px;
+  }
+  .step h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 18px;
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+  }
+  .step p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .step-icon {
+    position: absolute; top: 32px; right: 32px;
+    width: 36px; height: 36px;
+    background: rgba(108,92,231,0.12);
+    border: 1px solid rgba(108,92,231,0.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  /* ─── SCORING DISPLAY ─── */
+  .scoring-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+    align-items: center;
+  }
+  .score-visual { }
+  .score-main {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 80px;
+    letter-spacing: -4px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .score-label { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 32px; }
+  .score-bar-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .score-bar-label { font-size: 12px; color: var(--muted); width: 64px; flex-shrink: 0; }
+  .score-bar-track {
+    flex: 1; height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%; border-radius: 2px;
+    background: var(--accent2);
+    transition: width 1.2s cubic-bezier(0.16,1,0.3,1);
+  }
+  .score-bar-fill.logic { background: var(--accent); }
+  .score-bar-fill.evidence { background: var(--accent3); }
+  .score-bar-fill.clarity { background: #fdcb6e; }
+  .score-bar-fill.rebuttal { background: var(--danger); }
+  .score-bar-fill.rhetoric { background: #a29bfe; }
+  .score-bar-val { font-size: 12px; color: var(--muted); width: 30px; text-align: right; flex-shrink: 0; }
+  .score-info h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 28px;
+    letter-spacing: -1px; margin-bottom: 12px;
+  }
+  .score-info p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 20px; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag {
+    font-size: 11px; letter-spacing: 0.05em;
+    padding: 5px 12px; border-radius: 100px;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+
+  /* ─── PRICING ─── */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .plan {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 28px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .plan:hover { border-color: var(--border2); }
+  .plan.featured {
+    border-color: rgba(108,92,231,0.4);
+    background: linear-gradient(160deg, rgba(108,92,231,0.08) 0%, var(--bg2) 60%);
+  }
+  .plan-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    padding: 4px 14px; border-radius: 100px;
+    white-space: nowrap;
+  }
+  .plan-tier {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .plan-price {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 40px;
+    letter-spacing: -2px; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .plan-price span { font-size: 16px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+  .plan-desc { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .plan-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .plan-feature {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; color: var(--muted);
+    margin-bottom: 10px; line-height: 1.4;
+  }
+  .check { color: var(--accent3); flex-shrink: 0; margin-top: 1px; }
+  .plan-btn {
+    width: 100%; margin-top: 24px;
+    padding: 12px;
+    border-radius: 7px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 13px;
+    cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+  .plan-btn.outline {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text);
+  }
+  .plan-btn.outline:hover { border-color: rgba(255,255,255,0.3); }
+  .plan-btn.filled {
+    background: var(--accent);
+    border: none; color: white;
+  }
+  .plan-btn.filled:hover { background: #7c6ff0; }
+
+  /* ─── MANIFESTO ─── */
+  .manifesto {
+    text-align: center;
+    padding: 120px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .manifesto blockquote {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: clamp(28px, 4vw, 48px);
+    line-height: 1.3;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    margin-bottom: 28px;
+  }
+  .manifesto cite {
+    font-size: 13px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 24px;
+  }
+  footer .logo { font-size: 18px; }
+  .footer-links { display: flex; gap: 28px; }
+  .footer-links a {
+    font-size: 12px; color: var(--dim);
+    text-decoration: none; letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--muted); }
+  .footer-copy { font-size: 12px; color: var(--dim); }
+
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* divider lines */
+  .full-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    nav ul { display: none; }
+    section { padding: 64px 20px; }
+    h1 { letter-spacing: -2px; }
+    .steps-grid { grid-template-columns: 1fr; }
+    .scoring-section { grid-template-columns: 1fr; padding: 28px; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; padding: 32px 20px; }
+    .hero { padding: 100px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">Agora<span>Sphere</span></a>
+  <ul>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#scoring">Scoring</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+  </ul>
+  <a href="#" class="nav-cta">Join beta</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">
+    <div class="pulse-dot"></div>
+    Live debates · AI fact-checking · Real-time scoring
+  </div>
+  <h1>Where arguments<br><em>get tested.</em></h1>
+  <p class="hero-sub">
+    Agora Sphere is a live debate platform where LLMs fact-check claims in real time — scoring every argument on logic, evidence, clarity, rebuttal, and rhetoric. No echo chambers. No spin. Just verified discourse.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-primary">Request early access</button>
+    <button class="btn-secondary">Watch a live debate →</button>
+  </div>
+
+  <!-- Live debate ticker -->
+  <div class="live-ticker">
+    <div class="ticker-header">
+      <div class="live-badge">LIVE</div>
+      Active debates right now
+      <span style="margin-left: auto; color: var(--dim);">3 rooms · 214 watching</span>
+    </div>
+    <div class="debate-row">
+      <div class="debater">
+        <span class="debater-name">J. Rivera</span>
+        <span class="debater-score">ELO 847</span>
+        <span class="fact-chip verified">✓ verified claim</span>
+      </div>
+      <span class="vs-badge">VS</span>
+      <div class="debater right">
+        <span class="debater-name">K. Patel</span>
+        <span class="debater-score">ELO 912</span>
+        <span class="fact-chip disputed">✗ disputed claim</span>
+      </div>
+    </div>
+    <div class="debate-row">
+      <div class="debater">
+        <span class="debater-name">M. Chen</span>
+        <span class="debater-score">ELO 763</span>
+        <span class="fact-chip checking">⟳ checking…</span>
+      </div>
+      <span class="vs-badge">VS</span>
+      <div class="debater right">
+        <span class="debater-name">T. Okafor</span>
+        <span class="debater-score">ELO 791</span>
+        <span class="fact-chip verified">✓ verified claim</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="full-divider">
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-label">// how it works</div>
+  <h2>Debate with a<br><em>technical backbone</em></h2>
+  <p class="section-sub">Every debate is transcribed, analyzed, and scored in real time. No judgment calls — just evidence-based evaluation.</p>
+
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon">🎙</div>
+      <h3>Join or host a debate</h3>
+      <p>Pick a live room, choose your position, and enter the forum. Free users can join open debates; premium users can host custom rooms with specific motions.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon">⚡</div>
+      <h3>LLMs fact-check live</h3>
+      <p>A hybrid AI pipeline transcribes your speech and triggers deep analysis at key moments — contention completions, rebuttals, and cited evidence.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon">📊</div>
+      <h3>Receive your score</h3>
+      <p>After each round, your 0–1000 score is computed across five rubric dimensions. Your ELO ranking updates based on opponent skill and outcome.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<!-- SCORING -->
+<section id="scoring">
+  <div class="section-label">// scoring system</div>
+  <h2>Rated like chess.<br><em>Judged like debate.</em></h2>
+  <p class="section-sub">A Glicko-inspired ELO system with provisional ratings, uncertainty modeling, and a rubric built on competitive World Schools standards.</p>
+
+  <div class="scoring-section">
+    <div class="score-visual">
+      <div class="score-main">742</div>
+      <div class="score-label">Current composite score · Provisional</div>
+      <div class="score-bar-row">
+        <div class="score-bar-label">Logic</div>
+        <div class="score-bar-track"><div class="score-bar-fill logic" style="width: 82%"></div></div>
+        <div class="score-bar-val">82</div>
+      </div>
+      <div class="score-bar-row">
+        <div class="score-bar-label">Evidence</div>
+        <div class="score-bar-track"><div class="score-bar-fill evidence" style="width: 75%"></div></div>
+        <div class="score-bar-val">75</div>
+      </div>
+      <div class="score-bar-row">
+        <div class="score-bar-label">Clarity</div>
+        <div class="score-bar-track"><div class="score-bar-fill clarity" style="width: 68%"></div></div>
+        <div class="score-bar-val">68</div>
+      </div>
+      <div class="score-bar-row">
+        <div class="score-bar-label">Rebuttal</div>
+        <div class="score-bar-track"><div class="score-bar-fill rebuttal" style="width: 79%"></div></div>
+        <div class="score-bar-val">79</div>
+      </div>
+      <div class="score-bar-row">
+        <div class="score-bar-label">Rhetoric</div>
+        <div class="score-bar-track"><div class="score-bar-fill rhetoric" style="width: 71%"></div></div>
+        <div class="score-bar-val">71</div>
+      </div>
+    </div>
+    <div class="score-info">
+      <h3>Five dimensions. One transparent verdict.</h3>
+      <p>Each round is evaluated across Logic (30%), Evidence (20%), Clarity (20%), Rebuttal (20%), and Rhetoric (10%). Gates prevent inflated scores when critical failures occur.</p>
+      <p>New users start with provisional ratings and high uncertainty — so you can climb quickly to your true bracket without artificial sandbagging.</p>
+      <div class="tag-row">
+        <span class="tag">Toulmin argument model</span>
+        <span class="tag">Glicko uncertainty</span>
+        <span class="tag">Hard-stop gates</span>
+        <span class="tag">Calibration battery</span>
+        <span class="tag">0–1000 scale</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<!-- MANIFESTO -->
+<div class="manifesto">
+  <blockquote>"A society that cannot distinguish a strong argument from a loud one is not free — it is just noisy."</blockquote>
+  <cite>— the Agora Sphere mission</cite>
+</div>
+
+<hr class="full-divider">
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-label">// pricing</div>
+  <h2>Start free.<br><em>Scale with intent.</em></h2>
+  <p class="section-sub">Built for students, debaters, and institutions. Every tier includes real-time fact-checking.</p>
+
+  <div class="pricing-grid">
+    <div class="plan">
+      <div class="plan-tier">Free</div>
+      <div class="plan-price">$0<span> / mo</span></div>
+      <p class="plan-desc">Explore open debates and get a taste of AI-scored argumentation.</p>
+      <hr class="plan-divider">
+      <div class="plan-feature"><span class="check">✓</span> Join open debate rooms</div>
+      <div class="plan-feature"><span class="check">✓</span> 1 free AI analysis/round</div>
+      <div class="plan-feature"><span class="check">✓</span> Provisional ELO rating</div>
+      <div class="plan-feature"><span class="check">✓</span> Post-round summary</div>
+      <button class="plan-btn outline">Get started free</button>
+    </div>
+    <div class="plan featured">
+      <div class="plan-badge">MOST POPULAR</div>
+      <div class="plan-tier">Premium</div>
+      <div class="plan-price">$12<span> / mo</span></div>
+      <p class="plan-desc">Serious debaters who want full coaching, analytics, and custom rooms.</p>
+      <hr class="plan-divider">
+      <div class="plan-feature"><span class="check">✓</span> Everything in Free</div>
+      <div class="plan-feature"><span class="check">✓</span> Host custom debate rooms</div>
+      <div class="plan-feature"><span class="check">✓</span> Live rolling AI coaching</div>
+      <div class="plan-feature"><span class="check">✓</span> Full 5-category rubric breakdown</div>
+      <div class="plan-feature"><span class="check">✓</span> Rebuttal detection + evidence audit</div>
+      <div class="plan-feature"><span class="check">✓</span> Profile customization</div>
+      <button class="plan-btn filled">Start free trial</button>
+    </div>
+    <div class="plan">
+      <div class="plan-tier">Institutional</div>
+      <div class="plan-price">Custom<span> / quote</span></div>
+      <p class="plan-desc">For schools, debate programs, and organizations. Up to 50+ members under one account.</p>
+      <hr class="plan-divider">
+      <div class="plan-feature"><span class="check">✓</span> Everything in Premium for all members</div>
+      <div class="plan-feature"><span class="check">✓</span> Tournament mode + sanctioned debates</div>
+      <div class="plan-feature"><span class="check">✓</span> Archived analytics + calibration tools</div>
+      <div class="plan-feature"><span class="check">✓</span> Human judge integration</div>
+      <div class="plan-feature"><span class="check">✓</span> Compliance routing + SOC 2</div>
+      <button class="plan-btn outline">Contact us</button>
+    </div>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="logo">Agora<span>Sphere</span></a>
+  <div class="footer-links">
+    <a href="#">About</a>
+    <a href="#">Blog</a>
+    <a href="#">Careers</a>
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+  </div>
+  <span class="footer-copy">© 2025 Agora Sphere Inc. All rights reserved.</span>
+</footer>
+
+<script>
+  // Animate score bars on scroll
+  const bars = document.querySelectorAll('.score-bar-fill');
+  const widths = [];
+  bars.forEach(b => {
+    widths.push(b.style.width);
+    b.style.width = '0%';
+  });
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        bars.forEach((b, i) => { b.style.width = widths[i]; });
+        obs.disconnect();
+      }
+    });
+  }, { threshold: 0.3 });
+
+  const scoreSection = document.querySelector('.scoring-section');
+  if (scoreSection) obs.observe(scoreSection);
+</script>
+</body>
+</html>
