@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
+import { useUserMenu } from "./userMenuContext";
 
 interface Message {
   id: string;
@@ -32,9 +33,12 @@ function getUserColor(userId: string): string {
 
 export default function ChatPanel({ roomId, currentUser, isOpen, onClose }: Props) {
   const supabase = createClient();
+  const { openUserMenu } = useUserMenu();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Users I've blocked — their messages are hidden from my view.
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolled = useRef(false);
 
@@ -68,6 +72,21 @@ export default function ChatPanel({ roomId, currentUser, isOpen, onClose }: Prop
 
     return () => { supabase.removeChannel(channel); };
   }, [fetchMessages, roomId]);
+
+  // Load my block list (RLS returns only my own rows) and refresh when the
+  // context menu blocks/unblocks someone.
+  const loadBlocks = useCallback(async () => {
+    if (!currentUser) return;
+    const { data } = await supabase.from("user_blocks").select("blocked_id");
+    setBlockedIds(new Set((data ?? []).map((b: { blocked_id: string }) => b.blocked_id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    loadBlocks();
+    window.addEventListener("blocks-updated", loadBlocks);
+    return () => window.removeEventListener("blocks-updated", loadBlocks);
+  }, [loadBlocks]);
 
   // Auto-scroll
   useEffect(() => {
@@ -124,17 +143,41 @@ export default function ChatPanel({ roomId, currentUser, isOpen, onClose }: Prop
               No messages yet
             </div>
           )}
-          {messages.map((msg) => (
-            <div key={msg.id} className="chat-msg">
-              <span
-                className="chat-msg-user"
-                style={{ color: getUserColor(msg.user_id) }}
-              >
-                {msg.user?.username || "User"}
-              </span>
-              <span className="chat-msg-text">{msg.content}</span>
-            </div>
-          ))}
+          {messages
+            .filter((msg) => !blockedIds.has(msg.user_id))
+            .map((msg) => (
+              <div key={msg.id} className="chat-msg">
+                <span
+                  className="chat-msg-user"
+                  style={{
+                    color: getUserColor(msg.user_id),
+                    cursor: msg.user_id !== currentUser?.id ? "pointer" : "default",
+                  }}
+                  onClick={(e) => {
+                    if (msg.user_id === currentUser?.id) return;
+                    openUserMenu(
+                      { x: e.clientX, y: e.clientY },
+                      { userId: msg.user_id, username: msg.user?.username || "User" },
+                      {
+                        chat: {
+                          roomId,
+                          messageId: msg.id,
+                          messagePreview: msg.content,
+                        },
+                      }
+                    );
+                  }}
+                  title={
+                    msg.user_id !== currentUser?.id
+                      ? `Click for options — ${msg.user?.username || "User"}`
+                      : undefined
+                  }
+                >
+                  {msg.user?.username || "User"}
+                </span>
+                <span className="chat-msg-text">{msg.content}</span>
+              </div>
+            ))}
         </div>
 
         {currentUser ? (
