@@ -15,6 +15,7 @@ import "@livekit/components-styles";
 import { Track, RoomEvent, type Participant } from "livekit-client";
 import type { DebateParticipant } from "@/types/database";
 import { uniqueViewerCount } from "@/lib/viewerCount";
+import { useUserMenu, type MenuRoomContext } from "@/components/userMenuContext";
 
 type ParticipantWithUser = DebateParticipant & {
   user: { username: string; avatar_url: string | null };
@@ -26,6 +27,7 @@ type TilePresence = "speaking" | "silent" | "disconnected";
 interface Props {
   token: string;
   serverUrl: string;
+  roomId: string;
   isDebater: boolean;
   hostId: string;
   currentUserId: string;
@@ -54,6 +56,7 @@ interface Props {
 export default function DebateVideo({
   token,
   serverUrl,
+  roomId,
   isDebater,
   hostId,
   currentUserId,
@@ -86,6 +89,7 @@ export default function DebateVideo({
       <DebateStage
         proDebater={proDebater}
         conDebater={conDebater}
+        roomId={roomId}
         hostId={hostId}
         currentUserId={currentUserId}
         isDebater={isDebater}
@@ -142,6 +146,7 @@ type DataMsg =
 function DebateStage({
   proDebater,
   conDebater,
+  roomId,
   hostId,
   currentUserId,
   isDebater,
@@ -161,6 +166,7 @@ function DebateStage({
 }: {
   proDebater?: ParticipantWithUser;
   conDebater?: ParticipantWithUser;
+  roomId: string;
   hostId: string;
   currentUserId: string;
   isDebater: boolean;
@@ -415,6 +421,56 @@ function DebateStage({
   // queue reorders, instead of snapping.
   const audienceRef = useFlipList();
 
+  /* ── Unified user context menu ─────────────────────────────────────
+     All user interactions in the room (tiles, audience) open the same
+     role-aware menu. Local-only AV prefs live here; host/moderator
+     actions are resolved centrally by the menu itself. */
+  const { openUserMenu } = useUserMenu();
+  const [mutedAudio, setMutedAudio] = useState<Set<string>>(new Set());
+  const [hiddenCams, setHiddenCams] = useState<Set<string>>(new Set());
+
+  const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Host override of the floor timer (used by End/Give speaking turn).
+  function hostForceTurn(next: "PRO" | "CON") {
+    const now = Date.now();
+    setCurrentTurn(next);
+    setTurnStartedAt(now);
+    showToast(`${next}'s turn`);
+    broadcast({ type: "turn", turn: next, startedAt: now });
+  }
+
+  function openMemberMenu(e: React.MouseEvent, p: ParticipantWithUser) {
+    if (p.user_id === currentUserId) return;
+    e.stopPropagation();
+    const isDeb = p.role === "debater";
+    const room: MenuRoomContext = {
+      roomId,
+      isHost,
+      targetIsDebater: isDeb,
+      targetIsSpectator: !isDeb,
+      targetStance: (p.stance as "PRO" | "CON" | null) ?? null,
+      timerActive: hasTimer && bothPresent && !!currentTurn,
+      targetHasTurn: isDeb && !!p.stance && currentTurn === p.stance,
+      audioMutedLocally: mutedAudio.has(p.user_id),
+      cameraHiddenLocally: hiddenCams.has(p.user_id),
+      onToggleLocalMute: () => toggleInSet(setMutedAudio, p.user_id),
+      onToggleHideCamera: () => toggleInSet(setHiddenCams, p.user_id),
+      onForceTurn: isHost ? hostForceTurn : undefined,
+    };
+    openUserMenu(
+      { x: e.clientX, y: e.clientY },
+      { userId: p.user_id, username: p.user?.username || "User" },
+      { room }
+    );
+  }
+
   // Host reports the real connected count (LiveKit's participant list is the
   // server's truth: dead sockets are dropped, duplicate identities replaced).
   // Debounced 2s to coalesce join/leave bursts; only written when changed.
@@ -608,6 +664,12 @@ function DebateStage({
             isActiveTurn={hasTimer && bothPresent && currentTurn === "PRO"}
             handRaised={!!proDebater?.hand_raised_at}
             presence={presence.pro}
+            hideVideoLocally={!!proDebater && hiddenCams.has(proDebater.user_id)}
+            onOpenMenu={
+              proDebater && proDebater.user_id !== currentUserId
+                ? (e) => openMemberMenu(e, proDebater)
+                : undefined
+            }
           />
           <SpeakerTile
             debater={conDebater}
@@ -620,6 +682,12 @@ function DebateStage({
             isActiveTurn={hasTimer && bothPresent && currentTurn === "CON"}
             handRaised={!!conDebater?.hand_raised_at}
             presence={presence.con}
+            hideVideoLocally={!!conDebater && hiddenCams.has(conDebater.user_id)}
+            onOpenMenu={
+              conDebater && conDebater.user_id !== currentUserId
+                ? (e) => openMemberMenu(e, conDebater)
+                : undefined
+            }
           />
         </div>
       </div>
@@ -639,6 +707,10 @@ function DebateStage({
                 ? `${s.user?.username || "Spectator"} — hand raised ${waitingLabel(s.hand_raised_at)}`
                 : s.user?.username || "Spectator"
             }
+            onClick={
+              s.user_id !== currentUserId ? (e) => openMemberMenu(e, s) : undefined
+            }
+            style={s.user_id !== currentUserId ? { cursor: "pointer" } : undefined}
           >
             <div className={`audience-avatar ${hashColor(s.user?.username || "")}`}>
               {getInitials(s.user?.username || "?")}
@@ -653,10 +725,12 @@ function DebateStage({
         )}
       </div>
 
-      {/* Hidden audio */}
-      {audioTracks.map((t) => (
-        <AudioTrack key={t.participant.sid} trackRef={t} />
-      ))}
+      {/* Hidden audio — skip anyone this user muted locally */}
+      {audioTracks
+        .filter((t) => !mutedAudio.has(t.participant.identity))
+        .map((t) => (
+          <AudioTrack key={t.participant.sid} trackRef={t} />
+        ))}
 
       {/* Controls row */}
       <div className="controls-row">
@@ -838,6 +912,8 @@ function SpeakerTile({
   isActiveTurn,
   handRaised,
   presence,
+  hideVideoLocally,
+  onOpenMenu,
 }: {
   debater?: ParticipantWithUser;
   track?: TrackReference;
@@ -849,6 +925,10 @@ function SpeakerTile({
   isActiveTurn: boolean;
   handRaised: boolean;
   presence: TilePresence;
+  /** This viewer chose to hide the debater's camera (local only). */
+  hideVideoLocally?: boolean;
+  /** Clicking the tile opens the unified user context menu. */
+  onOpenMenu?: (e: React.MouseEvent) => void;
 }) {
   const isHost = debater?.user_id === hostId;
   const isLocal = debater?.user_id === currentUserId;
@@ -857,7 +937,7 @@ function SpeakerTile({
   const username = debater?.user?.username || "";
 
   // Render video only if track exists AND publication is not muted
-  const showVideo = !!track && track.publication?.isMuted !== true;
+  const showVideo = !!track && track.publication?.isMuted !== true && !hideVideoLocally;
 
   const isSpeaking = !!debater && presence === "speaking";
   const isDisconnected = !!debater && presence === "disconnected";
@@ -865,6 +945,8 @@ function SpeakerTile({
   return (
     <div
       className={`speaker-tile${isLocal ? " is-local" : ""}${isActiveTurn ? " is-active-turn" : ""}${isSpeaking ? " speaking" : ""}`}
+      onClick={onOpenMenu}
+      title={onOpenMenu ? `Click for options — ${username}` : undefined}
     >
       <div className={`tile-wash ${washClass}`} />
       <div className="tile-grid" />

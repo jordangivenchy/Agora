@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import EditProfileModal from "./EditProfileModal";
 import FollowListModal from "./FollowListModal";
+import { useUserMenu } from "./userMenuContext";
 
 interface Props {
   userId: string | null;
@@ -67,6 +68,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
   const [refetching, setRefetching] = useState(false);          // post-save refetch (silent)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { openUserMenu } = useUserMenu();
   const [editOpen, setEditOpen] = useState(false);
   const [followListMode, setFollowListMode] = useState<null | "followers" | "following">(null);
 
@@ -427,22 +429,37 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                     : "Follow"}
                 </button>
                 <button
-                  onClick={() => alert("Direct messages are coming soon.")}
-                  className="flex-1 cursor-pointer transition-all"
+                  onClick={(e) =>
+                    openUserMenu(
+                      { x: e.clientX, y: e.clientY },
+                      { userId: profile.id, username: profile.username },
+                      { hideViewProfile: true }
+                    )
+                  }
+                  className="shrink-0 flex items-center justify-center cursor-pointer transition-all"
                   style={{
+                    width: 40,
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    color: "rgba(238,238,245,0.82)",
-                    fontFamily: "'Syne', sans-serif",
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    letterSpacing: "0.03em",
-                    padding: "10px 18px",
+                    color: "rgba(238,238,245,0.7)",
                     borderRadius: 10,
                   }}
-                  title="Coming soon"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                    e.currentTarget.style.color = "rgba(238,238,245,0.7)";
+                  }}
+                  title="More options"
+                  aria-label="More options"
                 >
-                  Message
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="1.8" />
+                    <circle cx="12" cy="12" r="1.8" />
+                    <circle cx="19" cy="12" r="1.8" />
+                  </svg>
                 </button>
               </div>
             )}
