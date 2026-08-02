@@ -73,6 +73,8 @@ export default function Home() {
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
   const [booted, setBooted] = useState(false);
+  const [dbOffline, setDbOffline] = useState(false);
+  const dataLandedRef = useRef(false);
   const hostRef = useRef<HTMLDivElement>(null);
 
   /* Inject the MVP markup imperatively, outside React's diffing, so state
@@ -168,14 +170,32 @@ export default function Home() {
         if (typeof w.__agoraApplyData === "function") {
           (w.__agoraApplyData as (d: unknown) => void)(data);
         }
+        dataLandedRef.current = true;
+        setDbOffline(false);
         setBooted(true);
       } catch (e) {
         console.error("home data load failed", e);
         // Boot anyway so the MVP demo data renders and the page isn't blank.
         (window as unknown as Record<string, unknown>).__AGORA_DATA__ ??= { debates: [], user: null };
+        setDbOffline(true);
         setBooted(true);
       }
   }, [supabase]);
+
+  /* Never let a slow or unreachable backend hold the UI hostage. Supabase's
+     auth client retries with backoff for minutes when its host is down, so
+     `loadData` can hang well past any reasonable paint. Boot the visual
+     engine on a short timer regardless; real data flows in later via
+     __agoraApplyData if and when the fetch lands. */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (dataLandedRef.current) return;
+      (window as unknown as Record<string, unknown>).__AGORA_DATA__ ??= { debates: [], user: null };
+      setDbOffline(true);
+      setBooted(true);
+    }, 3500);
+    return () => clearTimeout(t);
+  }, []);
 
   /* Boot + live tracking: realtime DB changes and a 30s heartbeat both
      re-run loadData, so viewer counts and member totals stay current. */
@@ -279,6 +299,29 @@ export default function Home() {
   return (
     <>
       <div ref={hostRef} />
+      {dbOffline && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 16,
+            right: 16,
+            zIndex: 300,
+            maxWidth: 340,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "rgba(51,41,26,0.96)",
+            border: "1px solid #6b5a30",
+            color: "#f4d47c",
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong style={{ fontWeight: 600 }}>Database unreachable</strong> — showing the
+          interface with example content. Live debates, sign-in, and your profile need the
+          Supabase project to be running.
+        </div>
+      )}
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <BattlePage open={activeTab === "battle"} onClose={() => setActiveTab(null)} />
       <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
