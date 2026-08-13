@@ -242,7 +242,7 @@ export default function LoginPage() {
               marginBottom: "6px",
             }}
           >
-            {mode === "signin" ? "Welcome back" : "Welcome to the arena"}
+            {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p
             className="text-center"
@@ -254,8 +254,8 @@ export default function LoginPage() {
             }}
           >
             {mode === "signin"
-              ? "Sign in to debate, vote, and follow debaters."
-              : "Join live debates, challenge ideas, and sharpen your arguments."}
+              ? "Sign in to speak, vote, and follow people."
+              : "Join live discussions, share your perspective, and be heard."}
           </p>
 
           {/* Error / notice banners */}
@@ -466,7 +466,7 @@ export default function LoginPage() {
           className="no-underline transition-colors"
           style={{ marginTop: "14px", fontSize: "12.5px", color: "var(--text-muted)", fontWeight: 500 }}
         >
-          ← Browse debates without signing in
+          ← Browse discussions without signing in
         </a>
       </main>
     </div>

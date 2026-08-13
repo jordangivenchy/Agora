@@ -54,6 +54,10 @@ interface Props {
   onToggleNotes: () => void;
   chatOpen: boolean;
   notesOpen: boolean;
+  /** Settings → Discussion defaults: start with mic muted / camera off.
+      Only affects the initial connect; in-room toggles still work. */
+  joinMuted?: boolean;
+  joinCameraOff?: boolean;
 }
 
 export default function DebateVideo({
@@ -79,14 +83,16 @@ export default function DebateVideo({
   onToggleNotes,
   chatOpen,
   notesOpen,
+  joinMuted = false,
+  joinCameraOff = false,
 }: Props) {
   return (
     <LiveKitRoom
       token={token}
       serverUrl={serverUrl}
       connect={true}
-      video={isDebater}
-      audio={isDebater}
+      video={isDebater && !joinCameraOff}
+      audio={isDebater && !joinMuted}
       className="stage-body"
       data-lk-theme="default"
     >

@@ -93,7 +93,8 @@
       e.preventDefault();
       var href = a.getAttribute('href');
       if (href === '#logout') window.dispatchEvent(new CustomEvent('agora:logout'));
-      else if (href === '#profile' || href === '#settings') window.dispatchEvent(new CustomEvent('agora:profile'));
+      else if (href === '#settings') go('/settings');
+      else if (href === '#profile') window.dispatchEvent(new CustomEvent('agora:profile'));
       else if (href === '#stats') window.dispatchEvent(new CustomEvent('agora:dashboard'));
       else if (href === '#debates') window.dispatchEvent(new CustomEvent('agora:debates'));
     });

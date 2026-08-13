@@ -1525,3 +1525,21 @@ body {
 .tile-grid { background-image: none !important; }
 .ar-badge { font-family: 'DM Sans', sans-serif; letter-spacing: 0.04em; }
 .live-badge-stage { font-family: 'DM Sans', sans-serif !important; }
+
+/* ── Reduce motion (Settings → Appearance, and prefers-reduced-motion) ──
+   Applied as a root class by SettingsBoot / the settings page. Kills the
+   starfield, sparkles, and every animation/transition app-wide. */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+html.reduce-motion #star-canvas,
+html.reduce-motion #shooting-svg,
+html.reduce-motion .nav-sparkle {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #star-canvas, #shooting-svg, .nav-sparkle { display: none !important; }
+}

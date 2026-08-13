@@ -67,6 +67,9 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   const [isLeaving, setIsLeaving] = useState(false);
   // Ended rooms show the vote tally instead of bouncing everyone home.
   const [showResults, setShowResults] = useState(false);
+  // Settings → Discussion defaults (join muted / camera off). Loaded once
+  // alongside the user; defaults apply for guests and on fetch failure.
+  const [mediaDefaults, setMediaDefaults] = useState({ joinMuted: false, joinCameraOff: false });
   const [userLoaded, setUserLoaded] = useState(false);
   const [participantsLoaded, setParticipantsLoaded] = useState(false);
   const [queueSearch, setQueueSearch] = useState("");
@@ -158,6 +161,14 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
+        if (user) {
+          const { data: us } = await supabase
+            .from("user_settings")
+            .select("join_muted, join_camera_off")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (us) setMediaDefaults({ joinMuted: us.join_muted, joinCameraOff: us.join_camera_off });
+        }
       } catch (e) {
         console.error("getUser failed", e);
       } finally {
@@ -1034,6 +1045,8 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
             token={livekitToken}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL!}
             roomId={roomId}
+            joinMuted={mediaDefaults.joinMuted}
+            joinCameraOff={mediaDefaults.joinCameraOff}
             isDebater={myParticipation?.role === "debater"}
             hostId={room!.host_id}
             currentUserId={currentUser?.id || guestId || ""}

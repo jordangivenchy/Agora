@@ -75,17 +75,23 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
   // Track who I am (+ moderator flag) once.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!session?.user) {
         setMe(null);
         return;
       }
-      const { data } = await supabase
-        .from("users")
-        .select("is_moderator")
-        .eq("id", session.user.id)
-        .single();
-      setMe({ id: session.user.id, isModerator: !!data?.is_moderator });
+      const userId = session.user.id;
+      // Deferred: supabase-js awaits auth-change subscribers, so awaiting
+      // another supabase call directly in this callback deadlocks every
+      // auth operation that fires an event (signIn, updateUser, …).
+      setTimeout(async () => {
+        const { data } = await supabase
+          .from("users")
+          .select("is_moderator")
+          .eq("id", userId)
+          .single();
+        setMe({ id: userId, isModerator: !!data?.is_moderator });
+      }, 0);
     });
     return () => subscription.unsubscribe();
   }, [supabase]);
