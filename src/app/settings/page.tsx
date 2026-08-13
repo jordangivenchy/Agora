@@ -25,6 +25,8 @@ type SettingsRow = {
   join_camera_off: boolean;
   reduce_motion: boolean;
   show_debate_history: boolean;
+  notify_follows: boolean;
+  notify_room_live: boolean;
 };
 
 const DEFAULT_SETTINGS: SettingsRow = {
@@ -32,6 +34,8 @@ const DEFAULT_SETTINGS: SettingsRow = {
   join_camera_off: false,
   reduce_motion: false,
   show_debate_history: true,
+  notify_follows: true,
+  notify_room_live: true,
 };
 
 type ProfileRow = {
@@ -52,6 +56,7 @@ type SectionKey =
   | "profile"
   | "account"
   | "discussion"
+  | "notifications"
   | "appearance"
   | "privacy"
   | "blocked"
@@ -61,6 +66,7 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "profile",    label: "Profile",                sub: "Name, username, bio, avatar" },
   { key: "account",    label: "Account & security",     sub: "Email, password, sessions" },
   { key: "discussion", label: "Discussion defaults",    sub: "Mic and camera on join" },
+  { key: "notifications", label: "Notifications",       sub: "What you get notified about" },
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
   { key: "blocked",    label: "Blocked users",          sub: "Manage your block list" },
@@ -193,6 +199,8 @@ export default function SettingsPage() {
           join_camera_off: r.join_camera_off,
           reduce_motion: r.reduce_motion,
           show_debate_history: r.show_debate_history,
+          notify_follows: r.notify_follows ?? true,
+          notify_room_live: r.notify_room_live ?? true,
         });
       }
 
@@ -457,6 +465,27 @@ export default function SettingsPage() {
               onChange={(v) => saveToggle("join_camera_off", v)}
               label="Join with camera off"
               sub="Your camera stays off until you turn it on yourself"
+            />
+          </SectionCard>
+        );
+
+      case "notifications":
+        return (
+          <SectionCard
+            title="In-app notifications"
+            sub="Applied when the notification is created — turning one off stops it at the source."
+          >
+            <Toggle
+              on={settings.notify_follows}
+              onChange={(v) => saveToggle("notify_follows", v)}
+              label="New followers"
+              sub="When someone starts following you"
+            />
+            <Toggle
+              on={settings.notify_room_live}
+              onChange={(v) => saveToggle("notify_room_live", v)}
+              label="Live discussions"
+              sub="When someone you follow goes live"
             />
           </SectionCard>
         );
