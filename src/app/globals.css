@@ -1540,6 +1540,11 @@ html.reduce-motion #shooting-svg,
 html.reduce-motion .nav-sparkle {
   display: none !important;
 }
+/* Note: the starfield is deliberately NOT hidden under the OS-level
+   prefers-reduced-motion media query — display:none can't stop the JS
+   canvas loop anyway, and the OS flag silently deleting a core visual
+   surprised more than it helped. Hiding it is the explicit in-app
+   setting's job. CSS animations/transitions still calm down here: */
 @media (prefers-reduced-motion: reduce) {
-  #star-canvas, #shooting-svg, .nav-sparkle { display: none !important; }
+  .nav-sparkle { display: none !important; }
 }

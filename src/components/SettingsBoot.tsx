@@ -20,18 +20,27 @@ export default function SettingsBoot() {
 
     const supabase = createClient();
     (async () => {
+      const apply = (on: boolean) => {
+        document.documentElement.classList.toggle("reduce-motion", on);
+        try {
+          if (on) localStorage.setItem("agora-reduce-motion", "1");
+          else localStorage.removeItem("agora-reduce-motion");
+        } catch {}
+      };
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        // Signed out: never inherit a previous user's cached setting.
+        apply(false);
+        return;
+      }
       const { data } = await supabase
         .from("user_settings")
         .select("reduce_motion")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (!data) return;
-      document.documentElement.classList.toggle("reduce-motion", data.reduce_motion);
-      try {
-        localStorage.setItem("agora-reduce-motion", data.reduce_motion ? "1" : "0");
-      } catch {}
+      // No row means defaults — reduce_motion off.
+      apply(!!data?.reduce_motion);
     })();
   }, []);
 

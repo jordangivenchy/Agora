@@ -2151,8 +2151,8 @@ document.addEventListener('pointermove', (e) => {
 //  STARFIELD — canvas-based (enhanced)
 // ═══════════════════════════════════════════════
 (function initStarfield() {
-  const canvas = document.getElementById('star-canvas');
-  const ctx = canvas.getContext('2d');
+  let canvas = document.getElementById('star-canvas');
+  let ctx = canvas.getContext('2d');
   const DENSITY = 0.00018;
 
   // Mouse parallax state
@@ -2261,6 +2261,16 @@ document.addEventListener('pointermove', (e) => {
   }
 
   function render() {
+    // React re-injects the MVP markup on remount, which orphans the canvas
+    // this closure captured at boot — leaving the visible one forever blank.
+    // Re-acquire the live node whenever they diverge.
+    const liveCanvas = document.getElementById('star-canvas');
+    if (liveCanvas && liveCanvas !== canvas) {
+      canvas = liveCanvas;
+      ctx = canvas.getContext('2d');
+      resize();
+    }
+
     // Smooth mouse lerp
     mouseX += (targetMouseX - mouseX) * 0.06;
     mouseY += (targetMouseY - mouseY) * 0.06;
@@ -2342,7 +2352,7 @@ document.addEventListener('pointermove', (e) => {
 (function initShootingStars() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const svg = document.getElementById('shooting-svg');
+  let svg = document.getElementById('shooting-svg');
   const NS = 'http://www.w3.org/2000/svg';
 
   // Define gradient once
@@ -2384,7 +2394,13 @@ document.addEventListener('pointermove', (e) => {
   }
 
   function spawnStar() {
-    if (activeRect) { svg.removeChild(activeRect); activeRect = null; }
+    // Re-acquire the SVG if React re-injected the MVP markup (see starfield).
+    const liveSvg = document.getElementById('shooting-svg');
+    if (liveSvg && liveSvg !== svg) {
+      svg = liveSvg;
+      svg.appendChild(defs);
+    }
+    if (activeRect) { activeRect.remove(); activeRect = null; }
     if (activeFrame) { cancelAnimationFrame(activeFrame); activeFrame = null; }
 
     const { x, y, angle } = randomStartPoint();
@@ -2414,7 +2430,7 @@ document.addEventListener('pointermove', (e) => {
 
       const W = window.innerWidth, H2 = window.innerHeight;
       if (px < -40 || px > W + 40 || py < -40 || py > H2 + 40) {
-        svg.removeChild(rect);
+        rect.remove();
         activeRect = null;
         scheduleNext();
         return;
