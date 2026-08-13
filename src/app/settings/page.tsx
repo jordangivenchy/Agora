@@ -43,6 +43,7 @@ type ProfileRow = {
   email: string;
   username_changed_at: string | null;
   created_at: string;
+  is_moderator: boolean;
 };
 
 type BlockedUser = { id: string; username: string; avatar_url: string | null };
@@ -176,7 +177,7 @@ export default function SettingsPage() {
 
       const [profRes, setRes, blockRes] = await Promise.all([
         supabase.from("users")
-          .select("id, username, display_name, avatar_url, bio, email, username_changed_at, created_at")
+          .select("id, username, display_name, avatar_url, bio, email, username_changed_at, created_at, is_moderator")
           .eq("id", user.id).maybeSingle(),
         supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("user_blocks").select("blocked_id").eq("blocker_id", user.id),
@@ -639,6 +640,18 @@ export default function SettingsPage() {
                 <span className="block text-[10px] mt-0.5" style={{ color: "#6b6b74" }}>{s.sub}</span>
               </button>
             ))}
+            {/* Moderators get a link to the report queue; the /mod page and
+                its RPCs enforce the role server-side regardless. */}
+            {profile?.is_moderator && (
+              <a
+                href="/mod"
+                className="block w-full text-left mb-1.5 px-3.5 py-3 no-underline"
+                style={{ borderRadius: 10, border: "0.5px solid rgba(244,212,124,0.25)" }}
+              >
+                <span className="block text-[13px]" style={{ color: "#f4d47c" }}>Moderation</span>
+                <span className="block text-[10px] mt-0.5" style={{ color: "#6b6b74" }}>Open the report queue</span>
+              </a>
+            )}
           </nav>
 
           {/* active panel — hidden on mobile until a section is chosen */}
