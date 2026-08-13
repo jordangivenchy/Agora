@@ -41,7 +41,7 @@ export default function RoomCard({ room }: Props) {
 
   return (
     <Link
-      href={isLive ? `/rooms/${room.id}?spectate=1` : `/rooms/${room.id}`}
+      href={isLive ? `/agora/${room.id}` : `/rooms/${room.id}`}
       className="room-card block cursor-pointer transition-all"
       style={{
         background: "var(--bg-secondary)",

@@ -60,11 +60,11 @@
   window.__agoraApplyData = applyData;
   applyData(window.__AGORA_DATA__);
 
-  /* Cards navigate to the real LiveKit room when one exists. */
+  /* Cards navigate to the Agora (amphitheater view) when a real room exists. */
   var _origOpen = window.openDebateModal;
   window.openDebateModal = function (i) {
     var d = DEBATES[i];
-    if (d && d.roomId) { go('/rooms/' + d.roomId); }
+    if (d && d.roomId) { go('/agora/' + d.roomId); }
     else if (typeof _origOpen === 'function') { _origOpen(i); }
   };
 
