@@ -354,9 +354,9 @@ export default function TrendingPage({ open, onClose }: Props) {
                   onClick={() => window.dispatchEvent(new CustomEvent("agora:tab", { detail: "battle" }))}
                   className="inline-flex items-center justify-center cursor-pointer"
                   style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontSize: 16 }}
-                  title="Debate this topic in Battle"
+                  title="Discuss this topic"
                 >
-                  ⚔
+                  ✦
                 </button>
                 <p className="text-[10px] mt-1" style={{ color: "#9cc4f0" }}>Battle</p>
               </div>
@@ -398,7 +398,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   </div>
                 ))}
                 {activeShort.comments.length === 0 && !(localComments[activeShort.id]?.length) && (
-                  <p className="text-[11px]" style={{ color: "#8b8b94" }}>No comments yet — start the argument.</p>
+                  <p className="text-[11px]" style={{ color: "#8b8b94" }}>No comments yet — start the discussion.</p>
                 )}
               </div>
               <form
@@ -486,7 +486,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   className="cursor-pointer text-[12px] font-medium px-4 py-2 rounded-lg border-none"
                   style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
                 >
-                  ⚔ Start the first one
+                  ✦ Start the first one
                 </button>
               </div>
             ) : (

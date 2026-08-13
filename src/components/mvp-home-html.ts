@@ -20,8 +20,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   </a>
   <div class="nav-search agora-search-shell" id="navSearchWrap">
     <div class="search-active-indicator"></div>
-    <input type="text" id="searchInput" placeholder="Search a topic, debater, or motion…" aria-label="Search" autocomplete="off">
-    <button class="create-btn nav-search-btn" id="searchBtn" type="button" aria-label="Create debate">
+    <input type="text" id="searchInput" placeholder="Search topics, people, or keywords…" aria-label="Search" autocomplete="off">
+    <button class="create-btn nav-search-btn" id="searchBtn" type="button" aria-label="Create a discussion">
       <span class="create-icon">✦</span>
       <span class="create-label"><span>C</span><span>r</span><span>e</span><span>a</span><span>t</span><span>e</span></span>
     </button>
@@ -51,10 +51,10 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
           <span class="avatar-menu-icon">👤</span>Profile
         </a>
         <a class="avatar-menu-item" href="#stats" role="menuitem">
-          <span class="avatar-menu-icon">♟</span>My ELO &amp; Stats
+          <span class="avatar-menu-icon">◆</span>Rating &amp; stats
         </a>
         <a class="avatar-menu-item" href="#debates" role="menuitem">
-          <span class="avatar-menu-icon">📋</span>My Debates
+          <span class="avatar-menu-icon">📋</span>My discussions
         </a>
         <a class="avatar-menu-item" href="#settings" role="menuitem">
           <span class="avatar-menu-icon">⚙️</span>Settings
@@ -80,9 +80,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 </div>
 
 <!-- ─── DISCOVERY OVERLAY ─── -->
-<div id="discoveryOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Search and discover debates">
+<div id="discoveryOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Search and discover discussions">
   <div class="discovery-search-bar">
-    <input id="discoveryInput" type="text" placeholder="Search motions, debaters, topics, categories…" autocomplete="off" />
+    <input id="discoveryInput" type="text" placeholder="Search topics, people, or categories…" autocomplete="off" />
     <button class="discovery-close" id="closeDiscovery" aria-label="Close search">✕</button>
   </div>
   <div class="discovery-body">
@@ -110,9 +110,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <div class="filter-group">
         <span class="filter-group-title">Status</span>
         <button class="filter-pill active" data-filter-group="status" onclick="_dsFilter(this)">All</button>
-        <button class="filter-pill" data-filter-group="status" onclick="_dsFilter(this)">🔴 Live now</button>
-        <button class="filter-pill" data-filter-group="status" onclick="_dsFilter(this)">⏳ In queue</button>
-        <button class="filter-pill" data-filter-group="status" onclick="_dsFilter(this)">🕐 Scheduled</button>
+        <button class="filter-pill" data-filter-group="status" onclick="_dsFilter(this)">Live now</button>
+        <button class="filter-pill" data-filter-group="status" onclick="_dsFilter(this)">In queue</button>
+        <button class="filter-pill" data-filter-group="status" onclick="_dsFilter(this)">Scheduled</button>
       </div>
 
       <div class="filter-divider"></div>
@@ -175,219 +175,219 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 
     <!-- Results -->
     <div class="discovery-results" id="discoveryResults">
-      <div class="results-meta" id="resultsMeta">Showing 9 debates</div>
+      <div class="results-meta" id="resultsMeta">Showing 9 discussions</div>
       <div class="results-grid" id="resultsGrid">
 
         <div class="result-card" data-category="Politics" data-status="live" data-format="Oxford Style" data-language="English">
           <div class="result-card-top">
-            <span class="result-status live">● LIVE</span>
+            <span class="result-status live">● Live</span>
             <span class="result-category">Politics</span>
           </div>
           <div class="result-motion">"Free speech has no absolute limits"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#1976D2">PT</div>
             <span class="debater-name">PhilosophyTube</span>
-            <span class="vs-badge">VS</span>
+            <span class="vs-badge">vs</span>
             <div class="debater-avatar" style="background:#e65c00">D</div>
             <span class="debater-name">Destiny</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👁 4.7K watching</span>
-            <span class="result-meta-item">🎙 Oxford Style</span>
-            <span class="result-meta-item">🌐 English</span>
+            <span class="result-meta-item">4.7K watching</span>
+            <span class="result-meta-item">Oxford Style</span>
+            <span class="result-meta-item">English</span>
           </div>
           <div class="result-actions">
             <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as debater</button>
+            <button class="result-btn join">Join as speaker</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Economics" data-status="queue" data-format="1v1" data-language="English">
           <div class="result-card-top">
-            <span class="result-status queue">⏳ IN QUEUE</span>
+            <span class="result-status queue">In queue</span>
             <span class="result-category">Economics</span>
           </div>
           <div class="result-motion">"Universal Basic Income would destroy work ethic"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#0f6e56">H</div>
             <span class="debater-name">HasanAbi</span>
-            <span class="vs-badge">VS</span>
-            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for opponent…</span>
+            <span class="vs-badge">vs</span>
+            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for someone to join…</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👥 3 in queue</span>
-            <span class="result-meta-item">🎙 1v1</span>
+            <span class="result-meta-item">3 in queue</span>
+            <span class="result-meta-item">1v1</span>
             <span class="result-meta-item">~2 min wait</span>
           </div>
           <div class="result-actions">
-            <button class="result-btn watch">Spectate</button>
-            <button class="result-btn queue-join">Join Queue</button>
+            <button class="result-btn watch">Watch</button>
+            <button class="result-btn queue-join">Join queue</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Ethics" data-status="scheduled" data-format="Oxford Style" data-language="English">
           <div class="result-card-top">
-            <span class="result-status scheduled">🕐 SCHEDULED</span>
+            <span class="result-status scheduled">Scheduled</span>
             <span class="result-category">Ethics</span>
           </div>
           <div class="result-motion">"AI cannot be held morally responsible for its actions"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#533ab7">CD</div>
             <span class="debater-name">CosmosDebate</span>
-            <span class="vs-badge">VS</span>
+            <span class="vs-badge">vs</span>
             <div class="debater-avatar" style="background:#854f0b">LE</div>
             <span class="debater-name">LegalEagle</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">📅 Tomorrow 8PM</span>
-            <span class="result-meta-item">🎙 Oxford Style</span>
-            <span class="result-meta-item">🌐 English</span>
+            <span class="result-meta-item">Tomorrow 8PM</span>
+            <span class="result-meta-item">Oxford Style</span>
+            <span class="result-meta-item">English</span>
           </div>
           <div class="result-actions">
             <button class="result-btn watch">Set reminder</button>
-            <button class="result-btn join">Register to debate</button>
+            <button class="result-btn join">Sign up to speak</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Science & Tech" data-status="live" data-format="Open Debate" data-language="English">
           <div class="result-card-top">
-            <span class="result-status live">● LIVE</span>
+            <span class="result-status live">● Live</span>
             <span class="result-category">Science &amp; Tech</span>
           </div>
           <div class="result-motion">"AI will eliminate more jobs than it creates within a decade"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#00cec9">TR</div>
             <span class="debater-name">TechRealist</span>
-            <span class="vs-badge">VS</span>
+            <span class="vs-badge">vs</span>
             <div class="debater-avatar" style="background:#64B5F6">AO</div>
             <span class="debater-name">AIOptimist</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👁 2.1K watching</span>
-            <span class="result-meta-item">🎙 Open Debate</span>
-            <span class="result-meta-item">🌐 English</span>
+            <span class="result-meta-item">2.1K watching</span>
+            <span class="result-meta-item">Open Debate</span>
+            <span class="result-meta-item">English</span>
           </div>
           <div class="result-actions">
             <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as debater</button>
+            <button class="result-btn join">Join as speaker</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Philosophy" data-status="queue" data-format="Oxford Style" data-language="Spanish">
           <div class="result-card-top">
-            <span class="result-status queue">⏳ IN QUEUE</span>
+            <span class="result-status queue">In queue</span>
             <span class="result-category">Philosophy</span>
           </div>
           <div class="result-motion">"Free will is an illusion incompatible with determinism"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#6c3483">KM</div>
             <span class="debater-name">KairosMind</span>
-            <span class="vs-badge">VS</span>
-            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for opponent…</span>
+            <span class="vs-badge">vs</span>
+            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for someone to join…</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👥 1 in queue</span>
-            <span class="result-meta-item">🎙 Oxford Style</span>
-            <span class="result-meta-item">🌐 Spanish</span>
+            <span class="result-meta-item">1 in queue</span>
+            <span class="result-meta-item">Oxford Style</span>
+            <span class="result-meta-item">Spanish</span>
           </div>
           <div class="result-actions">
-            <button class="result-btn watch">Spectate</button>
-            <button class="result-btn queue-join">Join Queue</button>
+            <button class="result-btn watch">Watch</button>
+            <button class="result-btn queue-join">Join queue</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Foreign Policy" data-status="live" data-format="Panel (2v2)" data-language="English">
           <div class="result-card-top">
-            <span class="result-status live">● LIVE</span>
+            <span class="result-status live">● Live</span>
             <span class="result-category">Foreign Policy</span>
           </div>
           <div class="result-motion">"NATO expansion destabilizes more than it secures"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#1976D2">GM</div>
             <span class="debater-name">GlobalMarket</span>
-            <span class="vs-badge">VS</span>
+            <span class="vs-badge">vs</span>
             <div class="debater-avatar" style="background:#c0392b">CB</div>
             <span class="debater-name">CosmosDebate</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👁 890 watching</span>
-            <span class="result-meta-item">🎙 Panel (2v2)</span>
-            <span class="result-meta-item">🌐 English</span>
+            <span class="result-meta-item">890 watching</span>
+            <span class="result-meta-item">Panel (2v2)</span>
+            <span class="result-meta-item">English</span>
           </div>
           <div class="result-actions">
             <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as debater</button>
+            <button class="result-btn join">Join as speaker</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Culture" data-status="scheduled" data-format="1v1" data-language="English">
           <div class="result-card-top">
-            <span class="result-status scheduled">🕐 SCHEDULED</span>
+            <span class="result-status scheduled">Scheduled</span>
             <span class="result-category">Culture</span>
           </div>
           <div class="result-motion">"Cancel culture strengthens accountability norms"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#636e72">SN</div>
             <span class="debater-name">Sneako</span>
-            <span class="vs-badge">VS</span>
+            <span class="vs-badge">vs</span>
             <div class="debater-avatar" style="background:#fd79a8">PT</div>
             <span class="debater-name">PhilosophyTube</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">📅 Sat 1:00 PM ET</span>
-            <span class="result-meta-item">🎙 1v1</span>
-            <span class="result-meta-item">🌐 English</span>
+            <span class="result-meta-item">Sat 1:00 PM ET</span>
+            <span class="result-meta-item">1v1</span>
+            <span class="result-meta-item">English</span>
           </div>
           <div class="result-actions">
             <button class="result-btn watch">Set reminder</button>
-            <button class="result-btn join">Register to debate</button>
+            <button class="result-btn join">Sign up to speak</button>
           </div>
         </div>
 
         <div class="result-card" data-category="Law" data-status="live" data-format="Open Debate" data-language="English">
           <div class="result-card-top">
-            <span class="result-status live">● LIVE</span>
+            <span class="result-status live">● Live</span>
             <span class="result-category">Law</span>
           </div>
           <div class="result-motion">"Jury trials should be abolished for complex financial crimes"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#e2b96b">LE</div>
             <span class="debater-name">LegalEagle</span>
-            <span class="vs-badge">VS</span>
+            <span class="vs-badge">vs</span>
             <div class="debater-avatar" style="background:#00b894">CV</div>
             <span class="debater-name">CivicVoice</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👁 1.3K watching</span>
-            <span class="result-meta-item">🎙 Open Debate</span>
-            <span class="result-meta-item">🌐 English</span>
+            <span class="result-meta-item">1.3K watching</span>
+            <span class="result-meta-item">Open Debate</span>
+            <span class="result-meta-item">English</span>
           </div>
           <div class="result-actions">
             <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as debater</button>
+            <button class="result-btn join">Join as speaker</button>
           </div>
         </div>
 
         <div class="result-card" data-category="History" data-status="queue" data-format="Oxford Style" data-language="French">
           <div class="result-card-top">
-            <span class="result-status queue">⏳ IN QUEUE</span>
+            <span class="result-status queue">In queue</span>
             <span class="result-category">History</span>
           </div>
           <div class="result-motion">"The French Revolution did more harm than good in the long run"</div>
           <div class="result-debaters">
             <div class="debater-avatar" style="background:#2980b9">PN</div>
             <span class="debater-name">PoliticsNow</span>
-            <span class="vs-badge">VS</span>
-            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for opponent…</span>
+            <span class="vs-badge">vs</span>
+            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for someone to join…</span>
           </div>
           <div class="result-meta-row">
-            <span class="result-meta-item">👥 2 in queue</span>
-            <span class="result-meta-item">🎙 Oxford Style</span>
-            <span class="result-meta-item">🌐 French</span>
+            <span class="result-meta-item">2 in queue</span>
+            <span class="result-meta-item">Oxford Style</span>
+            <span class="result-meta-item">French</span>
           </div>
           <div class="result-actions">
-            <button class="result-btn watch">Spectate</button>
-            <button class="result-btn queue-join">Join Queue</button>
+            <button class="result-btn watch">Watch</button>
+            <button class="result-btn queue-join">Join queue</button>
           </div>
         </div>
 
@@ -451,7 +451,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         </div>
       </a>
 
-      <!-- Battle (1v1 matchmaking) -->
+      <!-- Discuss (1v1 matchmaking; data-nav-id stays "battle" — routing key) -->
       <a class="sidebar-link" href="#" data-nav-id="battle">
         <span class="nav-hover-shimmer"></span>
         <span class="nav-light-slit"></span>
@@ -464,7 +464,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
           <span class="nav-icon-wrap">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l13 13"/><path d="M15 19l4-4"/><path d="M17 21l2-2"/><path d="M20 4L7 17"/><path d="M9 19l-4-4"/><path d="M7 21l-2-2"/></svg>
           </span>
-          <span class="nav-label">Battle</span>
+          <span class="nav-label">Discuss</span>
         </div>
       </a>
 
@@ -603,7 +603,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   <div class="content-lower">
     <div class="debates-col">
       <div class="section-header">
-        <div class="section-title" id="gridTitle">Live Debates</div>
+        <div class="section-title" id="gridTitle">Live discussions</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <span class="search-result-count" id="searchResultCount"></span>
           <a class="view-all" href="#">View all →</a>
@@ -624,8 +624,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   <!-- Banner -->
   <div class="explore-banner">
     <div class="explore-banner-text">
-      <h1 class="explore-title">Explore Debates</h1>
-      <p class="explore-subtitle">Find live rooms, join a queue, or register for upcoming debates</p>
+      <h1 class="explore-title">Explore discussions</h1>
+      <p class="explore-subtitle">Find a live room, join a queue, or sign up for one coming up</p>
     </div>
     <div class="explore-banner-stats">
       <div class="explore-stat">
@@ -634,7 +634,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       </div>
       <div class="explore-stat">
         <span class="explore-stat-val">1,847</span>
-        <span class="explore-stat-label">Debaters online</span>
+        <span class="explore-stat-label">Speakers online</span>
       </div>
       <div class="explore-stat">
         <span class="explore-stat-val">38K</span>
@@ -647,7 +647,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   <div class="explore-search-wrap">
     <span class="explore-search-icon">⌕</span>
     <input id="exploreSearchInput" class="explore-search-input" type="text"
-      placeholder="Search motions, debaters, topics, keywords…" autocomplete="off" />
+      placeholder="Search topics, people, or keywords…" autocomplete="off" />
   </div>
 
   <!-- Filter bar -->
@@ -679,8 +679,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <div class="explore-filter-pills" id="epStatusFilter">
           <button class="explore-pill active"    onclick="_epFilter(this,'status')">All</button>
           <button class="explore-pill live-pill" onclick="_epFilter(this,'status')">● Live</button>
-          <button class="explore-pill"           onclick="_epFilter(this,'status')">⏳ Queue</button>
-          <button class="explore-pill"           onclick="_epFilter(this,'status')">🕐 Scheduled</button>
+          <button class="explore-pill"           onclick="_epFilter(this,'status')">Queue</button>
+          <button class="explore-pill"           onclick="_epFilter(this,'status')">Scheduled</button>
         </div>
       </div>
 
@@ -746,7 +746,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 <!-- ═══════════════════════════════════════════════
      PHASE 2: DEBATE ROOM MODAL
      ═══════════════════════════════════════════════ -->
-<div class="modal-overlay" id="debateModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Debate Room">
+<div class="modal-overlay" id="debateModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Discussion room">
   <div class="debate-room" id="debateRoomPanel">
     <!-- injected by renderDebateRoom() -->
   </div>

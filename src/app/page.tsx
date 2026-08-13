@@ -128,7 +128,9 @@ export default function Home() {
           return {
             motion: room.motion,
             debater1: proD?.user?.username ?? "Open seat",
-            debater2: conD?.user?.username ?? "",
+            // Mirror debater1's fallback: an empty string renders its initial as
+            // literal "undefined" in the card avatar.
+            debater2: conD?.user?.username ?? "Open seat",
             color1: PALETTE[i % PALETTE.length],
             color2: PALETTE[(i + 3) % PALETTE.length],
             elo: "—",

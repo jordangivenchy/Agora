@@ -1,7 +1,7 @@
 "use client";
 
 /* Battle — Omegle-style 1v1 debate matchmaking. Pick a topic (and
-   optionally a motion), toggle AI rating, and hit Find an opponent:
+   optionally a topic), toggle AI rating, and hit the match button:
    the matcher joins an open 1v1 room on your topic, or opens a battle
    room and you go live when a challenger arrives. Agora, the in-debate
    AI assistant, is introduced here with a preview chat. */
@@ -108,14 +108,14 @@ export default function BattlePage({ open, onClose }: Props) {
     if (cancelled.current) return;
 
     if (matches && matches.length > 0) {
-      setStatusMsg(`Opponent found — "${matches[0].motion}". Entering the arena…`);
+      setStatusMsg(`Match found — "${matches[0].motion}". Joining…`);
       setTimeout(() => { window.location.href = `/rooms/${matches[0].id}`; }, 1200);
       return;
     }
 
     // Nobody waiting: open a battle room and hold the floor.
     setPhase("creating");
-    setStatusMsg("No open battles on this topic — opening one for you…");
+    setStatusMsg("No one waiting on this topic — opening a room for you…");
     const chosenTopic = topicKey ?? TOPICS[Math.floor(Math.random() * TOPICS.length)].key;
     const pool = AUTO_MOTIONS[chosenTopic] ?? AUTO_MOTIONS["culture"];
     const chosenMotion = motion.trim() || pool[Math.floor(Math.random() * pool.length)];
@@ -135,13 +135,13 @@ export default function BattlePage({ open, onClose }: Props) {
     });
     if (cancelled.current) return;
     if (rpcError) {
-      setError(rpcError.message || "Couldn't open a battle room. Try again.");
+      setError(rpcError.message || "Couldn't open a room. Try again.");
       setPhase("idle");
       return;
     }
     const row = Array.isArray(rows) ? rows[0] : rows;
     const roomId: string | undefined = row?.room_id;
-    if (!roomId) { setError("Couldn't open a battle room. Try again."); setPhase("idle"); return; }
+    if (!roomId) { setError("Couldn't open a room. Try again."); setPhase("idle"); return; }
 
     // Best-effort battle metadata (skipped until the migration runs).
     await supabase.from("room_meta").insert({
@@ -150,7 +150,7 @@ export default function BattlePage({ open, onClose }: Props) {
       curriculum: aiRating ? "agora-general" : null,
     });
 
-    setStatusMsg("Battle room is live — you'll match the moment a challenger joins.");
+    setStatusMsg("Your room is live — you'll be matched as soon as someone joins.");
     setTimeout(() => { window.location.href = `/rooms/${roomId}`; }, 1400);
   }, [supabase, topicKey, motion, stance, aiRating]);
 
@@ -212,12 +212,12 @@ export default function BattlePage({ open, onClose }: Props) {
     >
       <div className="max-w-[860px] mx-auto px-6 py-5">
         <div className="flex items-center gap-3.5 mb-4">
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>Battle</span>
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>Discuss</span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>
-            1v1 debate roulette — pick a topic, get matched, argue live
+            1v1 — pick a topic, get matched, and talk it out live
           </span>
           <span className="text-[11px] ml-auto whitespace-nowrap" style={{ color: "#6b6b74" }}>
-            <span style={{ color: "#f09595" }}>●</span> matchmaking live
+            <span style={{ color: "#f09595" }}>●</span> matching live
           </span>
         </div>
 
@@ -229,7 +229,7 @@ export default function BattlePage({ open, onClose }: Props) {
                 <div className="relative mx-auto mb-4" style={{ width: 96, height: 96 }}>
                   <span className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(217,162,56,0.5)", animation: "battlePing 1.6s ease-out infinite" }} />
                   <span className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(96,165,250,0.4)", animation: "battlePing 1.6s ease-out 0.5s infinite" }} />
-                  <span className="absolute inset-0 flex items-center justify-center text-[34px]">⚔</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-[34px]">✦</span>
                 </div>
                 <p className="m-0 mb-2 text-[15px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
                   {statusMsg}
@@ -245,7 +245,7 @@ export default function BattlePage({ open, onClose }: Props) {
               </div>
             ) : (
               <>
-                <p className="m-0 mb-2 text-[10px]" style={{ letterSpacing: 1.5, color: "#8b8b94" }}>CHOOSE YOUR ARENA</p>
+                <p className="m-0 mb-2 text-[10px]" style={{ letterSpacing: 1.5, color: "#8b8b94" }}>CHOOSE A TOPIC</p>
                 <div className="flex gap-2 flex-wrap mb-4">
                   <button
                     onClick={() => setTopicKey(null)}
@@ -256,7 +256,7 @@ export default function BattlePage({ open, onClose }: Props) {
                         : { background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#c0c0c8" }
                     }
                   >
-                    🎲 Any topic
+                    Any topic
                   </button>
                   {TOPICS.map((t) => (
                     <button
@@ -277,7 +277,7 @@ export default function BattlePage({ open, onClose }: Props) {
                 <input
                   value={motion}
                   onChange={(e) => setMotion(e.target.value)}
-                  placeholder="Motion (optional) — leave blank and we'll pick a good one"
+                  placeholder="Topic (optional) — leave blank and we'll pick a good one"
                   className="w-full text-[13px] px-4 py-2 rounded-lg outline-none mb-4"
                   style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#e5e5ec" }}
                 />
@@ -300,7 +300,7 @@ export default function BattlePage({ open, onClose }: Props) {
                             : { background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#c0c0c8" }
                         }
                       >
-                        {s === "either" ? "🎲 Either" : s}
+                        {s === "either" ? "Either" : s}
                       </button>
                     ))}
                   </div>
@@ -316,7 +316,7 @@ export default function BattlePage({ open, onClose }: Props) {
                     <span style={{ width: 22, height: 12, borderRadius: 99, position: "relative", background: aiRating ? "#1d9e75" : "#3a3a42", display: "inline-block" }}>
                       <span style={{ position: "absolute", top: 2, left: aiRating ? 12 : 2, width: 8, height: 8, borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
                     </span>
-                    AI rating {aiRating ? "on — this battle counts toward your AR" : "off — casual, unrated"}
+                    AI rating {aiRating ? "on — this discussion counts toward your AR" : "off — unrated"}
                   </button>
                 </div>
 
@@ -331,10 +331,10 @@ export default function BattlePage({ open, onClose }: Props) {
                   className="cursor-pointer w-full text-[14px] font-medium py-3 rounded-lg border-none"
                   style={{ background: "linear-gradient(135deg,#f7e3a0,#e0b04a 55%,#c07f22)", color: "#412402", boxShadow: "0 0 22px rgba(232,163,61,0.3)", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}
                 >
-                  ⚔ Find an opponent
+                  Find someone to discuss with
                 </button>
                 <p className="m-0 mt-2 text-center text-[10px]" style={{ color: "#6b6b74" }}>
-                  Joins an open battle on your topic — or opens one and matches you when a challenger arrives
+                  Joins an open room on your topic — or opens one and matches you when someone arrives
                 </p>
               </>
             )}
@@ -352,7 +352,7 @@ export default function BattlePage({ open, onClose }: Props) {
             </span>
             <div>
               <p className="m-0 text-[13px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-                Agora — your in-battle AI
+                Agora — your in-room AI
               </p>
               <p className="m-0 text-[10px]" style={{ color: "#8b8b94" }}>
                 Say <span style={{ color: "#9cc4f0" }}>"Hey, Agora"</span> out loud or type in chat — both sides get spoken and written answers, with sources

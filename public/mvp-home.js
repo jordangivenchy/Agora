@@ -424,8 +424,8 @@ function renderCarousel() {
     <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
       <div class="carousel-bg" style="background:${c.gradient};"></div>
       <div class="carousel-bg-grid"></div>
-      <div class="carousel-live-badge"><div class="carousel-live-dot"></div> LIVE</div>
-      <div class="carousel-viewers">👁 ${c.viewersDisplay} viewers</div>
+      <div class="carousel-live-badge"><div class="carousel-live-dot"></div> Live</div>
+      <div class="carousel-viewers">${c.viewersDisplay} watching</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">"${c.motion}"</div>
         <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
@@ -433,7 +433,7 @@ function renderCarousel() {
       <div class="carousel-panel">
         <div class="panel-avatar" style="background:${c.color};">${c.initials}</div>
         <div class="panel-name">${c.debater}</div>
-        <div class="panel-viewers">👁 ${c.viewersDisplay} viewers</div>
+        <div class="panel-viewers">${c.viewersDisplay} watching</div>
         <div class="panel-topic">${c.motion}</div>
         <div class="panel-stance ${c.stance.toLowerCase()}">${c.stance}</div>
         <div class="panel-factcheck">
@@ -724,7 +724,7 @@ function renderTopicButtons() {
     const count     = getTopicDebateCount(key);
     const isTrend   = key === trendingKey;
     const isActive  = key === activeTopicKey;
-    const liveText  = count > 0 ? `${count} live${isTrend ? ' 🔥' : ''}` : 'no live';
+    const liveText  = count > 0 ? `${count} live` : 'no live';
 
     return `
       <button
@@ -817,9 +817,9 @@ function buildDebateCard(d, realIndex) {
 
   // Status badge
   const badgeMap = {
-    live:      { cls: 'hc-badge-live',      html: '<span class="hc-badge-dot"></span> LIVE' },
-    queue:     { cls: 'hc-badge-queue',     html: '⏳ IN QUEUE' },
-    scheduled: { cls: 'hc-badge-scheduled', html: '🕐 SCHEDULED' },
+    live:      { cls: 'hc-badge-live',      html: '<span class="hc-badge-dot"></span> Live' },
+    queue:     { cls: 'hc-badge-queue',     html: 'In queue' },
+    scheduled: { cls: 'hc-badge-scheduled', html: 'Scheduled' },
   };
   const badge = badgeMap[status] || badgeMap.live;
 
@@ -827,16 +827,16 @@ function buildDebateCard(d, realIndex) {
   let watchBtn  = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">▶ Watch</button>`;
   let joinBtn;
   if (status === 'live') {
-    joinBtn = `<button class="hc-btn hc-btn-join-blue" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join as Debater</button>`;
+    joinBtn = `<button class="hc-btn hc-btn-join-blue" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join as speaker</button>`;
   } else if (status === 'queue') {
     joinBtn = `<button class="hc-btn hc-btn-join-amber" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join Queue</button>`;
   } else {
     joinBtn = `<button class="hc-btn hc-btn-join-purple" onclick="openDebateModal(${realIndex});event.stopPropagation()">Register</button>`;
-    watchBtn = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">Spectate</button>`;
+    watchBtn = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">Watch</button>`;
   }
 
   // Meta items
-  const viewerLabel = status === 'queue' ? `👥 ${d.viewers}` : `👁 ${d.viewers}`;
+  const viewerLabel = status === 'queue' ? `${d.viewers} in queue` : `${d.viewers} watching`;
   const format  = d.format   || '1v1';
   const language = d.language || 'EN';
 
@@ -892,7 +892,7 @@ function renderDebateGrid() {
   // Search mode overrides topic filter
   if (searchQuery.trim()) {
     const results = getSearchResults(searchQuery);
-    title.textContent = 'Search Results';
+    title.textContent = 'Search results';
     countBadge.textContent = `${results.length} found`;
     countBadge.classList.add('visible');
 
@@ -902,8 +902,8 @@ function renderDebateGrid() {
         grid.innerHTML = `
           <div class="search-empty-state">
             <div class="search-empty-icon">🔍</div>
-            <div class="search-empty-title">No debates match "${searchQuery}"</div>
-            <div class="search-empty-sub">Try a different keyword, debater name, or topic.</div>
+            <div class="search-empty-title">Nothing matches "${searchQuery}"</div>
+            <div class="search-empty-sub">Try a different keyword, name, or topic.</div>
           </div>
         `;
       } else {
@@ -917,7 +917,7 @@ function renderDebateGrid() {
 
   countBadge.classList.remove('visible');
   const t = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
-  title.textContent = t ? `${t.emoji} ${t.label} · Live Now` : 'Live Debates';
+  title.textContent = t ? `${t.emoji} ${t.label} · Live now` : 'Live discussions';
 
   const filtered = getFilteredDebates(activeTopicKey);
 
@@ -928,8 +928,8 @@ function renderDebateGrid() {
       grid.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">${t ? t.emoji : '🎙️'}</div>
-          <div class="empty-title">No live debates in ${t ? t.label : 'this topic'} right now</div>
-          <div class="empty-sub">Check back soon — this arena heats up fast.</div>
+          <div class="empty-title">Nothing live in ${t ? t.label : 'this topic'} right now</div>
+          <div class="empty-sub">Check back soon, or browse another topic.</div>
           ${upcomingInTopic.length ? `
             <div class="upcoming-label">Scheduled · Up Next</div>
             <div class="upcoming-list">
@@ -1005,24 +1005,24 @@ function renderELOModule() {
           </div>
         </div>
       `).join('')
-    : `<div class="elo-empty">No ranked debaters in ${t?.label || 'this topic'} yet.<br><span style="color:var(--text-dim);">Be the first to compete. →</span></div>`;
+    : `<div class="elo-empty">No rated speakers in ${t?.label || 'this topic'} yet.<br><span style="color:var(--text-dim);">Be the first to start one. →</span></div>`;
 
   const moduleTitle = eloScope === 'topic' && t
     ? `${t.emoji} Top in ${t.label}`
-    : 'Most Popular';
+    : 'Most popular';
 
   mod.innerHTML = `
     <div class="elo-module-header">
       <div class="elo-module-title">${moduleTitle}</div>
-      <div class="elo-scope-toggle" role="group" aria-label="ELO scope">
+      <div class="elo-scope-toggle" role="group" aria-label="Rating scope">
         <button class="scope-btn${eloScope === 'global' ? ' active' : ''}" data-scope="global">Global</button>
-        <button class="scope-btn${eloScope === 'topic'  ? ' active' : ''}" data-scope="topic" ${topicBtnDisabled} title="${topicBtnTitle}">This Topic</button>
+        <button class="scope-btn${eloScope === 'topic'  ? ' active' : ''}" data-scope="topic" ${topicBtnDisabled} title="${topicBtnTitle}">This topic</button>
       </div>
     </div>
     <div class="elo-list">${listHTML}</div>
     <div class="elo-module-footer">
       <a class="elo-explore-link" href="#">View full rankings →</a>
-      <span class="elo-total-count">${DEBATERS.length} ranked</span>
+      <span class="elo-total-count">${DEBATERS.length} rated</span>
     </div>
   `;
 
@@ -1108,7 +1108,7 @@ function renderDebateRoom(index) {
       <div class="feed-arg-reactions">
         <button class="feed-reaction-btn" data-arg-reaction="up" title="Strong argument">👍 <span class="react-count">${Math.floor(Math.random()*120)+8}</span></button>
         <button class="feed-reaction-btn" data-arg-reaction="down" title="Weak argument">👎 <span class="react-count">${Math.floor(Math.random()*30)+2}</span></button>
-        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Fire argument">🔥 <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Compelling">★ <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
       </div>
     </div>
   `).join('');
@@ -1116,12 +1116,12 @@ function renderDebateRoom(index) {
   panel.innerHTML = `
     <!-- HEADER -->
     <div class="room-header">
-      <div class="room-live-badge"><div class="carousel-live-dot"></div> LIVE</div>
+      <div class="room-live-badge"><div class="carousel-live-dot"></div> Live</div>
       <div class="room-header-info">
         <div class="room-motion">"${d.motion}"</div>
-        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ◆ ${d.elo} ELO stakes &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
+        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ◆ ${d.elo} AR &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
       </div>
-      <div class="room-viewers-pill">👁 ${d.viewers} viewers</div>
+      <div class="room-viewers-pill">${d.viewers} watching</div>
       <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">✕</button>
     </div>
 
@@ -1143,7 +1143,7 @@ function renderDebateRoom(index) {
             <div class="room-debater-name-label">${d.debater2}</div>
             <span class="room-stance-badge con">CON</span>
           </div>
-          <div class="room-vs-divider">VS</div>
+          <div class="room-vs-divider">vs</div>
         </div>
       </div>
 
@@ -1183,7 +1183,7 @@ function renderDebateRoom(index) {
             class="room-vote-btn pro${voted === 'pro' ? ' voted' : ''}"
             id="roomVotePro"
             ${voted ? 'disabled' : ''}
-            aria-label="Vote PRO on this motion"
+            aria-label="Vote PRO on this topic"
           >
             ${voted === 'pro' ? '✓ Voted PRO' : '👍 PRO'}
           </button>
@@ -1191,19 +1191,19 @@ function renderDebateRoom(index) {
             class="room-vote-btn con${voted === 'con' ? ' voted' : ''}"
             id="roomVoteCon"
             ${voted ? 'disabled' : ''}
-            aria-label="Vote CON on this motion"
+            aria-label="Vote CON on this topic"
           >
             ${voted === 'con' ? '✓ Voted CON' : '👎 CON'}
           </button>
         </div>
 
         <div class="room-vote-note" id="roomVoteNote">
-          ${voted ? `You voted ${voted.toUpperCase()}. Votes are locked for this session.` : 'Cast your vote to influence the debate ranking.'}
+          ${voted ? `You voted ${voted.toUpperCase()}. Votes are locked for this session.` : 'Your vote counts toward the final result.'}
         </div>
 
         <div class="room-elo-stakes">
-          <span class="room-elo-stakes-label">◆ ELO at stake</span>
-          <span class="room-elo-stakes-val">${d.elo} points</span>
+          <span class="room-elo-stakes-label">◆ Rating</span>
+          <span class="room-elo-stakes-val">Affects both speakers' AR</span>
         </div>
       </div>
 
@@ -1596,7 +1596,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
       <div class="modal-section">
         <span class="modal-section-label">Motion / Topic</span>
         <div class="modal-input-row">
-          <input class="modal-input" id="motionInput" type="text" placeholder="State the motion or topic…" autocomplete="off" />
+          <input class="modal-input" id="motionInput" type="text" placeholder="What's the topic?" autocomplete="off" />
           <button class="suggest-btn" onclick="_cmSuggest()">✦ Suggest</button>
         </div>
       </div>
@@ -1638,7 +1638,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
       <div class="modal-section">
         <div class="toggle-row">
           <div>
-            <div class="toggle-label">Show your AR to opponent</div>
+            <div class="toggle-label">Show your AR to the other speaker</div>
             <div class="toggle-sublabel">Before match is confirmed</div>
           </div>
           <div class="toggle-switch on" onclick="_cmToggle(this)"><div class="knob"></div></div>
@@ -1655,12 +1655,12 @@ document.getElementById('searchBtn').addEventListener('click', () => {
       <div class="entry-cards">
         <div class="entry-card queue" onclick="_cmShowQueue()">
           <span class="entry-card-icon">⚡</span>
-          <span class="entry-card-title">Join Queue</span>
-          <span class="entry-card-desc">Enter matchmaking and get paired with a debater on your topic and skill level</span>
+          <span class="entry-card-title">Join a queue</span>
+          <span class="entry-card-desc">Get paired with someone on your topic and skill level</span>
         </div>
         <div class="entry-card create" onclick="_cmShowCreate()">
           <span class="entry-card-icon">🎙</span>
-          <span class="entry-card-title">Create Discussion</span>
+          <span class="entry-card-title">Create a room</span>
           <span class="entry-card-desc">Host your own room with full control over format, rules, and audience</span>
         </div>
       </div>
@@ -1673,14 +1673,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     modalTitle.innerHTML = `<button class="back-btn" onclick="_cmEntry()">←</button> Join Queue`;
     modalBody.innerHTML = sharedFields() + `
       <div class="modal-section">
-        <span class="modal-section-label">Skill matchmaking</span>
+        <span class="modal-section-label">Skill matching</span>
         <div class="pill-group" id="skillPills">
           <span class="pill selected" onclick="_cmSelectOne(this,'skillPills')">Match similar AR</span>
           <span class="pill"          onclick="_cmSelectOne(this,'skillPills')">Open to all</span>
         </div>
       </div>
       <div class="modal-section">
-        <span class="modal-section-label">Preferred opponent AR range</span>
+        <span class="modal-section-label">Preferred AR range</span>
         <div class="ar-slider-wrap">
           <div class="ar-range-row">
             <span class="ar-range-label">Min</span>
@@ -1708,14 +1708,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
         <div class="toggle-row">
           <div>
             <div class="toggle-label">Notify me when matched</div>
-            <div class="toggle-sublabel">Leave queue, get pinged when a match is found</div>
+            <div class="toggle-sublabel">Leave the queue and get notified when someone is found</div>
           </div>
           <div class="toggle-switch" onclick="_cmToggle(this)"><div class="knob"></div></div>
         </div>
         <div class="toggle-row">
           <div>
             <div class="toggle-label">Auto-accept match</div>
-            <div class="toggle-sublabel">Skip manual confirmation when opponent found</div>
+            <div class="toggle-sublabel">Skip manual confirmation when someone is found</div>
           </div>
           <div class="toggle-switch" onclick="_cmToggle(this)"><div class="knob"></div></div>
         </div>
@@ -1778,7 +1778,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
         <div class="toggle-row">
           <div>
             <div class="toggle-label">Recording consent</div>
-            <div class="toggle-sublabel">Allow this debate to be saved and shared</div>
+            <div class="toggle-sublabel">Allow this discussion to be saved and shared</div>
           </div>
           <div class="toggle-switch on" onclick="_cmToggle(this)"><div class="knob"></div></div>
         </div>
@@ -2044,19 +2044,19 @@ init();
     const meta = document.getElementById('epResultsMeta');
     if (!grid) return;
 
-    meta.textContent = `Showing ${list.length} debate${list.length !== 1 ? 's' : ''}`;
+    meta.textContent = `Showing ${list.length} discussion${list.length !== 1 ? 's' : ''}`;
 
     if (list.length === 0) {
-      grid.innerHTML = `<div class="explore-empty"><span class="explore-empty-icon">🔍</span>No debates match your filters</div>`;
+      grid.innerHTML = `<div class="explore-empty"><span class="explore-empty-icon">🔍</span>Nothing matches your filters</div>`;
       return;
     }
 
     grid.innerHTML = list.map(d => {
-      const statusLabel = d.status === 'live' ? '● LIVE' : d.status === 'queue' ? '⏳ IN QUEUE' : '🕐 SCHEDULED';
+      const statusLabel = d.status === 'live' ? '● Live' : d.status === 'queue' ? 'In queue' : 'Scheduled';
       const avatarsHtml = d.debaters.map((av, i) => `
         <div class="explore-avatar" style="background:${av.color}">${av.init}</div>
         <span class="explore-debater-name">${d.names[i]}</span>
-        ${i < d.debaters.length - 1 ? '<span class="explore-vs">VS</span>' : ''}
+        ${i < d.debaters.length - 1 ? '<span class="explore-vs">vs</span>' : ''}
       `).join('');
       const waitingHtml = d.debaters.length === 1
         ? `<span class="explore-debater-name" style="color:rgba(255,255,255,0.2)">${d.names[1]}</span>` : '';
@@ -2233,10 +2233,13 @@ init();
       const cardText = card.textContent.toLowerCase();
 
       const catOk  = catFilter  === 'All' || catFilter  === '' || cardCat.includes(catFilter.toLowerCase());
+      // Compare case-insensitively: the pill labels are sentence case ("Live now",
+      // "Scheduled"), so matching against lowercase literals needs the fold.
+      const statLc = statFilter.toLowerCase();
       const statOk = statFilter === 'All' || statFilter === '' ||
-                     (statFilter.includes('live')      && cardStat === 'live') ||
-                     (statFilter.includes('queue')     && cardStat === 'queue') ||
-                     (statFilter.includes('scheduled') && cardStat === 'scheduled');
+                     (statLc.includes('live')      && cardStat === 'live') ||
+                     (statLc.includes('queue')     && cardStat === 'queue') ||
+                     (statLc.includes('scheduled') && cardStat === 'scheduled');
       const fmtOk  = fmtFilter  === 'All formats' || fmtFilter === '' || cardFmt.includes(fmtFilter.toLowerCase());
       const langOk = langFilter === 'Any language' || langFilter === '' || cardLang.includes(langFilter.toLowerCase());
       const queryOk = q === '' || cardText.includes(q);

@@ -103,7 +103,7 @@ export default function DebatesPage({ open, onClose }: Props) {
     ]);
 
     if (histRes.error) {
-      setError(histRes.error.message || "Could not load debates");
+      setError(histRes.error.message || "Could not load discussions");
       setRows([]);
     } else {
       setRows((histRes.data as HistoryRow[]) || []);
@@ -124,13 +124,13 @@ export default function DebatesPage({ open, onClose }: Props) {
 
   const cancelRoom = useCallback(async (roomId: string) => {
     const ok = typeof window !== "undefined"
-      ? window.confirm("Cancel this scheduled debate? This can't be undone.")
+      ? window.confirm("Cancel this scheduled discussion? This can't be undone.")
       : false;
     if (!ok) return;
     setCancelBusyId(roomId);
     const { error: rpcErr } = await supabase.rpc("cancel_room", { p_room: roomId });
     if (rpcErr) {
-      setError(rpcErr.message || "Could not cancel debate");
+      setError(rpcErr.message || "Could not cancel discussion");
       setCancelBusyId(null);
       return;
     }
@@ -255,7 +255,7 @@ export default function DebatesPage({ open, onClose }: Props) {
         )}
 
         {/* ── Past debates header & stats ───────────────────────────── */}
-        <SectionHeading title="Past debates" count={pastRows.length} />
+        <SectionHeading title="Past discussions" count={pastRows.length} />
 
         <div
           className="grid mb-6"
@@ -284,7 +284,7 @@ export default function DebatesPage({ open, onClose }: Props) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search motions, topics…"
+            placeholder="Search topics…"
             className="outline-none"
             style={{
               flex: 1,
@@ -340,14 +340,14 @@ export default function DebatesPage({ open, onClose }: Props) {
         {isSignedIn === false && (
           <EmptyState
             title={<><a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to view your debates</>}
-            sub="We only track debates for signed-in users."
+            sub="We only track discussions for signed-in users."
           />
         )}
 
-        {isSignedIn && loading && <EmptyState title="Loading debates…" sub="" />}
+        {isSignedIn && loading && <EmptyState title="Loading discussions…" sub="" />}
 
         {isSignedIn && !loading && error && (
-          <EmptyState title="Could not load debates" sub={error} />
+          <EmptyState title="Could not load discussions" sub={error} />
         )}
 
         {isSignedIn && !loading && !error && pastRows.length === 0 && scheduled.length === 0 && (
