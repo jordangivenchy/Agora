@@ -405,7 +405,13 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         return;
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to join room";
+      const raw = err instanceof Error ? err.message : "Failed to join room";
+      // RLS rejections carry the policy name; the "suspended users …"
+      // policies come from 20260812_enforce_suspension.sql.
+      const message =
+        raw.includes("suspended users") || raw.includes("account_suspended")
+          ? "This account is suspended. Contact support if you believe this is a mistake."
+          : raw;
       setError(message);
     } finally {
       setJoining(false);
