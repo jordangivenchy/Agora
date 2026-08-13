@@ -184,6 +184,13 @@ export default function Home() {
       }
   }, [supabase]);
 
+  // Deep link support: /?profile=<userId> (from "Copy profile link") opens
+  // that user's profile on load.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("profile");
+    if (p) setProfileUserId(p);
+  }, []);
+
   /* Never let a slow or unreachable backend hold the UI hostage. Supabase's
      auth client retries with backoff for minutes when its host is down, so
      `loadData` can hang well past any reasonable paint. Boot the visual

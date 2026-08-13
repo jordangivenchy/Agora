@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { useUserMenu } from "./userMenuContext";
 
 export type SidebarView = "home" | "explore" | "following";
 
@@ -42,8 +43,11 @@ function initials(name: string) {
     : name.slice(0, 2).toUpperCase();
 }
 
-export default function Sidebar({ activeView, onChangeView, onOpenDashboard, onOpenProfile }: Props) {
+// onOpenProfile stays in Props for compatibility; profile opening now goes
+// through the unified context menu's View Profile action.
+export default function Sidebar({ activeView, onChangeView, onOpenDashboard }: Props) {
   const supabase = createClient();
+  const { openUserMenu } = useUserMenu();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [meId, setMeId] = useState<string | null>(null);
@@ -288,7 +292,12 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard, onO
             {friends.map((f) => (
               <button
                 key={f.id}
-                onClick={() => onOpenProfile(f.id)}
+                onClick={(e) =>
+                  openUserMenu(
+                    { x: e.clientX, y: e.clientY },
+                    { userId: f.id, username: f.username }
+                  )
+                }
                 className="flex items-center gap-2.5 w-full text-left cursor-pointer transition-all"
                 style={{
                   padding: "10px 14px",

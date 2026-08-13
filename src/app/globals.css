@@ -630,6 +630,102 @@ body {
 }
 .audience-avatar:hover { filter: saturate(1.25) brightness(1.1); }
 
+/* ── Unified user context menu ── */
+.user-menu {
+  position: fixed;
+  z-index: 1300;
+  width: 236px;
+  background: rgba(18,18,21,0.98);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: fadeSlideIn 0.15s ease;
+}
+.user-menu-header {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  padding: 6px 10px 7px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.user-menu-row:hover:not(:disabled) {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+}
+.user-menu-row.danger { color: #f19999; }
+.user-menu-row.danger:hover:not(:disabled) {
+  background: rgba(239,68,68,0.12);
+  color: #fca5a5;
+}
+.user-menu-row:disabled { opacity: 0.4; cursor: default; }
+.user-menu-emoji { width: 18px; text-align: center; flex-shrink: 0; font-size: 13px; }
+.user-menu-soon {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-dim);
+}
+.user-menu-divider { height: 1px; background: var(--border); margin: 5px 8px; }
+.user-menu-section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 4px 10px 3px;
+}
+.user-menu-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1400;
+  background: rgba(18,18,21,0.95);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 9px 18px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+  animation: fadeSlideIn 0.2s ease;
+}
+
+.chat-msg-user:hover { text-decoration: underline; }
+
 /* ── Presence indicators (VAD/connection state on speaker tiles) ── */
 .presence-dot {
   display: inline-block;

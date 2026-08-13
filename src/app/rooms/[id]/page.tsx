@@ -1033,6 +1033,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
           <DebateVideo
             token={livekitToken}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL!}
+            roomId={roomId}
             isDebater={myParticipation?.role === "debater"}
             hostId={room!.host_id}
             currentUserId={currentUser?.id || guestId || ""}
