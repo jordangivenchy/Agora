@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { SEED_SHORTS, type SeedClip } from "@/lib/seed-content";
+import type { SeedClip } from "@/lib/seed-content";
 
 interface Props {
   open: boolean;
@@ -188,7 +188,8 @@ export default function TrendingPage({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const shorts: Clip[] = [...dbClips, ...SEED_SHORTS.map((s) => ({ ...s, isSeed: true }))];
+  // Real uploads only — the fictional demo reel is gone.
+  const shorts: Clip[] = [...dbClips];
 
   return (
     <div
@@ -451,6 +452,11 @@ export default function TrendingPage({ open, onClose }: Props) {
                 <p className="m-0 mb-2 text-[11px]" style={{ color: uploadMsg.includes("✓") ? "#97c459" : "#f4d47c" }}>{uploadMsg}</p>
               )}
               <div className="flex gap-3 overflow-x-auto pb-1">
+                {shorts.length === 0 && (
+                  <p className="m-0 py-6 text-[11px]" style={{ color: "#8b8b94" }}>
+                    No clips yet — record a discussion and clip your best moment.
+                  </p>
+                )}
                 {shorts.map((s) => (
                   <button
                     key={s.id}

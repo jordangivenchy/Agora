@@ -20,8 +20,8 @@ const NODES: {
   status: "available" | "coming-soon";
   energy: number;
 }[] = [
-  { key: "debates",     title: "Debates",     subtitle: "Upcoming & past", content: "Your scheduled debates and full match history.",  icon: "⚔️", status: "available",   energy: 80 },
-  { key: "agorarating", title: "AgoraRating", subtitle: "Elo Score",        content: "Your competitive rating and ranking history.",    icon: "📊", status: "coming-soon", energy: 65 },
+  { key: "debates",     title: "Discussions", subtitle: "Upcoming & past", content: "Your scheduled discussions and full history.",    icon: "📋", status: "available",   energy: 80 },
+  { key: "agorarating", title: "AgoraRating", subtitle: "AR score",         content: "Your rating and ranking history.",                icon: "📊", status: "coming-soon", energy: 65 },
   { key: "train",       title: "Train",       subtitle: "Practice",         content: "Sharpen your arguments with AI-powered training.", icon: "🏋️", status: "coming-soon", energy: 50 },
 ];
 

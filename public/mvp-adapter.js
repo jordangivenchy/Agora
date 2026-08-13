@@ -30,7 +30,8 @@
           viewersNum: d.viewersNum || 0,
           motion: d.motion,
           stance: d.debater1Stance || 'PRO',
-          factCheck: { type: 'verified', label: 'verified' },
+          // No factCheck: real rooms have no fact-checking yet, and stamping
+          // "verified" on them was a fabricated trust signal.
           gradient: d.gradient,
           topicKey: d.topicKey,
           debateIndex: d._i,

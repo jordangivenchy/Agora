@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { SEED_COMMUNITIES } from "@/lib/seed-content";
 
 interface Props {
   open: boolean;
@@ -53,7 +52,6 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   const [search, setSearch] = useState("");
   const [dbCommunities, setDbCommunities] = useState<DbCommunity[]>([]);
   const [migrated, setMigrated] = useState(true);
-  const [joinedSeeds, setJoinedSeeds] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState("topic-circle");
@@ -111,36 +109,6 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     [supabase, userId, load]
   );
 
-  /* Joining a suggested community makes it real: it's created in the
-     database on first join (when the migration has run), so suggestions
-     graduate into actual communities instead of staying cosmetic. */
-  const joinSeed = useCallback(
-    async (seed: { id: string; name: string; kind: string }) => {
-      if (joinedSeeds[seed.id]) {
-        setJoinedSeeds((m) => ({ ...m, [seed.id]: false }));
-        return;
-      }
-      setJoinedSeeds((m) => ({ ...m, [seed.id]: true }));
-      if (!migrated || !userId) return;
-      const { data: existing } = await supabase
-        .from("communities").select("id").eq("name", seed.name).maybeSingle();
-      let communityId = existing?.id;
-      if (!communityId) {
-        const { data: created } = await supabase
-          .from("communities")
-          .insert({ name: seed.name, kind: seed.kind, created_by: userId })
-          .select("id")
-          .single();
-        communityId = created?.id;
-      }
-      if (communityId) {
-        await supabase.from("community_members").insert({ community_id: communityId, user_id: userId });
-        load();
-      }
-    },
-    [supabase, userId, migrated, joinedSeeds, load]
-  );
-
   const createCommunity = useCallback(async () => {
     const name = newName.trim();
     if (!name || !userId) return;
@@ -156,16 +124,6 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       load();
     }
   }, [supabase, userId, newName, newKind, load]);
-
-  const seeds = useMemo(
-    () =>
-      SEED_COMMUNITIES.filter(
-        (c) =>
-          (filter === "all" || c.kind === filter) &&
-          (!search || c.name.toLowerCase().includes(search.toLowerCase()))
-      ),
-    [filter, search]
-  );
 
   const realOnes = useMemo(
     () =>
@@ -294,57 +252,16 @@ export default function CommunitiesPage({ open, onClose }: Props) {
             </div>
           ))}
 
-          {seeds.map((c) => (
-            <div key={c.id} className="p-3.5" style={card}>
-              <div className="flex gap-2.5 items-center mb-2.5">
-                <span
-                  className="flex items-center justify-center"
-                  style={{ width: 42, height: 42, borderRadius: 11, background: c.color, color: "#fff", fontSize: 15, fontFamily: "'Syne', sans-serif", fontWeight: 700 }}
-                >
-                  {c.initial}
-                </span>
-                <div>
-                  <p className="m-0 text-[13px] font-medium" style={{ color: "#f5f5f0" }}>{c.name}</p>
-                  <p className="m-0 text-[10px]" style={{ color: "#8b8b94" }}>{c.kindLabel}</p>
-                </div>
-              </div>
-              <p className="m-0 mb-2.5 text-[11px]" style={{ color: "#9a9aa2" }}>
-                {c.members.toLocaleString()} members · <span style={{ color: c.activity.color }}>{c.activity.text}</span>
+          {realOnes.length === 0 && (
+            <div className="p-6 text-center" style={{ ...card, gridColumn: "1 / -1" }}>
+              <p className="m-0 mb-1 text-[13px]" style={{ color: "#f5f5f0" }}>
+                No communities yet
               </p>
-              <button
-                onClick={() => joinSeed(c)}
-                className="w-full cursor-pointer text-[11px] py-1.5 rounded-lg text-center"
-                style={
-                  joinedSeeds[c.id]
-                    ? { background: "rgba(30,30,38,0.8)", border: "0.5px solid #3a5a3a", color: "#97c459" }
-                    : { background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0" }
-                }
-              >
-                {joinedSeeds[c.id] ? "✓ Joined" : "Join"}
-              </button>
+              <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
+                Be the first — create one for your school, team, or topic.
+              </p>
             </div>
-          ))}
-        </div>
-
-        <div className="p-4" style={card}>
-          <p className="m-0 mb-2.5 text-[13px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-            Community events this week
-          </p>
-          <div className="flex gap-2.5 flex-wrap">
-            {[
-              ["Thu 7 PM", "Berkeley vs Stanford — Oxford exhibition"],
-              ["Sat 1 PM", "MUN Global crisis committee"],
-              ["Sun 5 PM", "Philosophy Circle steelman night"],
-            ].map(([when, what]) => (
-              <span
-                key={what}
-                className="text-[11px] px-3.5 py-1.5 rounded-lg"
-                style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#c0c0c8" }}
-              >
-                <span style={{ color: "#f4d47c" }}>{when}</span> · {what}
-              </span>
-            ))}
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -92,17 +92,17 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 
       <div class="filter-group">
         <span class="filter-group-title">Category</span>
-        <button class="filter-pill active" data-filter-group="category" onclick="_dsFilter(this)">All <span class="pill-count">240</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Politics <span class="pill-count">48</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Ethics <span class="pill-count">31</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Economics <span class="pill-count">27</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Science &amp; Tech <span class="pill-count">22</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Philosophy <span class="pill-count">19</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Foreign Policy <span class="pill-count">16</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Culture <span class="pill-count">14</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Sports <span class="pill-count">11</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Law <span class="pill-count">9</span></button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">History <span class="pill-count">8</span></button>
+        <button class="filter-pill active" data-filter-group="category" onclick="_dsFilter(this)">All</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Politics</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Ethics</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Economics</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Science &amp; Tech</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Philosophy</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Foreign Policy</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Culture</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Sports</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Law</button>
+        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">History</button>
       </div>
 
       <div class="filter-divider"></div>
@@ -138,260 +138,12 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <button class="filter-pill" data-filter-group="language" onclick="_dsFilter(this)">Arabic</button>
       </div>
 
-      <div class="filter-divider"></div>
-
-      <div class="filter-group">
-        <span class="filter-group-title">AR Range</span>
-        <div class="ar-filter-row">
-          <input class="ar-filter-input" type="number" value="0" placeholder="Min" />
-          <span class="ar-filter-sep">—</span>
-          <input class="ar-filter-input" type="number" value="3000" placeholder="Max" />
-        </div>
-      </div>
-
-      <div class="filter-divider"></div>
-
-      <div class="filter-group">
-        <span class="filter-group-title">Options</span>
-        <div class="filter-toggle-row">
-          <span class="filter-toggle-label">Live only</span>
-          <div class="mini-toggle" onclick="this.classList.toggle('on');this.querySelector('.knob').style.left=this.classList.contains('on')?'14px':'2px'"><div class="knob"></div></div>
-        </div>
-        <div class="filter-toggle-row">
-          <span class="filter-toggle-label">Open to join</span>
-          <div class="mini-toggle on" onclick="this.classList.toggle('on');this.querySelector('.knob').style.left=this.classList.contains('on')?'14px':'2px'"><div class="knob"></div></div>
-        </div>
-        <div class="filter-toggle-row">
-          <span class="filter-toggle-label">Has open queue</span>
-          <div class="mini-toggle" onclick="this.classList.toggle('on');this.querySelector('.knob').style.left=this.classList.contains('on')?'14px':'2px'"><div class="knob"></div></div>
-        </div>
-        <div class="filter-toggle-row">
-          <span class="filter-toggle-label">Show AR to opponents</span>
-          <div class="mini-toggle on" onclick="this.classList.toggle('on');this.querySelector('.knob').style.left=this.classList.contains('on')?'14px':'2px'"><div class="knob"></div></div>
-        </div>
-      </div>
-
     </div><!-- /discovery-filters -->
 
     <!-- Results -->
     <div class="discovery-results" id="discoveryResults">
-      <div class="results-meta" id="resultsMeta">Showing 9 discussions</div>
-      <div class="results-grid" id="resultsGrid">
-
-        <div class="result-card" data-category="Politics" data-status="live" data-format="Oxford Style" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status live">● Live</span>
-            <span class="result-category">Politics</span>
-          </div>
-          <div class="result-motion">"Free speech has no absolute limits"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#1976D2">PT</div>
-            <span class="debater-name">PhilosophyTube</span>
-            <span class="vs-badge">vs</span>
-            <div class="debater-avatar" style="background:#e65c00">D</div>
-            <span class="debater-name">Destiny</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">4.7K watching</span>
-            <span class="result-meta-item">Oxford Style</span>
-            <span class="result-meta-item">English</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as speaker</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Economics" data-status="queue" data-format="1v1" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status queue">In queue</span>
-            <span class="result-category">Economics</span>
-          </div>
-          <div class="result-motion">"Universal Basic Income would destroy work ethic"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#0f6e56">H</div>
-            <span class="debater-name">HasanAbi</span>
-            <span class="vs-badge">vs</span>
-            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for someone to join…</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">3 in queue</span>
-            <span class="result-meta-item">1v1</span>
-            <span class="result-meta-item">~2 min wait</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn queue-join">Join queue</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Ethics" data-status="scheduled" data-format="Oxford Style" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status scheduled">Scheduled</span>
-            <span class="result-category">Ethics</span>
-          </div>
-          <div class="result-motion">"AI cannot be held morally responsible for its actions"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#533ab7">CD</div>
-            <span class="debater-name">CosmosDebate</span>
-            <span class="vs-badge">vs</span>
-            <div class="debater-avatar" style="background:#854f0b">LE</div>
-            <span class="debater-name">LegalEagle</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">Tomorrow 8PM</span>
-            <span class="result-meta-item">Oxford Style</span>
-            <span class="result-meta-item">English</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Set reminder</button>
-            <button class="result-btn join">Sign up to speak</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Science & Tech" data-status="live" data-format="Open Debate" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status live">● Live</span>
-            <span class="result-category">Science &amp; Tech</span>
-          </div>
-          <div class="result-motion">"AI will eliminate more jobs than it creates within a decade"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#00cec9">TR</div>
-            <span class="debater-name">TechRealist</span>
-            <span class="vs-badge">vs</span>
-            <div class="debater-avatar" style="background:#64B5F6">AO</div>
-            <span class="debater-name">AIOptimist</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">2.1K watching</span>
-            <span class="result-meta-item">Open Debate</span>
-            <span class="result-meta-item">English</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as speaker</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Philosophy" data-status="queue" data-format="Oxford Style" data-language="Spanish">
-          <div class="result-card-top">
-            <span class="result-status queue">In queue</span>
-            <span class="result-category">Philosophy</span>
-          </div>
-          <div class="result-motion">"Free will is an illusion incompatible with determinism"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#6c3483">KM</div>
-            <span class="debater-name">KairosMind</span>
-            <span class="vs-badge">vs</span>
-            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for someone to join…</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">1 in queue</span>
-            <span class="result-meta-item">Oxford Style</span>
-            <span class="result-meta-item">Spanish</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn queue-join">Join queue</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Foreign Policy" data-status="live" data-format="Panel (2v2)" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status live">● Live</span>
-            <span class="result-category">Foreign Policy</span>
-          </div>
-          <div class="result-motion">"NATO expansion destabilizes more than it secures"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#1976D2">GM</div>
-            <span class="debater-name">GlobalMarket</span>
-            <span class="vs-badge">vs</span>
-            <div class="debater-avatar" style="background:#c0392b">CB</div>
-            <span class="debater-name">CosmosDebate</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">890 watching</span>
-            <span class="result-meta-item">Panel (2v2)</span>
-            <span class="result-meta-item">English</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as speaker</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Culture" data-status="scheduled" data-format="1v1" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status scheduled">Scheduled</span>
-            <span class="result-category">Culture</span>
-          </div>
-          <div class="result-motion">"Cancel culture strengthens accountability norms"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#636e72">SN</div>
-            <span class="debater-name">Sneako</span>
-            <span class="vs-badge">vs</span>
-            <div class="debater-avatar" style="background:#fd79a8">PT</div>
-            <span class="debater-name">PhilosophyTube</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">Sat 1:00 PM ET</span>
-            <span class="result-meta-item">1v1</span>
-            <span class="result-meta-item">English</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Set reminder</button>
-            <button class="result-btn join">Sign up to speak</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="Law" data-status="live" data-format="Open Debate" data-language="English">
-          <div class="result-card-top">
-            <span class="result-status live">● Live</span>
-            <span class="result-category">Law</span>
-          </div>
-          <div class="result-motion">"Jury trials should be abolished for complex financial crimes"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#e2b96b">LE</div>
-            <span class="debater-name">LegalEagle</span>
-            <span class="vs-badge">vs</span>
-            <div class="debater-avatar" style="background:#00b894">CV</div>
-            <span class="debater-name">CivicVoice</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">1.3K watching</span>
-            <span class="result-meta-item">Open Debate</span>
-            <span class="result-meta-item">English</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn join">Join as speaker</button>
-          </div>
-        </div>
-
-        <div class="result-card" data-category="History" data-status="queue" data-format="Oxford Style" data-language="French">
-          <div class="result-card-top">
-            <span class="result-status queue">In queue</span>
-            <span class="result-category">History</span>
-          </div>
-          <div class="result-motion">"The French Revolution did more harm than good in the long run"</div>
-          <div class="result-debaters">
-            <div class="debater-avatar" style="background:#2980b9">PN</div>
-            <span class="debater-name">PoliticsNow</span>
-            <span class="vs-badge">vs</span>
-            <span class="debater-name" style="color:rgba(255,255,255,0.25)">Waiting for someone to join…</span>
-          </div>
-          <div class="result-meta-row">
-            <span class="result-meta-item">2 in queue</span>
-            <span class="result-meta-item">Oxford Style</span>
-            <span class="result-meta-item">French</span>
-          </div>
-          <div class="result-actions">
-            <button class="result-btn watch">Watch</button>
-            <button class="result-btn queue-join">Join queue</button>
-          </div>
-        </div>
-
-      </div><!-- /results-grid -->
+      <div class="results-meta" id="resultsMeta"></div>
+      <div class="results-grid" id="resultsGrid"><!-- cards generated from real rooms by renderDiscoveryCards() --></div><!-- /results-grid -->
     </div><!-- /discovery-results -->
   </div><!-- /discovery-body -->
 </div><!-- /discoveryOverlay -->
@@ -629,15 +381,15 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
     </div>
     <div class="explore-banner-stats">
       <div class="explore-stat">
-        <span class="explore-stat-val">240</span>
+        <span class="explore-stat-val">—</span>
         <span class="explore-stat-label">Active rooms</span>
       </div>
       <div class="explore-stat">
-        <span class="explore-stat-val">1,847</span>
+        <span class="explore-stat-val">—</span>
         <span class="explore-stat-label">Speakers online</span>
       </div>
       <div class="explore-stat">
-        <span class="explore-stat-val">38K</span>
+        <span class="explore-stat-val">—</span>
         <span class="explore-stat-label">Watching now</span>
       </div>
     </div>
@@ -704,29 +456,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
           <button class="explore-pill"        onclick="_epFilter(this,'lang')">FR</button>
           <button class="explore-pill"        onclick="_epFilter(this,'lang')">ZH</button>
           <button class="explore-pill"        onclick="_epFilter(this,'lang')">AR</button>
-        </div>
-      </div>
-
-      <div class="explore-filter-group-inline">
-        <span class="explore-filter-group-label">AR Range</span>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <input class="explore-ar-input" id="epArMin" type="number" value="0" placeholder="Min" />
-          <span style="color:rgba(255,255,255,0.2);font-size:12px;">—</span>
-          <input class="explore-ar-input" id="epArMax" type="number" value="3000" placeholder="Max" />
-        </div>
-      </div>
-
-      <div class="explore-filter-group-inline">
-        <span class="explore-filter-group-label">Options</span>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label class="explore-toggle-label">
-            <div class="mini-toggle-e" onclick="this.classList.toggle('on');this.querySelector('.knob').style.left=this.classList.contains('on')?'14px':'2px';_epApplyFilters()"><div class="knob"></div></div>
-            <span>Live only</span>
-          </label>
-          <label class="explore-toggle-label">
-            <div class="mini-toggle-e on" onclick="this.classList.toggle('on');this.querySelector('.knob').style.left=this.classList.contains('on')?'14px':'2px';_epApplyFilters()"><div class="knob"></div></div>
-            <span>Open to join</span>
-          </label>
         </div>
       </div>
 
