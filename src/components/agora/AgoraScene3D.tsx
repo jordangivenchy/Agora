@@ -558,7 +558,7 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
     const screen = new THREE.Group();
     const panel = new THREE.Mesh(
       new THREE.PlaneGeometry(W, H),
-      new THREE.MeshBasicMaterial({ color: 0x0a1220, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide })
     );
     screen.add(panel);
 
@@ -596,7 +596,7 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
     screen.add(shoulders);
     const plate = new THREE.Mesh(
       new THREE.BoxGeometry(4.2, 0.55, 0.04),
-      new THREE.MeshBasicMaterial({ color: 0x0e1424, transparent: true, opacity: 0.85 })
+      new THREE.MeshBasicMaterial({ color: 0x1c1c1f, transparent: true, opacity: 0.9 })
     );
     plate.position.set(0, -3.3, 0.07);
     screen.add(plate);
