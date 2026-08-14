@@ -50,6 +50,13 @@ function colorFor(id: string): string {
 
 function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: StagePerson[] }) {
   const speakingCount = speakers.filter((s) => s.speaking).length || speakers.length;
+  /* No stance labels — the panel leads with who's actually on stage. */
+  const title =
+    speakers.length === 0
+      ? "Open seat"
+      : speakers.length === 1
+        ? speakers[0].username
+        : `${speakers.length} debaters`;
   return (
     <div className={`ag-stage-panel ag-stage-panel--${side}`}>
       <div className="ag-stage-panel-head">
@@ -57,10 +64,10 @@ function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: Stage
           <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
           <path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
-        <span className="ag-stage-panel-title">{side === "pro" ? "PRO SIDE" : "CON SIDE"}</span>
+        <span className="ag-stage-panel-title">{title}</span>
       </div>
       <div className="ag-stage-panel-count">
-        {speakers.length === 0 ? "Open seat" : `${speakingCount} Speaking`}
+        {speakers.length === 0 ? "Waiting for a debater" : `${speakingCount} Speaking`}
       </div>
       <div className="ag-stage-avatars">
         {speakers.length === 0 && <div className="ag-stage-avatar ag-stage-avatar--empty">?</div>}
