@@ -46,9 +46,11 @@ type Comment = {
   post_id: string;
   parent_id: string | null;
   author_id: string | null;
+  author_username: string;
   body: string;
   created_at: string;
-  author: { username: string } | null;
+  score: number;
+  my_vote: number | null;
 };
 
 const KINDS = [
@@ -133,6 +135,8 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   const [commentText, setCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [commentSort, setCommentSort] = useState<"top" | "new">("top");
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   // Composers
   const [composing, setComposing] = useState(false);
@@ -185,12 +189,8 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   }, [supabase, selected, sort]);
 
   const loadComments = useCallback(async (postId: string) => {
-    const { data } = await supabase
-      .from("community_comments")
-      .select("id, post_id, parent_id, author_id, body, created_at, author:users(username)")
-      .eq("post_id", postId)
-      .order("created_at", { ascending: true });
-    setComments((data ?? []) as unknown as Comment[]);
+    const { data } = await supabase.rpc("get_post_comments", { p_post: postId });
+    setComments((data ?? []) as Comment[]);
   }, [supabase]);
 
   useEffect(() => { if (open) loadCommunities(); }, [open, loadCommunities]);
@@ -223,6 +223,20 @@ export default function CommunitiesPage({ open, onClose }: Props) {
         p.id === post.id ? { ...p, score: prev.score, my_vote: prev.my_vote } : p;
       setPosts((ps) => ps.map(rollback));
       setOpenPost((p) => (p && p.id === post.id ? rollback(p) : p));
+      setError(err.message.includes("suspended") ? "Your account is suspended." : "Vote failed — try again.");
+    }
+  }, [supabase, requireAuth]);
+
+  const voteComment = useCallback(async (comment: Comment, value: number) => {
+    if (!requireAuth()) return;
+    const prev = { score: comment.score, my_vote: comment.my_vote };
+    const delta = value - (comment.my_vote ?? 0);
+    setComments((cs) => cs.map((c) =>
+      c.id === comment.id ? { ...c, score: c.score + delta, my_vote: value === 0 ? null : value } : c));
+    const { error: err } = await supabase.rpc("vote_comment", { p_comment: comment.id, p_value: value });
+    if (err) {
+      setComments((cs) => cs.map((c) =>
+        c.id === comment.id ? { ...c, score: prev.score, my_vote: prev.my_vote } : c));
       setError(err.message.includes("suspended") ? "Your account is suspended." : "Vote failed — try again.");
     }
   }, [supabase, requireAuth]);
@@ -329,7 +343,8 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     [communities, selected]
   );
 
-  // parent_id -> children; replies below depth 1 render flattened at depth 1.
+  // True threading: parent_id -> children, siblings sorted by the active
+  // comment sort (top = score desc, then oldest; new = newest first).
   const commentTree = useMemo(() => {
     const roots: Comment[] = [];
     const children = new Map<string, Comment[]>();
@@ -341,67 +356,139 @@ export default function CommunitiesPage({ open, onClose }: Props) {
         children.set(c.parent_id, list);
       }
     }
-    const descendants = (id: string): Comment[] => {
+    const bySort = (a: Comment, b: Comment) =>
+      commentSort === "top"
+        ? b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at)
+        : +new Date(b.created_at) - +new Date(a.created_at);
+    roots.sort(bySort);
+    for (const list of children.values()) list.sort(bySort);
+    const subtreeSize = (id: string): number => {
       const direct = children.get(id) ?? [];
-      return direct.flatMap((d) => [d, ...descendants(d.id)]);
+      return direct.reduce((n, d) => n + 1 + subtreeSize(d.id), 0);
     };
-    return { roots, descendants };
-  }, [comments]);
+    return { roots, children, subtreeSize };
+  }, [comments, commentSort]);
 
   if (!open) return null;
 
   /* ── render helpers ── */
 
-  const renderComment = (c: Comment, depth: number) => (
-    <div key={c.id} style={{ marginLeft: depth > 0 ? 26 : 0 }} className="mb-2.5">
-      <div className="px-3.5 py-2.5" style={{ ...card, borderRadius: 10 }}>
-        <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-          @{c.author?.username ?? "(deleted)"} · {timeAgo(c.created_at)}
-        </p>
-        <p className="m-0 mt-1 text-[12.5px] leading-relaxed whitespace-pre-wrap" style={{ color: "#e5e5ec" }}>
-          {c.body}
-        </p>
-        <div className="flex gap-3 mt-1.5">
-          <button
-            onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); } }}
-            className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-            style={{ color: "#9cc4f0", fontFamily: "inherit" }}
-          >
-            Reply
-          </button>
-          {c.author_id === userId && (
-            <button
-              onClick={() => deleteComment(c)}
-              className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-              style={{ color: "#6b6b74", fontFamily: "inherit" }}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-        {replyTo === c.id && (
-          <div className="flex gap-2 mt-2">
-            <input
-              style={inputStyle}
-              placeholder={`Reply to @${c.author?.username ?? "comment"}…`}
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submitComment(c.id, replyText); }}
-              autoFocus
-            />
-            <button
-              onClick={() => submitComment(c.id, replyText)}
-              disabled={busy || !replyText.trim()}
-              className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
-              style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
-            >
-              Reply
-            </button>
+  const MAX_INDENT = 5;
+
+  const toggleCollapse = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  /* One thread node: collapse toggle, vote pips, body, actions, reply
+     box, then children — visual indent caps at MAX_INDENT so deep
+     chains stay readable while true nesting is preserved. */
+  const renderThread = (c: Comment, depth: number): React.ReactNode => {
+    const kids = commentTree.children.get(c.id) ?? [];
+    const isCollapsed = collapsed.has(c.id);
+    const hidden = commentTree.subtreeSize(c.id);
+    return (
+      <div key={c.id} style={{ marginLeft: depth > 0 ? 18 : 0 }}>
+        <div
+          className="pl-3 mb-2"
+          style={depth > 0 ? { borderLeft: "2px solid rgba(255,255,255,0.08)" } : undefined}
+        >
+          <div className="px-3.5 py-2.5" style={{ ...card, borderRadius: 10 }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              {kids.length > 0 && (
+                <button
+                  onClick={() => toggleCollapse(c.id)}
+                  className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+                  style={{ color: "#6b6b74", fontFamily: "inherit", width: 16 }}
+                  aria-label={isCollapsed ? "Expand thread" : "Collapse thread"}
+                >
+                  {isCollapsed ? "[+]" : "[\u2013]"}
+                </button>
+              )}
+              <span className="text-[11px]" style={{ color: "#8b8b94" }}>
+                @{c.author_username} · {timeAgo(c.created_at)}
+              </span>
+              {isCollapsed && hidden > 0 && (
+                <span className="text-[10px]" style={{ color: "#c9b06a" }}>
+                  {hidden} repl{hidden === 1 ? "y" : "ies"} hidden
+                </span>
+              )}
+            </div>
+            {!isCollapsed && (
+              <>
+                <p className="m-0 mt-1 text-[12.5px] leading-relaxed whitespace-pre-wrap" style={{ color: "#e5e5ec" }}>
+                  {c.body}
+                </p>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="flex items-center gap-1">
+                    <button
+                      onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
+                      className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+                      style={{ color: c.my_vote === 1 ? "#f4d47c" : "#6b6b74" }}
+                      aria-label="Upvote comment"
+                    >
+                      ▲
+                    </button>
+                    <span className="text-[11px]" style={{ color: "#c0c0c8", fontWeight: 600, minWidth: 12, textAlign: "center" }}>
+                      {c.score}
+                    </span>
+                    <button
+                      onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
+                      className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+                      style={{ color: c.my_vote === -1 ? "#85b7eb" : "#6b6b74" }}
+                      aria-label="Downvote comment"
+                    >
+                      ▼
+                    </button>
+                  </span>
+                  <button
+                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); } }}
+                    className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
+                    style={{ color: "#9cc4f0", fontFamily: "inherit" }}
+                  >
+                    Reply
+                  </button>
+                  {c.author_id === userId && (
+                    <button
+                      onClick={() => deleteComment(c)}
+                      className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
+                      style={{ color: "#6b6b74", fontFamily: "inherit" }}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+                {replyTo === c.id && (
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      style={inputStyle}
+                      placeholder={`Reply to @${c.author_username}\u2026`}
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") submitComment(c.id, replyText); }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => submitComment(c.id, replyText)}
+                      disabled={busy || !replyText.trim()}
+                      className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
+                      style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+                    >
+                      Reply
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        )}
+          {!isCollapsed && kids.map((k) => renderThread(k, depth < MAX_INDENT ? depth + 1 : depth))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div
@@ -589,17 +676,32 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 </div>
 
                 {/* comments */}
+                {commentTree.roots.length > 0 && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[11px]" style={{ color: "#6b6b74" }}>Sort:</span>
+                    {(["top", "new"] as const).map((cs) => (
+                      <button
+                        key={cs}
+                        onClick={() => setCommentSort(cs)}
+                        className="cursor-pointer text-[11px] px-2.5 py-1 rounded-full"
+                        style={{
+                          background: commentSort === cs ? "rgba(255,255,255,0.1)" : "transparent",
+                          border: "0.5px solid " + (commentSort === cs ? "#4a4a54" : "#34343c"),
+                          color: commentSort === cs ? "#f5f5f0" : "#8b8b94",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {cs === "top" ? "Top" : "New"}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {commentTree.roots.length === 0 ? (
                   <p className="text-[12px] text-center py-6" style={{ color: "#6b6b74" }}>
                     No comments yet — start the discussion.
                   </p>
                 ) : (
-                  commentTree.roots.map((root) => (
-                    <div key={root.id}>
-                      {renderComment(root, 0)}
-                      {commentTree.descendants(root.id).map((child) => renderComment(child, 1))}
-                    </div>
-                  ))
+                  commentTree.roots.map((root) => renderThread(root, 0))
                 )}
               </div>
             ) : (
