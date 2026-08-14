@@ -76,10 +76,11 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   const [formatVariant, setFormatVariant] = useState<string | null>(null);
   const [curriculum, setCurriculum] = useState("agora-general");
 
-  // Prefill (News → "Start debate")
+  // Prefill (News → "Start debate"; Topics → "Create a lobby" passes only
+  // the field of study, no motion)
   useEffect(() => {
-    if (open && initialMotion) {
-      setMotion(initialMotion);
+    if (open) {
+      if (initialMotion) setMotion(initialMotion);
       if (initialTopic) setTopicKey(initialTopic);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

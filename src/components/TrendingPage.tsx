@@ -359,7 +359,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                 >
                   ✦
                 </button>
-                <p className="text-[10px] mt-1" style={{ color: "#9cc4f0" }}>Battle</p>
+                <p className="text-[10px] mt-1" style={{ color: "#9cc4f0" }}>Topics</p>
               </div>
             </div>
 

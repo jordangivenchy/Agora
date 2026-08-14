@@ -583,6 +583,7 @@ function renderFriends() {
 
 function renderTopicButtons() {
   const row = document.getElementById('categoryRow');
+  if (!row) return; // Browse section removed — TopicsHome.tsx owns field pills now
   const trendingKey = getTrendingTopicKey();
 
   row.innerHTML = Object.entries(TOPICS).map(([key, t]) => {
@@ -620,6 +621,7 @@ function renderTopicButtons() {
 
 function renderTopicStrip() {
   const strip = document.getElementById('topicStrip');
+  if (!strip) return; // Browse section removed — TopicsHome.tsx owns field pills now
 
   if (activeTopicKey === 'all') {
     strip.classList.remove('visible');
@@ -749,6 +751,7 @@ function buildDebateCard(d, realIndex) {
 
 function renderDebateGrid() {
   const grid  = document.getElementById('debateGrid');
+  if (!grid) return; // Home grid removed — TopicsHome.tsx lists rooms per field now
   const title = document.getElementById('gridTitle');
   const countBadge = document.getElementById('searchResultCount');
 
@@ -780,7 +783,7 @@ function renderDebateGrid() {
 
   countBadge.classList.remove('visible');
   const t = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
-  title.textContent = t ? `${t.emoji} ${t.label} · Live now` : 'Live discussions';
+  title.textContent = t ? `${t.emoji} ${t.label} · Live now` : 'Popular rooms';
 
   const filtered = getFilteredDebates(activeTopicKey);
 
@@ -1181,8 +1184,9 @@ function handleSearchInput(query) {
 document.getElementById('arrowLeft').addEventListener('click', () => { goToSlide(currentSlide - 1); resetAutoPlay(); });
 document.getElementById('arrowRight').addEventListener('click', () => { goToSlide(currentSlide + 1); resetAutoPlay(); });
 
-// Category row scroll on wheel
-document.getElementById('categoryRow').addEventListener('wheel', e => {
+// Category row scroll on wheel (no-op since the Browse section was removed)
+var _categoryRowEl = document.getElementById('categoryRow');
+if (_categoryRowEl) _categoryRowEl.addEventListener('wheel', e => {
   if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
     e.preventDefault();
     document.getElementById('categoryRow').scrollLeft += e.deltaY;
