@@ -21,10 +21,13 @@ export interface SeatedPerson {
   avatarUrl: string | null;
 }
 
+export type AgoraView = "audience" | "speaker";
+
 interface Props {
   roomId: string;
   audience: SeatedPerson[];
   viewerCount: number;
+  view: AgoraView;
 }
 
 /* ── Deterministic PRNG ── */
@@ -447,14 +450,154 @@ function buildTorches(scene: THREE.Scene): THREE.PointLight[] {
     scene.add(flame);
     const light = new THREE.PointLight(0xffa94d, 60, 34, 1.9);
     light.position.set(x, 3.4, z);
+    light.userData = { base: 55, flick: 7 };
     scene.add(light);
     torches.push(light);
   }
   return torches;
 }
 
-export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
+/* The scaenae frons — the ruined stage building behind the platform, per
+   the speaker-view reference: broken wall silhouette, a colonnade with
+   entablature, statue silhouettes, a dark central doorway, and wall
+   sconces. All blockout primitives; the whole structure is one .glb swap
+   point later. */
+function buildScaenae(scene: THREE.Scene): THREE.PointLight[] {
+  const rng = mulberry32(hashString("agora-scaenae"));
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x6f6557, flatShading: true });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x2c261f, flatShading: true });
+  const statueMat = new THREE.MeshStandardMaterial({ color: 0x8d8474, flatShading: true });
+
+  // Back deck bridging the platform to the wall.
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(17, 0.9, 3.6), wallMat);
+  deck.position.set(0, 0.45, 10.6);
+  deck.receiveShadow = true;
+  scene.add(deck);
+
+  // Central wall block + lower side wings.
+  const center = new THREE.Mesh(new THREE.BoxGeometry(14, 9, 1.2), wallMat);
+  center.position.set(0, 4.5, 13);
+  center.castShadow = center.receiveShadow = true;
+  scene.add(center);
+  for (const sign of [-1, 1]) {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(8.5, 5.8, 1.2), wallMat);
+    wing.position.set(sign * 11, 2.9, 13);
+    wing.castShadow = wing.receiveShadow = true;
+    scene.add(wing);
+  }
+  // Ruined top: broken merlons along the crest.
+  for (let i = 0; i < 9; i++) {
+    const w = 0.8 + rng() * 1.6;
+    const h = 0.4 + rng() * 1.2;
+    const x = -7 + rng() * 14;
+    const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.1), wallMat);
+    block.position.set(x, 9 + h / 2, 13);
+    block.castShadow = true;
+    scene.add(block);
+  }
+
+  // Dark doorway at the center.
+  const door = new THREE.Mesh(new THREE.BoxGeometry(2.6, 4.4, 0.35), darkMat);
+  door.position.set(0, 2.2, 12.3);
+  scene.add(door);
+
+  // Colonnade in front of the wall with an entablature beam.
+  const colGeo = new THREE.CylinderGeometry(0.32, 0.36, 5, 10);
+  const capGeo = new THREE.BoxGeometry(0.9, 0.32, 0.9);
+  for (const x of [-6.6, -4.4, -2.2, 2.2, 4.4, 6.6]) {
+    const col = new THREE.Mesh(colGeo, wallMat);
+    col.position.set(x, 2.5 + 0.9, 11.6);
+    col.castShadow = true;
+    scene.add(col);
+    const cap = new THREE.Mesh(capGeo, wallMat);
+    cap.position.set(x, 5.9 + 0.16, 11.6);
+    scene.add(cap);
+  }
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(14.4, 0.55, 1.1), wallMat);
+  beam.position.set(0, 6.35, 11.6);
+  beam.castShadow = true;
+  scene.add(beam);
+
+  // Statue silhouettes on plinths between columns.
+  for (const x of [-5.5, -3.3, 3.3, 5.5]) {
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.8), wallMat);
+    plinth.position.set(x, 1.6, 11.9);
+    scene.add(plinth);
+    const figure = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.3, 3, 8), statueMat);
+    figure.position.set(x, 2.9, 11.9);
+    figure.castShadow = true;
+    scene.add(figure);
+  }
+
+  // Wall sconces — smaller, calmer flames than the stage torches.
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb45c });
+  const sconces: THREE.PointLight[] = [];
+  for (const x of [-7.7, -3.3, 3.3, 7.7]) {
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), flameMat);
+    flame.position.set(x, 5, 12.2);
+    scene.add(flame);
+    const light = new THREE.PointLight(0xffa94d, 26, 16, 1.9);
+    light.position.set(x, 5.1, 12);
+    light.userData = { base: 24, flick: 4 };
+    scene.add(light);
+    sconces.push(light);
+  }
+  return sconces;
+}
+
+/* Night sky for the low camera: seeded starfield dome + distant mountain
+   silhouettes on the horizon behind the scaenae. */
+function buildSky(scene: THREE.Scene) {
+  const rng = mulberry32(hashString("agora-sky"));
+  const starCount = 700;
+  const positions = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    // Upper hemisphere shell, radius ~120.
+    const a = rng() * Math.PI * 2;
+    const elev = Math.asin(rng()); // bias toward the horizon
+    const r = 115 + rng() * 10;
+    positions[i * 3] = r * Math.cos(elev) * Math.cos(a);
+    positions[i * 3 + 1] = 6 + r * Math.sin(elev);
+    positions[i * 3 + 2] = r * Math.cos(elev) * Math.sin(a);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const stars = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      color: 0xbfd0ff,
+      size: 0.55,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.85,
+      fog: false,
+    })
+  );
+  scene.add(stars);
+
+  const mountainMat = new THREE.MeshStandardMaterial({ color: 0x0e1522, flatShading: true });
+  const spots = [
+    { x: -55, z: 85, r: 38, h: 13 },
+    { x: -10, z: 92, r: 45, h: 10 },
+    { x: 42, z: 84, r: 36, h: 15 },
+    { x: 85, z: 70, r: 30, h: 9 },
+    { x: -90, z: 65, r: 32, h: 11 },
+  ];
+  for (const m of spots) {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(m.r, m.h, 7), mountainMat);
+    cone.position.set(m.x, m.h / 2 - 0.5, m.z);
+    scene.add(cone);
+  }
+}
+
+export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  /* The view lives in a ref so switching cameras never rebuilds the
+     scene — the render loop just glides toward the new target. */
+  const viewRef = useRef<AgoraView>(view);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -497,17 +640,21 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     scene.background = new THREE.Color(0x0a0e0a);
     scene.fog = new THREE.FogExp2(0x0a0e0a, 0.011);
 
-    /* Vantage between top-down and grandstand — ~55° below horizontal:
-       the bowl reads like the reference while risers, chair backs, and
-       trees keep their depth. */
-    /* Narrower lens + higher, farther camera = flatter perspective: the
-       side wings stop leaning and the bowl reads level, like the
-       reference. Kept dead-center on x so the frame is symmetric. */
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-    const camBase = new THREE.Vector3(0, 40, 18.5);
-    camera.position.copy(camBase);
-    const lookAt = new THREE.Vector3(0, 1, -7);
-    camera.lookAt(lookAt);
+    /* Two vantages, one camera:
+       - audience: high and far, narrow lens — the level, symmetric bowl.
+       - speaker: low in the orchestra, eye-level with the stage, the
+         scaenae and night sky filling the frame like the reference.
+       The loop lerps position and look target, so switching views is a
+       glide, not a cut. */
+    const CAMS: Record<AgoraView, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
+      audience: { pos: new THREE.Vector3(0, 40, 18.5), look: new THREE.Vector3(0, 1, -7) },
+      speaker: { pos: new THREE.Vector3(0, 3.2, -13.5), look: new THREE.Vector3(0, 4.2, 11) },
+    };
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
+    const camPos = CAMS[viewRef.current].pos.clone();
+    const camLook = CAMS[viewRef.current].look.clone();
+    camera.position.copy(camPos);
+    camera.lookAt(camLook);
 
     /* ── Lights ── */
     scene.add(new THREE.HemisphereLight(0x24344a, 0x0c130c, 0.85));
@@ -521,6 +668,7 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
 
     /* ── Build the world ── */
     buildGround(scene);
+    buildSky(scene);
     buildTerraces(scene);
     buildAisle(scene);
     buildOrchestra(scene);
@@ -528,7 +676,7 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     buildStage(scene);
     buildChairsAndCrowd(scene, seats, occupancy);
     buildTrees(scene);
-    const torches = buildTorches(scene);
+    const torches = [...buildTorches(scene), ...buildScaenae(scene)];
 
     /* ── Resize ── */
     const resize = () => {
@@ -542,19 +690,23 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(host);
 
-    /* ── Animate: torch flicker + slow camera sway ── */
+    /* ── Animate: torch flicker, camera glide + vertical breathing ── */
     let raf = 0;
     const t0 = performance.now();
     const animate = () => {
       raf = requestAnimationFrame(animate);
       const t = (performance.now() - t0) / 1000;
       torches.forEach((torch, i) => {
-        torch.intensity = 55 + Math.sin(t * 9 + i * 2.4) * 7 + Math.sin(t * 23 + i) * 4;
+        const { base, flick } = torch.userData as { base: number; flick: number };
+        torch.intensity =
+          base + Math.sin(t * 9 + i * 2.4) * flick + Math.sin(t * 23 + i) * flick * 0.55;
       });
-      /* Vertical-only breathing — lateral sway made the whole bowl look
-         slanted. */
-      camera.position.y = camBase.y + Math.sin(t * 0.07) * 0.35;
-      camera.lookAt(lookAt);
+      const target = CAMS[viewRef.current];
+      camPos.lerp(target.pos, 0.045);
+      camLook.lerp(target.look, 0.045);
+      camera.position.copy(camPos);
+      camera.position.y += Math.sin(t * 0.07) * 0.35;
+      camera.lookAt(camLook);
       renderer.render(scene, camera);
     };
     animate();

@@ -5,7 +5,7 @@
    speaker-view toggle. The 2D data logic (who's on stage, who's seated)
    lives in the page; this component just lays it out. */
 
-import AgoraScene3D from "./AgoraScene3D";
+import AgoraScene3D, { type AgoraView } from "./AgoraScene3D";
 
 export interface StagePerson {
   id: string;
@@ -26,7 +26,8 @@ interface Props {
   conSpeakers: StagePerson[];
   audience: SeatedPerson[];
   viewerCount: number;
-  onSwitchView?: () => void;
+  view: AgoraView;
+  onSwitchView: () => void;
 }
 
 function hashString(s: string): number {
@@ -85,11 +86,13 @@ export default function Amphitheater({
   conSpeakers,
   audience,
   viewerCount,
+  view,
   onSwitchView,
 }: Props) {
+  const inSpeaker = view === "speaker";
   return (
     <div className="ag-theater">
-      <AgoraScene3D roomId={roomId} audience={audience} viewerCount={viewerCount} />
+      <AgoraScene3D roomId={roomId} audience={audience} viewerCount={viewerCount} view={view} />
 
       {/* The stage rail: panels + emblem + view toggle over the 3D scene */}
       <div className="ag-stage">
@@ -101,16 +104,15 @@ export default function Amphitheater({
           <button
             className="ag-switch-view"
             onClick={onSwitchView}
-            disabled={!onSwitchView}
-            title="Speaker view — coming soon"
+            title={inSpeaker ? "Back to the amphitheater" : "Eye-level with the stage"}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
               <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
               <path d="M8 21h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
             <span>
-              <strong>Switch speaker view</strong>
-              <small>focused view of the debaters</small>
+              <strong>{inSpeaker ? "Switch audience view" : "Switch speaker view"}</strong>
+              <small>{inSpeaker ? "back to the amphitheater" : "focused view of the debaters"}</small>
             </span>
           </button>
         </div>

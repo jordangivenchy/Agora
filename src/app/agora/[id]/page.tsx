@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { DebateRoom, DebateParticipant } from "@/types/database";
 import { TOPICS } from "@/types/database";
 import Amphitheater from "@/components/agora/Amphitheater";
+import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
 import type { User } from "@supabase/supabase-js";
 import "../agora.css";
@@ -42,6 +43,7 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
   const [loaded, setLoaded] = useState(false);
   const [following, setFollowing] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
+  const [view, setView] = useState<AgoraView>("audience");
 
   const fetchAll = useCallback(async () => {
     try {
@@ -182,6 +184,8 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
           conSpeakers={conSpeakers}
           audience={audience}
           viewerCount={room.viewer_count ?? 0}
+          view={view}
+          onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
         />
 
         {/* ── Bottom control bar ── */}

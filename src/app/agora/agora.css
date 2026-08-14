@@ -326,9 +326,14 @@
   background: rgba(18, 16, 26, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #cfd3dc;
-  cursor: not-allowed;
-  opacity: 0.85;
+  cursor: pointer;
   white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ag-switch-view:hover {
+  border-color: #7c5cff;
+  background: rgba(28, 24, 40, 0.95);
 }
 
 .ag-switch-view span { display: flex; flex-direction: column; text-align: left; }
