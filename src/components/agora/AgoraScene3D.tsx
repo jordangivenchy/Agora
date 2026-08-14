@@ -185,7 +185,9 @@ function buildPlaza(scene: THREE.Scene) {
      of seeded jitter in height and rotation so the paving reads
      hand-laid rather than machined. */
   const rng = mulberry32(hashString("agora-plaza"));
-  const center = new THREE.Vector3(0, 0, -4.2);
+  /* Tangent to the stage platform's front edge (z ≈ 1.65) so the
+     medallion reads as part of the stage structure, like the reference. */
+  const center = new THREE.Vector3(0, 0, -1.6);
 
   // Raised medallion: two stacked discs, lighter stone on top.
   const baseDisc = new THREE.Mesh(
@@ -256,14 +258,25 @@ function buildStage(scene: THREE.Scene) {
   platform.receiveShadow = true;
   platform.castShadow = true;
   scene.add(platform);
-  // Center medallion — placeholder for the Agora emblem.
-  const medallion = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.6, 1.6, 0.14, 32),
-    new THREE.MeshStandardMaterial({ color: 0x9a8f7d, flatShading: true })
+
+  /* Apron: a low collar reaching out from the platform and under the
+     medallion's rim, so circle and stage read as one structure. */
+  const apron = new THREE.Mesh(
+    new THREE.BoxGeometry(8.6, 0.3, 3.6),
+    new THREE.MeshStandardMaterial({ color: 0x7d7365, flatShading: true })
   );
-  medallion.position.set(0, 1.18, 4.6);
-  medallion.castShadow = true;
-  scene.add(medallion);
+  apron.position.set(0, 0.15, 0.6);
+  apron.receiveShadow = true;
+  scene.add(apron);
+  // Side shoulders flanking the medallion, echoing the reference's
+  // stepped stage front.
+  const shoulderGeo = new THREE.BoxGeometry(3.4, 0.6, 2.2);
+  for (const sign of [-1, 1]) {
+    const shoulder = new THREE.Mesh(shoulderGeo, stone);
+    shoulder.position.set(sign * 5.6, 0.3, 1.1);
+    shoulder.receiveShadow = true;
+    scene.add(shoulder);
+  }
 }
 
 function buildChairsAndCrowd(
@@ -487,8 +500,11 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     /* Vantage between top-down and grandstand — ~55° below horizontal:
        the bowl reads like the reference while risers, chair backs, and
        trees keep their depth. */
-    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
-    const camBase = new THREE.Vector3(0, 37, 18);
+    /* Narrower lens + higher, farther camera = flatter perspective: the
+       side wings stop leaning and the bowl reads level, like the
+       reference. Kept dead-center on x so the frame is symmetric. */
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+    const camBase = new THREE.Vector3(0, 40, 18.5);
     camera.position.copy(camBase);
     const lookAt = new THREE.Vector3(0, 1, -7);
     camera.lookAt(lookAt);
@@ -535,8 +551,9 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
       torches.forEach((torch, i) => {
         torch.intensity = 55 + Math.sin(t * 9 + i * 2.4) * 7 + Math.sin(t * 23 + i) * 4;
       });
-      camera.position.x = camBase.x + Math.sin(t * 0.11) * 1.0;
-      camera.position.y = camBase.y + Math.sin(t * 0.07) * 0.4;
+      /* Vertical-only breathing — lateral sway made the whole bowl look
+         slanted. */
+      camera.position.y = camBase.y + Math.sin(t * 0.07) * 0.35;
       camera.lookAt(lookAt);
       renderer.render(scene, camera);
     };
