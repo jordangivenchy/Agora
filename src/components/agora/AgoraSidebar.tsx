@@ -1,9 +1,15 @@
 "use client";
 
-/* Right rail of the Agora: Chat / Q&A tabs, active moderators, and rules.
+/* Right rail of the Agora: Chat / Q&A tabs.
    Chat is live — same room_messages table and realtime channel the classic
-   room uses, restyled to the amphitheater look (avatar, name, timestamp).
-   Q&A is a placeholder until audience questions get a backend. */
+   room uses. Messages are always visible, but posting is gated: you unlock
+   the input by clicking "Join chat", which affirms you've read the chat
+   rules shown in the gate. The acceptance is remembered per browser.
+   Q&A is a placeholder until audience questions get a backend.
+
+   (A moderators panel used to live here — it's deliberately gone from the
+   audience-facing rail. Moderation surfaces will return later inside the
+   collaborator / stream-start flow, not the public page.) */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -20,7 +26,6 @@ interface Message {
 interface Props {
   roomId: string;
   currentUser: User | null;
-  hostName: string | null;
 }
 
 const USER_COLORS = [
@@ -43,22 +48,31 @@ function fmtTime(iso: string): string {
   return `${h}:${m} ${ampm}`;
 }
 
-const RULES = [
-  { icon: "🤝", text: "Be respectful" },
-  { icon: "✋", text: "No interruptions" },
-  { icon: "🎯", text: "Stay on topic" },
-  { icon: "👂", text: "Listen to others" },
-  { icon: "🚫", text: "No personal attacks" },
+const CHAT_RULES = [
+  "Be respectful",
+  "No interruptions",
+  "Stay on topic",
+  "Listen to others",
+  "No personal attacks",
 ];
 
-export default function AgoraSidebar({ roomId, currentUser, hostName }: Props) {
+const CHAT_JOINED_KEY = "agora-chat-joined";
+
+export default function AgoraSidebar({ roomId, currentUser }: Props) {
   const [supabase] = useState(() => createClient());
   const [tab, setTab] = useState<"chat" | "qa">("chat");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  /* Chat unlock: null until we've read localStorage (avoids a gate flash
+     for people who already joined). */
+  const [joined, setJoined] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolled = useRef(false);
+
+  useEffect(() => {
+    setJoined(localStorage.getItem(CHAT_JOINED_KEY) === "1");
+  }, []);
 
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
@@ -97,6 +111,11 @@ export default function AgoraSidebar({ roomId, currentUser, hostName }: Props) {
     userScrolled.current = scrollHeight - scrollTop - clientHeight > 100;
   }
 
+  function joinChat() {
+    localStorage.setItem(CHAT_JOINED_KEY, "1");
+    setJoined(true);
+  }
+
   async function sendMessage(e?: React.FormEvent) {
     e?.preventDefault();
     if (!currentUser || !input.trim() || sending) return;
@@ -113,7 +132,6 @@ export default function AgoraSidebar({ roomId, currentUser, hostName }: Props) {
 
   return (
     <aside className="ag-sidebar">
-      {/* Chat / Q&A card */}
       <section className="ag-card ag-chat-card">
         <div className="ag-tabs">
           <button className={`ag-tab ${tab === "chat" ? "active" : ""}`} onClick={() => setTab("chat")}>
@@ -148,22 +166,41 @@ export default function AgoraSidebar({ roomId, currentUser, hostName }: Props) {
                 );
               })}
             </div>
-            {currentUser ? (
-              <form className="ag-chat-inputrow" onSubmit={sendMessage}>
-                <input
-                  className="ag-chat-input"
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Message #debate-chat"
-                  maxLength={200}
-                />
-              </form>
-            ) : (
-              <div className="ag-chat-signin">
-                <a href="/login">Sign in</a> to chat
+
+            {/* The gate: rules first, input after */}
+            {joined === false ? (
+              <div className="ag-chat-gate">
+                <div className="ag-chat-gate-title">Chat rules</div>
+                <ul className="ag-chat-gate-rules">
+                  {CHAT_RULES.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+                <button className="ag-chat-join" onClick={joinChat}>
+                  Join chat
+                </button>
+                <div className="ag-chat-gate-note">
+                  Joining confirms you&apos;ve read the rules.
+                </div>
               </div>
-            )}
+            ) : joined === true ? (
+              currentUser ? (
+                <form className="ag-chat-inputrow" onSubmit={sendMessage}>
+                  <input
+                    className="ag-chat-input"
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Message #debate-chat"
+                    maxLength={200}
+                  />
+                </form>
+              ) : (
+                <div className="ag-chat-signin">
+                  <a href="/login">Sign in</a> to chat
+                </div>
+              )
+            ) : null}
           </>
         ) : (
           <div className="ag-qa-placeholder">
@@ -172,43 +209,6 @@ export default function AgoraSidebar({ roomId, currentUser, hostName }: Props) {
             <small>Q&amp;A is coming soon.</small>
           </div>
         )}
-      </section>
-
-      {/* Moderators */}
-      <section className="ag-card">
-        <div className="ag-card-title">
-          ACTIVE MODERATORS — {hostName ? 2 : 1}
-        </div>
-        <div className="ag-mod-row">
-          <div className="ag-chat-avatar ag-mod-avatar" style={{ background: "#5865f2" }}>M</div>
-          <span className="ag-mod-name">Moderator</span>
-          <span className="ag-badge-bot">BOT</span>
-        </div>
-        {hostName && (
-          <div className="ag-mod-row">
-            <div className="ag-chat-avatar ag-mod-avatar" style={{ background: getUserColor(hostName) }}>
-              {hostName.charAt(0).toUpperCase()}
-            </div>
-            <span className="ag-mod-name">
-              {hostName}
-              <small>Host</small>
-            </span>
-            <span className="ag-badge-shield" title="Host">🛡️</span>
-          </div>
-        )}
-      </section>
-
-      {/* Rules */}
-      <section className="ag-card">
-        <div className="ag-card-title">RULES</div>
-        <ul className="ag-rules">
-          {RULES.map((r) => (
-            <li key={r.text}>
-              <span className="ag-rule-icon">{r.icon}</span>
-              {r.text}
-            </li>
-          ))}
-        </ul>
       </section>
     </aside>
   );

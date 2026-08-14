@@ -38,7 +38,6 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
 
   const [room, setRoom] = useState<DebateRoom | null>(null);
   const [participants, setParticipants] = useState<ParticipantWithUser[]>([]);
-  const [hostName, setHostName] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [following, setFollowing] = useState(false);
@@ -60,20 +59,6 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
       }
       setRoom(roomData);
       if (partData) setParticipants(partData as ParticipantWithUser[]);
-
-      const host = (partData as ParticipantWithUser[] | null)?.find(
-        (p) => p.user_id === roomData.host_id
-      );
-      if (host?.user?.username) {
-        setHostName(host.user.username);
-      } else {
-        const { data: hostRow } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", roomData.host_id)
-          .maybeSingle();
-        if (hostRow?.username) setHostName(hostRow.username);
-      }
     } catch (e) {
       console.error("agora load failed", e);
     } finally {
@@ -219,7 +204,7 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
         </footer>
       </div>
 
-      <AgoraSidebar roomId={roomId} currentUser={currentUser} hostName={hostName} />
+      <AgoraSidebar roomId={roomId} currentUser={currentUser} />
     </div>
   );
 }

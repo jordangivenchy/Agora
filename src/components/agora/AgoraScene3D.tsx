@@ -414,10 +414,13 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     scene.background = new THREE.Color(0x0a0e0a);
     scene.fog = new THREE.FogExp2(0x0a0e0a, 0.011);
 
-    const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 200);
-    const camBase = new THREE.Vector3(0, 26, 27);
+    /* High vantage, ~65° below horizontal — mostly top-down like the
+       reference, but tilted enough that risers, chair backs, and tree
+       heights keep their depth. */
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
+    const camBase = new THREE.Vector3(0, 42, 15);
     camera.position.copy(camBase);
-    const lookAt = new THREE.Vector3(0, 1.5, -7);
+    const lookAt = new THREE.Vector3(0, 0.5, -7);
     camera.lookAt(lookAt);
 
     /* ── Lights ── */
@@ -461,8 +464,8 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
       torches.forEach((torch, i) => {
         torch.intensity = 55 + Math.sin(t * 9 + i * 2.4) * 7 + Math.sin(t * 23 + i) * 4;
       });
-      camera.position.x = camBase.x + Math.sin(t * 0.11) * 1.4;
-      camera.position.y = camBase.y + Math.sin(t * 0.07) * 0.5;
+      camera.position.x = camBase.x + Math.sin(t * 0.11) * 1.0;
+      camera.position.y = camBase.y + Math.sin(t * 0.07) * 0.4;
       camera.lookAt(lookAt);
       renderer.render(scene, camera);
     };
