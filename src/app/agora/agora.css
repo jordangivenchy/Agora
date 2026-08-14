@@ -209,30 +209,14 @@
   padding: 0 22px;
 }
 
-/* Center column: emblem rides half above the platform, toggle sits below */
+/* Center column: just the view toggle between the two panels */
 
 .ag-stage-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin-top: -46px;
   flex-shrink: 0;
 }
-
-.ag-stage-emblem {
-  width: 74px;
-  height: 74px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #5d574f, #3b3733 75%);
-  border: 2px solid #6a635a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55);
-}
-
-.ag-stage-emblem-icon { font-size: 30px; }
 
 .ag-stage-panel {
   flex: 1;

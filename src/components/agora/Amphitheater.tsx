@@ -98,9 +98,6 @@ export default function Amphitheater({
       <div className="ag-stage">
         <SpeakerPanel side="pro" speakers={proSpeakers} />
         <div className="ag-stage-center">
-          <div className="ag-stage-emblem">
-            <span className="ag-stage-emblem-icon">🏛️</span>
-          </div>
           <button
             className="ag-switch-view"
             onClick={onSwitchView}
