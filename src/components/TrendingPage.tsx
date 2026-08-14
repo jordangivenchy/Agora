@@ -305,7 +305,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   {activeShort.opponent && <> — from "{activeShort.motion}"</>}
                 </p>
                 {activeShort.roomId ? (
-                  <a href={`/rooms/${activeShort.roomId}`} className="text-[11px] no-underline" style={{ color: "#9cc4f0" }}>
+                  <a href={`/agora/${activeShort.roomId}`} className="text-[11px] no-underline" style={{ color: "#9cc4f0" }}>
                     watch full debate ⤢
                   </a>
                 ) : activeShort.opponent ? (
@@ -498,7 +498,7 @@ export default function TrendingPage({ open, onClose }: Props) {
             ) : (
               <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                 {rooms.map((r, i) => (
-                  <a key={r.id} href={`/rooms/${r.id}`} className="no-underline">
+                  <a key={r.id} href={`/agora/${r.id}`} className="no-underline">
                     <div
                       className="relative mb-2"
                       style={{ aspectRatio: "16/9", borderRadius: 12, background: GRID_GRADIENTS[i % GRID_GRADIENTS.length], border: "0.5px solid #3a3a44" }}

@@ -1957,7 +1957,7 @@ init();
   window._epApplyFilters = applyFilters;
 
   // Any click on a card (or its buttons) opens the real room — the adapter's
-  // openDebateModal override navigates to /rooms/<id>.
+  // openDebateModal override navigates to /agora/<id>.
   document.getElementById('epResultsGrid')?.addEventListener('click', (e) => {
     const card = e.target.closest?.('.explore-result-card');
     if (card && card.dataset.epIdx !== undefined) openDebateModal(+card.dataset.epIdx);

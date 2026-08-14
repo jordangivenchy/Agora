@@ -115,7 +115,7 @@ export default function JoinPrivateRoomModal({ open, onClose }: Props) {
       // Note: the new RPC queues non-host debaters (queued=true). The room
       // page handles the "waiting for host" UX, so we just navigate there.
       setNavigating(true);
-      router.push(`/rooms/${roomId}?via=invite`);
+      router.push(`/agora/${roomId}?via=invite`);
     } catch (err: unknown) {
       const m = err instanceof Error ? err.message : "Something went wrong";
       setError(m);

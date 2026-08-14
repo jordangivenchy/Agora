@@ -134,7 +134,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
 
   if (!open && !navigating) return null;
 
-  // Navigation spinner (seamless transition into /rooms/[id])
+  // Navigation spinner (seamless transition into /agora/[id])
   if (navigating) {
     return (
       <div
@@ -283,7 +283,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       // during navigation, the user can see the action button and retry.
       setLoading(false);
       setNavigating(true);
-      router.push(`/rooms/${roomId}`);
+      router.push(`/agora/${roomId}`);
       return;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create room";
@@ -401,7 +401,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 onClose();
               } else {
                 setNavigating(true);
-                router.push(`/rooms/${createdInvite.roomId}`);
+                router.push(`/agora/${createdInvite.roomId}`);
               }
             }}
             className="w-full cursor-pointer transition-all"

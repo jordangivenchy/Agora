@@ -147,7 +147,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       const { data: roomId } = await supabase.rpc("check_topic_match");
       if (roomId) {
         if (pollRef.current) clearInterval(pollRef.current);
-        window.location.href = `/rooms/${roomId}`;
+        window.location.href = `/agora/${roomId}`;
         return;
       }
       load();
@@ -167,7 +167,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
     }
     const res = data as { status: string; room_id?: string };
     if (res?.status === "matched" && res.room_id) {
-      window.location.href = `/rooms/${res.room_id}`;
+      window.location.href = `/agora/${res.room_id}`;
       return;
     }
     setTopics((ts) => ts.map((x) =>
@@ -372,7 +372,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               </p>
             </div>
             <button
-              onClick={() => { window.location.href = `/rooms/${r.id}`; }}
+              onClick={() => { window.location.href = `/agora/${r.id}`; }}
               className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
               style={{
                 background: r.status === "live" ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
@@ -534,7 +534,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                   {reminders[r.id]?.amSet ? "🔔 Reminder set" : "🔔 Notify me"}
                 </button>
                 <button
-                  onClick={() => { window.location.href = `/rooms/${r.id}`; }}
+                  onClick={() => { window.location.href = `/agora/${r.id}`; }}
                   className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
                   style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
                 >

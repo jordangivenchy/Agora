@@ -47,7 +47,7 @@ function notifText(n: NotifRow): string {
 }
 
 function notifHref(n: NotifRow): string | null {
-  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon")) return `/rooms/${n.room_id}`;
+  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon")) return `/agora/${n.room_id}`;
   if (n.actor_id && n.type === "new_follower") return `/?profile=${n.actor_id}`;
   return null;
 }
@@ -101,7 +101,7 @@ export default function NotificationsBell({ container }: Props) {
             const n = new Notification("AgoraSphere", { body });
             n.onclick = () => {
               window.focus();
-              if (row.room_id) window.location.href = `/rooms/${row.room_id}`;
+              if (row.room_id) window.location.href = `/agora/${row.room_id}`;
             };
           }
         }
