@@ -179,49 +179,71 @@ function buildOrchestra(scene: THREE.Scene) {
   scene.add(floor);
 }
 
-function buildRocks(scene: THREE.Scene) {
-  /* The rocky heart of the orchestra: a central outcrop plus weathered
-     stones scattered across the half-circle floor. Instanced icosahedra,
-     squashed and randomly rotated, read as low-poly boulders. */
-  const rng = mulberry32(hashString("agora-rocks"));
-  const rockGeo = new THREE.IcosahedronGeometry(1, 0);
-  const shades = [0x7d7469, 0x736a5f, 0x878075, 0x6a6157];
+function buildPlaza(scene: THREE.Scene) {
+  /* The stone heart of the orchestra, like the reference: a raised
+     circular medallion ringed by radial paver blocks. Pavers get a touch
+     of seeded jitter in height and rotation so the paving reads
+     hand-laid rather than machined. */
+  const rng = mulberry32(hashString("agora-plaza"));
+  const center = new THREE.Vector3(0, 0, -4.2);
+
+  // Raised medallion: two stacked discs, lighter stone on top.
+  const baseDisc = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.1, 3.25, 0.22, 40),
+    new THREE.MeshStandardMaterial({ color: 0x857c6d, flatShading: true })
+  );
+  baseDisc.position.set(center.x, 0.11, center.z);
+  baseDisc.receiveShadow = true;
+  scene.add(baseDisc);
+  const topDisc = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.35, 2.35, 0.14, 36),
+    new THREE.MeshStandardMaterial({ color: 0x93897a, flatShading: true })
+  );
+  topDisc.position.set(center.x, 0.29, center.z);
+  topDisc.receiveShadow = true;
+  scene.add(topDisc);
+  // Dark inset at the very center — where the carved emblem will live.
+  const inset = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.15, 1.15, 0.05, 28),
+    new THREE.MeshStandardMaterial({ color: 0x6e6557, flatShading: true })
+  );
+  inset.position.set(center.x, 0.38, center.z);
+  scene.add(inset);
+
+  // Radial paver rings around the medallion.
+  const paverGeo = new THREE.BoxGeometry(1, 0.12, 0.72);
+  const shades = [0x7f7668, 0x776e60, 0x89806f];
   const meshes = shades.map(
     (c) =>
       new THREE.InstancedMesh(
-        rockGeo,
+        paverGeo,
         new THREE.MeshStandardMaterial({ color: c, flatShading: true }),
-        40
+        160
       )
   );
   const counts = shades.map(() => 0);
   const dummy = new THREE.Object3D();
-
-  const place = (x: number, z: number, s: number) => {
-    const idx = Math.floor(rng() * shades.length);
-    dummy.position.set(x, s * 0.32, z);
-    dummy.scale.set(s, s * 0.55, s);
-    dummy.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
-    dummy.updateMatrix();
-    meshes[idx].setMatrixAt(counts[idx]++, dummy.matrix);
-  };
-
-  // Central outcrop — a tight cluster of larger boulders.
-  for (let i = 0; i < 7; i++) {
-    const a = rng() * Math.PI;
-    const r = rng() * 2.2;
-    place(r * Math.cos(a), -r * Math.sin(a) - 1.2, 0.9 + rng() * 1.1);
+  const RINGS = 3;
+  for (let ring = 0; ring < RINGS; ring++) {
+    const r = 3.9 + ring * 0.85;
+    const count = Math.floor((2 * Math.PI * r) / 1.12);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + ring * 0.13;
+      const x = center.x + r * Math.cos(a);
+      const z = center.z - r * Math.sin(a);
+      // Keep pavers on the orchestra floor (inside the first terrace,
+      // not spilling onto the stage side).
+      if (Math.hypot(x, z) > INNER_R - 0.6 || z > 1.4) continue;
+      const idx = Math.floor(rng() * shades.length);
+      dummy.position.set(x, 0.06 + rng() * 0.025, z);
+      dummy.rotation.set(0, a + Math.PI / 2 + (rng() - 0.5) * 0.06, 0);
+      dummy.scale.setScalar(0.94 + rng() * 0.12);
+      dummy.updateMatrix();
+      meshes[idx].setMatrixAt(counts[idx]++, dummy.matrix);
+    }
   }
-  // Weathered stones scattered across the rest of the orchestra floor.
-  for (let i = 0; i < 22; i++) {
-    const a = (12 + rng() * 156) * DEG;
-    const r = 3.6 + rng() * (INNER_R - 4.4);
-    place(r * Math.cos(a), -r * Math.sin(a), 0.25 + rng() * 0.5);
-  }
-
   meshes.forEach((m, i) => {
     m.count = counts[i];
-    m.castShadow = true;
     m.receiveShadow = true;
     scene.add(m);
   });
@@ -466,7 +488,7 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
        the bowl reads like the reference while risers, chair backs, and
        trees keep their depth. */
     const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
-    const camBase = new THREE.Vector3(0, 34, 21);
+    const camBase = new THREE.Vector3(0, 37, 18);
     camera.position.copy(camBase);
     const lookAt = new THREE.Vector3(0, 1, -7);
     camera.lookAt(lookAt);
@@ -486,7 +508,7 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     buildTerraces(scene);
     buildAisle(scene);
     buildOrchestra(scene);
-    buildRocks(scene);
+    buildPlaza(scene);
     buildStage(scene);
     buildChairsAndCrowd(scene, seats, occupancy);
     buildTrees(scene);
