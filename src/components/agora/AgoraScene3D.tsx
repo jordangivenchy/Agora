@@ -582,11 +582,41 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
       screen.add(bar);
     }
 
+    /* Placeholder occupant — an empty-video-call silhouette so the panel
+       reads as "a debater goes here": head, shoulders, and a nameplate
+       bar, tinted by side. The camera looks toward +z, so world +x is
+       frame-left: +x carries PRO purple, −x carries CON blue, matching
+       the HTML rail below. */
+    const tint = sign > 0 ? 0xa78bfa : 0x7ab8ff;
+    const figMat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.55 });
+    /* Children inherit the group's 180° turn, so local +z already faces
+       the viewer — no extra rotation on the flat shapes. */
+    const head = new THREE.Mesh(new THREE.CircleGeometry(1.4, 28), figMat);
+    head.position.set(0, 1.7, 0.07);
+    screen.add(head);
+    const shoulders = new THREE.Mesh(new THREE.CircleGeometry(2.6, 28, 0, Math.PI), figMat);
+    shoulders.position.set(0, -1.5, 0.07);
+    screen.add(shoulders);
+    const plate = new THREE.Mesh(
+      new THREE.BoxGeometry(4.2, 0.55, 0.04),
+      new THREE.MeshBasicMaterial({ color: 0x0e1424, transparent: true, opacity: 0.85 })
+    );
+    plate.position.set(0, -3.3, 0.07);
+    screen.add(plate);
+    const plateDot = new THREE.Mesh(
+      new THREE.CircleGeometry(0.14, 12),
+      new THREE.MeshBasicMaterial({ color: tint })
+    );
+    plateDot.position.set(-1.6, -3.3, 0.1);
+    screen.add(plateDot);
+
     // Centers pushed apart so the doubled panels sit edge to edge with a
     // slim central gap, rising over the scaenae crest like projections.
-    screen.position.set(sign * 8.1, 7.4, 10.4);
+    // z = 9.8 with a gentler tilt keeps the far edge (~z 10.3) clear of
+    // the colonnade faces at z ≈ 11.2 — no clipping.
+    screen.position.set(sign * 8.1, 7.4, 9.8);
     // Face the audience (-z), turned a touch inward toward the center seat.
-    screen.rotation.y = Math.PI + sign * 0.1;
+    screen.rotation.y = Math.PI + sign * 0.06;
     group.add(screen);
   }
   group.visible = false;
