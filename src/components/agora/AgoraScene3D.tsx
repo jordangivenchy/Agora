@@ -545,6 +545,71 @@ function buildScaenae(scene: THREE.Scene): THREE.PointLight[] {
   return sconces;
 }
 
+/* The prime-vision screens: two big translucent panels floating over the
+   stage — the future PRO/CON video feed surfaces — framed in shimmering
+   holo borders like the reference. Hidden in audience view; the render
+   loop fades them in for speaker view and cycles the frame hue. */
+function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: THREE.MeshBasicMaterial[] } {
+  const group = new THREE.Group();
+  const frameMats: THREE.MeshBasicMaterial[] = [];
+  const W = 7.6;
+  const H = 4.4;
+  for (const sign of [-1, 1]) {
+    const screen = new THREE.Group();
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(W, H),
+      new THREE.MeshBasicMaterial({
+        color: 0x0a1220,
+        transparent: true,
+        opacity: 0.48,
+        side: THREE.DoubleSide,
+      })
+    );
+    screen.add(panel);
+
+    const frameMat = new THREE.MeshBasicMaterial({ color: 0x9be8ff });
+    frameMats.push(frameMat);
+    const barH = new THREE.BoxGeometry(W + 0.3, 0.13, 0.06);
+    const barV = new THREE.BoxGeometry(0.13, H + 0.3, 0.06);
+    for (const y of [-H / 2 - 0.08, H / 2 + 0.08]) {
+      const bar = new THREE.Mesh(barH, frameMat);
+      bar.position.y = y;
+      screen.add(bar);
+    }
+    for (const x of [-W / 2 - 0.08, W / 2 + 0.08]) {
+      const bar = new THREE.Mesh(barV, frameMat);
+      bar.position.x = x;
+      screen.add(bar);
+    }
+
+    screen.position.set(sign * 4.9, 6.3, 10.4);
+    // Face the audience (-z), turned a touch inward toward the center seat.
+    screen.rotation.y = Math.PI + sign * 0.1;
+    group.add(screen);
+  }
+  group.visible = false;
+  scene.add(group);
+  return { group, frameMats };
+}
+
+/* Warm pool of light on the plaza + small flames ringing the orchestra
+   rim, so the floor glows like the reference at night. */
+function buildOrchestraGlow(scene: THREE.Scene): THREE.PointLight {
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffc46a });
+  const flameGeo = new THREE.SphereGeometry(0.14, 6, 5);
+  for (let a = 14; a <= 166; a += 12) {
+    const r = INNER_R - 0.7;
+    const flame = new THREE.Mesh(flameGeo, flameMat);
+    flame.position.set(r * Math.cos(a * DEG), 0.4, -r * Math.sin(a * DEG));
+    scene.add(flame);
+  }
+  const glow = new THREE.PointLight(0xffa94d, 38, 26, 1.8);
+  glow.position.set(0, 3, -3.5);
+  glow.userData = { base: 36, flick: 2.5 };
+  scene.add(glow);
+  return glow;
+}
+
 /* Night sky for the low camera: seeded starfield dome + distant mountain
    silhouettes on the horizon behind the scaenae. */
 function buildSky(scene: THREE.Scene) {
@@ -648,7 +713,9 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
        glide, not a cut. */
     const CAMS: Record<AgoraView, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
       audience: { pos: new THREE.Vector3(0, 40, 18.5), look: new THREE.Vector3(0, 1, -7) },
-      speaker: { pos: new THREE.Vector3(0, 3.2, -13.5), look: new THREE.Vector3(0, 4.2, 11) },
+      /* A great seat: a few rows up on the center aisle, orchestra glowing
+         below, screens and scaenae filling the frame. */
+      speaker: { pos: new THREE.Vector3(0, 5.6, -17), look: new THREE.Vector3(0, 4.6, 10) },
     };
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
     const camPos = CAMS[viewRef.current].pos.clone();
@@ -676,7 +743,8 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
     buildStage(scene);
     buildChairsAndCrowd(scene, seats, occupancy);
     buildTrees(scene);
-    const torches = [...buildTorches(scene), ...buildScaenae(scene)];
+    const torches = [...buildTorches(scene), ...buildScaenae(scene), buildOrchestraGlow(scene)];
+    const holo = buildHoloScreens(scene);
 
     /* ── Resize ── */
     const resize = () => {
@@ -707,6 +775,12 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
       camera.position.copy(camPos);
       camera.position.y += Math.sin(t * 0.07) * 0.35;
       camera.lookAt(camLook);
+      /* Holo screens exist only for the speaker vantage; their frames
+         shimmer through slow hue drift while visible. */
+      holo.group.visible = viewRef.current === "speaker";
+      if (holo.group.visible) {
+        holo.frameMats.forEach((m, i) => m.color.setHSL((t * 0.05 + i * 0.18) % 1, 0.6, 0.62));
+      }
       renderer.render(scene, camera);
     };
     animate();
