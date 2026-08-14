@@ -558,12 +558,7 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
     const screen = new THREE.Group();
     const panel = new THREE.Mesh(
       new THREE.PlaneGeometry(W, H),
-      new THREE.MeshBasicMaterial({
-        color: 0x0a1220,
-        transparent: true,
-        opacity: 0.48,
-        side: THREE.DoubleSide,
-      })
+      new THREE.MeshBasicMaterial({ color: 0x0a1220, side: THREE.DoubleSide })
     );
     screen.add(panel);
 
@@ -588,14 +583,16 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
        frame-left: +x carries PRO purple, −x carries CON blue, matching
        the HTML rail below. */
     const tint = sign > 0 ? 0xa78bfa : 0x7ab8ff;
-    const figMat = new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.55 });
+    const figMat = new THREE.MeshBasicMaterial({ color: tint });
     /* Children inherit the group's 180° turn, so local +z already faces
-       the viewer — no extra rotation on the flat shapes. */
+       the viewer — no extra rotation on the flat shapes. Head and
+       shoulders are spaced apart (classic avatar-glyph gap) and sit at
+       different depths, so the two shapes never intersect. */
     const head = new THREE.Mesh(new THREE.CircleGeometry(1.4, 28), figMat);
-    head.position.set(0, 1.7, 0.07);
+    head.position.set(0, 2.0, 0.08);
     screen.add(head);
     const shoulders = new THREE.Mesh(new THREE.CircleGeometry(2.6, 28, 0, Math.PI), figMat);
-    shoulders.position.set(0, -1.5, 0.07);
+    shoulders.position.set(0, -2.1, 0.07);
     screen.add(shoulders);
     const plate = new THREE.Mesh(
       new THREE.BoxGeometry(4.2, 0.55, 0.04),
