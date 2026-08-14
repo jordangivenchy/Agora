@@ -154,7 +154,45 @@ export default function TopicsPage({ open, onClose }: Props) {
         )}
 
         <div className="flex flex-col gap-2.5 pb-8">
-          {topics.map((t) => {
+          {(() => {
+            // Group questions by field of study; order categories by how
+            // many people are actively waiting across their questions.
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const groups = TOPICS
+              .map((cat) => {
+                const rows = topics
+                  .filter((t) => t.topic_key === cat.key)
+                  .sort((a, b) => b.queue_count - a.queue_count);
+                return {
+                  cat,
+                  rows,
+                  active: rows.reduce((n, t) => n + t.queue_count, 0),
+                };
+              })
+              .filter((g) => g.rows.length > 0)
+              .sort((a, b) => b.active - a.active);
+            const other = topics
+              .filter((t) => !TOPICS.some((c) => c.key === t.topic_key))
+              .sort((a, b) => b.queue_count - a.queue_count);
+            if (other.length) {
+              groups.push({
+                cat: { key: "other", label: "Other", emoji: "💬", color: "#8b8b94" } as unknown as (typeof TOPICS)[number],
+                rows: other,
+                active: other.reduce((n, t) => n + t.queue_count, 0),
+              });
+            }
+            return groups.map((g) => (
+              <div key={g.cat.key}>
+                <p className="m-0 mb-2 mt-2 text-[12px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#c0c0c8" }}>
+                  {g.cat.emoji} {g.cat.label}
+                  {g.active > 0 && (
+                    <span className="ml-2 text-[10.5px]" style={{ color: "#f4d47c", fontFamily: "'DM Sans', sans-serif", fontWeight: 400 }}>
+                      {g.active} active
+                    </span>
+                  )}
+                </p>
+                <div className="flex flex-col gap-2.5">
+                  {g.rows.map((t) => {
             const cat = TOPICS.find((x) => x.key === t.topic_key);
             const waiting = t.am_queued;
             return (
@@ -170,14 +208,8 @@ export default function TopicsPage({ open, onClose }: Props) {
                   <p className="m-0 text-[15px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
                     {t.question}
                   </p>
-                  <p className="m-0 mt-1 text-[11px]" style={{ color: "#8b8b94" }}>
-                    {cat ? `${cat.emoji} ${cat.label}` : t.topic_key}
-                    {" · "}
-                    <span style={{ color: t.queue_count > 0 ? "#f4d47c" : "#6b6b74" }}>
-                      {t.queue_count > 0
-                        ? `${t.queue_count} waiting to talk`
-                        : "no one waiting yet"}
-                    </span>
+                  <p className="m-0 mt-1 text-[11px]" style={{ color: t.queue_count > 0 ? "#f4d47c" : "#6b6b74" }}>
+                    {t.queue_count > 0 ? `${t.queue_count} waiting to talk` : "no one waiting yet"}
                   </p>
                   {waiting && (
                     <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#f4d47c" }}>
@@ -208,12 +240,16 @@ export default function TopicsPage({ open, onClose }: Props) {
                       fontWeight: t.queue_count > 0 ? 600 : 400,
                     }}
                   >
-                    {busyId === t.id ? "Joining…" : t.queue_count > 0 ? "Match now" : "Queue up"}
+                    {busyId === t.id ? "Joining…" : "Queue"}
                   </button>
                 )}
               </div>
-            );
-          })}
+                  );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       </div>
     </div>
