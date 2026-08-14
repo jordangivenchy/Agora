@@ -179,6 +179,54 @@ function buildOrchestra(scene: THREE.Scene) {
   scene.add(floor);
 }
 
+function buildRocks(scene: THREE.Scene) {
+  /* The rocky heart of the orchestra: a central outcrop plus weathered
+     stones scattered across the half-circle floor. Instanced icosahedra,
+     squashed and randomly rotated, read as low-poly boulders. */
+  const rng = mulberry32(hashString("agora-rocks"));
+  const rockGeo = new THREE.IcosahedronGeometry(1, 0);
+  const shades = [0x7d7469, 0x736a5f, 0x878075, 0x6a6157];
+  const meshes = shades.map(
+    (c) =>
+      new THREE.InstancedMesh(
+        rockGeo,
+        new THREE.MeshStandardMaterial({ color: c, flatShading: true }),
+        40
+      )
+  );
+  const counts = shades.map(() => 0);
+  const dummy = new THREE.Object3D();
+
+  const place = (x: number, z: number, s: number) => {
+    const idx = Math.floor(rng() * shades.length);
+    dummy.position.set(x, s * 0.32, z);
+    dummy.scale.set(s, s * 0.55, s);
+    dummy.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
+    dummy.updateMatrix();
+    meshes[idx].setMatrixAt(counts[idx]++, dummy.matrix);
+  };
+
+  // Central outcrop — a tight cluster of larger boulders.
+  for (let i = 0; i < 7; i++) {
+    const a = rng() * Math.PI;
+    const r = rng() * 2.2;
+    place(r * Math.cos(a), -r * Math.sin(a) - 1.2, 0.9 + rng() * 1.1);
+  }
+  // Weathered stones scattered across the rest of the orchestra floor.
+  for (let i = 0; i < 22; i++) {
+    const a = (12 + rng() * 156) * DEG;
+    const r = 3.6 + rng() * (INNER_R - 4.4);
+    place(r * Math.cos(a), -r * Math.sin(a), 0.25 + rng() * 0.5);
+  }
+
+  meshes.forEach((m, i) => {
+    m.count = counts[i];
+    m.castShadow = true;
+    m.receiveShadow = true;
+    scene.add(m);
+  });
+}
+
 function buildStage(scene: THREE.Scene) {
   const stone = new THREE.MeshStandardMaterial({ color: 0x847a6b, flatShading: true });
   const platform = new THREE.Mesh(new THREE.BoxGeometry(17, 1.1, 7.5), stone);
@@ -414,13 +462,13 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     scene.background = new THREE.Color(0x0a0e0a);
     scene.fog = new THREE.FogExp2(0x0a0e0a, 0.011);
 
-    /* High vantage, ~65° below horizontal — mostly top-down like the
-       reference, but tilted enough that risers, chair backs, and tree
-       heights keep their depth. */
-    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
-    const camBase = new THREE.Vector3(0, 42, 15);
+    /* Vantage between top-down and grandstand — ~55° below horizontal:
+       the bowl reads like the reference while risers, chair backs, and
+       trees keep their depth. */
+    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
+    const camBase = new THREE.Vector3(0, 34, 21);
     camera.position.copy(camBase);
-    const lookAt = new THREE.Vector3(0, 0.5, -7);
+    const lookAt = new THREE.Vector3(0, 1, -7);
     camera.lookAt(lookAt);
 
     /* ── Lights ── */
@@ -438,6 +486,7 @@ export default function AgoraScene3D({ roomId, audience, viewerCount }: Props) {
     buildTerraces(scene);
     buildAisle(scene);
     buildOrchestra(scene);
+    buildRocks(scene);
     buildStage(scene);
     buildChairsAndCrowd(scene, seats, occupancy);
     buildTrees(scene);
