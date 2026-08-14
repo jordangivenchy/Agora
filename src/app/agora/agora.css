@@ -174,21 +174,17 @@
   justify-content: center;
 }
 
-.ag-theater-svg {
+/* The 3D scene fills the theater area; the stage rail floats over it */
+
+.ag-scene3d {
+  position: absolute;
+  inset: 0;
+}
+
+.ag-scene3d canvas {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-/* Seats are live elements — they respond before they're even clickable */
-
-.ag-seat {
-  transition: filter 0.15s;
-}
-
-.ag-seat:hover {
-  filter: brightness(1.45);
-  cursor: pointer;
 }
 
 /* ── Stage ── */
@@ -199,14 +195,13 @@
   bottom: 0;
   transform: translateX(-50%);
   width: min(860px, 88%);
-  height: 172px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 22%),
-    linear-gradient(180deg, #55504a 0%, #47423c 30%, #3b3733 100%);
-  border: 1px solid #5f594f;
+  height: 158px;
+  background: rgba(10, 10, 14, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: none;
   border-radius: 18px 18px 0 0;
-  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
