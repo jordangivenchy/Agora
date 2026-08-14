@@ -180,6 +180,17 @@
   display: block;
 }
 
+/* Seats are live elements — they respond before they're even clickable */
+
+.ag-seat {
+  transition: filter 0.15s;
+}
+
+.ag-seat:hover {
+  filter: brightness(1.45);
+  cursor: pointer;
+}
+
 /* ── Stage ── */
 
 .ag-stage {
@@ -187,9 +198,10 @@
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
-  width: min(760px, 82%);
-  height: 178px;
+  width: min(860px, 88%);
+  height: 172px;
   background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 22%),
     linear-gradient(180deg, #55504a 0%, #47423c 30%, #3b3733 100%);
   border: 1px solid #5f594f;
   border-bottom: none;
@@ -198,15 +210,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 26px;
-  padding: 0 26px;
+  gap: 22px;
+  padding: 0 22px;
+}
+
+/* Center column: emblem rides half above the platform, toggle sits below */
+
+.ag-stage-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: -46px;
+  flex-shrink: 0;
 }
 
 .ag-stage-emblem {
-  position: absolute;
-  top: -37px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 74px;
   height: 74px;
   border-radius: 50%;
@@ -304,20 +323,17 @@
 /* Center button: the future speaker-view toggle */
 
 .ag-switch-view {
-  position: absolute;
-  bottom: 22px;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 20px;
+  padding: 9px 18px;
   border-radius: 12px;
   background: rgba(18, 16, 26, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #cfd3dc;
   cursor: not-allowed;
   opacity: 0.85;
+  white-space: nowrap;
 }
 
 .ag-switch-view span { display: flex; flex-direction: column; text-align: left; }
