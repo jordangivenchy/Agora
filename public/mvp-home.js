@@ -1708,11 +1708,6 @@ function init() {
   renderDebateGrid();
   renderELOModule();
   startAutoPlay();
-
-  // Phase 2: welcome toast after a short delay
-  setTimeout(() => {
-    showToast('info', '🔴', 'Live debates in progress', '8 debates live now — click any card to watch', 5000);
-  }, 1200);
 }
 
 init();
