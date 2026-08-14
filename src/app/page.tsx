@@ -12,7 +12,7 @@ import DashboardModal from "@/components/DashboardModal";
 import UserProfileModal from "@/components/UserProfileModal";
 import DebatesPage from "@/components/DebatesPage";
 import TrendingPage from "@/components/TrendingPage";
-import BattlePage from "@/components/BattlePage";
+import TopicsPage from "@/components/TopicsPage";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
@@ -332,7 +332,15 @@ export default function Home() {
         </div>
       )}
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
-      <BattlePage open={activeTab === "battle"} onClose={() => setActiveTab(null)} />
+      <TopicsPage
+        open={activeTab === "battle"}
+        onClose={() => setActiveTab(null)}
+        onStart={(motion, topic) => {
+          setActiveTab(null);
+          setCreatePrefill({ motion, topic });
+          setShowCreate(true);
+        }}
+      />
       <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
       <NewsPage
         open={activeTab === "news"}

@@ -179,7 +179,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       return;
     }
     if (proSize + conSize > 20) {
-      setError("Total debaters can't exceed 20");
+      setError("Total speakers can't exceed 20");
       return;
     }
 
@@ -477,7 +477,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               color: "var(--text-primary)",
             }}
           >
-            Create a Debate
+            Start a discussion
           </h2>
           <button
             onClick={onClose}
@@ -521,7 +521,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
             )}
 
             {/* Motion */}
-            <FieldGroup label="Motion / Topic">
+            <FieldGroup label="Topic">
               <input
                 type="text"
                 value={motion}
@@ -852,7 +852,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                     }}
                   >
                     {allowSpectators
-                      ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; debaters must use the invite code."
+                      ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; speakers must use the invite code."
                       : "Room is completely hidden from all listings and search. Only people with the invite code can enter."}
                   </p>
                 </>

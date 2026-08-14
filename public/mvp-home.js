@@ -725,8 +725,6 @@ function buildDebateCard(d, realIndex) {
       <div class="hc-meta">
         <span>${viewerLabel}</span>
         <span class="hc-dot">·</span>
-        <span class="hc-ar">◆ ${d.elo} AR</span>
-        <span class="hc-dot">·</span>
         <span>${format}</span>
         <span class="hc-dot">·</span>
         <span>${language}</span>
@@ -840,67 +838,8 @@ function attachCardListeners(grid) {
 // ═══════════════════════════════════════════════
 
 function renderELOModule() {
-  const mod = document.getElementById('eloModule');
-  const t   = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
-
-  const topicBtnDisabled = activeTopicKey === 'all' ? 'disabled' : '';
-  const topicBtnTitle    = activeTopicKey === 'all' ? 'Select a topic to filter' : '';
-
-  let pool;
-  if (eloScope === 'topic' && activeTopicKey !== 'all') {
-    pool = DEBATERS.filter(d => d.topicKeys.includes(activeTopicKey))
-      .sort((a, b) => b.globalElo - a.globalElo)
-      .slice(0, 4);
-  } else {
-    pool = [...DEBATERS].sort((a, b) => b.globalElo - a.globalElo).slice(0, 4);
-  }
-
-  const listHTML = pool.length > 0
-    ? pool.map((d, i) => `
-        <div class="elo-row" tabindex="0" role="button" aria-label="${d.name}, ELO ${d.globalElo}">
-          <div class="elo-rank ${rankClass(i)}">#${i + 1}</div>
-          <div class="elo-avatar-sm" style="background:${d.color};">${d.initials}</div>
-          <div class="elo-info">
-            <div class="elo-name">${d.name}</div>
-            <div class="elo-specialty">${TOPICS[d.specialty]?.label || d.specialty}</div>
-          </div>
-          <div class="elo-score-col">
-            <div class="elo-score"><span class="elo-score-diamond">◆</span> ${d.globalElo.toLocaleString()}</div>
-            ${trendIcon(d.trendDir, d.trendDelta)}
-          </div>
-        </div>
-      `).join('')
-    : `<div class="elo-empty">No rated speakers in ${t?.label || 'this topic'} yet.<br><span style="color:var(--text-dim);">Be the first to start one. →</span></div>`;
-
-  const moduleTitle = eloScope === 'topic' && t
-    ? `${t.emoji} Top in ${t.label}`
-    : 'Most popular';
-
-  mod.innerHTML = `
-    <div class="elo-module-header">
-      <div class="elo-module-title">${moduleTitle}</div>
-      <div class="elo-scope-toggle" role="group" aria-label="Rating scope">
-        <button class="scope-btn${eloScope === 'global' ? ' active' : ''}" data-scope="global">Global</button>
-        <button class="scope-btn${eloScope === 'topic'  ? ' active' : ''}" data-scope="topic" ${topicBtnDisabled} title="${topicBtnTitle}">This topic</button>
-      </div>
-    </div>
-    <div class="elo-list">${listHTML}</div>
-    <div class="elo-module-footer">
-      <a class="elo-explore-link" href="#">View full rankings →</a>
-      <span class="elo-total-count">${DEBATERS.length} rated</span>
-    </div>
-  `;
-
-  mod.querySelectorAll('.scope-btn:not([disabled])').forEach(btn => {
-    btn.addEventListener('click', () => {
-      eloScope = btn.dataset.scope;
-      mod.classList.add('fading');
-      setTimeout(() => {
-        renderELOModule();
-        mod.classList.remove('fading');
-      }, 120);
-    });
-  });
+  // Rating system removed from the product — the module and its column
+  // are gone from the template; this stub keeps legacy call sites safe.
 }
 
 // ═══════════════════════════════════════════════
@@ -984,7 +923,7 @@ function renderDebateRoom(index) {
       <div class="room-live-badge"><div class="carousel-live-dot"></div> Live</div>
       <div class="room-header-info">
         <div class="room-motion">"${d.motion}"</div>
-        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ◆ ${d.elo} AR &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
+        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
       </div>
       <div class="room-viewers-pill">${d.viewers} watching</div>
       <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">✕</button>
@@ -1066,10 +1005,6 @@ function renderDebateRoom(index) {
           ${voted ? `You voted ${voted.toUpperCase()}. Votes are locked for this session.` : 'Your vote counts toward the final result.'}
         </div>
 
-        <div class="room-elo-stakes">
-          <span class="room-elo-stakes-label">◆ Rating</span>
-          <span class="room-elo-stakes-val">Affects both speakers' AR</span>
-        </div>
       </div>
 
       <!-- ARGUMENT FEED -->

@@ -50,9 +50,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <a class="avatar-menu-item" href="#profile" role="menuitem">
           <span class="avatar-menu-icon">👤</span>Profile
         </a>
-        <a class="avatar-menu-item" href="#stats" role="menuitem">
-          <span class="avatar-menu-icon">◆</span>Rating &amp; stats
-        </a>
         <a class="avatar-menu-item" href="#debates" role="menuitem">
           <span class="avatar-menu-icon">📋</span>My discussions
         </a>
@@ -203,7 +200,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         </div>
       </a>
 
-      <!-- Discuss (1v1 matchmaking; data-nav-id stays "battle" — routing key) -->
+      <!-- Topics (data-nav-id stays "battle" — legacy routing key) -->
       <a class="sidebar-link" href="#" data-nav-id="battle">
         <span class="nav-hover-shimmer"></span>
         <span class="nav-light-slit"></span>
@@ -216,7 +213,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
           <span class="nav-icon-wrap">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l13 13"/><path d="M15 19l4-4"/><path d="M17 21l2-2"/><path d="M20 4L7 17"/><path d="M9 19l-4-4"/><path d="M7 21l-2-2"/></svg>
           </span>
-          <span class="nav-label">Discuss</span>
+          <span class="nav-label">Topics</span>
         </div>
       </a>
 
@@ -362,9 +359,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         </div>
       </div>
       <div class="debate-grid" id="debateGrid"></div>
-    </div>
-    <div class="elo-col">
-      <div class="elo-module" id="eloModule"></div>
     </div>
   </div>
 

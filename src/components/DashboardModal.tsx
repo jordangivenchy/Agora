@@ -9,7 +9,7 @@ interface Props {
   onOpenDebates: () => void;
 }
 
-type NodeKey = "debates" | "agorarating" | "train";
+type NodeKey = "debates" | "train";
 
 const NODES: {
   key: NodeKey;
@@ -21,7 +21,6 @@ const NODES: {
   energy: number;
 }[] = [
   { key: "debates",     title: "Discussions", subtitle: "Upcoming & past", content: "Your scheduled discussions and full history.",    icon: "📋", status: "available",   energy: 80 },
-  { key: "agorarating", title: "AgoraRating", subtitle: "AR score",         content: "Your rating and ranking history.",                icon: "📊", status: "coming-soon", energy: 65 },
   { key: "train",       title: "Train",       subtitle: "Practice",         content: "Sharpen your arguments with AI-powered training.", icon: "🏋️", status: "coming-soon", energy: 50 },
 ];
 
