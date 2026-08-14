@@ -13,6 +13,8 @@ import UserProfileModal from "@/components/UserProfileModal";
 import DebatesPage from "@/components/DebatesPage";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
+import NotificationsBell from "@/components/NotificationsBell";
+import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
@@ -71,6 +73,8 @@ export default function Home() {
   const [showDebates, setShowDebates] = useState(false);
   const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
+  const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
+  const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
   const [booted, setBooted] = useState(false);
@@ -85,9 +89,11 @@ export default function Home() {
     if (hostRef.current && !hostRef.current.firstChild) {
       hostRef.current.innerHTML = MVP_HOME_HTML;
     }
-    // Portal target for the Topics dropdowns (lives inside the MVP markup,
-    // just below the live carousel).
+    // Portal targets living inside the MVP markup: the Browse section
+    // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
+    setBellHost(document.getElementById("notifBellHost"));
+    setNewsHost(document.getElementById("newsTickerHost"));
   }, []);
 
   /* Fetch real rooms + auth + platform stats, expose to the MVP scripts.
@@ -343,6 +349,8 @@ export default function Home() {
           Supabase project to be running.
         </div>
       )}
+      <NotificationsBell container={bellHost} />
+      <NewsTicker container={newsHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <TopicsHome
         container={fieldsHost}

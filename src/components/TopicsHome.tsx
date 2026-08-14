@@ -27,7 +27,10 @@ type TopicRow = {
   question: string;
   topic_key: string;
   queue_count: number;
+  pro_count: number;
+  con_count: number;
   am_queued: boolean;
+  my_stance: "PRO" | "CON" | null;
 };
 
 type RoomRow = {
@@ -152,11 +155,11 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [anyQueued, userId, supabase, load]);
 
-  const queueUp = useCallback(async (t: TopicRow) => {
+  const queueUp = useCallback(async (t: TopicRow, stance: "PRO" | "CON") => {
     if (!userId) { window.location.href = "/login"; return; }
     setBusyId(t.id);
     setError(null);
-    const { data, error: err } = await supabase.rpc("queue_for_topic", { p_topic: t.id });
+    const { data, error: err } = await supabase.rpc("queue_for_topic", { p_topic: t.id, p_stance: stance });
     setBusyId(null);
     if (err) {
       setError(err.message.includes("suspended") ? "Your account is suspended." : err.message);
@@ -168,7 +171,16 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       return;
     }
     setTopics((ts) => ts.map((x) =>
-      x.id === t.id ? { ...x, am_queued: true, queue_count: x.queue_count + 1 } : x));
+      x.id === t.id
+        ? {
+            ...x,
+            am_queued: true,
+            my_stance: stance,
+            queue_count: x.queue_count + 1,
+            pro_count: x.pro_count + (stance === "PRO" ? 1 : 0),
+            con_count: x.con_count + (stance === "CON" ? 1 : 0),
+          }
+        : x));
   }, [supabase, userId]);
 
   const leaveQueue = useCallback(async (t: TopicRow) => {
@@ -176,7 +188,16 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
     await supabase.rpc("leave_topic_queue", { p_topic: t.id });
     setBusyId(null);
     setTopics((ts) => ts.map((x) =>
-      x.id === t.id ? { ...x, am_queued: false, queue_count: Math.max(0, x.queue_count - 1) } : x));
+      x.id === t.id
+        ? {
+            ...x,
+            am_queued: false,
+            my_stance: null,
+            queue_count: Math.max(0, x.queue_count - 1),
+            pro_count: Math.max(0, x.pro_count - (x.my_stance === "PRO" ? 1 : 0)),
+            con_count: Math.max(0, x.con_count - (x.my_stance === "CON" ? 1 : 0)),
+          }
+        : x));
   }, [supabase]);
 
   if (!container) return null;
@@ -290,69 +311,10 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         </p>
       )}
 
-      {/* Selected field: queue questions */}
       <div className="flex flex-col gap-2 mt-3">
-        {selRows.map((t) => {
-          const inQueue = t.am_queued;
-          return (
-            <div
-              key={t.id}
-              className="p-3.5 flex items-center gap-3.5 flex-wrap"
-              style={{
-                ...rowCard,
-                border: inQueue ? "0.5px solid rgba(226,185,107,0.45)" : (rowCard.border as string),
-              }}
-            >
-              <div className="flex-1 min-w-[220px]">
-                <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
-                  {t.question}
-                </p>
-                <p className="m-0 mt-1 text-[11px]" style={{ color: t.queue_count > 0 ? "#f4d47c" : "#6b6b74" }}>
-                  {t.queue_count > 0 ? `${t.queue_count} waiting to talk` : "no one waiting yet"}
-                </p>
-                {inQueue && (
-                  <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#f4d47c" }}>
-                    <span className="inline-block animate-pulse">●</span> In queue — you&rsquo;ll be
-                    matched the moment someone joins. Keep this page open.
-                  </p>
-                )}
-              </div>
-              {inQueue ? (
-                <button
-                  onClick={() => leaveQueue(t)}
-                  disabled={busyId === t.id}
-                  className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
-                  style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
-                >
-                  Leave queue
-                </button>
-              ) : (
-                <button
-                  onClick={() => queueUp(t)}
-                  disabled={busyId === t.id}
-                  className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
-                  style={{
-                    background: t.queue_count > 0 ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
-                    border: t.queue_count > 0 ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
-                    color: t.queue_count > 0 ? "#412402" : "#9cc4f0",
-                    fontFamily: "inherit",
-                    fontWeight: t.queue_count > 0 ? 600 : 400,
-                  }}
-                >
-                  {busyId === t.id ? "Joining…" : "Queue"}
-                </button>
-              )}
-            </div>
-          );
-        })}
-        {selRows.length === 0 && (
-          <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
-            No standing questions in {selCat.label} yet.
-          </p>
-        )}
 
-        {/* Selected field: open rooms */}
-        <div className="flex items-center gap-3 mt-2.5 mb-0.5">
+        {/* Selected field: popular rooms */}
+        <div className="flex items-center gap-3 mb-0.5">
           <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
             POPULAR ROOMS
           </span>
@@ -424,6 +386,98 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             </button>
           </div>
         ))}
+
+        {/* Selected field: queue questions */}
+        <div className="flex items-center gap-3 mt-2.5 mb-0.5">
+          <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
+            QUEUE
+          </span>
+          <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+        </div>
+        {selRows.map((t) => {
+          const inQueue = t.am_queued;
+          return (
+            <div
+              key={t.id}
+              className="p-3.5 flex items-center gap-3.5 flex-wrap"
+              style={{
+                ...rowCard,
+                border: inQueue ? "0.5px solid rgba(226,185,107,0.45)" : (rowCard.border as string),
+              }}
+            >
+              <div className="flex-1 min-w-[220px]">
+                <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                  {t.question}
+                </p>
+                <p className="m-0 mt-1 text-[11px]" style={{ color: "#6b6b74" }}>
+                  {t.queue_count > 0 ? (
+                    <>
+                      <span style={{ color: t.pro_count > 0 ? "#97c459" : "#6b6b74" }}>{t.pro_count} on Pro</span>
+                      {" · "}
+                      <span style={{ color: t.con_count > 0 ? "#e05a5a" : "#6b6b74" }}>{t.con_count} on Con</span>
+                    </>
+                  ) : (
+                    "no one waiting yet"
+                  )}
+                </p>
+                {inQueue && (
+                  <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#f4d47c" }}>
+                    <span className="inline-block animate-pulse">●</span> In queue on{" "}
+                    {t.my_stance === "CON" ? "Con" : "Pro"} — you&rsquo;ll be matched the moment
+                    someone takes the other side. Keep this page open.
+                  </p>
+                )}
+              </div>
+              {inQueue ? (
+                <button
+                  onClick={() => leaveQueue(t)}
+                  disabled={busyId === t.id}
+                  className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
+                  style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+                >
+                  Leave queue
+                </button>
+              ) : (
+                <div className="flex gap-2 shrink-0">
+                  {/* The side that matches instantly (someone waits opposite) gets the gold treatment. */}
+                  <button
+                    onClick={() => queueUp(t, "PRO")}
+                    disabled={busyId === t.id}
+                    className="cursor-pointer text-[12px] px-3.5 py-2 rounded-lg"
+                    style={{
+                      background: t.con_count > 0 ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(28,46,24,0.9)",
+                      border: t.con_count > 0 ? "0.5px solid #d9a238" : "0.5px solid #3d5a33",
+                      color: t.con_count > 0 ? "#412402" : "#97c459",
+                      fontFamily: "inherit",
+                      fontWeight: t.con_count > 0 ? 600 : 400,
+                    }}
+                  >
+                    {busyId === t.id ? "…" : "Pro"}
+                  </button>
+                  <button
+                    onClick={() => queueUp(t, "CON")}
+                    disabled={busyId === t.id}
+                    className="cursor-pointer text-[12px] px-3.5 py-2 rounded-lg"
+                    style={{
+                      background: t.pro_count > 0 ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(52,24,24,0.9)",
+                      border: t.pro_count > 0 ? "0.5px solid #d9a238" : "0.5px solid #5a3333",
+                      color: t.pro_count > 0 ? "#412402" : "#e05a5a",
+                      fontFamily: "inherit",
+                      fontWeight: t.pro_count > 0 ? 600 : 400,
+                    }}
+                  >
+                    {busyId === t.id ? "…" : "Con"}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {selRows.length === 0 && (
+          <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
+            No standing questions in {selCat.label} yet.
+          </p>
+        )}
 
         {/* Scheduled discussions — their own section, ordered by sign-ups */}
         {selScheduled.length > 0 && (

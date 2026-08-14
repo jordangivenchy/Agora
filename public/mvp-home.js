@@ -282,15 +282,54 @@ function getSearchResults(query) {
 //  CAROUSEL
 // ═══════════════════════════════════════════════
 
+// News headlines come from an external API — escape before innerHTML.
+function escHTML(s) {
+  return String(s ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
+// News slide (kind: 'news', pushed by mvp-adapter): headline + the outlets
+// reporting the story; side panel lists coverage instead of a debater.
+function newsSlideHTML(c, i, total) {
+  const chips = (c.sources || []).slice(0, 4).map(s => `
+    <span class="carousel-news-chip">
+      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="13" height="13" />` : ''}
+      ${escHTML(s.name)}
+    </span>`).join('');
+  const rows = (c.sources || []).slice(0, 5).map(s => `
+    <div class="panel-outlet-row">
+      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="14" height="14" />` : ''}
+      <span>${escHTML(s.name)}</span>
+    </div>`).join('');
+  return `
+    <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${total}">
+      <div class="carousel-bg" style="background:${c.gradient};"></div>
+      <div class="carousel-bg-grid"></div>
+      <div class="carousel-live-badge news">📰 News</div>
+      <div class="carousel-lower-third">
+        <div class="carousel-motion">${escHTML(c.headline)}</div>
+        <div class="carousel-news-chips">${chips}</div>
+        <button class="carousel-watch-btn carousel-news-btn">Read article →</button>
+      </div>
+      <div class="carousel-panel">
+        <div class="panel-name" style="margin-top:8px;">Reported by</div>
+        <div class="panel-outlets">${rows}</div>
+      </div>
+    </div>`;
+}
+
 function renderCarousel() {
   const track = document.getElementById('carouselTrack');
   const dots  = document.getElementById('carouselDots');
 
-  // No rooms yet: hide the hero strip rather than show an empty stage.
+  // Nothing at all (no rooms, no news): hide the hero strip.
   const cSection = document.querySelector('.carousel-section');
   if (cSection) cSection.style.display = CAROUSEL_DATA.length ? '' : 'none';
 
-  track.innerHTML = CAROUSEL_DATA.map((c, i) => `
+  const slideHTML = (c, i) => c.kind === 'news'
+    ? newsSlideHTML(c, i, CAROUSEL_DATA.length)
+    : `
     <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
       <div class="carousel-bg" style="background:${c.gradient};"></div>
       <div class="carousel-bg-grid"></div>
@@ -311,10 +350,27 @@ function renderCarousel() {
         </div>` : ''}
       </div>
     </div>
-  `).join('');
+  `;
+
+  // Infinite loop: a clone of the last slide leads and a clone of the
+  // first trails, so both directions can animate one step past the ends;
+  // goToSlide() snaps back (transition off) once that animation lands.
+  const N = CAROUSEL_DATA.length;
+  track.innerHTML = N > 1
+    ? slideHTML(CAROUSEL_DATA[N - 1], N - 1)
+      + CAROUSEL_DATA.map(slideHTML).join('')
+      + slideHTML(CAROUSEL_DATA[0], 0)
+    : CAROUSEL_DATA.map(slideHTML).join('');
+
+  // Land on the current slide without animating (offset +1 for the clone).
+  currentSlide = Math.min(currentSlide, Math.max(0, N - 1));
+  track.style.transition = 'none';
+  track.style.transform = `translateX(-${(N > 1 ? currentSlide + 1 : 0) * 100}%)`;
+  void track.offsetWidth;
+  track.style.transition = '';
 
   dots.innerHTML = CAROUSEL_DATA.map((_, i) =>
-    `<div class="carousel-dot${i === 0 ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
+    `<div class="carousel-dot${i === currentSlide ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
   ).join('');
 
   dots.querySelectorAll('.carousel-dot').forEach(dot => {
@@ -323,19 +379,57 @@ function renderCarousel() {
   });
 
   // Phase 2: wire carousel watch buttons
-  track.querySelectorAll('.carousel-watch-btn').forEach(btn => {
+  track.querySelectorAll('.carousel-watch-btn:not(.carousel-news-btn)').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const idx = parseInt(btn.dataset.debateIndex);
       if (!isNaN(idx)) openDebateModal(idx);
     });
   });
+
+  // News slides open the in-app News panel (React listens on agora:tab).
+  track.querySelectorAll('.carousel-news-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
+    });
+  });
+}
+
+let carouselSnapTimer = null;
+let carouselSnapPending = false;
+
+function snapCarousel(track) {
+  track.style.transition = 'none';
+  track.style.transform = `translateX(-${(currentSlide + 1) * 100}%)`;
+  void track.offsetWidth;
+  track.style.transition = '';
+  carouselSnapPending = false;
 }
 
 function goToSlide(index) {
-  currentSlide = (index + CAROUSEL_DATA.length) % CAROUSEL_DATA.length;
-  document.getElementById('carouselTrack').style.transform = `translateX(-${currentSlide * 100}%)`;
+  const track = document.getElementById('carouselTrack');
+  const N = CAROUSEL_DATA.length;
+  if (!N) return;
+  if (N === 1) { currentSlide = 0; return; }
+  clearTimeout(carouselSnapTimer);
+  // Still parked on a clone from the previous wrap? Snap home first so
+  // this navigation animates one step, not back across the whole strip.
+  if (carouselSnapPending) snapCarousel(track);
+
+  // One step past either end is a clone; further than that is clamped.
+  if (index > N) index = N;
+  if (index < -1) index = -1;
+
+  track.style.transform = `translateX(-${(index + 1) * 100}%)`;
+  currentSlide = (index + N) % N;
   document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+
+  // Landed on a clone: snap invisibly to the real slide it duplicates.
+  if (index === N || index === -1) {
+    carouselSnapPending = true;
+    carouselSnapTimer = setTimeout(() => snapCarousel(track), 520); // just past the 0.5s transition
+  }
 }
 
 function startAutoPlay() {

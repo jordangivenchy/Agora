@@ -1233,6 +1233,10 @@ body {
 /* ─── CAROUSEL ─── */
 .carousel-section { margin-bottom: 40px; }
 
+/* News ticker row (NewsTicker.tsx portals into #newsTickerHost) */
+.hide-scrollbar { scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
 .carousel-stage {
   position: relative;
   display: flex;
@@ -1349,6 +1353,41 @@ body {
   transition: background 0.2s, transform 0.15s;
 }
 .carousel-watch-btn:hover { background: rgba(255,123,0,0.95); transform: translateY(-1px); }
+a.carousel-watch-btn { text-decoration: none; }
+
+/* ── News slides (interleaved with live rooms by mvp-adapter) ── */
+.carousel-live-badge.news {
+  background: rgba(226,185,107,0.14);
+  border: 1px solid rgba(226,185,107,0.4);
+  color: #f4d47c;
+}
+.carousel-news-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.carousel-news-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 100px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(6px);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #d5d5dc;
+}
+.carousel-news-chip img { border-radius: 3px; opacity: 0.9; }
+.panel-outlets { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 100%; }
+.panel-outlet-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #b9b9c2;
+}
+.panel-outlet-row img { border-radius: 3px; opacity: 0.9; }
 
 .carousel-panel {
   position: absolute;
@@ -5468,4 +5507,188 @@ body { background: transparent; }
 .dashboard-btn:hover:not(.active), .dashboard-btn.active {
   background: rgba(59,130,246,0.1) !important;
   border-color: rgba(59,130,246,0.4) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SIDEBAR REVAMP
+   Last block in the file, so it wins on source order.
+
+   Replaces the previous treatment (per-item glass cards, animated
+   amber light beams, drifting sparkles, hover jitter, 30%-white shell
+   border) with a flat, calm nav in the style of Linear / Discord:
+   quiet rows, one clear active state, and an amber indicator pill
+   carrying the brand accent instead of five stacked glow layers.
+   ══════════════════════════════════════════════════════════════════ */
+
+:root { --sidebar-width: 232px; }
+
+/* ── Shell ───────────────────────────────────────────────────────── */
+.sidebar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.022) 0%, rgba(255,255,255,0) 42%),
+    #0e0e12 !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 12px 40px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation: sidebarEntrance 0.4s cubic-bezier(0.25,0.46,0.45,0.94) both !important;
+}
+
+.sidebar-scroll-area { padding: 4px 0 0 !important; }
+.sidebar-nav { padding: 8px 8px 4px !important; gap: 1px !important; }
+
+/* ── Nav rows: flat, no per-item card ────────────────────────────── */
+.sidebar-link {
+  height: 40px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-left: none !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: rgba(238,238,245,0.56) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.005em !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  overflow: hidden !important;
+  transition: background 0.14s ease, color 0.14s ease !important;
+}
+
+/* Calm hover — a wash, not a jump */
+.sidebar-link:hover:not(.active) {
+  background: rgba(255,255,255,0.055) !important;
+  color: rgba(238,238,245,0.92) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.sidebar-link.active {
+  background: rgba(226,185,107,0.10) !important;
+  color: #f4e4c1 !important;
+  /* Clears the legacy 3px #FFA200 border-left, which is declared at this
+     same specificity earlier in the file and would otherwise stack with
+     the indicator pill below. */
+  border: none !important;
+  border-left: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Active marker: one amber pill on the left edge */
+.sidebar-link.active::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 3px !important;
+  height: 18px !important;
+  border-radius: 0 3px 3px 0 !important;
+  background: #e2b96b !important;
+  box-shadow: 0 0 10px rgba(226,185,107,0.5) !important;
+  animation: none !important;
+  inset: auto !important;
+  z-index: 6 !important;
+}
+.sidebar-link.active::after { content: none !important; display: none !important; }
+
+/* ── Retire the decoration layers ────────────────────────────────── */
+.nav-sparkle,
+.sidebar-link.active .nav-sparkle,
+.nav-hover-shimmer,
+.nav-light-slit,
+.sidebar-link.active .nav-light-slit,
+.nav-light-beam,
+.sidebar-link.active .nav-light-beam,
+.nav-light-shadow,
+.sidebar-link.active .nav-light-shadow {
+  display: none !important;
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+/* ── Row internals ───────────────────────────────────────────────── */
+.nav-inner {
+  padding: 0 12px !important;
+  gap: 11px !important;
+  height: 100% !important;
+}
+.nav-icon-wrap {
+  width: 18px !important;
+  height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: inherit !important;
+  opacity: 0.85 !important;
+  transition: opacity 0.14s ease, color 0.14s ease !important;
+}
+.sidebar-link.active .nav-icon-wrap { color: #e2b96b !important; opacity: 1 !important; }
+.sidebar-link:hover .nav-icon-wrap { opacity: 1 !important; }
+.nav-label { font-weight: inherit !important; letter-spacing: -0.005em !important; }
+
+/* Breathing room where the nav changes topic (Communities onward) */
+.sidebar-link[data-nav-id="communities"] { margin-top: 12px !important; }
+
+/* ── Dashboard card: softer container, chart kept ────────────────── */
+.dashboard-btn {
+  margin: 10px 4px 2px !important;
+  padding: 12px !important;
+  height: auto !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(255,255,255,0.028) !important;
+  transition: border-color 0.16s ease, background 0.16s ease !important;
+}
+.dashboard-btn:hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.13) !important;
+  transform: none !important;
+}
+.dashboard-btn.active { background: rgba(226,185,107,0.09) !important; }
+.dashboard-btn.active::before { display: none !important; }
+
+/* ── Friends ─────────────────────────────────────────────────────── */
+.friends-section {
+  padding: 10px 0 6px !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+}
+.friends-header { padding: 0 16px 8px !important; }
+.friends-title {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.09em !important;
+  color: rgba(255,255,255,0.34) !important;
+}
+.friends-count {
+  background: rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.42) !important;
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+}
+.friend-item {
+  padding: 7px 12px !important;
+  margin: 0 8px !important;
+  border-radius: 9px !important;
+  transition: background 0.14s ease !important;
+}
+.friend-item:hover { background: rgba(255,255,255,0.055) !important; transform: none !important; }
+.friend-name { font-size: 12.5px !important; font-weight: 500 !important; }
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.sidebar-footer {
+  color: rgba(255,255,255,0.16) !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.02em !important;
 }

@@ -41,6 +41,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <div class="nav-messages-glass-shadow"></div>
       </div>
     </div>
+    <!-- Notification bell — React portal target (NotificationsBell.tsx) -->
+    <div id="notifBellHost" style="display:flex;align-items:center;"></div>
     <div class="nav-avatar" id="profileAvatarWrap">
       <button class="avatar-btn" id="profileAvatarBtn" aria-label="Profile menu" aria-expanded="false" aria-haspopup="true">
         <div class="avatar-neon-ring"></div>
@@ -322,6 +324,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <button class="carousel-arrow right" id="arrowRight" aria-label="Next">▶</button>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
+    <!-- News headlines — React portal target (NewsTicker.tsx) -->
+    <div id="newsTickerHost"></div>
   </section>
 
   <!-- TOPICS — React portal target (TopicsHome.tsx renders the
