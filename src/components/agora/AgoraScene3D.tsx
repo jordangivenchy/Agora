@@ -552,8 +552,8 @@ function buildScaenae(scene: THREE.Scene): THREE.PointLight[] {
 function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: THREE.MeshBasicMaterial[] } {
   const group = new THREE.Group();
   const frameMats: THREE.MeshBasicMaterial[] = [];
-  const W = 7.6;
-  const H = 4.4;
+  const W = 15.2;
+  const H = 8.8;
   for (const sign of [-1, 1]) {
     const screen = new THREE.Group();
     const panel = new THREE.Mesh(
@@ -582,7 +582,9 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
       screen.add(bar);
     }
 
-    screen.position.set(sign * 4.9, 6.3, 10.4);
+    // Centers pushed apart so the doubled panels sit edge to edge with a
+    // slim central gap, rising over the scaenae crest like projections.
+    screen.position.set(sign * 8.1, 7.4, 10.4);
     // Face the audience (-z), turned a touch inward toward the center seat.
     screen.rotation.y = Math.PI + sign * 0.1;
     group.add(screen);
