@@ -1,43 +1,32 @@
 "use client";
 
-/* Topics — replaces the old matchmaking-style Discuss page. Instead of
-   "finding an opponent," people queue into conversations from what's
-   actually happening: headlines (news_topics rows) and topic areas
-   ranked by live activity.
+/* Topics — standing questions with matchmaking queues. No lobbies, no
+   manual room creation: pick a question ("Is God real?"), queue up,
+   and the moment someone else queues on it the server creates the
+   room, seats you both, and this page sends each of you in.
 
-   Join flow per row:
-   - something's live on the topic → jump straight into the busiest room
-     (the room's own join screen handles side/queue/spectate)
-   - nothing live → hand the motion/topic to the create-room modal via
-     onStart, so the user opens the conversation themselves */
+   Backed by 20260817_topic_queues.sql:
+   - get_debate_topics: question bank + live queue counts + my state
+   - queue_for_topic: joins the queue, or matches instantly if someone
+     is already waiting (returns the created room)
+   - check_topic_match: the waiting side polls until its room exists
+   - leave_topic_queue: cancel */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** Prefills the real CreateRoomModal (same contract as NewsPage). */
-  onStart: (motion: string, topicKey: string) => void;
 }
 
-type NewsRow = {
+type TopicRow = {
   id: string;
-  headline: string;
+  question: string;
   topic_key: string;
-  suggested_motion: string;
-  created_at: string;
-};
-
-type LiveTopic = {
-  key: string;
-  label: string;
-  emoji: string;
-  liveCount: number;
-  topRoomId: string | null;
-  topRoomMotion: string | null;
-  watching: number;
+  queue_count: number;
+  am_queued: boolean;
 };
 
 const card: React.CSSProperties = {
@@ -46,77 +35,49 @@ const card: React.CSSProperties = {
   borderRadius: 12,
 };
 
-const joinBtn: React.CSSProperties = {
-  background: "rgba(24,48,82,0.9)",
-  border: "0.5px solid #2c5382",
-  color: "#9cc4f0",
-  borderRadius: 9,
-  padding: "7px 14px",
-  fontSize: 12,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  whiteSpace: "nowrap",
-};
+const POLL_MS = 2500;
 
-const startBtn: React.CSSProperties = {
-  background: "transparent",
-  border: "0.5px solid #3a3a42",
-  color: "#c0c0c8",
-  borderRadius: 9,
-  padding: "7px 14px",
-  fontSize: 12,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  whiteSpace: "nowrap",
-};
-
-export default function TopicsPage({ open, onClose, onStart }: Props) {
+export default function TopicsPage({ open, onClose }: Props) {
   const [supabase] = useState(() => createClient());
-  const [news, setNews] = useState<NewsRow[]>([]);
-  const [topics, setTopics] = useState<LiveTopic[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [topics, setTopics] = useState<TopicRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const anyQueued = topics.some((t) => t.am_queued);
 
   const load = useCallback(async () => {
-    const [newsRes, roomsRes] = await Promise.all([
-      supabase
-        .from("news_topics")
-        .select("id, headline, topic_key, suggested_motion, created_at")
-        .order("created_at", { ascending: false })
-        .limit(12),
-      supabase
-        .from("debate_rooms")
-        .select("id, motion, topic_key, viewer_count, started_at")
-        .eq("status", "live")
-        .eq("is_private", false)
-        .order("viewer_count", { ascending: false }),
-    ]);
-
-    setNews((newsRes.data ?? []) as NewsRow[]);
-
-    const rooms = roomsRes.data ?? [];
-    const byTopic = new Map<string, typeof rooms>();
-    for (const r of rooms) {
-      const list = byTopic.get(r.topic_key) ?? [];
-      list.push(r);
-      byTopic.set(r.topic_key, list);
-    }
-    const ranked: LiveTopic[] = TOPICS.map((t) => {
-      const list = byTopic.get(t.key) ?? [];
-      return {
-        key: t.key,
-        label: t.label,
-        emoji: t.emoji,
-        liveCount: list.length,
-        topRoomId: list[0]?.id ?? null,
-        topRoomMotion: list[0]?.motion ?? null,
-        watching: list.reduce((n, r) => n + (r.viewer_count ?? 0), 0),
-      };
-    }).sort((a, b) => b.liveCount - a.liveCount || b.watching - a.watching);
-    setTopics(ranked);
+    const { data: auth } = await supabase.auth.getUser();
+    setUserId(auth?.user?.id ?? null);
+    const { data, error: err } = await supabase.rpc("get_debate_topics");
+    if (err) { setError(err.message); return; }
+    setTopics((data ?? []) as TopicRow[]);
     setLoaded(true);
   }, [supabase]);
 
   useEffect(() => { if (open) load(); }, [open, load]);
+
+  /* While queued anywhere: poll for a match; also refresh counts so
+     the board feels alive. Cleared when the page closes or nothing
+     is queued. */
+  useEffect(() => {
+    if (!open || !anyQueued || !userId) {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
+    }
+    pollRef.current = setInterval(async () => {
+      const { data: roomId } = await supabase.rpc("check_topic_match");
+      if (roomId) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        window.location.href = `/rooms/${roomId}`;
+        return;
+      }
+      load();
+    }, POLL_MS);
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [open, anyQueued, userId, supabase, load]);
 
   useEffect(() => {
     if (!open) return;
@@ -125,13 +86,32 @@ export default function TopicsPage({ open, onClose, onStart }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const joinLive = (roomId: string) => {
-    window.location.href = `/rooms/${roomId}`;
-  };
+  const queueUp = useCallback(async (t: TopicRow) => {
+    if (!userId) { window.location.href = "/login"; return; }
+    setBusyId(t.id);
+    setError(null);
+    const { data, error: err } = await supabase.rpc("queue_for_topic", { p_topic: t.id });
+    setBusyId(null);
+    if (err) {
+      setError(err.message.includes("suspended") ? "Your account is suspended." : err.message);
+      return;
+    }
+    const res = data as { status: string; room_id?: string };
+    if (res?.status === "matched" && res.room_id) {
+      window.location.href = `/rooms/${res.room_id}`;
+      return;
+    }
+    setTopics((ts) => ts.map((x) =>
+      x.id === t.id ? { ...x, am_queued: true, queue_count: x.queue_count + 1 } : x));
+  }, [supabase, userId]);
 
-  /** Live room on the news item's topic, if any. */
-  const liveForTopic = (topicKey: string): LiveTopic | undefined =>
-    topics.find((t) => t.key === topicKey && t.liveCount > 0);
+  const leaveQueue = useCallback(async (t: TopicRow) => {
+    setBusyId(t.id);
+    await supabase.rpc("leave_topic_queue", { p_topic: t.id });
+    setBusyId(null);
+    setTopics((ts) => ts.map((x) =>
+      x.id === t.id ? { ...x, am_queued: false, queue_count: Math.max(0, x.queue_count - 1) } : x));
+  }, [supabase]);
 
   if (!open) return null;
 
@@ -148,91 +128,92 @@ export default function TopicsPage({ open, onClose, onStart }: Props) {
         background: "var(--bg-primary, #0a0a0c)",
       }}
     >
-      <div className="max-w-[860px] mx-auto px-6 py-5">
+      <div className="max-w-[760px] mx-auto px-6 py-5">
 
-        <div className="flex items-center gap-3.5 mb-5 flex-wrap">
+        <div className="flex items-center gap-3.5 mb-1 flex-wrap">
           <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
             Topics
           </span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>
-            Join a conversation about what&rsquo;s happening now
+            Pick a question, queue up, get matched
           </span>
         </div>
-
-        {/* ── In the news ── */}
-        <p className="m-0 mb-2.5 text-[13px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-          In the news
+        <p className="m-0 mb-5 text-[11px]" style={{ color: "#6b6b74" }}>
+          The moment someone else queues on the same question, a live discussion opens with both of you in it.
         </p>
-        {news.length === 0 ? (
-          <div className="p-5 mb-6 text-center" style={card}>
-            <p className="m-0 text-[12px]" style={{ color: "#8b8b94" }}>
-              {loaded ? "No news topics yet — they'll appear here once the news pipeline is live." : "Loading…"}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2.5 mb-6">
-            {news.map((n) => {
-              const live = liveForTopic(n.topic_key);
-              const t = TOPICS.find((x) => x.key === n.topic_key);
-              return (
-                <div key={n.id} className="p-4 flex items-center gap-3.5 flex-wrap" style={card}>
-                  <div className="flex-1 min-w-[220px]">
-                    <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
-                      {t ? `${t.emoji} ${t.label}` : n.topic_key}
-                    </p>
-                    <p className="m-0 mt-0.5 text-[13.5px]" style={{ color: "#f5f5f0" }}>{n.headline}</p>
-                    <p className="m-0 mt-1 text-[11.5px]" style={{ color: "#c9b06a" }}>
-                      &ldquo;{n.suggested_motion}&rdquo;
-                    </p>
-                  </div>
-                  {live?.topRoomId ? (
-                    <button style={joinBtn} onClick={() => joinLive(live.topRoomId!)}>
-                      Join live · {live.liveCount}
-                    </button>
-                  ) : (
-                    <button style={joinBtn} onClick={() => onStart(n.suggested_motion, n.topic_key)}>
-                      Start the conversation
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+
+        {error && (
+          <p className="mb-3 px-4 py-2.5 rounded-lg text-[12px]"
+            style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+            {error}
+          </p>
         )}
 
-        {/* ── Trending topics ── */}
-        <p className="m-0 mb-2.5 text-[13px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-          Trending topics
-        </p>
+        {!loaded && (
+          <p className="text-[12px] text-center py-8" style={{ color: "#6b6b74" }}>Loading…</p>
+        )}
+
         <div className="flex flex-col gap-2.5 pb-8">
-          {topics.map((t) => (
-            <div key={t.key} className="p-4 flex items-center gap-3.5 flex-wrap" style={card}>
-              <div className="flex-1 min-w-[220px]">
-                <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0" }}>
-                  {t.emoji} {t.label}
-                </p>
-                <p className="m-0 mt-0.5 text-[11px]" style={{ color: t.liveCount ? "#f09595" : "#6b6b74" }}>
-                  {t.liveCount
-                    ? `● ${t.liveCount} live now${t.watching ? ` · ${t.watching} watching` : ""}`
-                    : "Quiet right now"}
-                </p>
-                {t.topRoomMotion && (
-                  <p className="m-0 mt-1 text-[11.5px] truncate" style={{ color: "#9a9aa2" }}>
-                    Busiest: &ldquo;{t.topRoomMotion}&rdquo;
+          {topics.map((t) => {
+            const cat = TOPICS.find((x) => x.key === t.topic_key);
+            const waiting = t.am_queued;
+            return (
+              <div
+                key={t.id}
+                className="p-4 flex items-center gap-3.5 flex-wrap"
+                style={{
+                  ...card,
+                  border: waiting ? "0.5px solid rgba(226,185,107,0.45)" : (card.border as string),
+                }}
+              >
+                <div className="flex-1 min-w-[240px]">
+                  <p className="m-0 text-[15px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                    {t.question}
                   </p>
+                  <p className="m-0 mt-1 text-[11px]" style={{ color: "#8b8b94" }}>
+                    {cat ? `${cat.emoji} ${cat.label}` : t.topic_key}
+                    {" · "}
+                    <span style={{ color: t.queue_count > 0 ? "#f4d47c" : "#6b6b74" }}>
+                      {t.queue_count > 0
+                        ? `${t.queue_count} waiting to talk`
+                        : "no one waiting yet"}
+                    </span>
+                  </p>
+                  {waiting && (
+                    <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#f4d47c" }}>
+                      <span className="inline-block animate-pulse">●</span> In queue — you&rsquo;ll be
+                      matched the moment someone joins. Keep this page open.
+                    </p>
+                  )}
+                </div>
+                {waiting ? (
+                  <button
+                    onClick={() => leaveQueue(t)}
+                    disabled={busyId === t.id}
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
+                    style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+                  >
+                    Leave queue
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => queueUp(t)}
+                    disabled={busyId === t.id}
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
+                    style={{
+                      background: t.queue_count > 0 ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
+                      border: t.queue_count > 0 ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
+                      color: t.queue_count > 0 ? "#412402" : "#9cc4f0",
+                      fontFamily: "inherit",
+                      fontWeight: t.queue_count > 0 ? 600 : 400,
+                    }}
+                  >
+                    {busyId === t.id ? "Joining…" : t.queue_count > 0 ? "Match now" : "Queue up"}
+                  </button>
                 )}
               </div>
-              {t.topRoomId ? (
-                <button style={joinBtn} onClick={() => joinLive(t.topRoomId!)}>
-                  Join live
-                </button>
-              ) : (
-                <button style={startBtn} onClick={() => onStart("", t.key)}>
-                  Start one
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

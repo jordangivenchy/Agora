@@ -332,15 +332,7 @@ export default function Home() {
         </div>
       )}
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
-      <TopicsPage
-        open={activeTab === "battle"}
-        onClose={() => setActiveTab(null)}
-        onStart={(motion, topic) => {
-          setActiveTab(null);
-          setCreatePrefill({ motion, topic });
-          setShowCreate(true);
-        }}
-      />
+      <TopicsPage open={activeTab === "battle"} onClose={() => setActiveTab(null)} />
       <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
       <NewsPage
         open={activeTab === "news"}
