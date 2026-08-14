@@ -12,6 +12,7 @@ export interface StagePerson {
   username: string;
   avatarUrl: string | null;
   speaking: boolean;
+  stageRole?: "host" | "cohost" | "speaker" | "audience";
 }
 
 export interface SeatedPerson {
@@ -24,6 +25,9 @@ interface Props {
   roomId: string;
   proSpeakers: StagePerson[];
   conSpeakers: StagePerson[];
+  /* Non-debater stage: hosts, co-hosts, and promoted speakers, arranged
+     together — no artificial host section. */
+  stageStrip: StagePerson[];
   audience: SeatedPerson[];
   viewerCount: number;
   view: AgoraView;
@@ -87,10 +91,37 @@ function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: Stage
   );
 }
 
+/* One person on the discussion strip: avatar with a role ring, a crown
+   for hosts (outlined for co-hosts), a speaking ring when live. Entrance
+   is animated — coming up from the audience should feel like walking on
+   stage, not toggling state. */
+function StripChip({ person }: { person: StagePerson }) {
+  const role = person.stageRole ?? "speaker";
+  return (
+    <div className={`ag-strip-chip role-${role}`} title={`${person.username} — ${role}`}>
+      <div className="ag-strip-avatar" style={{ background: colorFor(person.id) }}>
+        {(person.username || "?").charAt(0).toUpperCase()}
+        {person.speaking && <span className="ag-speaking-ring" />}
+        {(role === "host" || role === "cohost") && (
+          <span className={`ag-crown ${role}`} aria-label={role}>
+            <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden
+              fill={role === "host" ? "currentColor" : "none"}
+              stroke="currentColor" strokeWidth={role === "host" ? 0 : 2.5}>
+              <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.5 10h-15L3 8z" />
+            </svg>
+          </span>
+        )}
+      </div>
+      <span className="ag-strip-name">{person.username}</span>
+    </div>
+  );
+}
+
 export default function Amphitheater({
   roomId,
   proSpeakers,
   conSpeakers,
+  stageStrip,
   audience,
   viewerCount,
   view,
@@ -100,6 +131,15 @@ export default function Amphitheater({
   return (
     <div className="ag-theater">
       <AgoraScene3D roomId={roomId} audience={audience} viewerCount={viewerCount} view={view} />
+
+      {/* The discussion strip: hosts and promoted speakers, above the rail */}
+      {stageStrip.length > 0 && (
+        <div className="ag-strip">
+          {stageStrip.map((person) => (
+            <StripChip key={person.id} person={person} />
+          ))}
+        </div>
+      )}
 
       {/* The stage rail: panels + emblem + view toggle over the 3D scene */}
       <div className="ag-stage">
