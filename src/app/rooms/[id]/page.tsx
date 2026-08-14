@@ -11,6 +11,7 @@ import SentimentBar from "@/components/SidePickerPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NotesPopout from "@/components/NotesPanel";
 import AgoraAssistant from "@/components/AgoraAssistant";
+import ResultsScreen from "@/components/ResultsScreen";
 import type { User } from "@supabase/supabase-js";
 
 type ParticipantWithUser = DebateParticipant & {
@@ -64,6 +65,11 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState("");
   const [isLeaving, setIsLeaving] = useState(false);
+  // Ended rooms show the vote tally instead of bouncing everyone home.
+  const [showResults, setShowResults] = useState(false);
+  // Settings → Discussion defaults (join muted / camera off). Loaded once
+  // alongside the user; defaults apply for guests and on fetch failure.
+  const [mediaDefaults, setMediaDefaults] = useState({ joinMuted: false, joinCameraOff: false });
   const [userLoaded, setUserLoaded] = useState(false);
   const [participantsLoaded, setParticipantsLoaded] = useState(false);
   const [queueSearch, setQueueSearch] = useState("");
@@ -109,8 +115,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
 
       setRoom(data);
       if (data.status === "ended") {
-        setIsLeaving(true);
-        router.push("/");
+        setShowResults(true);
       }
     } catch (e) {
       console.error("fetchRoom failed", e);
@@ -156,6 +161,14 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
+        if (user) {
+          const { data: us } = await supabase
+            .from("user_settings")
+            .select("join_muted, join_camera_off")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (us) setMediaDefaults({ joinMuted: us.join_muted, joinCameraOff: us.join_camera_off });
+        }
       } catch (e) {
         console.error("getUser failed", e);
       } finally {
@@ -237,8 +250,8 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
       .channel(`room-${roomId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms", filter: `id=eq.${roomId}` }, (payload) => {
         if (payload.new && (payload.new as DebateRoom).status === "ended") {
-          setIsLeaving(true);
-          router.push("/");
+          setRoom(payload.new as DebateRoom); // carries ended_at for the duration line
+          setShowResults(true);
           return;
         }
         fetchRoom();
@@ -405,7 +418,13 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         return;
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to join room";
+      const raw = err instanceof Error ? err.message : "Failed to join room";
+      // RLS rejections carry the policy name; the "suspended users …"
+      // policies come from 20260812_enforce_suspension.sql.
+      const message =
+        raw.includes("suspended users") || raw.includes("account_suspended")
+          ? "This account is suspended. Contact support if you believe this is a mistake."
+          : raw;
       setError(message);
     } finally {
       setJoining(false);
@@ -560,12 +579,13 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   }
 
   async function endRoom() {
-    setIsLeaving(true);
     await supabase
       .from("debate_rooms")
       .update({ status: "ended", ended_at: new Date().toISOString() })
       .eq("id", roomId);
-    router.push("/");
+    // The realtime subscription flips every client — including this one —
+    // to the results screen; fetchRoom covers the host if realtime lags.
+    fetchRoom();
   }
 
   async function startRoom() {
@@ -629,6 +649,13 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   // If something blew up before we became `ready`, surface the error with a
   // visible escape hatch instead of spinning forever. The normal in-flight
   // case still renders the spinner.
+  // Ended room: replace the room UI entirely (unmounting DebateVideo also
+  // tears down the LiveKit connection). Must precede the ready/isLeaving
+  // gates so a late visitor to an ended room's URL sees the tally too.
+  if (showResults && room) {
+    return <ResultsScreen room={room} />;
+  }
+
   if (!ready && error && !isLeaving) {
     return (
       <div
@@ -1017,6 +1044,9 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
           <DebateVideo
             token={livekitToken}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL!}
+            roomId={roomId}
+            joinMuted={mediaDefaults.joinMuted}
+            joinCameraOff={mediaDefaults.joinCameraOff}
             isDebater={myParticipation?.role === "debater"}
             hostId={room!.host_id}
             currentUserId={currentUser?.id || guestId || ""}

@@ -12,7 +12,9 @@ import DashboardModal from "@/components/DashboardModal";
 import UserProfileModal from "@/components/UserProfileModal";
 import DebatesPage from "@/components/DebatesPage";
 import TrendingPage from "@/components/TrendingPage";
-import BattlePage from "@/components/BattlePage";
+import TopicsHome from "@/components/TopicsHome";
+import NotificationsBell from "@/components/NotificationsBell";
+import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
@@ -69,7 +71,10 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showDebates, setShowDebates] = useState(false);
-  const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | "battle" | null>(null);
+  const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
+  const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
+  const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
+  const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
   const [booted, setBooted] = useState(false);
@@ -84,6 +89,11 @@ export default function Home() {
     if (hostRef.current && !hostRef.current.firstChild) {
       hostRef.current.innerHTML = MVP_HOME_HTML;
     }
+    // Portal targets living inside the MVP markup: the Browse section
+    // below the carousel, and the navbar's notification bell slot.
+    setFieldsHost(document.getElementById("fieldsSection"));
+    setBellHost(document.getElementById("notifBellHost"));
+    setNewsHost(document.getElementById("newsTickerHost"));
   }, []);
 
   /* Fetch real rooms + auth + platform stats, expose to the MVP scripts.
@@ -128,7 +138,9 @@ export default function Home() {
           return {
             motion: room.motion,
             debater1: proD?.user?.username ?? "Open seat",
-            debater2: conD?.user?.username ?? "",
+            // Mirror debater1's fallback: an empty string renders its initial as
+            // literal "undefined" in the card avatar.
+            debater2: conD?.user?.username ?? "Open seat",
             color1: PALETTE[i % PALETTE.length],
             color2: PALETTE[(i + 3) % PALETTE.length],
             elo: "—",
@@ -181,6 +193,13 @@ export default function Home() {
         setBooted(true);
       }
   }, [supabase]);
+
+  // Deep link support: /?profile=<userId> (from "Copy profile link") opens
+  // that user's profile on load.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("profile");
+    if (p) setProfileUserId(p);
+  }, []);
 
   /* Never let a slow or unreachable backend hold the UI hostage. Supabase's
      auth client retries with backoff for minutes when its host is down, so
@@ -273,8 +292,16 @@ export default function Home() {
     };
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
-      if (tab === "trending" || tab === "communities" || tab === "news" || tab === "battle") setActiveTab(tab);
+      if (tab === "trending" || tab === "communities" || tab === "news") setActiveTab(tab);
       else if (tab === "close") setActiveTab(null);
+      else if (tab === "battle") {
+        // Legacy Topics-tab key: the dropdowns now live on the home feed.
+        setActiveTab(null);
+        (document.querySelector('[data-nav-id="home"]') as HTMLElement | null)?.click();
+        setTimeout(() => {
+          document.getElementById("fieldsSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+      }
     };
     const onLogout = async () => {
       await supabase.auth.signOut();
@@ -322,8 +349,18 @@ export default function Home() {
           Supabase project to be running.
         </div>
       )}
+      <NotificationsBell container={bellHost} />
+      <NewsTicker container={newsHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
-      <BattlePage open={activeTab === "battle"} onClose={() => setActiveTab(null)} />
+      <TopicsHome
+        container={fieldsHost}
+        onCreateLobby={async (topic) => {
+          const { data: auth } = await supabase.auth.getUser();
+          if (!auth?.user) { window.location.href = "/login"; return; }
+          setCreatePrefill({ motion: "", topic });
+          setShowCreate(true);
+        }}
+      />
       <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
       <NewsPage
         open={activeTab === "news"}

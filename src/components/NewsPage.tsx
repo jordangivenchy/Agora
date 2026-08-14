@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { SEED_NEWS, SEED_DAILY_MOTION, type SeedNewsItem } from "@/lib/seed-content";
+import type { SeedNewsItem } from "@/lib/seed-content";
 
 interface Props {
   open: boolean;
@@ -31,8 +31,9 @@ function resetCountdown(): string {
 
 export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   const [supabase] = useState(() => createClient());
-  const [items, setItems] = useState<SeedNewsItem[]>(SEED_NEWS);
-  const [daily, setDaily] = useState(SEED_DAILY_MOTION);
+  // Empty until real news_topics rows exist — no fabricated headlines.
+  const [items, setItems] = useState<SeedNewsItem[]>([]);
+  const [daily, setDaily] = useState<{ motion: string; proVotes: number; conVotes: number } | null>(null);
   const [dailyId, setDailyId] = useState<string | null>(null);
   const [voted, setVoted] = useState<"pro" | "con" | null>(null);
   const [liveNow, setLiveNow] = useState(0);
@@ -78,7 +79,6 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
           motion: dailyRow.suggested_motion,
           proVotes: dailyRow.pro_votes,
           conVotes: dailyRow.con_votes,
-          liveCount: 0,
         });
       }
       const rest = data.filter((d) => !d.is_daily_motion);
@@ -107,6 +107,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   }, [open, onClose]);
 
   const pct = useMemo(() => {
+    if (!daily) return { pro: 50, total: 0 };
     const pro = daily.proVotes + (voted === "pro" ? 1 : 0);
     const con = daily.conVotes + (voted === "con" ? 1 : 0);
     const total = pro + con || 1;
@@ -132,13 +133,14 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
       <div className="max-w-[900px] mx-auto px-6 py-5">
         <div className="flex items-center gap-3.5 mb-4">
           <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
-          <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into motions</span>
+          <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
           <span className="text-[12px] ml-auto whitespace-nowrap" style={{ color: "#8b8b94" }}>
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </span>
         </div>
 
-        {/* Today's Motion */}
+        {/* Today's Motion — only when a real news_topics daily row exists */}
+        {daily && (
         <div style={{ background: "linear-gradient(135deg,#c9a44a,#5b4a86 50%,#2c5382)", padding: 1, borderRadius: 15, marginBottom: 16 }}>
           <div style={{ background: "linear-gradient(135deg,#1a1200 0%,#12101a 60%,#0d0d12 100%)", borderRadius: 14, padding: 18 }}>
             <div className="flex justify-between items-start mb-2.5">
@@ -151,7 +153,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
               <span className="text-[11px]" style={{ color: "#8b8b94" }}>resets in {resetCountdown()}</span>
             </div>
             <p className="m-0 mb-2.5" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 21, color: "#f7f3e8" }}>
-              "{daily.motion}"
+              "{daily?.motion}"
             </p>
             <div className="flex items-center gap-3 mb-3 flex-wrap">
               <div style={{ flex: 1, maxWidth: 300 }}>
@@ -171,11 +173,11 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             </div>
             <div className="flex gap-2.5 flex-wrap">
               <button
-                onClick={() => onStartDebate(daily.motion, "politics-ethics")}
+                onClick={() => daily && onStartDebate(daily.motion, "politics-ethics")}
                 className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-lg border-none"
                 style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
               >
-                ⚔ Debate this now
+                ✦ Discuss this now
               </button>
               <button
                 onClick={() => castVote("pro")}
@@ -203,6 +205,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             </div>
           </div>
         </div>
+        )}
 
         {/* Headlines */}
         <div className="flex flex-col gap-2.5">
@@ -224,15 +227,19 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 className="cursor-pointer text-[11px] px-3.5 py-1.5 rounded-lg whitespace-nowrap"
                 style={{ border: "0.5px solid #2c5382", background: "rgba(24,48,82,0.9)", color: "#9cc4f0" }}
               >
-                Start debate
+                Start a discussion
               </button>
             </div>
           ))}
+          {items.length === 0 && (
+            <div className="px-4 py-8 text-center" style={card}>
+              <p className="m-0 mb-1 text-[13px]" style={{ color: "#f5f5f0" }}>No topics yet</p>
+              <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
+                Daily discussion topics will appear here once the news pipeline is live.
+              </p>
+            </div>
+          )}
         </div>
-
-        <p className="text-[11px] mt-4" style={{ color: "#6b6b74" }}>
-          Headlines are curated daily. A live news feed integration lands with the content pipeline.
-        </p>
       </div>
     </div>
   );

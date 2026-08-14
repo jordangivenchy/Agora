@@ -5,6 +5,45 @@
 (function () {
   function go(url) { window.location.href = url; }
 
+  /* Hero carousel = popular live rooms interleaved with top news stories
+     (from /api/news, Particle-backed). Room slides and news slides are
+     built independently and merged here, so either source can arrive or
+     update at any time. */
+  var roomSlides = [];
+  var newsSlides = [];
+
+  var NEWS_GRADIENTS = [
+    'linear-gradient(120deg,#101426 0%,#1c2340 55%,#25172e 100%)',
+    'linear-gradient(120deg,#141020 0%,#2a1a33 55%,#12203a 100%)',
+    'linear-gradient(120deg,#0e1a2a 0%,#182a45 55%,#2b1f38 100%)',
+  ];
+
+  function rebuildCarousel() {
+    CAROUSEL_DATA.length = 0;
+    var n = Math.max(roomSlides.length, newsSlides.length);
+    for (var i = 0; i < n; i++) {
+      if (roomSlides[i]) CAROUSEL_DATA.push(roomSlides[i]);
+      if (newsSlides[i]) CAROUSEL_DATA.push(newsSlides[i]);
+    }
+    renderCarousel();
+  }
+
+  fetch('/api/news')
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      newsSlides = (j.stories || []).slice(0, 3).map(function (s, i) {
+        return {
+          kind: 'news',
+          headline: s.headline,
+          url: s.url,
+          sources: s.sources || [],
+          gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length],
+        };
+      });
+      if (newsSlides.length) rebuildCarousel();
+    })
+    .catch(function () { /* no news feed → carousel stays rooms-only */ });
+
   function applyData(D) {
     if (!D) return;
 
@@ -20,9 +59,8 @@
         .filter(function (d) { return d.status === 'live'; });
       live.sort(function (a, b) { return (b.viewersNum || 0) - (a.viewersNum || 0); });
       var top = (live.length ? live : DEBATES.slice()).slice(0, 4);
-      CAROUSEL_DATA.length = 0;
-      top.forEach(function (d) {
-        CAROUSEL_DATA.push({
+      roomSlides = top.map(function (d) {
+        return {
           debater: d.debater1,
           initials: (d.debater1 || '?').charAt(0).toUpperCase(),
           color: d.color1,
@@ -30,14 +68,15 @@
           viewersNum: d.viewersNum || 0,
           motion: d.motion,
           stance: d.debater1Stance || 'PRO',
-          factCheck: { type: 'verified', label: 'verified' },
+          // No factCheck: real rooms have no fact-checking yet, and stamping
+          // "verified" on them was a fabricated trust signal.
           gradient: d.gradient,
           topicKey: d.topicKey,
           debateIndex: d._i,
-        });
+        };
       });
 
-      renderCarousel();
+      rebuildCarousel();
       renderTopicButtons();
       if (typeof renderTopicStrip === 'function') renderTopicStrip();
       renderDebateGrid();
@@ -92,8 +131,8 @@
       e.preventDefault();
       var href = a.getAttribute('href');
       if (href === '#logout') window.dispatchEvent(new CustomEvent('agora:logout'));
-      else if (href === '#profile' || href === '#settings') window.dispatchEvent(new CustomEvent('agora:profile'));
-      else if (href === '#stats') window.dispatchEvent(new CustomEvent('agora:dashboard'));
+      else if (href === '#settings') go('/settings');
+      else if (href === '#profile') window.dispatchEvent(new CustomEvent('agora:profile'));
       else if (href === '#debates') window.dispatchEvent(new CustomEvent('agora:debates'));
     });
   });
@@ -154,7 +193,7 @@
         window.dispatchEvent(new CustomEvent('agora:dashboard'));
       } else {
         // Sidebar tabs that open real React pages.
-        var tab = e.target.closest('[data-nav-id="trending"], [data-nav-id="communities"], [data-nav-id="news"], [data-nav-id="battle"]');
+        var tab = e.target.closest('[data-nav-id="trending"], [data-nav-id="communities"], [data-nav-id="news"]');
         if (tab) {
           e.stopPropagation();
           e.preventDefault();

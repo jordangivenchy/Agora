@@ -61,128 +61,13 @@ const TOPICS = {
   },
 };
 
-const DEBATERS = [
-  { id: 'destiny',       name: 'Destiny',        initials: 'D', color: '#00b894', globalElo: 2847, trendDir: 'up',   trendDelta: 23,  topicKeys: ['politics-law','politics-ethics','foreign-policy','science-tech'], specialty: 'politics-law'   },
-  { id: 'hasanabi',      name: 'HasanAbi',        initials: 'H', color: '#e17055', globalElo: 2634, trendDir: 'up',   trendDelta: 41,  topicKeys: ['politics-ethics','economics','foreign-policy'],                    specialty: 'politics-ethics' },
-  { id: 'legaleagle',    name: 'LegalEagle',      initials: 'L', color: '#e2b96b', globalElo: 2591, trendDir: 'flat', trendDelta: 0,   topicKeys: ['politics-law','politics-ethics'],                                  specialty: 'politics-law'   },
-  { id: 'philosophytube',name: 'PhilosophyTube',  initials: 'P', color: '#fd79a8', globalElo: 2487, trendDir: 'up',   trendDelta: 18,  topicKeys: ['philosophy','politics-ethics','culture'],                          specialty: 'philosophy'     },
-  { id: 'cosmOsdebate',  name: 'CosmosDebate',    initials: 'C', color: '#4a9eff', globalElo: 2341, trendDir: 'up',   trendDelta: 56,  topicKeys: ['science-tech','foreign-policy','economics'],                       specialty: 'science-tech'   },
-  { id: 'techrealist',   name: 'TechRealist',     initials: 'T', color: '#00cec9', globalElo: 2298, trendDir: 'down', trendDelta: -12, topicKeys: ['science-tech','economics'],                                        specialty: 'science-tech'   },
-  { id: 'econdebater',   name: 'EconDebater',     initials: 'E', color: '#55efc4', globalElo: 2187, trendDir: 'up',   trendDelta: 34,  topicKeys: ['economics','foreign-policy'],                                      specialty: 'economics'      },
-  { id: 'politicsnow',   name: 'PoliticsNow',     initials: 'N', color: '#1976D2', globalElo: 2156, trendDir: 'up',   trendDelta: 67,  topicKeys: ['politics-law','politics-ethics','foreign-policy'],                 specialty: 'politics-law'   },
-  { id: 'sciencematters',name: 'ScienceMatters',  initials: 'S', color: '#74b9ff', globalElo: 2089, trendDir: 'flat', trendDelta: 0,   topicKeys: ['science-tech'],                                                   specialty: 'science-tech'   },
-  { id: 'cairosmind',    name: 'KairosMind',      initials: 'K', color: '#64B5F6', globalElo: 1987, trendDir: 'up',   trendDelta: 89,  topicKeys: ['philosophy','politics-ethics','culture'],                          specialty: 'philosophy'     },
-  { id: 'sneako',        name: 'Sneako',           initials: 'S', color: '#b2bec3', globalElo: 1834, trendDir: 'down', trendDelta: -31, topicKeys: ['politics-ethics','culture','foreign-policy'],                     specialty: 'politics-ethics' },
-  { id: 'greenfuture',   name: 'GreenFuture',     initials: 'G', color: '#55efc4', globalElo: 1756, trendDir: 'up',   trendDelta: 44,  topicKeys: ['science-tech','economics'],                                        specialty: 'science-tech'   },
-  { id: 'electionwatch', name: 'ElectionWatch',   initials: 'E', color: '#4a9eff', globalElo: 1698, trendDir: 'flat', trendDelta: 0,   topicKeys: ['politics-law'],                                                   specialty: 'politics-law'   },
-];
+// Demo leaderboard removed — no rating system yet, so the module shows
+// its empty state until real ratings exist.
+const DEBATERS = [];
 
-const DEBATES = [
-  {
-    motion: 'Social media causes teen depression',
-    debater1: 'Destiny', debater2: 'KairosMind',
-    color1: '#00b894', color2: '#1976D2',
-    elo: 847, viewers: '4.2K', viewersNum: 4200, progress: 75,
-    topicKey: 'politics-ethics',
-    secondaryTopics: ['science-tech', 'culture'],
-    subTags: ['social media', 'mental health'],
-    gradient: 'linear-gradient(135deg, #0d1b3e 0%, #1e0533 100%)',
-    icon: '📱',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'live', format: '1v1', language: 'EN',
-  },
-  {
-    motion: 'Affirmative action is constitutional',
-    debater1: 'LegalEagle', debater2: 'SocraticDebates',
-    color1: '#e2b96b', color2: '#4a9eff',
-    elo: 923, viewers: '1.8K', viewersNum: 1800, progress: 40,
-    topicKey: 'politics-law',
-    secondaryTopics: ['politics-ethics'],
-    subTags: ['civil rights', 'equal protection'],
-    gradient: 'linear-gradient(135deg, #1a1000 0%, #002d3d 100%)',
-    icon: '⚖️',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'live', format: 'Oxford', language: 'EN',
-  },
-  {
-    motion: 'UBI would destroy work ethic',
-    debater1: 'EconDebater', debater2: 'FuturePolicy',
-    color1: '#e17055', color2: '#00cec9',
-    elo: 761, viewers: '3.1K', viewersNum: 3100, progress: 55,
-    topicKey: 'economics',
-    secondaryTopics: ['politics-ethics'],
-    subTags: ['UBI', 'labor'],
-    gradient: 'linear-gradient(135deg, #0d2b1a 0%, #2d1a00 100%)',
-    icon: '💰',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'live', format: 'Open', language: 'EN',
-  },
-  {
-    motion: 'Nuclear is greener than solar',
-    debater1: 'ScienceMatters', debater2: 'GreenFuture',
-    color1: '#4a9eff', color2: '#00b894',
-    elo: 812, viewers: '892', viewersNum: 892, progress: 20,
-    topicKey: 'science-tech',
-    secondaryTopics: ['economics'],
-    subTags: ['energy', 'climate'],
-    gradient: 'linear-gradient(135deg, #001a2e 0%, #002214 100%)',
-    icon: '⚛️',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'queue', format: 'Oxford', language: 'EN',
-  },
-  {
-    motion: 'Free trade hurts American workers',
-    debater1: 'TradeRealist', debater2: 'GlobalMarket',
-    color1: '#fd79a8', color2: '#e2b96b',
-    elo: 688, viewers: '2.4K', viewersNum: 2400, progress: 85,
-    topicKey: 'economics',
-    secondaryTopics: ['foreign-policy'],
-    subTags: ['trade', 'labor', 'globalization'],
-    gradient: 'linear-gradient(135deg, #2d0a1a 0%, #1a1500 100%)',
-    icon: '🌍',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'live', format: 'Panel', language: 'EN',
-  },
-  {
-    motion: 'Democracy is failing in the West',
-    debater1: 'PoliticsNow', debater2: 'CivicDebater',
-    color1: '#1976D2', color2: '#e17055',
-    elo: 904, viewers: '5.7K', viewersNum: 5700, progress: 30,
-    topicKey: 'politics-ethics',
-    secondaryTopics: ['politics-law', 'foreign-policy'],
-    subTags: ['democracy', 'governance'],
-    gradient: 'linear-gradient(135deg, #0d0a2e 0%, #2e0d0d 100%)',
-    icon: '🗳️',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'live', format: '1v1', language: 'EN',
-  },
-  {
-    motion: 'AI will eliminate more jobs than it creates',
-    debater1: 'TechRealist', debater2: 'AIOptimist',
-    color1: '#00cec9', color2: '#64B5F6',
-    elo: 776, viewers: '1.2K', viewersNum: 1200, progress: 65,
-    topicKey: 'science-tech',
-    secondaryTopics: ['economics'],
-    subTags: ['AI', 'automation'],
-    gradient: 'linear-gradient(135deg, #001e2e 0%, #0d001a 100%)',
-    icon: '🤖',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'scheduled', format: '1v1', language: 'EN',
-  },
-  {
-    motion: 'The US should adopt ranked choice voting',
-    debater1: 'ElectionWatch', debater2: 'VotingRights',
-    color1: '#4a9eff', color2: '#fd79a8',
-    elo: 834, viewers: '987', viewersNum: 987, progress: 50,
-    topicKey: 'politics-law',
-    secondaryTopics: ['politics-ethics'],
-    subTags: ['electoral reform', 'voting'],
-    gradient: 'linear-gradient(135deg, #001a3d 0%, #1a001a 100%)',
-    icon: '✅',
-    debater1Stance: 'PRO', debater2Stance: 'CON',
-    status: 'live', format: 'Oxford', language: 'EN',
-  },
-];
+// Populated with real rooms by mvp-adapter.js (applyData). Empty until
+// data lands — the grid and carousel render their empty states.
+const DEBATES = [];
 
 const UPCOMING = [
   { motion: 'Should AI systems be granted legal personhood?',         topicKey: 'science-tech',    secondaryTopics: ['philosophy','politics-law'],   scheduledAt: 'Today · 4:00 PM ET',  debater1: 'TechRealist',  color1: '#00cec9', debater2: 'LegalEagle',     color2: '#e2b96b' },
@@ -195,21 +80,10 @@ const UPCOMING = [
   { motion: 'Cancel culture strengthens accountability norms',        topicKey: 'culture',         secondaryTopics: ['politics-ethics'],              scheduledAt: 'Sat · 1:00 PM ET',    debater1: 'Sneako',       color1: '#b2bec3', debater2: 'KairosMind',     color2: '#64B5F6' },
 ];
 
-const SIDEBAR_CHANNELS = [
-  { name: 'Destiny',        topic: 'AI in Government',       color: '#00b894', initial: 'D', topicKey: 'science-tech',   viewers: '13.4K' },
-  { name: 'HasanAbi',       topic: 'Universal Basic Income', color: '#e17055', initial: 'H', topicKey: 'economics',      viewers: '8.2K'  },
-  { name: 'Sneako',         topic: 'Immigration Policy',     color: '#b2bec3', initial: 'S', topicKey: 'foreign-policy', viewers: '5.1K'  },
-  { name: 'CosmosDebate',   topic: 'Nuclear Energy',         color: '#4a9eff', initial: 'C', topicKey: 'science-tech',   viewers: '2.1K'  },
-  { name: 'PhilosophyTube', topic: 'Free Speech Limits',     color: '#fd79a8', initial: 'P', topicKey: 'philosophy',     viewers: '4.7K'  },
-  { name: 'LegalEagle',     topic: 'Affirmative Action',     color: '#e2b96b', initial: 'L', topicKey: 'politics-law',   viewers: '1.3K'  },
-];
+const SIDEBAR_CHANNELS = [];
 
-const CAROUSEL_DATA = [
-  { debater: 'Destiny',       initials: 'D', color: '#00b894', viewersDisplay: '13.4K', viewersNum: 13400, motion: 'How AI Should Be Used in Government',  stance: 'ANTI', factCheck: { type: 'verified', label: 'verified'       }, gradient: 'linear-gradient(135deg,#0d1b4b 0%,#1a0533 50%,#2d1b69 100%)', topicKey: 'science-tech', debateIndex: 6    },
-  { debater: 'HasanAbi',      initials: 'H', color: '#e17055', viewersDisplay: '8.2K',  viewersNum: 8200,  motion: 'Universal Basic Income Now',           stance: 'PRO',  factCheck: { type: 'disputed', label: 'disputed claim'  }, gradient: 'linear-gradient(135deg,#0a2e1a 0%,#0d3b2e 50%,#1a4d3a 100%)', topicKey: 'economics',    debateIndex: 2    },
-  { debater: 'CosmosDebate',  initials: 'C', color: '#4a9eff', viewersDisplay: '2.1K',  viewersNum: 2100,  motion: 'Nuclear Energy is the Future',         stance: 'PRO',  factCheck: { type: 'verified', label: 'verified'       }, gradient: 'linear-gradient(135deg,#1a0a00 0%,#2d1500 50%,#3d2200 100%)', topicKey: 'science-tech', debateIndex: 3    },
-  { debater: 'PhilosophyTube',initials: 'P', color: '#fd79a8', viewersDisplay: '4.7K',  viewersNum: 4700,  motion: 'Free Speech Has No Absolute Limits',   stance: 'ANTI', factCheck: { type: 'checking', label: 'checking\u2026' }, gradient: 'linear-gradient(135deg,#0d0a2e 0%,#1a1040 50%,#2a1a5a 100%)', topicKey: 'philosophy',   debateIndex: 5    },
-];
+// Rebuilt from real rooms by mvp-adapter.js.
+const CAROUSEL_DATA = [];
 
 // ═══════════════════════════════════════════════
 //  PHASE 2: ARGUMENT DATA
@@ -296,16 +170,8 @@ const DEBATE_ARGS = [
 //  userVotes[i]  = 'pro' | 'con' | null
 // ═══════════════════════════════════════════════
 
-const INITIAL_VOTES = [
-  { pro: 3814, con: 2109 },  // social media depression
-  { pro: 1024, con: 1387 },  // affirmative action
-  { pro: 2180, con: 2910 },  // UBI
-  { pro: 748,  con: 512  },  // nuclear vs solar
-  { pro: 1870, con: 1340 },  // free trade
-  { pro: 4210, con: 2890 },  // democracy failing
-  { pro: 1023, con: 672  },  // AI jobs
-  { pro: 631,  con: 578  },  // ranked choice
-];
+// Rebuilt from real votes by mvp-adapter.js.
+const INITIAL_VOTES = [];
 
 let voteCounts = INITIAL_VOTES.map(v => ({ pro: v.pro, con: v.con }));
 let userVotes  = new Array(DEBATES.length).fill(null);
@@ -416,16 +282,59 @@ function getSearchResults(query) {
 //  CAROUSEL
 // ═══════════════════════════════════════════════
 
+// News headlines come from an external API — escape before innerHTML.
+function escHTML(s) {
+  return String(s ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
+// News slide (kind: 'news', pushed by mvp-adapter): headline + the outlets
+// reporting the story; side panel lists coverage instead of a debater.
+function newsSlideHTML(c, i, total) {
+  const chips = (c.sources || []).slice(0, 4).map(s => `
+    <span class="carousel-news-chip">
+      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="13" height="13" />` : ''}
+      ${escHTML(s.name)}
+    </span>`).join('');
+  const rows = (c.sources || []).slice(0, 5).map(s => `
+    <div class="panel-outlet-row">
+      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="14" height="14" />` : ''}
+      <span>${escHTML(s.name)}</span>
+    </div>`).join('');
+  return `
+    <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${total}">
+      <div class="carousel-bg" style="background:${c.gradient};"></div>
+      <div class="carousel-bg-grid"></div>
+      <div class="carousel-live-badge news">📰 News</div>
+      <div class="carousel-lower-third">
+        <div class="carousel-motion">${escHTML(c.headline)}</div>
+        <div class="carousel-news-chips">${chips}</div>
+        <button class="carousel-watch-btn carousel-news-btn">Read article →</button>
+      </div>
+      <div class="carousel-panel">
+        <div class="panel-name" style="margin-top:8px;">Reported by</div>
+        <div class="panel-outlets">${rows}</div>
+      </div>
+    </div>`;
+}
+
 function renderCarousel() {
   const track = document.getElementById('carouselTrack');
   const dots  = document.getElementById('carouselDots');
 
-  track.innerHTML = CAROUSEL_DATA.map((c, i) => `
+  // Nothing at all (no rooms, no news): hide the hero strip.
+  const cSection = document.querySelector('.carousel-section');
+  if (cSection) cSection.style.display = CAROUSEL_DATA.length ? '' : 'none';
+
+  const slideHTML = (c, i) => c.kind === 'news'
+    ? newsSlideHTML(c, i, CAROUSEL_DATA.length)
+    : `
     <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
       <div class="carousel-bg" style="background:${c.gradient};"></div>
       <div class="carousel-bg-grid"></div>
-      <div class="carousel-live-badge"><div class="carousel-live-dot"></div> LIVE</div>
-      <div class="carousel-viewers">👁 ${c.viewersDisplay} viewers</div>
+      <div class="carousel-live-badge"><div class="carousel-live-dot"></div> Live</div>
+      <div class="carousel-viewers">${c.viewersDisplay} watching</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">"${c.motion}"</div>
         <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
@@ -433,18 +342,35 @@ function renderCarousel() {
       <div class="carousel-panel">
         <div class="panel-avatar" style="background:${c.color};">${c.initials}</div>
         <div class="panel-name">${c.debater}</div>
-        <div class="panel-viewers">👁 ${c.viewersDisplay} viewers</div>
+        <div class="panel-viewers">${c.viewersDisplay} watching</div>
         <div class="panel-topic">${c.motion}</div>
         <div class="panel-stance ${c.stance.toLowerCase()}">${c.stance}</div>
-        <div class="panel-factcheck">
+        ${c.factCheck ? `<div class="panel-factcheck">
           <div class="fact-chip ${c.factCheck.type}">${c.factCheck.type === 'verified' ? '✓' : c.factCheck.type === 'disputed' ? '⚠' : '⟳'} ${c.factCheck.label}</div>
-        </div>
+        </div>` : ''}
       </div>
     </div>
-  `).join('');
+  `;
+
+  // Infinite loop: a clone of the last slide leads and a clone of the
+  // first trails, so both directions can animate one step past the ends;
+  // goToSlide() snaps back (transition off) once that animation lands.
+  const N = CAROUSEL_DATA.length;
+  track.innerHTML = N > 1
+    ? slideHTML(CAROUSEL_DATA[N - 1], N - 1)
+      + CAROUSEL_DATA.map(slideHTML).join('')
+      + slideHTML(CAROUSEL_DATA[0], 0)
+    : CAROUSEL_DATA.map(slideHTML).join('');
+
+  // Land on the current slide without animating (offset +1 for the clone).
+  currentSlide = Math.min(currentSlide, Math.max(0, N - 1));
+  track.style.transition = 'none';
+  track.style.transform = `translateX(-${(N > 1 ? currentSlide + 1 : 0) * 100}%)`;
+  void track.offsetWidth;
+  track.style.transition = '';
 
   dots.innerHTML = CAROUSEL_DATA.map((_, i) =>
-    `<div class="carousel-dot${i === 0 ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
+    `<div class="carousel-dot${i === currentSlide ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
   ).join('');
 
   dots.querySelectorAll('.carousel-dot').forEach(dot => {
@@ -453,19 +379,57 @@ function renderCarousel() {
   });
 
   // Phase 2: wire carousel watch buttons
-  track.querySelectorAll('.carousel-watch-btn').forEach(btn => {
+  track.querySelectorAll('.carousel-watch-btn:not(.carousel-news-btn)').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const idx = parseInt(btn.dataset.debateIndex);
       if (!isNaN(idx)) openDebateModal(idx);
     });
   });
+
+  // News slides open the in-app News panel (React listens on agora:tab).
+  track.querySelectorAll('.carousel-news-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
+    });
+  });
+}
+
+let carouselSnapTimer = null;
+let carouselSnapPending = false;
+
+function snapCarousel(track) {
+  track.style.transition = 'none';
+  track.style.transform = `translateX(-${(currentSlide + 1) * 100}%)`;
+  void track.offsetWidth;
+  track.style.transition = '';
+  carouselSnapPending = false;
 }
 
 function goToSlide(index) {
-  currentSlide = (index + CAROUSEL_DATA.length) % CAROUSEL_DATA.length;
-  document.getElementById('carouselTrack').style.transform = `translateX(-${currentSlide * 100}%)`;
+  const track = document.getElementById('carouselTrack');
+  const N = CAROUSEL_DATA.length;
+  if (!N) return;
+  if (N === 1) { currentSlide = 0; return; }
+  clearTimeout(carouselSnapTimer);
+  // Still parked on a clone from the previous wrap? Snap home first so
+  // this navigation animates one step, not back across the whole strip.
+  if (carouselSnapPending) snapCarousel(track);
+
+  // One step past either end is a clone; further than that is clamped.
+  if (index > N) index = N;
+  if (index < -1) index = -1;
+
+  track.style.transform = `translateX(-${(index + 1) * 100}%)`;
+  currentSlide = (index + N) % N;
   document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+
+  // Landed on a clone: snap invisibly to the real slide it duplicates.
+  if (index === N || index === -1) {
+    carouselSnapPending = true;
+    carouselSnapTimer = setTimeout(() => snapCarousel(track), 520); // just past the 0.5s transition
+  }
 }
 
 function startAutoPlay() {
@@ -517,14 +481,9 @@ function renderSidebarChannels() {
 //  FRIENDS SECTION
 // ═══════════════════════════════════════════════
 
-const FRIENDS = [
-  { name: 'Alex Rivera',  status: 'online',  tag: 'elo', tagLabel: '1847 AR' },
-  { name: 'Maya Chen',    status: 'online',  tag: 'elo', tagLabel: '2103 AR' },
-  { name: 'Jordan Lee',   status: 'online',  tag: 'elo', tagLabel: '1654 AR' },
-  { name: 'Sam Torres',   status: 'offline', tag: 'elo', tagLabel: '1290 AR' },
-  { name: 'Riley Park',   status: 'offline', tag: 'elo', tagLabel: '1512 AR' },
-  { name: 'Casey Morgan', status: 'offline', tag: 'elo', tagLabel:  '980 AR' },
-];
+// Replaced with the signed-in user's real friends by mvp-adapter.js;
+// the section is hidden when there are none.
+const FRIENDS = [];
 
 const AVATAR_COLORS = [
   '#1976D2','#00b894','#4a9eff','#fd9644','#64B5F6','#e17055','#00cec9','#fdcb6e',
@@ -718,13 +677,14 @@ function renderFriends() {
 
 function renderTopicButtons() {
   const row = document.getElementById('categoryRow');
+  if (!row) return; // Browse section removed — TopicsHome.tsx owns field pills now
   const trendingKey = getTrendingTopicKey();
 
   row.innerHTML = Object.entries(TOPICS).map(([key, t]) => {
     const count     = getTopicDebateCount(key);
     const isTrend   = key === trendingKey;
     const isActive  = key === activeTopicKey;
-    const liveText  = count > 0 ? `${count} live${isTrend ? ' 🔥' : ''}` : 'no live';
+    const liveText  = count > 0 ? `${count} live` : 'no live';
 
     return `
       <button
@@ -755,6 +715,7 @@ function renderTopicButtons() {
 
 function renderTopicStrip() {
   const strip = document.getElementById('topicStrip');
+  if (!strip) return; // Browse section removed — TopicsHome.tsx owns field pills now
 
   if (activeTopicKey === 'all') {
     strip.classList.remove('visible');
@@ -817,9 +778,9 @@ function buildDebateCard(d, realIndex) {
 
   // Status badge
   const badgeMap = {
-    live:      { cls: 'hc-badge-live',      html: '<span class="hc-badge-dot"></span> LIVE' },
-    queue:     { cls: 'hc-badge-queue',     html: '⏳ IN QUEUE' },
-    scheduled: { cls: 'hc-badge-scheduled', html: '🕐 SCHEDULED' },
+    live:      { cls: 'hc-badge-live',      html: '<span class="hc-badge-dot"></span> Live' },
+    queue:     { cls: 'hc-badge-queue',     html: 'In queue' },
+    scheduled: { cls: 'hc-badge-scheduled', html: 'Scheduled' },
   };
   const badge = badgeMap[status] || badgeMap.live;
 
@@ -827,16 +788,16 @@ function buildDebateCard(d, realIndex) {
   let watchBtn  = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">▶ Watch</button>`;
   let joinBtn;
   if (status === 'live') {
-    joinBtn = `<button class="hc-btn hc-btn-join-blue" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join as Debater</button>`;
+    joinBtn = `<button class="hc-btn hc-btn-join-blue" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join as speaker</button>`;
   } else if (status === 'queue') {
     joinBtn = `<button class="hc-btn hc-btn-join-amber" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join Queue</button>`;
   } else {
     joinBtn = `<button class="hc-btn hc-btn-join-purple" onclick="openDebateModal(${realIndex});event.stopPropagation()">Register</button>`;
-    watchBtn = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">Spectate</button>`;
+    watchBtn = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">Watch</button>`;
   }
 
   // Meta items
-  const viewerLabel = status === 'queue' ? `👥 ${d.viewers}` : `👁 ${d.viewers}`;
+  const viewerLabel = status === 'queue' ? `${d.viewers} in queue` : `${d.viewers} watching`;
   const format  = d.format   || '1v1';
   const language = d.language || 'EN';
 
@@ -859,8 +820,6 @@ function buildDebateCard(d, realIndex) {
 
       <div class="hc-meta">
         <span>${viewerLabel}</span>
-        <span class="hc-dot">·</span>
-        <span class="hc-ar">◆ ${d.elo} AR</span>
         <span class="hc-dot">·</span>
         <span>${format}</span>
         <span class="hc-dot">·</span>
@@ -886,13 +845,14 @@ function buildDebateCard(d, realIndex) {
 
 function renderDebateGrid() {
   const grid  = document.getElementById('debateGrid');
+  if (!grid) return; // Home grid removed — TopicsHome.tsx lists rooms per field now
   const title = document.getElementById('gridTitle');
   const countBadge = document.getElementById('searchResultCount');
 
   // Search mode overrides topic filter
   if (searchQuery.trim()) {
     const results = getSearchResults(searchQuery);
-    title.textContent = 'Search Results';
+    title.textContent = 'Search results';
     countBadge.textContent = `${results.length} found`;
     countBadge.classList.add('visible');
 
@@ -902,8 +862,8 @@ function renderDebateGrid() {
         grid.innerHTML = `
           <div class="search-empty-state">
             <div class="search-empty-icon">🔍</div>
-            <div class="search-empty-title">No debates match "${searchQuery}"</div>
-            <div class="search-empty-sub">Try a different keyword, debater name, or topic.</div>
+            <div class="search-empty-title">Nothing matches "${searchQuery}"</div>
+            <div class="search-empty-sub">Try a different keyword, name, or topic.</div>
           </div>
         `;
       } else {
@@ -917,7 +877,7 @@ function renderDebateGrid() {
 
   countBadge.classList.remove('visible');
   const t = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
-  title.textContent = t ? `${t.emoji} ${t.label} · Live Now` : 'Live Debates';
+  title.textContent = t ? `${t.emoji} ${t.label} · Live now` : 'Popular rooms';
 
   const filtered = getFilteredDebates(activeTopicKey);
 
@@ -928,8 +888,8 @@ function renderDebateGrid() {
       grid.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">${t ? t.emoji : '🎙️'}</div>
-          <div class="empty-title">No live debates in ${t ? t.label : 'this topic'} right now</div>
-          <div class="empty-sub">Check back soon — this arena heats up fast.</div>
+          <div class="empty-title">Nothing live in ${t ? t.label : 'this topic'} right now</div>
+          <div class="empty-sub">Check back soon, or browse another topic.</div>
           ${upcomingInTopic.length ? `
             <div class="upcoming-label">Scheduled · Up Next</div>
             <div class="upcoming-list">
@@ -975,67 +935,8 @@ function attachCardListeners(grid) {
 // ═══════════════════════════════════════════════
 
 function renderELOModule() {
-  const mod = document.getElementById('eloModule');
-  const t   = activeTopicKey !== 'all' ? TOPICS[activeTopicKey] : null;
-
-  const topicBtnDisabled = activeTopicKey === 'all' ? 'disabled' : '';
-  const topicBtnTitle    = activeTopicKey === 'all' ? 'Select a topic to filter' : '';
-
-  let pool;
-  if (eloScope === 'topic' && activeTopicKey !== 'all') {
-    pool = DEBATERS.filter(d => d.topicKeys.includes(activeTopicKey))
-      .sort((a, b) => b.globalElo - a.globalElo)
-      .slice(0, 4);
-  } else {
-    pool = [...DEBATERS].sort((a, b) => b.globalElo - a.globalElo).slice(0, 4);
-  }
-
-  const listHTML = pool.length > 0
-    ? pool.map((d, i) => `
-        <div class="elo-row" tabindex="0" role="button" aria-label="${d.name}, ELO ${d.globalElo}">
-          <div class="elo-rank ${rankClass(i)}">#${i + 1}</div>
-          <div class="elo-avatar-sm" style="background:${d.color};">${d.initials}</div>
-          <div class="elo-info">
-            <div class="elo-name">${d.name}</div>
-            <div class="elo-specialty">${TOPICS[d.specialty]?.label || d.specialty}</div>
-          </div>
-          <div class="elo-score-col">
-            <div class="elo-score"><span class="elo-score-diamond">◆</span> ${d.globalElo.toLocaleString()}</div>
-            ${trendIcon(d.trendDir, d.trendDelta)}
-          </div>
-        </div>
-      `).join('')
-    : `<div class="elo-empty">No ranked debaters in ${t?.label || 'this topic'} yet.<br><span style="color:var(--text-dim);">Be the first to compete. →</span></div>`;
-
-  const moduleTitle = eloScope === 'topic' && t
-    ? `${t.emoji} Top in ${t.label}`
-    : 'Most Popular';
-
-  mod.innerHTML = `
-    <div class="elo-module-header">
-      <div class="elo-module-title">${moduleTitle}</div>
-      <div class="elo-scope-toggle" role="group" aria-label="ELO scope">
-        <button class="scope-btn${eloScope === 'global' ? ' active' : ''}" data-scope="global">Global</button>
-        <button class="scope-btn${eloScope === 'topic'  ? ' active' : ''}" data-scope="topic" ${topicBtnDisabled} title="${topicBtnTitle}">This Topic</button>
-      </div>
-    </div>
-    <div class="elo-list">${listHTML}</div>
-    <div class="elo-module-footer">
-      <a class="elo-explore-link" href="#">View full rankings →</a>
-      <span class="elo-total-count">${DEBATERS.length} ranked</span>
-    </div>
-  `;
-
-  mod.querySelectorAll('.scope-btn:not([disabled])').forEach(btn => {
-    btn.addEventListener('click', () => {
-      eloScope = btn.dataset.scope;
-      mod.classList.add('fading');
-      setTimeout(() => {
-        renderELOModule();
-        mod.classList.remove('fading');
-      }, 120);
-    });
-  });
+  // Rating system removed from the product — the module and its column
+  // are gone from the template; this stub keeps legacy call sites safe.
 }
 
 // ═══════════════════════════════════════════════
@@ -1108,7 +1009,7 @@ function renderDebateRoom(index) {
       <div class="feed-arg-reactions">
         <button class="feed-reaction-btn" data-arg-reaction="up" title="Strong argument">👍 <span class="react-count">${Math.floor(Math.random()*120)+8}</span></button>
         <button class="feed-reaction-btn" data-arg-reaction="down" title="Weak argument">👎 <span class="react-count">${Math.floor(Math.random()*30)+2}</span></button>
-        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Fire argument">🔥 <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Compelling">★ <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
       </div>
     </div>
   `).join('');
@@ -1116,12 +1017,12 @@ function renderDebateRoom(index) {
   panel.innerHTML = `
     <!-- HEADER -->
     <div class="room-header">
-      <div class="room-live-badge"><div class="carousel-live-dot"></div> LIVE</div>
+      <div class="room-live-badge"><div class="carousel-live-dot"></div> Live</div>
       <div class="room-header-info">
         <div class="room-motion">"${d.motion}"</div>
-        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ◆ ${d.elo} ELO stakes &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
+        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
       </div>
-      <div class="room-viewers-pill">👁 ${d.viewers} viewers</div>
+      <div class="room-viewers-pill">${d.viewers} watching</div>
       <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">✕</button>
     </div>
 
@@ -1143,7 +1044,7 @@ function renderDebateRoom(index) {
             <div class="room-debater-name-label">${d.debater2}</div>
             <span class="room-stance-badge con">CON</span>
           </div>
-          <div class="room-vs-divider">VS</div>
+          <div class="room-vs-divider">vs</div>
         </div>
       </div>
 
@@ -1183,7 +1084,7 @@ function renderDebateRoom(index) {
             class="room-vote-btn pro${voted === 'pro' ? ' voted' : ''}"
             id="roomVotePro"
             ${voted ? 'disabled' : ''}
-            aria-label="Vote PRO on this motion"
+            aria-label="Vote PRO on this topic"
           >
             ${voted === 'pro' ? '✓ Voted PRO' : '👍 PRO'}
           </button>
@@ -1191,20 +1092,16 @@ function renderDebateRoom(index) {
             class="room-vote-btn con${voted === 'con' ? ' voted' : ''}"
             id="roomVoteCon"
             ${voted ? 'disabled' : ''}
-            aria-label="Vote CON on this motion"
+            aria-label="Vote CON on this topic"
           >
             ${voted === 'con' ? '✓ Voted CON' : '👎 CON'}
           </button>
         </div>
 
         <div class="room-vote-note" id="roomVoteNote">
-          ${voted ? `You voted ${voted.toUpperCase()}. Votes are locked for this session.` : 'Cast your vote to influence the debate ranking.'}
+          ${voted ? `You voted ${voted.toUpperCase()}. Votes are locked for this session.` : 'Your vote counts toward the final result.'}
         </div>
 
-        <div class="room-elo-stakes">
-          <span class="room-elo-stakes-label">◆ ELO at stake</span>
-          <span class="room-elo-stakes-val">${d.elo} points</span>
-        </div>
       </div>
 
       <!-- ARGUMENT FEED -->
@@ -1381,8 +1278,9 @@ function handleSearchInput(query) {
 document.getElementById('arrowLeft').addEventListener('click', () => { goToSlide(currentSlide - 1); resetAutoPlay(); });
 document.getElementById('arrowRight').addEventListener('click', () => { goToSlide(currentSlide + 1); resetAutoPlay(); });
 
-// Category row scroll on wheel
-document.getElementById('categoryRow').addEventListener('wheel', e => {
+// Category row scroll on wheel (no-op since the Browse section was removed)
+var _categoryRowEl = document.getElementById('categoryRow');
+if (_categoryRowEl) _categoryRowEl.addEventListener('wheel', e => {
   if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
     e.preventDefault();
     document.getElementById('categoryRow').scrollLeft += e.deltaY;
@@ -1596,7 +1494,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
       <div class="modal-section">
         <span class="modal-section-label">Motion / Topic</span>
         <div class="modal-input-row">
-          <input class="modal-input" id="motionInput" type="text" placeholder="State the motion or topic…" autocomplete="off" />
+          <input class="modal-input" id="motionInput" type="text" placeholder="What's the topic?" autocomplete="off" />
           <button class="suggest-btn" onclick="_cmSuggest()">✦ Suggest</button>
         </div>
       </div>
@@ -1638,7 +1536,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
       <div class="modal-section">
         <div class="toggle-row">
           <div>
-            <div class="toggle-label">Show your AR to opponent</div>
+            <div class="toggle-label">Show your AR to the other speaker</div>
             <div class="toggle-sublabel">Before match is confirmed</div>
           </div>
           <div class="toggle-switch on" onclick="_cmToggle(this)"><div class="knob"></div></div>
@@ -1655,12 +1553,12 @@ document.getElementById('searchBtn').addEventListener('click', () => {
       <div class="entry-cards">
         <div class="entry-card queue" onclick="_cmShowQueue()">
           <span class="entry-card-icon">⚡</span>
-          <span class="entry-card-title">Join Queue</span>
-          <span class="entry-card-desc">Enter matchmaking and get paired with a debater on your topic and skill level</span>
+          <span class="entry-card-title">Join a queue</span>
+          <span class="entry-card-desc">Get paired with someone on your topic and skill level</span>
         </div>
         <div class="entry-card create" onclick="_cmShowCreate()">
           <span class="entry-card-icon">🎙</span>
-          <span class="entry-card-title">Create Discussion</span>
+          <span class="entry-card-title">Create a room</span>
           <span class="entry-card-desc">Host your own room with full control over format, rules, and audience</span>
         </div>
       </div>
@@ -1673,14 +1571,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     modalTitle.innerHTML = `<button class="back-btn" onclick="_cmEntry()">←</button> Join Queue`;
     modalBody.innerHTML = sharedFields() + `
       <div class="modal-section">
-        <span class="modal-section-label">Skill matchmaking</span>
+        <span class="modal-section-label">Skill matching</span>
         <div class="pill-group" id="skillPills">
           <span class="pill selected" onclick="_cmSelectOne(this,'skillPills')">Match similar AR</span>
           <span class="pill"          onclick="_cmSelectOne(this,'skillPills')">Open to all</span>
         </div>
       </div>
       <div class="modal-section">
-        <span class="modal-section-label">Preferred opponent AR range</span>
+        <span class="modal-section-label">Preferred AR range</span>
         <div class="ar-slider-wrap">
           <div class="ar-range-row">
             <span class="ar-range-label">Min</span>
@@ -1708,14 +1606,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
         <div class="toggle-row">
           <div>
             <div class="toggle-label">Notify me when matched</div>
-            <div class="toggle-sublabel">Leave queue, get pinged when a match is found</div>
+            <div class="toggle-sublabel">Leave the queue and get notified when someone is found</div>
           </div>
           <div class="toggle-switch" onclick="_cmToggle(this)"><div class="knob"></div></div>
         </div>
         <div class="toggle-row">
           <div>
             <div class="toggle-label">Auto-accept match</div>
-            <div class="toggle-sublabel">Skip manual confirmation when opponent found</div>
+            <div class="toggle-sublabel">Skip manual confirmation when someone is found</div>
           </div>
           <div class="toggle-switch" onclick="_cmToggle(this)"><div class="knob"></div></div>
         </div>
@@ -1778,7 +1676,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
         <div class="toggle-row">
           <div>
             <div class="toggle-label">Recording consent</div>
-            <div class="toggle-sublabel">Allow this debate to be saved and shared</div>
+            <div class="toggle-sublabel">Allow this discussion to be saved and shared</div>
           </div>
           <div class="toggle-switch on" onclick="_cmToggle(this)"><div class="knob"></div></div>
         </div>
@@ -1843,11 +1741,6 @@ function init() {
   renderDebateGrid();
   renderELOModule();
   startAutoPlay();
-
-  // Phase 2: welcome toast after a short delay
-  setTimeout(() => {
-    showToast('info', '🔴', 'Live debates in progress', '8 debates live now — click any card to watch', 5000);
-  }, 1200);
 }
 
 init();
@@ -1963,80 +1856,30 @@ init();
 (function() {
 
   // ── Data ───────────────────────────────────
-  const EP_DEBATES = [
-    { motion: '"Free speech has no absolute limits"',
-      category: 'Politics', status: 'live', format: 'Oxford', lang: 'EN',
-      debaters: [{init:'PT',color:'#1565C0'},{init:'D',color:'#e65c00'}],
-      names: ['PhilosophyTube','Destiny'],
-      meta: ['4.7K watching','AR 1800+'], ar: 1800,
-      actions: ['watch','join'] },
-    { motion: '"Universal Basic Income would destroy work ethic"',
-      category: 'Economics', status: 'queue', format: '1v1', lang: 'EN',
-      debaters: [{init:'H',color:'#0f6e56'}],
-      names: ['HasanAbi','Waiting…'],
-      meta: ['3 in queue','~2 min wait'], ar: 1400,
-      actions: ['spectate','queue'] },
-    { motion: '"AI cannot be held morally responsible for its actions"',
-      category: 'Ethics', status: 'scheduled', format: 'Oxford', lang: 'EN',
-      debaters: [{init:'CD',color:'#533ab7'},{init:'LE',color:'#854f0b'}],
-      names: ['CosmosDebate','LegalEagle'],
-      meta: ['Tomorrow 8PM','AR 1400+'], ar: 1400,
-      actions: ['remind','register'] },
-    { motion: '"Democracy is in terminal decline in the West"',
-      category: 'Politics', status: 'live', format: 'Panel', lang: 'EN',
-      debaters: [{init:'SN',color:'#636e72'},{init:'PN',color:'#2980b9'}],
-      names: ['Sneako','PoliticsNow'],
-      meta: ['2.1K watching','Panel 2v2'], ar: 1500,
-      actions: ['watch','join'] },
-    { motion: '"Nuclear energy is essential for climate goals"',
-      category: 'Science & Tech', status: 'queue', format: 'Open', lang: 'EN',
-      debaters: [{init:'KM',color:'#633806'}],
-      names: ['KairosMind','Waiting…'],
-      meta: ['1 in queue','~5 min wait'], ar: 1200,
-      actions: ['spectate','queue'] },
-    { motion: '"Affirmative action does more harm than good"',
-      category: 'Law', status: 'scheduled', format: '1v1', lang: 'EN',
-      debaters: [{init:'LE',color:'#854f0b'},{init:'RV',color:'#1b6b3a'}],
-      names: ['LegalEagle','RationalView'],
-      meta: ['Friday 6PM','AR 1600+'], ar: 1600,
-      actions: ['remind','register'] },
-    { motion: '"NATO expansion destabilizes more than it secures"',
-      category: 'Foreign Policy', status: 'live', format: 'Panel', lang: 'EN',
-      debaters: [{init:'GM',color:'#1976D2'},{init:'CB',color:'#c0392b'}],
-      names: ['GlobalMarket','CosmosDebate'],
-      meta: ['890 watching','Panel 2v2'], ar: 1700,
-      actions: ['watch','join'] },
-    { motion: '"Free will is an illusion incompatible with determinism"',
-      category: 'Philosophy', status: 'queue', format: 'Oxford', lang: 'ES',
-      debaters: [{init:'KM',color:'#6c3483'}],
-      names: ['KairosMind','Waiting…'],
-      meta: ['1 in queue','~7 min wait'], ar: 1350,
-      actions: ['spectate','queue'] },
-    { motion: '"Cancel culture strengthens accountability norms"',
-      category: 'Culture', status: 'scheduled', format: '1v1', lang: 'EN',
-      debaters: [{init:'SN',color:'#636e72'},{init:'PT',color:'#fd79a8'}],
-      names: ['Sneako','PhilosophyTube'],
-      meta: ['Sat 1PM ET','AR 1100+'], ar: 1100,
-      actions: ['remind','register'] },
-    { motion: '"Jury trials should be abolished for complex financial crimes"',
-      category: 'Law', status: 'live', format: 'Open', lang: 'EN',
-      debaters: [{init:'LE',color:'#e2b96b'},{init:'CV',color:'#00b894'}],
-      names: ['LegalEagle','CivicVoice'],
-      meta: ['1.3K watching','Open Debate'], ar: 1500,
-      actions: ['watch','join'] },
-    { motion: '"The French Revolution did more harm than good"',
-      category: 'History', status: 'queue', format: 'Oxford', lang: 'FR',
-      debaters: [{init:'PN',color:'#2980b9'}],
-      names: ['PoliticsNow','Waiting…'],
-      meta: ['2 in queue','~9 min wait'], ar: 1300,
-      actions: ['spectate','queue'] },
-    { motion: '"Social media algorithms are a public health crisis"',
-      category: 'Ethics', status: 'live', format: '1v1', lang: 'EN',
-      debaters: [{init:'D',color:'#e65c00'},{init:'AO',color:'#64B5F6'}],
-      names: ['Destiny','AIOptimist'],
-      meta: ['3.4K watching','AR 1900+'], ar: 1900,
-      actions: ['watch','join'] },
-  ];
+  // Explore cards come from the same real rooms the home grid shows.
+  // (The demo catalogue of fictional debaters lived here until 2026-08.)
+  function epSource() {
+    return DEBATES.map((d, i) => {
+      const t = TOPICS[d.topicKey];
+      const debaters = [{ init: (d.debater1 || '?').charAt(0).toUpperCase(), color: d.color1 }];
+      const names = [d.debater1];
+      if (d.debater2 && d.debater2 !== 'Open seat') {
+        debaters.push({ init: d.debater2.charAt(0).toUpperCase(), color: d.color2 });
+        names.push(d.debater2);
+      } else {
+        names.push('Open seat');
+      }
+      return {
+        motion: '"' + d.motion + '"',
+        category: t ? t.label : d.topicKey,
+        status: d.status, format: d.format || 'Open', lang: d.language || 'EN',
+        debaters: debaters, names: names,
+        meta: [d.viewers + ' watching'], ar: 0,
+        actions: ['watch', 'join'],
+        idx: i,
+      };
+    });
+  }
 
   // ── Render ─────────────────────────────────
   function renderCards(list) {
@@ -2044,30 +1887,30 @@ init();
     const meta = document.getElementById('epResultsMeta');
     if (!grid) return;
 
-    meta.textContent = `Showing ${list.length} debate${list.length !== 1 ? 's' : ''}`;
+    meta.textContent = `Showing ${list.length} discussion${list.length !== 1 ? 's' : ''}`;
 
     if (list.length === 0) {
-      grid.innerHTML = `<div class="explore-empty"><span class="explore-empty-icon">🔍</span>No debates match your filters</div>`;
+      grid.innerHTML = `<div class="explore-empty"><span class="explore-empty-icon">🔍</span>Nothing matches your filters</div>`;
       return;
     }
 
     grid.innerHTML = list.map(d => {
-      const statusLabel = d.status === 'live' ? '● LIVE' : d.status === 'queue' ? '⏳ IN QUEUE' : '🕐 SCHEDULED';
+      const statusLabel = d.status === 'live' ? '● Live' : d.status === 'queue' ? 'In queue' : 'Scheduled';
       const avatarsHtml = d.debaters.map((av, i) => `
         <div class="explore-avatar" style="background:${av.color}">${av.init}</div>
         <span class="explore-debater-name">${d.names[i]}</span>
-        ${i < d.debaters.length - 1 ? '<span class="explore-vs">VS</span>' : ''}
+        ${i < d.debaters.length - 1 ? '<span class="explore-vs">vs</span>' : ''}
       `).join('');
       const waitingHtml = d.debaters.length === 1
         ? `<span class="explore-debater-name" style="color:rgba(255,255,255,0.2)">${d.names[1]}</span>` : '';
 
       const btn1Class = 'watch';
-      const btn1Label = d.actions[0] === 'watch' ? 'Watch' : d.actions[0] === 'spectate' ? 'Spectate' : 'Set reminder';
+      const btn1Label = d.actions[0] === 'watch' ? 'Watch' : d.actions[0] === 'spectate' ? 'Watch' : 'Set reminder';
       const btn2Class = d.actions[1] === 'queue' ? 'queue-btn' : 'join';
-      const btn2Label = d.actions[1] === 'join' ? 'Join as debater' : d.actions[1] === 'queue' ? 'Join Queue' : 'Register';
+      const btn2Label = d.actions[1] === 'join' ? 'Join as speaker' : d.actions[1] === 'queue' ? 'Join queue' : 'Register';
 
       return `
-        <div class="explore-result-card" data-cat="${d.category}" data-status="${d.status}" data-format="${d.format}" data-lang="${d.lang}" data-ar="${d.ar}">
+        <div class="explore-result-card" data-ep-idx="${d.idx}" style="cursor:pointer" data-cat="${d.category}" data-status="${d.status}" data-format="${d.format}" data-lang="${d.lang}" data-ar="${d.ar}">
           <div class="explore-card-top">
             <span class="explore-status ${d.status}">${statusLabel}</span>
             <span class="explore-card-category">${d.category}</span>
@@ -2094,8 +1937,8 @@ init();
     const arMin  = parseInt(document.getElementById('epArMin')?.value || '0');
     const arMax  = parseInt(document.getElementById('epArMax')?.value || '9999');
 
-    const filtered = EP_DEBATES.filter(d => {
-      if (cat !== 'All' && d.category !== cat) return false;
+    const filtered = epSource().filter(d => {
+      if (cat !== 'All' && !d.category.toLowerCase().includes(cat.toLowerCase())) return false;
       if (status.includes('Live') && d.status !== 'live') return false;
       if (status.includes('Queue') && d.status !== 'queue') return false;
       if (status.includes('Scheduled') && d.status !== 'scheduled') return false;
@@ -2112,6 +1955,13 @@ init();
     renderCards(filtered);
   }
   window._epApplyFilters = applyFilters;
+
+  // Any click on a card (or its buttons) opens the real room — the adapter's
+  // openDebateModal override navigates to /rooms/<id>.
+  document.getElementById('epResultsGrid')?.addEventListener('click', (e) => {
+    const card = e.target.closest?.('.explore-result-card');
+    if (card && card.dataset.epIdx !== undefined) openDebateModal(+card.dataset.epIdx);
+  });
 
   // ── Filter pill handler ─────────────────────
   window._epFilter = function(el, group) {
@@ -2160,8 +2010,48 @@ init();
   const discInput  = document.getElementById('discoveryInput');
   const mainInput  = document.getElementById('searchInput');
 
+  // Build result cards from the real rooms in DEBATES. Regenerated on every
+  // open so the overlay always reflects current data; the data-* attributes
+  // feed _dsFilterResults exactly like the old static markup did.
+  function renderDiscoveryCards() {
+    const grid = document.getElementById('resultsGrid');
+    if (!grid) return;
+    grid.innerHTML = DEBATES.map((d, i) => {
+      const t = TOPICS[d.topicKey];
+      const cat = t ? t.label : d.topicKey;
+      const statusLabel = d.status === 'live' ? '● Live' : d.status === 'queue' ? 'In queue' : 'Scheduled';
+      const second = d.debater2 && d.debater2 !== 'Open seat'
+        ? `<div class="debater-avatar" style="background:${d.color2}">${d.debater2.charAt(0).toUpperCase()}</div><span class="debater-name">${d.debater2}</span>`
+        : `<span class="debater-name" style="color:rgba(255,255,255,0.25)">Open seat</span>`;
+      return `
+      <div class="result-card" style="cursor:pointer" onclick="openDebateModal(${i})" data-category="${cat}" data-status="${d.status}" data-format="${d.format || 'Open'}" data-language="${d.language || 'EN'}">
+        <div class="result-card-top">
+          <span class="result-status ${d.status}">${statusLabel}</span>
+          <span class="result-category">${cat}</span>
+        </div>
+        <div class="result-motion">"${d.motion}"</div>
+        <div class="result-debaters">
+          <div class="debater-avatar" style="background:${d.color1}">${(d.debater1 || '?').charAt(0).toUpperCase()}</div>
+          <span class="debater-name">${d.debater1}</span>
+          <span class="vs-badge">vs</span>
+          ${second}
+        </div>
+        <div class="result-meta-row">
+          <span class="result-meta-item">${d.viewers} watching</span>
+          <span class="result-meta-item">${d.format || 'Open'}</span>
+          <span class="result-meta-item">${d.language || 'EN'}</span>
+        </div>
+        <div class="result-actions">
+          <button class="result-btn watch">Watch</button>
+          <button class="result-btn join">Join as speaker</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
   function openDiscovery() {
     if (overlay.style.display === 'flex') return;
+    renderDiscoveryCards();
     overlay.style.display = 'flex';
     overlay.classList.remove('ds-visible');
     // Trigger reflow so animation re-runs each open
@@ -2233,10 +2123,13 @@ init();
       const cardText = card.textContent.toLowerCase();
 
       const catOk  = catFilter  === 'All' || catFilter  === '' || cardCat.includes(catFilter.toLowerCase());
+      // Compare case-insensitively: the pill labels are sentence case ("Live now",
+      // "Scheduled"), so matching against lowercase literals needs the fold.
+      const statLc = statFilter.toLowerCase();
       const statOk = statFilter === 'All' || statFilter === '' ||
-                     (statFilter.includes('live')      && cardStat === 'live') ||
-                     (statFilter.includes('queue')     && cardStat === 'queue') ||
-                     (statFilter.includes('scheduled') && cardStat === 'scheduled');
+                     (statLc.includes('live')      && cardStat === 'live') ||
+                     (statLc.includes('queue')     && cardStat === 'queue') ||
+                     (statLc.includes('scheduled') && cardStat === 'scheduled');
       const fmtOk  = fmtFilter  === 'All formats' || fmtFilter === '' || cardFmt.includes(fmtFilter.toLowerCase());
       const langOk = langFilter === 'Any language' || langFilter === '' || cardLang.includes(langFilter.toLowerCase());
       const queryOk = q === '' || cardText.includes(q);
@@ -2253,7 +2146,7 @@ init();
       grid.insertAdjacentHTML('beforeend', `
         <div class="ds-empty">
           <span class="ds-empty-icon">🔍</span>
-          No debates match your search${q ? ' for <em>"' + q + '"</em>' : ''}
+          No discussions match your search${q ? ' for <em>"' + q + '"</em>' : ''}
         </div>`);
     } else if (visible > 0 && existing) {
       existing.remove();
@@ -2262,7 +2155,7 @@ init();
     const meta = document.getElementById('resultsMeta');
     if (meta) {
       meta.textContent = visible > 0
-        ? `Showing ${visible} debate${visible !== 1 ? 's' : ''}${q ? ' for "' + query + '"' : ''}`
+        ? `Showing ${visible} discussion${visible !== 1 ? 's' : ''}${q ? ' for "' + query + '"' : ''}`
         : `No results${q ? ' for "' + query + '"' : ''}`;
     }
   }
@@ -2286,8 +2179,8 @@ document.addEventListener('pointermove', (e) => {
 //  STARFIELD — canvas-based (enhanced)
 // ═══════════════════════════════════════════════
 (function initStarfield() {
-  const canvas = document.getElementById('star-canvas');
-  const ctx = canvas.getContext('2d');
+  let canvas = document.getElementById('star-canvas');
+  let ctx = canvas.getContext('2d');
   const DENSITY = 0.00018;
 
   // Mouse parallax state
@@ -2396,6 +2289,16 @@ document.addEventListener('pointermove', (e) => {
   }
 
   function render() {
+    // React re-injects the MVP markup on remount, which orphans the canvas
+    // this closure captured at boot — leaving the visible one forever blank.
+    // Re-acquire the live node whenever they diverge.
+    const liveCanvas = document.getElementById('star-canvas');
+    if (liveCanvas && liveCanvas !== canvas) {
+      canvas = liveCanvas;
+      ctx = canvas.getContext('2d');
+      resize();
+    }
+
     // Smooth mouse lerp
     mouseX += (targetMouseX - mouseX) * 0.06;
     mouseY += (targetMouseY - mouseY) * 0.06;
@@ -2477,7 +2380,7 @@ document.addEventListener('pointermove', (e) => {
 (function initShootingStars() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const svg = document.getElementById('shooting-svg');
+  let svg = document.getElementById('shooting-svg');
   const NS = 'http://www.w3.org/2000/svg';
 
   // Define gradient once
@@ -2519,7 +2422,13 @@ document.addEventListener('pointermove', (e) => {
   }
 
   function spawnStar() {
-    if (activeRect) { svg.removeChild(activeRect); activeRect = null; }
+    // Re-acquire the SVG if React re-injected the MVP markup (see starfield).
+    const liveSvg = document.getElementById('shooting-svg');
+    if (liveSvg && liveSvg !== svg) {
+      svg = liveSvg;
+      svg.appendChild(defs);
+    }
+    if (activeRect) { activeRect.remove(); activeRect = null; }
     if (activeFrame) { cancelAnimationFrame(activeFrame); activeFrame = null; }
 
     const { x, y, angle } = randomStartPoint();
@@ -2549,7 +2458,7 @@ document.addEventListener('pointermove', (e) => {
 
       const W = window.innerWidth, H2 = window.innerHeight;
       if (px < -40 || px > W + 40 || py < -40 || py > H2 + 40) {
-        svg.removeChild(rect);
+        rect.remove();
         activeRect = null;
         scheduleNext();
         return;

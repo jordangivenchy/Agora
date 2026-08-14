@@ -26,7 +26,7 @@ export default function QueuePanel({ queue, roomId, currentUser }: Props) {
 
   return (
     <div className="p-4 border-b border-border">
-      <h3 className="text-sm font-semibold text-text-primary mb-3">Debate Queue</h3>
+      <h3 className="text-sm font-semibold text-text-primary mb-3">Queue</h3>
 
       {myQueueEntry && (
         <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 mb-3">
