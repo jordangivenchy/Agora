@@ -75,7 +75,7 @@ const EXPLORE_PILL: Record<string, string> = {
 };
 
 const rowCard: React.CSSProperties = {
-  background: "rgba(18,18,24,0.92)",
+  background: "rgba(7,9,16,0.95)",
   border: "0.5px solid #2e2e38",
   borderRadius: 12,
 };
@@ -285,7 +285,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               onClick={() => setSelectedKey(cat.key)}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
-                background: "rgba(18,18,24,0.92)",
+                background: "rgba(7,9,16,0.95)",
                 border: active ? "1px solid #d9a238" : "0.5px solid #2e2e38",
                 boxShadow: active ? "0 0 12px rgba(217,162,56,0.25)" : "none",
                 borderRadius: 999,

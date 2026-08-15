@@ -5525,8 +5525,8 @@ body { background: transparent; }
 /* ── Shell ───────────────────────────────────────────────────────── */
 .sidebar {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.022) 0%, rgba(255,255,255,0) 42%),
-    #0e0e12 !important;
+    linear-gradient(180deg, rgba(255,255,255,0.012) 0%, rgba(255,255,255,0) 42%),
+    #07080d !important;
   border: 1px solid rgba(255,255,255,0.07) !important;
   border-radius: 18px !important;
   box-shadow:
