@@ -259,8 +259,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
       {/* Field pills — side by side, like the Browse row */}
       <div
-        className="flex gap-2.5 pb-1"
-        style={{ overflowX: "auto", scrollbarWidth: "thin" }}
+        className="flex gap-2.5 pb-1 hide-scrollbar"
+        style={{ overflowX: "auto" }}
         role="tablist"
         aria-label="Fields of study"
       >
