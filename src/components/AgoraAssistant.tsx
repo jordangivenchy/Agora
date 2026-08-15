@@ -10,6 +10,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Props {
   motion?: string;
+  /* Room context forwarded to the backend so it can persist history per room
+     and bias evidence retrieval toward the room's topic. */
+  roomId?: string;
+  topicKey?: string;
 }
 
 type SRInstance = {
@@ -29,7 +33,7 @@ function getRecognition(): SRCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-export default function AgoraAssistant({ motion }: Props) {
+export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
   const [openPanel, setOpenPanel] = useState(false);
   const [log, setLog] = useState<{ from: "you" | "agora"; text: string }[]>([]);
   const [draft, setDraft] = useState("");
@@ -64,7 +68,7 @@ export default function AgoraAssistant({ motion }: Props) {
         const res = await fetch("/api/agora", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, motion }),
+          body: JSON.stringify({ question, motion, roomId, topicKey }),
         });
         const data = await res.json();
         const answer: string = data.answer ?? "Something went wrong — try again.";
@@ -76,7 +80,7 @@ export default function AgoraAssistant({ motion }: Props) {
         setThinking(false);
       }
     },
-    [motion, voiceOut, speak]
+    [motion, roomId, topicKey, voiceOut, speak]
   );
   const askRef = useRef(ask);
   useEffect(() => { askRef.current = ask; }, [ask]);
@@ -256,7 +260,7 @@ export default function AgoraAssistant({ motion }: Props) {
                 <button onClick={toggleHotword} className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "#9cc4f0", textDecoration: "underline" }}>
                   hands-free listening
                 </button>{" "}
-                and just say <span style={{ color: "#9cc4f0" }}>"Hey, Agora…"</span>
+                and just say <span style={{ color: "#9cc4f0" }}>&ldquo;Hey, Agora…&rdquo;</span>
               </p>
             )}
             {log.map((m, i) => (

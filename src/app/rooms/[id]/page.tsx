@@ -1207,7 +1207,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         userId={currentUser?.id}
       />
 
-      <AgoraAssistant motion={room?.motion} />
+      <AgoraAssistant motion={room?.motion} roomId={roomId} topicKey={room?.topic_key} />
     </div>
   );
 }
