@@ -328,8 +328,31 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
     <div id="newsTickerHost"></div>
   </section>
 
-  <!-- TOPICS — React portal target (TopicsHome.tsx renders the
-       field-of-study dropdowns: queue questions + user lobbies) -->
+  <!-- BROWSE — the classic field pills + topic strip (mvp-home.js renders
+       these from real room data via the adapter) -->
+  <section class="browse-section">
+    <div class="browse-heading">Browse</div>
+    <div class="category-row" id="categoryRow" role="group" aria-label="Browse by field"></div>
+    <div class="topic-strip" id="topicStrip" aria-live="polite"></div>
+  </section>
+
+  <!-- POPULAR ROOMS — the classic card grid (single column; the rating
+       module that used to sit beside it left the product) -->
+  <div class="content-lower single">
+    <div class="debates-col">
+      <div class="section-header">
+        <div class="section-title" id="gridTitle">Popular rooms</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="search-result-count" id="searchResultCount"></span>
+          <a class="view-all" href="#">View all →</a>
+        </div>
+      </div>
+      <div class="debate-grid" id="debateGrid"></div>
+    </div>
+  </div>
+
+  <!-- QUESTION QUEUES + SCHEDULED — React portal target (TopicsHome.tsx,
+       re-skinned to the classic chrome; follows the Browse pill selection) -->
   <section id="fieldsSection"></section>
 
 </div><!-- /homeFeed -->

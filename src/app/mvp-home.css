@@ -3355,6 +3355,8 @@ body { background: transparent; }
   .content-lower { grid-template-columns: 1fr !important; }
   .elo-col { position: static !important; grid-row: 2; }
 }
+/* Grid without the retired rating column: full width. */
+.content-lower.single { grid-template-columns: 1fr !important; }
 
 /* ── BROWSE HEADING — amber-to-white gradient ── */
 .browse-heading {

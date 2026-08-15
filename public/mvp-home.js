@@ -69,16 +69,9 @@ const DEBATERS = [];
 // data lands — the grid and carousel render their empty states.
 const DEBATES = [];
 
-const UPCOMING = [
-  { motion: 'Should AI systems be granted legal personhood?',         topicKey: 'science-tech',    secondaryTopics: ['philosophy','politics-law'],   scheduledAt: 'Today · 4:00 PM ET',  debater1: 'TechRealist',  color1: '#00cec9', debater2: 'LegalEagle',     color2: '#e2b96b' },
-  { motion: 'Universal healthcare is economically viable in the US',  topicKey: 'economics',       secondaryTopics: ['politics-ethics'],              scheduledAt: 'Today · 6:30 PM ET',  debater1: 'EconDebater',  color1: '#55efc4', debater2: 'FuturePolicy',   color2: '#4a9eff' },
-  { motion: 'NATO expansion destabilizes more than it secures',       topicKey: 'foreign-policy',  secondaryTopics: ['politics-law'],                 scheduledAt: 'Tomorrow · 2:00 PM',  debater1: 'CosmosDebate', color1: '#4a9eff', debater2: 'GlobalMarket',   color2: '#1976D2' },
-  { motion: 'Affirmative action violates equal protection',           topicKey: 'politics-law',    secondaryTopics: ['politics-ethics'],              scheduledAt: 'Tomorrow · 5:00 PM',  debater1: 'LegalEagle',   color1: '#e2b96b', debater2: 'CivicDebater',   color2: '#fd79a8' },
-  { motion: 'Social media platforms should be public utilities',      topicKey: 'politics-ethics', secondaryTopics: ['politics-law','culture'],       scheduledAt: 'Thu · 7:00 PM ET',    debater1: 'Sneako',       color1: '#b2bec3', debater2: 'PhilosophyTube', color2: '#fd79a8' },
-  { motion: 'Colonialism explains more than it obscures in history',  topicKey: 'philosophy',      secondaryTopics: ['foreign-policy','culture'],     scheduledAt: 'Fri · 3:00 PM ET',    debater1: 'KairosMind',   color1: '#64B5F6', debater2: 'PhilosophyTube', color2: '#fd79a8' },
-  { motion: 'The Olympics should ban political protests',             topicKey: 'sports',          secondaryTopics: ['politics-ethics'],              scheduledAt: 'Fri · 5:00 PM ET',    debater1: 'SportsDebater',color1: '#fd9644', debater2: 'CivicVoice',     color2: '#4a9eff' },
-  { motion: 'Cancel culture strengthens accountability norms',        topicKey: 'culture',         secondaryTopics: ['politics-ethics'],              scheduledAt: 'Sat · 1:00 PM ET',    debater1: 'Sneako',       color1: '#b2bec3', debater2: 'KairosMind',     color2: '#64B5F6' },
-];
+// Sample scheduled debates removed — fabricated content. Real scheduled
+// discussions (with reminders) render in the TopicsHome queue section.
+const UPCOMING = [];
 
 const SIDEBAR_CHANNELS = [];
 
@@ -946,6 +939,8 @@ function renderELOModule() {
 function setActiveTopic(key) {
   activeTopicKey = key;
   eloScope = 'global';
+  // Let React (TopicsHome queue section) follow the Browse pill selection.
+  window.dispatchEvent(new CustomEvent('agora:topic', { detail: key }));
 
   try {
     localStorage.setItem('agora_topic', key);
