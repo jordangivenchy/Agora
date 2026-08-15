@@ -1,18 +1,16 @@
 "use client";
 
-/* Question queues + scheduled discussions on the homepage — rendered into
-   the MVP markup (portal into #fieldsSection, below the classic Browse
-   pills and Popular-rooms grid).
+/* Topics on the homepage — rendered into the MVP markup (portal into
+   #fieldsSection, just below the live carousel).
 
-   The classic homepage chrome owns field selection (category pills →
-   setActiveTopic in mvp-home.js); this component follows it via the
-   'agora:topic' event and renders only what the classic page never had:
-   1. Standing questions with Pro/Con matchmaking queues (RPCs:
-      get_debate_topics / queue_for_topic / check_topic_match /
+   Layout: a horizontal row of field-of-study pills (like the Browse row —
+   all fields side by side, one selected). Below the row, the selected
+   field shows:
+   1. Its standing questions with matchmaking queues (same RPCs as the old
+      Topics tab: get_debate_topics / queue_for_topic / check_topic_match /
       leave_topic_queue — backed by 20260817_topic_queues.sql).
-   2. Scheduled discussions with reminder sign-ups (toggle_room_reminder).
-   Open/live rooms are NOT listed here — the Popular-rooms grid covers
-   them. Headers reuse the classic .section-header/.section-title look. */
+   2. Open rooms in that field — live discussions plus lobbies people
+      created ('created'/'scheduled') — and a button to open your own. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -63,6 +61,19 @@ const REFRESH_MS = 30000;
 const isScheduled = (r: { status: string; scheduled_start: string | null }) =>
   r.status !== "live" && !!r.scheduled_start;
 
+/* Field key → Explore page category-pill label (the pills filter rooms by
+   label substring, so "Law" selects the Politics (Law) rooms exactly). */
+const EXPLORE_PILL: Record<string, string> = {
+  "politics-law": "Law",
+  ethics: "Ethics",
+  sports: "Sports",
+  culture: "Culture",
+  economics: "Economics",
+  "science-tech": "Science & Tech",
+  "foreign-policy": "Foreign Policy",
+  philosophy: "Philosophy",
+};
+
 const rowCard: React.CSSProperties = {
   background: "rgba(18,18,24,0.92)",
   border: "0.5px solid #2e2e38",
@@ -75,16 +86,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [reminders, setReminders] = useState<Record<string, { count: number; amSet: boolean }>>({});
-  // 'all' or a field key — mirrors the classic Browse pills. Initial value
-  // comes from the same URL param / localStorage the pills persist to.
-  const [selectedKey, setSelectedKey] = useState<string>(() => {
-    if (typeof window === "undefined") return "all";
-    try {
-      return new URL(window.location.href).searchParams.get("topic")
-        ?? localStorage.getItem("agora_topic")
-        ?? "all";
-    } catch { return "all"; }
-  });
+  const [selectedKey, setSelectedKey] = useState<string>(TOPICS[0].key);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -120,16 +122,6 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       }
     }
   }, [supabase]);
-
-  /* Follow the classic Browse pills (mvp-home.js setActiveTopic). */
-  useEffect(() => {
-    const onTopic = (e: Event) => {
-      const key = (e as CustomEvent).detail;
-      if (typeof key === "string") setSelectedKey(key);
-    };
-    window.addEventListener("agora:topic", onTopic);
-    return () => window.removeEventListener("agora:topic", onTopic);
-  }, []);
 
   useEffect(() => {
     load();
@@ -210,15 +202,21 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
   if (!container) return null;
 
-  // 'all' shows the busiest questions across every field; a selected field
-  // narrows both sections to it (matching what the grid above shows).
-  const selCat = TOPICS.find((c) => c.key === selectedKey) ?? null;
-  const fieldLabel = selCat ? selCat.label : "all fields";
+  const selCat = TOPICS.find((c) => c.key === selectedKey) ?? TOPICS[0];
   const selRows = topics
-    .filter((t) => !selCat || t.topic_key === selCat.key)
-    .sort((a, b) => b.queue_count - a.queue_count)
-    .slice(0, selCat ? undefined : 8);
-  const fieldRooms = rooms.filter((r) => !selCat || r.topic_key === selCat.key);
+    .filter((t) => t.topic_key === selCat.key)
+    .sort((a, b) => b.queue_count - a.queue_count);
+  // Popular rooms: live first (most watched on top), then open lobbies
+  // (newest first). Scheduled discussions get their own section, ordered
+  // by how many people signed up for a reminder.
+  const fieldRooms = rooms.filter((r) => r.topic_key === selCat.key);
+  const selRooms = fieldRooms
+    .filter((r) => !isScheduled(r))
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === "live" ? -1 : 1;
+      if (a.status === "live") return (b.viewer_count ?? 0) - (a.viewer_count ?? 0);
+      return b.created_at.localeCompare(a.created_at);
+    });
   const selScheduled = fieldRooms
     .filter(isScheduled)
     .sort((a, b) => (reminders[b.id]?.count ?? 0) - (reminders[a.id]?.count ?? 0));
@@ -249,7 +247,63 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   };
 
   return createPortal(
-    <div style={{ fontFamily: "'DM Sans', sans-serif", margin: "6px 0" }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", margin: "26px 0 6px" }}>
+      <div className="flex items-baseline gap-3 flex-wrap mb-3">
+        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 19, color: "#f5f5f0" }}>
+          Browse
+        </span>
+        <span className="text-[12px]" style={{ color: "#8b8b94" }}>
+          Pick a field — queue on a question and get matched, or join a room
+        </span>
+      </div>
+
+      {/* Field pills — side by side, like the Browse row */}
+      <div
+        className="flex gap-2.5 pb-1"
+        style={{ overflowX: "auto", scrollbarWidth: "thin" }}
+        role="tablist"
+        aria-label="Fields of study"
+      >
+        {TOPICS.map((cat) => {
+          const active = cat.key === selCat.key;
+          const catTopics = topics.filter((t) => t.topic_key === cat.key);
+          const waiting = catTopics.reduce((n, t) => n + t.queue_count, 0);
+          const queuedHere = catTopics.some((t) => t.am_queued);
+          const live = rooms.filter((r) => r.topic_key === cat.key && r.status === "live").length;
+          const scheduled = rooms.filter((r) => r.topic_key === cat.key && isScheduled(r)).length;
+          const open = rooms.filter((r) => r.topic_key === cat.key && r.status !== "live" && !isScheduled(r)).length;
+          const sub = live > 0 ? `${live} live`
+            : waiting > 0 ? `${waiting} waiting`
+            : open > 0 ? `${open} open`
+            : scheduled > 0 ? `${scheduled} scheduled`
+            : "quiet";
+          return (
+            <button
+              key={cat.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setSelectedKey(cat.key)}
+              className="cursor-pointer shrink-0 px-4 py-2 text-left"
+              style={{
+                background: "rgba(18,18,24,0.92)",
+                border: active ? "1px solid #d9a238" : "0.5px solid #2e2e38",
+                boxShadow: active ? "0 0 12px rgba(217,162,56,0.25)" : "none",
+                borderRadius: 999,
+                fontFamily: "inherit",
+              }}
+            >
+              <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: active ? "#f4d47c" : "#f5f5f0", whiteSpace: "nowrap" }}>
+                {cat.emoji} {cat.label}
+                {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: "#f4d47c" }}>●</span>}
+              </span>
+              <span className="block text-[10px] mt-0.5" style={{ color: live > 0 ? "#e05a5a" : waiting > 0 ? "#f4d47c" : "#6b6b74", whiteSpace: "nowrap" }}>
+                {sub}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {error && (
         <p className="mt-3 mb-0 px-4 py-2.5 rounded-lg text-[12px]"
           style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
@@ -257,20 +311,89 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         </p>
       )}
 
-      {/* Question queues — classic section header, grid-matching chrome */}
-      <div className="section-header" style={{ marginTop: 26 }}>
-        <div className="section-title">
-          Open questions{selCat ? ` · ${selCat.emoji} ${selCat.label}` : ""}
+      <div className="flex flex-col gap-2 mt-3">
+
+        {/* Selected field: popular rooms */}
+        <div className="flex items-center gap-3 mb-0.5">
+          <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
+            POPULAR ROOMS
+          </span>
+          <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+          <button
+            onClick={() => {
+              // Hand off to the MVP Explore page with this field's category
+              // filter pre-selected (pills are engine-owned DOM).
+              const label = EXPLORE_PILL[selCat.key];
+              (document.querySelector('[data-nav-id="explore"]') as HTMLElement | null)?.click();
+              setTimeout(() => {
+                const pill = [...document.querySelectorAll("#epCategoryFilter .explore-pill")]
+                  .find((p) => p.textContent?.trim() === label);
+                const w = window as unknown as { _epFilter?: (el: Element, group: string) => void };
+                if (pill && w._epFilter) w._epFilter(pill, "category");
+              }, 120);
+            }}
+            className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg"
+            style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+          >
+            Explore all {selCat.label} rooms →
+          </button>
+          <button
+            onClick={() => onCreateLobby(selCat.key)}
+            className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg"
+            style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+          >
+            + Create a room
+          </button>
         </div>
-        <a
-          className="view-all"
-          href="#"
-          onClick={(e) => { e.preventDefault(); onCreateLobby(selCat?.key ?? TOPICS[0].key); }}
-        >
-          + Create a room
-        </a>
-      </div>
-      <div className="flex flex-col gap-2">
+
+        {selRooms.length === 0 && (
+          <p className="m-0 text-[11px]" style={{ color: "#6b6b74" }}>
+            No open rooms in {selCat.label} yet — start one and pick your own question.
+          </p>
+        )}
+
+        {selRooms.map((r) => (
+          <div
+            key={r.id}
+            className="p-3.5 flex items-center gap-3.5 flex-wrap"
+            style={rowCard}
+          >
+            <div className="flex-1 min-w-[220px]">
+              <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                {r.motion}
+              </p>
+              <p className="m-0 mt-1 text-[11px]" style={{ color: "#8b8b94" }}>
+                {r.status === "live" && (
+                  <span style={{ color: "#e05a5a" }}>● Live{r.viewer_count ? ` · ${r.viewer_count} watching` : ""} · </span>
+                )}
+                {r.host?.username ? `by ${r.host.username} · ` : ""}
+                {FORMAT_LABEL[r.format] ?? r.format}
+                {r.status === "created" ? " · waiting for speakers" : ""}
+              </p>
+            </div>
+            <button
+              onClick={() => { window.location.href = `/agora/${r.id}`; }}
+              className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
+              style={{
+                background: r.status === "live" ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
+                border: r.status === "live" ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
+                color: r.status === "live" ? "#412402" : "#9cc4f0",
+                fontFamily: "inherit",
+                fontWeight: r.status === "live" ? 600 : 400,
+              }}
+            >
+              {r.status === "live" ? "Watch" : "Join"}
+            </button>
+          </div>
+        ))}
+
+        {/* Selected field: queue questions */}
+        <div className="flex items-center gap-3 mt-2.5 mb-0.5">
+          <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
+            QUEUE
+          </span>
+          <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+        </div>
         {selRows.map((t) => {
           const inQueue = t.am_queued;
           return (
@@ -352,18 +475,19 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         })}
         {selRows.length === 0 && (
           <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
-            No standing questions in {fieldLabel} yet.
+            No standing questions in {selCat.label} yet.
           </p>
         )}
-      </div>
 
-      {/* Scheduled discussions — their own classic section, ordered by sign-ups */}
-      {selScheduled.length > 0 && (
-        <>
-          <div className="section-header" style={{ marginTop: 24 }}>
-            <div className="section-title">Scheduled</div>
-          </div>
-          <div className="flex flex-col gap-2">
+        {/* Scheduled discussions — their own section, ordered by sign-ups */}
+        {selScheduled.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 mt-2.5 mb-0.5">
+              <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+                SCHEDULED
+              </span>
+              <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+            </div>
             {selScheduled.map((r) => (
               <div
                 key={r.id}
@@ -418,9 +542,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 </button>
               </div>
             ))}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>,
     container
   );
