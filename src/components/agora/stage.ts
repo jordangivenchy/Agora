@@ -19,10 +19,16 @@ export function deriveStageRole(
   p: StageParticipant,
   room: Pick<DebateRoom, "host_id">
 ): StageRole {
-  if (p.stage_role && ["host", "cohost", "speaker", "audience"].includes(p.stage_role)) {
+  /* Explicit promotions always win. 'audience' is NOT trusted as explicit:
+     it's the column default, and the room-creation / seat-taking paths never
+     set stage_role — so a debater (or the room creator) whose row reads
+     'audience' almost certainly just carries the default. Trusting it locked
+     real debaters out of their mic/camera in every newly created room. An
+     intentional demotion sets role='spectator' too, so it still lands in the
+     audience branch below. */
+  if (p.stage_role && ["host", "cohost", "speaker"].includes(p.stage_role)) {
     return p.stage_role;
   }
-  // Pre-migration fallback.
   if (p.user_id === room.host_id) return "host";
   if (p.role === "debater") return "speaker";
   return "audience";
@@ -36,10 +42,14 @@ export function onStage(role: StageRole): boolean {
   return role !== "audience";
 }
 
-/* Raised hands, oldest first — the order the host works the queue. */
+/* Raised hands, oldest first — the order the host works the queue.
+   user_id tiebreak mirrors advance_speaker_queue's ORDER BY, so every
+   client and the server all derive the identical line. */
 export function sortRequests(list: StageParticipant[]): StageParticipant[] {
-  return [...list].sort((a, b) =>
-    (a.hand_raised_at ?? "").localeCompare(b.hand_raised_at ?? "")
+  return [...list].sort(
+    (a, b) =>
+      (a.hand_raised_at ?? "").localeCompare(b.hand_raised_at ?? "") ||
+      a.user_id.localeCompare(b.user_id)
   );
 }
 

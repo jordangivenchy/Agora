@@ -14,11 +14,31 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import type { Track } from "livekit-client";
+import {
+  MIC_POS,
+  PORTAL_Z,
+  VISIBLE_SLOTS,
+  renderedCount,
+  slotPosition,
+} from "./queueLayout";
 
 export interface SeatedPerson {
   id: string;
   username: string;
   avatarUrl: string | null;
+}
+
+/** A live camera routed onto one of the stage holo screens. */
+export interface ScreenFeed {
+  /** Stable identity+track key — feed application is keyed on this. */
+  key: string;
+  track: Track;
+}
+
+export interface ScreenFeeds {
+  pro?: ScreenFeed | null;
+  con?: ScreenFeed | null;
 }
 
 export type AgoraView = "audience" | "speaker";
@@ -28,6 +48,15 @@ interface Props {
   audience: SeatedPerson[];
   viewerCount: number;
   view: AgoraView;
+  /** Live camera feeds for the stage screens (pro = frame-left, con = right). */
+  feeds?: ScreenFeeds;
+  /** Speaker queue, front first (mic holder excluded). Members leave their
+      seats and stand in the center aisle, closest-to-mic = next. */
+  queue?: SeatedPerson[];
+  /** Whoever holds the mic — rendered standing on the medallion. */
+  micHolder?: SeatedPerson | null;
+  /** True while the mic holder is actually speaking (drives the mic glow). */
+  micLive?: boolean;
 }
 
 /* ── Deterministic PRNG ── */
@@ -78,12 +107,40 @@ function generateSeats(): Seat3D[] {
   for (let row = 0; row < ROWS; row++) {
     const r = INNER_R + (row + 0.5) * ROW_STEP;
     const y = BASE_H + row * STEP_H; // top surface of this terrace
-    const wedges: { side: "pro" | "con"; from: number; to: number }[] = [
-      { side: "con", from: EDGE + 2, to: 90 - AISLE_HALF - 1.5 },
-      { side: "pro", from: 90 + AISLE_HALF + 1.5, to: 180 - EDGE - 2 },
+    /* Rows 0–1 keep a wider margin so their innermost seats sit clear of
+       the tunnel hood (roof edge at |x| = 1.25); each wedge re-spaces its
+       seats evenly across the shortened arc, so the lower rows stay
+       uniform rather than bunching at the tunnel side. */
+    const margin = row < 2 ? AISLE_HALF + 7 : AISLE_HALF + 1.5;
+    const wedges: { side: "pro" | "con"; from: number; to: number; interior?: boolean }[] = [
+      { side: "con", from: EDGE + 2, to: 90 - margin },
+      { side: "pro", from: 90 + margin, to: 180 - EDGE - 2 },
     ];
+    /* The center aisle no longer needs to be walkable — queue entry is
+       teleport-based and the tunnel dives below grade just past the portal.
+       Rows 2+ reclaim the gap as one continuous strip; interior-only
+       placement keeps even spacing and can't collide with the seats that
+       already sit on the strip's endpoints. */
+    if (row >= 2) {
+      wedges.push({ side: "con", from: 90 - AISLE_HALF - 1.5, to: 90 + AISLE_HALF + 1.5, interior: true });
+    }
     for (const w of wedges) {
       const arcLen = (w.to - w.from) * DEG * r;
+      if (w.interior) {
+        const count = Math.max(0, Math.floor(arcLen / SEAT_ARC_SPACING) - 1);
+        for (let i = 0; i < count; i++) {
+          const a = (w.from + ((i + 1) / (count + 1)) * (w.to - w.from)) * DEG;
+          seats.push({
+            x: r * Math.cos(a),
+            z: -r * Math.sin(a),
+            y,
+            yaw: a - Math.PI / 2,
+            side: a <= Math.PI / 2 ? "con" : "pro", // match the flanking halves
+            row,
+          });
+        }
+        continue;
+      }
       const count = Math.max(1, Math.floor(arcLen / SEAT_ARC_SPACING));
       for (let i = 0; i < count; i++) {
         const t = count === 1 ? 0.5 : i / (count - 1);
@@ -131,6 +188,11 @@ function buildTerraces(scene: THREE.Scene) {
       [(EDGE) * DEG, (90 - AISLE_HALF) * DEG],
       [(90 + AISLE_HALF) * DEG, (180 - EDGE) * DEG],
     ];
+    /* Rows 2+ close the old aisle gap — a floor under the reclaimed center
+       seats. Rows 0–1 stay open for the tunnel portal and trench mouth. */
+    if (i >= 2) {
+      halves.push([(90 - AISLE_HALF) * DEG, (90 + AISLE_HALF) * DEG]);
+    }
     for (const [a0, a1] of halves) {
       const geo = new THREE.ExtrudeGeometry(sectorShape(r0, r0 + ROW_STEP, a0, a1), {
         depth: height,
@@ -153,18 +215,39 @@ function buildTerraces(scene: THREE.Scene) {
   scene.add(wall);
 }
 
-function buildAisle(scene: THREE.Scene) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0x7a7061, flatShading: true });
+/* The old center-aisle staircase (and its portal landing) is gone entirely:
+   queue entry teleports, the hooded tunnel reads as built architecture on
+   its own, and anything half-sunk at the mouth just clipped the floor.
+   Circulation moved to the bowl's SIDES instead: a staircase climbs each
+   edge of the seating, straddling the terrace boundary. */
+function buildSideStairs(scene: THREE.Scene) {
+  /* Same stones as the terrace floors, alternating by row, so the stairs
+     read as part of the bowl's masonry rather than a separate build. */
+  const stoneA = new THREE.MeshStandardMaterial({ color: 0x6b6156, flatShading: true });
+  const stoneB = new THREE.MeshStandardMaterial({ color: 0x5e554b, flatShading: true });
   const stepsPerRow = 3;
-  const width = 2 * INNER_R * Math.sin(AISLE_HALF * DEG); // chord ≈ aisle width
-  for (let i = 0; i < ROWS * stepsPerRow; i++) {
-    const r = INNER_R + (i / stepsPerRow) * ROW_STEP;
-    const h = BASE_H + Math.floor(i / stepsPerRow) * STEP_H + (i % stepsPerRow) * (STEP_H / stepsPerRow);
-    const geo = new THREE.BoxGeometry(width + r * 0.06, h, ROW_STEP / stepsPerRow + 0.05);
-    const step = new THREE.Mesh(geo, mat);
-    step.position.set(0, h / 2, -(r + ROW_STEP / stepsPerRow / 2));
-    step.receiveShadow = true;
-    scene.add(step);
+  const stepDepth = ROW_STEP / stepsPerRow;
+  const HALF_W = 0.75; // half the stair width
+  const GAP = 0.55; // breathing room to the outermost seats, matching seat rhythm
+  for (const side of [1, -1]) {
+    for (let i = 0; i < ROWS * stepsPerRow; i++) {
+      const r = INNER_R + (i / stepsPerRow) * ROW_STEP + stepDepth / 2;
+      /* Fully OUTSIDE the terrace arc with an even seat-like gap: the
+         angular clearance shrinks with radius, so it's computed per step —
+         parallel to the bowl's side all the way up, never clipping. */
+      const off = (HALF_W + GAP) / r;
+      const a = side === 1 ? EDGE * DEG - off : (180 - EDGE) * DEG + off;
+      const row = Math.floor(i / stepsPerRow);
+      const h = BASE_H + row * STEP_H + (i % stepsPerRow) * (STEP_H / stepsPerRow);
+      const step = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, h, stepDepth + 0.05),
+        row % 2 === 0 ? stoneA : stoneB
+      );
+      step.position.set(r * Math.cos(a), h / 2, -r * Math.sin(a));
+      step.rotation.y = a - Math.PI / 2; // tread faces along the radial climb
+      step.receiveShadow = true;
+      scene.add(step);
+    }
   }
 }
 
@@ -239,6 +322,9 @@ function buildPlaza(scene: THREE.Scene) {
       // Keep pavers on the orchestra floor (inside the first terrace,
       // not spilling onto the stage side).
       if (Math.hypot(x, z) > INNER_R - 0.6 || z > 1.4) continue;
+      // Part around the speaker-queue path corridor so the stone band
+      // reaches the medallion without clipping through pavers.
+      if (Math.abs(x) < 0.85 && z < -3.2) continue;
       const idx = Math.floor(rng() * shades.length);
       dummy.position.set(x, 0.06 + rng() * 0.025, z);
       dummy.rotation.set(0, a + Math.PI / 2 + (rng() - 0.5) * 0.06, 0);
@@ -283,7 +369,7 @@ function buildStage(scene: THREE.Scene) {
 }
 
 function buildChairsAndCrowd(
-  scene: THREE.Scene,
+  scene: THREE.Object3D, // a Group in practice — lets the crowd rebuild without touching the scene
   seats: Seat3D[],
   occupancy: Map<number, SeatedPerson | null>
 ) {
@@ -549,17 +635,31 @@ function buildScaenae(scene: THREE.Scene): THREE.PointLight[] {
    stage — the future PRO/CON video feed surfaces — framed in shimmering
    holo borders like the reference. Hidden in audience view; the render
    loop fades them in for speaker view and cycles the frame hue. */
-function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: THREE.MeshBasicMaterial[] } {
+interface HoloSlot {
+  side: "pro" | "con";
+  panel: THREE.Mesh;
+  baseMat: THREE.MeshBasicMaterial;
+  silhouette: THREE.Group;
+}
+
+/* Plane aspect used for cover-cropping live video onto the screens. */
+const HOLO_W = 15.2;
+const HOLO_H = 8.8;
+
+function buildHoloScreens(scene: THREE.Scene): {
+  group: THREE.Group;
+  frameMats: THREE.MeshBasicMaterial[];
+  slots: HoloSlot[];
+} {
   const group = new THREE.Group();
   const frameMats: THREE.MeshBasicMaterial[] = [];
-  const W = 15.2;
-  const H = 8.8;
+  const slots: HoloSlot[] = [];
+  const W = HOLO_W;
+  const H = HOLO_H;
   for (const sign of [-1, 1]) {
     const screen = new THREE.Group();
-    const panel = new THREE.Mesh(
-      new THREE.PlaneGeometry(W, H),
-      new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide })
-    );
+    const baseMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, H), baseMat);
     screen.add(panel);
 
     const frameMat = new THREE.MeshBasicMaterial({ color: 0x9be8ff });
@@ -587,25 +687,31 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
     /* Children inherit the group's 180° turn, so local +z already faces
        the viewer — no extra rotation on the flat shapes. Head and
        shoulders are spaced apart (classic avatar-glyph gap) and sit at
-       different depths, so the two shapes never intersect. */
+       different depths, so the two shapes never intersect. The whole
+       silhouette lives in its own group so a live camera feed can hide
+       it and take over the panel. */
+    const silhouette = new THREE.Group();
     const head = new THREE.Mesh(new THREE.CircleGeometry(1.4, 28), figMat);
     head.position.set(0, 2.0, 0.08);
-    screen.add(head);
+    silhouette.add(head);
     const shoulders = new THREE.Mesh(new THREE.CircleGeometry(2.6, 28, 0, Math.PI), figMat);
     shoulders.position.set(0, -2.1, 0.07);
-    screen.add(shoulders);
+    silhouette.add(shoulders);
     const plate = new THREE.Mesh(
       new THREE.BoxGeometry(4.2, 0.55, 0.04),
       new THREE.MeshBasicMaterial({ color: 0x1c1c1f, transparent: true, opacity: 0.9 })
     );
     plate.position.set(0, -3.3, 0.07);
-    screen.add(plate);
+    silhouette.add(plate);
     const plateDot = new THREE.Mesh(
       new THREE.CircleGeometry(0.14, 12),
       new THREE.MeshBasicMaterial({ color: tint })
     );
     plateDot.position.set(-1.6, -3.3, 0.1);
-    screen.add(plateDot);
+    silhouette.add(plateDot);
+    screen.add(silhouette);
+
+    slots.push({ side: sign > 0 ? "pro" : "con", panel, baseMat, silhouette });
 
     // Centers pushed apart so the doubled panels sit edge to edge with a
     // slim central gap, rising over the scaenae crest like projections.
@@ -618,7 +724,125 @@ function buildHoloScreens(scene: THREE.Scene): { group: THREE.Group; frameMats: 
   }
   group.visible = false;
   scene.add(group);
-  return { group, frameMats };
+  return { group, frameMats, slots };
+}
+
+/* ── Speaker queue architecture ─────────────────────────────────────
+   The mic totem on the medallion, slot plates down the center aisle,
+   and the tunnel portal at the orchestra rim. Static geometry — the
+   queue members themselves live in a separate group the queue effect
+   owns. */
+function buildMicTotem(scene: THREE.Scene): { mat: THREE.MeshStandardMaterial } {
+  const stand = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.09, 1.35, 8),
+    new THREE.MeshStandardMaterial({ color: 0x3a3a42, flatShading: true })
+  );
+  stand.position.set(MIC_POS.x, MIC_POS.y + 0.68, MIC_POS.z);
+  scene.add(stand);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x24242c,
+    emissive: 0xffc46a,
+    emissiveIntensity: 0.35,
+    flatShading: true,
+  });
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat);
+  head.position.set(MIC_POS.x, MIC_POS.y + 1.42, MIC_POS.z);
+  scene.add(head);
+  return { mat };
+}
+
+function buildQueuePath(scene: THREE.Scene) {
+  /* Slot plates: small worn discs marking the visible line — proud enough
+     of the path band to read as deliberate markers, not z-fighting slivers. */
+  const plateMat = new THREE.MeshStandardMaterial({ color: 0x6b6156, flatShading: true });
+  for (let i = 0; i < VISIBLE_SLOTS; i++) {
+    const s = slotPosition(i);
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.55, 0.1, 14), plateMat);
+    plate.position.set(s.x, 0.05, s.z);
+    plate.receiveShadow = true;
+    scene.add(plate);
+  }
+
+  /* Stone path: one band from the portal all the way to the medallion,
+     ending tucked inside the base disc (the pavers part around the
+     corridor in buildPlaza, so nothing clips). A low stone step carries
+     the last stretch up onto the medallion — from there the medallion's
+     own discs stair up to the mic. */
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0x5d564b, flatShading: true });
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.05, 6.9), pathMat);
+  strip.position.set(0, 0.025, -8.0);
+  strip.receiveShadow = true;
+  scene.add(strip);
+  const step = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.24, 0.5), pathMat);
+  step.position.set(0, 0.12, -4.8); // rises flush with the base disc top
+  step.receiveShadow = true;
+  scene.add(step);
+
+  /* Tunnel portal at the orchestra rim: an arch in the first terrace face
+     with a dark throat behind it — the line visibly continues inside.
+     Same stone as the terraces (buildTerraces' stoneA), so the hood reads
+     as part of the bowl rather than a separate material. */
+  const stone = new THREE.MeshStandardMaterial({ color: 0x6b6156, flatShading: true });
+  const jambGeo = new THREE.BoxGeometry(0.35, 2.1, 0.5);
+  for (const sx of [-0.85, 0.85]) {
+    const jamb = new THREE.Mesh(jambGeo, stone);
+    jamb.position.set(sx, 1.05, PORTAL_Z);
+    scene.add(jamb);
+  }
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.38, 0.55), stone);
+  lintel.position.set(0, 2.25, PORTAL_Z);
+  scene.add(lintel);
+
+  /* Solid hood over the tunnel: a sloped stone roof from the portal lip
+     down to EXACTLY the third row's floor height (y = 1.6 at the row-2
+     terrace face, z ≈ −14.6), so terrace floor and tunnel roof meet as
+     one continuous surface. Side walls follow the same slope. */
+  const ROOF_SLOPE = 0.211; // atan(0.75 drop / 3.5 run)
+  /* Slightly longer than the gap: the far end tucks ~0.25 INTO the row-2
+     terrace just below its floor line, so there is no coincident edge to
+     read as a seam — the roof simply disappears into the stone. */
+  /* Wide enough to fully cap the side skirts (outer edge |x| = 1.45) —
+     no wall tops poking up as corner pillars at the back; the roof's own
+     edges rest over solid terrace stone at every radius. */
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(3.05, 0.35, 3.8), stone);
+  roof.rotation.x = -ROOF_SLOPE;
+  roof.position.set(0, 1.78, -13.0);
+  roof.castShadow = true;
+  scene.add(roof);
+  /* Thick side skirts: wide enough to overlap the curved terrace edges
+     along the whole run (gap half-width grows 0.87 → 1.27 with radius),
+     grounded below grade and tucked up into the roof — no sliver anywhere
+     for the unshadowed orchestra glow to leak through. */
+  const wallGeo2 = new THREE.BoxGeometry(0.7, 2.6, 3.8);
+  for (const sx of [-1.1, 1.1]) {
+    const wall = new THREE.Mesh(wallGeo2, stone);
+    wall.rotation.x = -ROOF_SLOPE; // follow the roof underside
+    wall.position.set(sx, 0.5, -13.0);
+    scene.add(wall);
+  }
+  /* Back cap sealing the hood against the terrace face below the flush line. */
+  const backCap = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.6, 0.4), stone);
+  backCap.position.set(0, 0.7, -14.6);
+  scene.add(backCap);
+  /* The throat dives steeply below grade right behind the portal, so it
+     never slices through the terraces or seats above — a short stretch of
+     open trench, then the line continues underground. */
+  const throat = new THREE.Mesh(
+    new THREE.BoxGeometry(1.7, 2.1, 4.4),
+    new THREE.MeshBasicMaterial({ color: 0x08080c })
+  );
+  throat.rotation.x = -0.55;
+  throat.position.set(0, -0.4, PORTAL_Z - 1.9);
+  scene.add(throat);
+
+  /* Guide lights: warm dots leading through the portal — "the line
+     continues down here". */
+  const dotMat = new THREE.MeshBasicMaterial({ color: 0xffc46a });
+  for (let i = 0; i < 4; i++) {
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), dotMat);
+    dot.position.set(0.62, 0.28, PORTAL_Z + 0.4 - i * 1.4);
+    scene.add(dot);
+  }
 }
 
 /* Warm pool of light on the plaza + small flames ringing the orchestra
@@ -684,7 +908,25 @@ function buildSky(scene: THREE.Scene) {
   }
 }
 
-export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Props) {
+/* Bookkeeping for one live feed applied to a holo panel. */
+interface ActiveFeed {
+  key: string;
+  track: Track;
+  el: HTMLVideoElement;
+  tex: THREE.VideoTexture;
+  mat: THREE.MeshBasicMaterial;
+}
+
+export default function AgoraScene3D({
+  roomId,
+  audience,
+  viewerCount,
+  view,
+  feeds,
+  queue,
+  micHolder,
+  micLive,
+}: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   /* The view lives in a ref so switching cameras never rebuilds the
      scene — the render loop just glides toward the new target. */
@@ -693,35 +935,201 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
     viewRef.current = view;
   }, [view]);
 
+  /* Holo-screen video feeds. The slots come from the world build; feeds
+     apply/teardown against them without ever touching the scene. The
+     render loop shows the screens whenever a feed is live (any view) —
+     otherwise only in speaker view, as before. */
+  const holoSlotsRef = useRef<HoloSlot[] | null>(null);
+  const activeFeedsRef = useRef<Map<string, ActiveFeed>>(new Map());
+  const feedsRef = useRef<ScreenFeeds | undefined>(feeds);
+  feedsRef.current = feeds;
+  const hasLiveFeedRef = useRef(false);
+
+  const clearFeed = (slot: HoloSlot) => {
+    const active = activeFeedsRef.current.get(slot.side);
+    if (!active) return;
+    active.track?.detach?.(active.el);
+    active.el.remove();
+    active.tex.dispose();
+    active.mat.dispose();
+    slot.panel.material = slot.baseMat;
+    slot.silhouette.visible = true;
+    activeFeedsRef.current.delete(slot.side);
+  };
+
+  const applyFeeds = () => {
+    const slots = holoSlotsRef.current;
+    if (!slots) return;
+    for (const slot of slots) {
+      const wanted = feedsRef.current?.[slot.side] ?? null;
+      const active = activeFeedsRef.current.get(slot.side);
+      if (active && (!wanted || wanted.key !== active.key)) clearFeed(slot);
+      if (!wanted || activeFeedsRef.current.has(slot.side)) continue;
+
+      const el = wanted.track.attach() as HTMLVideoElement;
+      el.muted = true; // audio plays through the call layer
+      el.playsInline = true;
+      el.style.display = "none";
+      document.body.appendChild(el);
+
+      const tex = new THREE.VideoTexture(el);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.center.set(0.5, 0.5);
+      /* The panels are viewed from their back face (the group is turned
+         180° toward the audience), which mirrors the image — flip X so
+         faces and text read correctly. */
+      tex.repeat.x = -1;
+      /* Cover-crop once the video reports its size. */
+      const fit = () => {
+        const vw = el.videoWidth;
+        const vh = el.videoHeight;
+        if (!vw || !vh) return;
+        const videoAspect = vw / vh;
+        const planeAspect = HOLO_W / HOLO_H;
+        const sx = Math.sign(tex.repeat.x) || 1;
+        if (videoAspect > planeAspect) {
+          tex.repeat.set(sx * (planeAspect / videoAspect), 1);
+        } else {
+          tex.repeat.set(sx * 1, videoAspect / planeAspect);
+        }
+      };
+      el.addEventListener("loadedmetadata", fit);
+      fit();
+
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      });
+      slot.panel.material = mat;
+      slot.silhouette.visible = false;
+      activeFeedsRef.current.set(slot.side, { key: wanted.key, track: wanted.track, el, tex, mat });
+    }
+    hasLiveFeedRef.current = activeFeedsRef.current.size > 0;
+  };
+  const applyFeedsRef = useRef(applyFeeds);
+  applyFeedsRef.current = applyFeeds;
+  const clearFeedRef = useRef(clearFeed);
+  clearFeedRef.current = clearFeed;
+
+  /* ── Speaker queue members ────────────────────────────────────────
+     One Group per person, diffed by id: joining teleports you in (short
+     ground glow), advancing slides you to the next slot (damped in the
+     render loop — never a walk), leaving removes you. The mic holder is
+     the same kind of member, targeted at the medallion. */
+  const queueGroupRef = useRef<THREE.Group | null>(null);
+  const queueMembersRef = useRef<Map<string, THREE.Group>>(new Map());
+  const micMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const micStateRef = useRef({ occupied: false, live: false });
+  const queueRef = useRef<SeatedPerson[]>(queue ?? []);
+  queueRef.current = queue ?? [];
+  const micHolderRef = useRef<SeatedPerson | null>(micHolder ?? null);
+  micHolderRef.current = micHolder ?? null;
+  micStateRef.current.live = !!micLive;
+
+  const applyQueue = () => {
+    const group = queueGroupRef.current;
+    if (!group) return;
+    const members = queueMembersRef.current;
+
+    // Desired members: mic holder + capped queue, each with a target spot.
+    const wanted = new Map<string, { person: SeatedPerson; x: number; y: number; z: number }>();
+    const holder = micHolderRef.current;
+    if (holder) wanted.set(holder.id, { person: holder, ...MIC_POS });
+    const line = queueRef.current;
+    for (let i = 0; i < renderedCount(line.length); i++) {
+      const p = line[i];
+      if (!wanted.has(p.id)) wanted.set(p.id, { person: p, ...slotPosition(i) });
+    }
+    micStateRef.current.occupied = !!holder;
+
+    // Remove the departed.
+    for (const [id, g] of members) {
+      if (wanted.has(id)) continue;
+      g.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry.dispose();
+          (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+        }
+      });
+      group.remove(g);
+      members.delete(id);
+    }
+
+    // Add newcomers (teleport + glow) and retarget everyone else (slide).
+    for (const [id, w] of wanted) {
+      const existing = members.get(id);
+      if (existing) {
+        existing.userData.target = new THREE.Vector3(w.x, w.y, w.z);
+        continue;
+      }
+      const g = new THREE.Group();
+      const tint = AVATAR_COLORS[hashString(id) % AVATAR_COLORS.length];
+      const bodyMat = new THREE.MeshStandardMaterial({ color: tint, flatShading: true });
+      const torso = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), bodyMat);
+      torso.scale.set(1, 0.85, 0.9);
+      torso.position.y = 0.72;
+      torso.castShadow = true;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), bodyMat.clone());
+      (head.material as THREE.MeshStandardMaterial).color.multiplyScalar(1.15);
+      head.position.y = 1.28;
+      head.castShadow = true;
+      const glow = new THREE.Mesh(
+        new THREE.CircleGeometry(0.75, 20),
+        new THREE.MeshBasicMaterial({
+          color: tint,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        })
+      );
+      glow.rotation.x = -Math.PI / 2;
+      glow.position.y = 0.05;
+      g.add(torso, head, glow);
+      g.position.set(w.x, w.y, w.z); // teleport: appear at the slot
+      g.userData.target = new THREE.Vector3(w.x, w.y, w.z);
+      g.userData.spawnGlow = glow;
+      g.userData.spawnAt = performance.now();
+      group.add(g);
+      members.set(id, g);
+    }
+  };
+  const applyQueueRef = useRef(applyQueue);
+  applyQueueRef.current = applyQueue;
+
+  /* Content-keyed: identical refetches change nothing. Order matters (it
+     IS the queue), so the key is the joined id sequence. */
+  const queueKey = `${micHolder?.id ?? ""}|${(queue ?? [])
+    .slice(0, renderedCount((queue ?? []).length))
+    .map((p) => p.id)
+    .join(",")}`;
+  useEffect(() => {
+    applyQueueRef.current();
+  }, [queueKey]);
+
+  /* Apply feed changes without touching the world. Keyed by content so a
+     re-render with identical feeds is a no-op. */
+  const feedKey = `${feeds?.pro?.key ?? ""}|${feeds?.con?.key ?? ""}`;
+  useEffect(() => {
+    applyFeedsRef.current();
+  }, [feedKey]);
+
+  /* The long-lived world (renderer, scene, camera, render loop) is built once
+     per room. The crowd is the only data-driven part, so it lives in its own
+     group that a second effect rebuilds in place — data refetches (30s
+     heartbeat, realtime events) never tear down the WebGL context anymore,
+     which is what used to hitch the animation every refresh. */
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const crowdRef = useRef<THREE.Group | null>(null);
+  const audienceRef = useRef(audience);
+  audienceRef.current = audience;
+  const viewerCountRef = useRef(viewerCount);
+  viewerCountRef.current = viewerCount;
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-
-    /* ── Occupancy (same seeded logic as before) ── */
-    const seats = generateSeats();
-    const rng = mulberry32(hashString(roomId));
-    const bySide: Record<"pro" | "con", number[]> = { pro: [], con: [] };
-    seats.forEach((s, i) => bySide[s.side].push(i));
-    (["pro", "con"] as const).forEach((side) => {
-      const arr = bySide[side];
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-    });
-    const occupancy = new Map<number, SeatedPerson | null>();
-    audience.forEach((person, i) => {
-      const side = i % 2 === 0 ? "pro" : "con";
-      const idx = bySide[side].shift() ?? bySide[side === "pro" ? "con" : "pro"].shift();
-      if (idx !== undefined) occupancy.set(idx, person);
-    });
-    const remaining = Math.max(0, viewerCount - audience.length);
-    for (let i = 0; i < remaining; i++) {
-      const side = i % 2 === 0 ? "pro" : "con";
-      const idx = bySide[side].shift() ?? bySide[side === "pro" ? "con" : "pro"].shift();
-      if (idx === undefined) break;
-      occupancy.set(idx, null);
-    }
 
     /* ── Renderer / scene / camera ── */
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -766,14 +1174,30 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
     buildGround(scene);
     buildSky(scene);
     buildTerraces(scene);
-    buildAisle(scene);
+    buildSideStairs(scene);
     buildOrchestra(scene);
     buildPlaza(scene);
     buildStage(scene);
-    buildChairsAndCrowd(scene, seats, occupancy);
     buildTrees(scene);
     const torches = [...buildTorches(scene), ...buildScaenae(scene), buildOrchestraGlow(scene)];
     const holo = buildHoloScreens(scene);
+    holoSlotsRef.current = holo.slots;
+    applyFeedsRef.current(); // re-apply live feeds across a world rebuild
+
+    /* Speaker queue: mic totem + slot path + the members group. */
+    const mic = buildMicTotem(scene);
+    micMatRef.current = mic.mat;
+    buildQueuePath(scene);
+    const queueGroup = new THREE.Group();
+    scene.add(queueGroup);
+    queueGroupRef.current = queueGroup;
+    applyQueueRef.current();
+
+    /* Crowd container — populated (and re-populated) by the crowd effect. */
+    const crowd = new THREE.Group();
+    scene.add(crowd);
+    sceneRef.current = scene;
+    crowdRef.current = crowd;
 
     /* ── Resize ── */
     const resize = () => {
@@ -787,26 +1211,64 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
     const observer = new ResizeObserver(resize);
     observer.observe(host);
 
-    /* ── Animate: torch flicker, camera glide + vertical breathing ── */
+    /* ── Animate: torch flicker, camera glide + vertical breathing ──
+       The camera glide uses exponential damping scaled by real frame time,
+       so it moves at the same speed on a 60Hz laptop, a 120Hz display, or
+       through a dropped-frame stutter — the fixed 0.045/frame lerp it
+       replaces ran twice as fast at 120Hz and jerked when frames dropped. */
     let raf = 0;
     const t0 = performance.now();
+    let lastFrame = t0;
+    const DAMP = 2.8; // ≈ the old 0.045/frame feel at 60fps
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      const t = (performance.now() - t0) / 1000;
+      const now = performance.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
+      lastFrame = now;
+      const t = (now - t0) / 1000;
       torches.forEach((torch, i) => {
         const { base, flick } = torch.userData as { base: number; flick: number };
         torch.intensity =
           base + Math.sin(t * 9 + i * 2.4) * flick + Math.sin(t * 23 + i) * flick * 0.55;
       });
       const target = CAMS[viewRef.current];
-      camPos.lerp(target.pos, 0.045);
-      camLook.lerp(target.look, 0.045);
+      const k = 1 - Math.exp(-DAMP * dt);
+      camPos.lerp(target.pos, k);
+      camLook.lerp(target.look, k);
       camera.position.copy(camPos);
       camera.position.y += Math.sin(t * 0.07) * 0.35;
       camera.lookAt(camLook);
-      /* Holo screens exist only for the speaker vantage; their frames
-         shimmer through slow hue drift while visible. */
-      holo.group.visible = viewRef.current === "speaker";
+      /* Speaker queue: damp members toward their slots (advancing = a
+         short slide, never a walk), fade spawn glows, pulse the mic. */
+      const slideK = 1 - Math.exp(-6 * dt);
+      queueGroupRef.current?.children.forEach((g) => {
+        const target = g.userData.target as THREE.Vector3 | undefined;
+        if (target) g.position.lerp(target, slideK);
+        const glow = g.userData.spawnGlow as THREE.Mesh | undefined;
+        if (glow) {
+          const age = (performance.now() - (g.userData.spawnAt as number)) / 1000;
+          const m = glow.material as THREE.MeshBasicMaterial;
+          m.opacity = Math.max(0, 0.85 * (1 - age / 0.6));
+          if (m.opacity === 0) {
+            g.remove(glow);
+            glow.geometry.dispose();
+            m.dispose();
+            delete g.userData.spawnGlow;
+          }
+        }
+      });
+      if (micMatRef.current) {
+        const s = micStateRef.current;
+        micMatRef.current.emissiveIntensity = s.live
+          ? 1.5 + Math.sin(t * 6) * 0.45
+          : s.occupied
+            ? 0.9 + Math.sin(t * 2.4) * 0.2
+            : 0.35;
+      }
+
+      /* Holo screens: always up when a live camera is on them; otherwise
+         only for the speaker vantage. Frames shimmer while visible. */
+      holo.group.visible = viewRef.current === "speaker" || hasLiveFeedRef.current;
       if (holo.group.visible) {
         holo.frameMats.forEach((m, i) => m.color.setHSL((t * 0.05 + i * 0.18) % 1, 0.6, 0.62));
       }
@@ -818,6 +1280,14 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      holo.slots.forEach((slot) => clearFeedRef.current(slot));
+      holoSlotsRef.current = null;
+      hasLiveFeedRef.current = false;
+      queueGroupRef.current = null;
+      queueMembersRef.current.clear();
+      micMatRef.current = null;
+      sceneRef.current = null;
+      crowdRef.current = null;
       scene.traverse((obj) => {
         if (obj instanceof THREE.Mesh) {
           obj.geometry.dispose();
@@ -828,7 +1298,56 @@ export default function AgoraScene3D({ roomId, audience, viewerCount, view }: Pr
       renderer.dispose();
       host.removeChild(renderer.domElement);
     };
-  }, [roomId, audience, viewerCount]);
+  }, [roomId]);
+
+  /* ── Crowd occupancy — rebuilds only its own group, keyed by content so
+     identical refetches (new array, same people) are complete no-ops. ── */
+  const crowdKey = `${roomId}|${viewerCount}|${audience.map((a) => a.id).join(",")}`;
+  useEffect(() => {
+    const crowd = crowdRef.current;
+    if (!crowd) return;
+
+    // Dispose the previous crowd's GPU resources before repopulating.
+    crowd.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry.dispose();
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach((m) => m.dispose());
+      }
+    });
+    crowd.clear();
+
+    /* Occupancy (same seeded logic as before). */
+    const people = audienceRef.current;
+    const count = viewerCountRef.current;
+    const seats = generateSeats();
+    const rng = mulberry32(hashString(roomId));
+    const bySide: Record<"pro" | "con", number[]> = { pro: [], con: [] };
+    seats.forEach((s, i) => bySide[s.side].push(i));
+    (["pro", "con"] as const).forEach((side) => {
+      const arr = bySide[side];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    });
+    const occupancy = new Map<number, SeatedPerson | null>();
+    people.forEach((person, i) => {
+      const side = i % 2 === 0 ? "pro" : "con";
+      const idx = bySide[side].shift() ?? bySide[side === "pro" ? "con" : "pro"].shift();
+      if (idx !== undefined) occupancy.set(idx, person);
+    });
+    const remaining = Math.max(0, count - people.length);
+    for (let i = 0; i < remaining; i++) {
+      const side = i % 2 === 0 ? "pro" : "con";
+      const idx = bySide[side].shift() ?? bySide[side === "pro" ? "con" : "pro"].shift();
+      if (idx === undefined) break;
+      occupancy.set(idx, null);
+    }
+
+    buildChairsAndCrowd(crowd, seats, occupancy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crowdKey]);
 
   return <div ref={hostRef} className="ag-scene3d" />;
 }

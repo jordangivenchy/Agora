@@ -24,7 +24,11 @@ import {
 import type { DebateRoom } from "@/types/database";
 
 interface Props {
-  room: DebateRoom & { speaker_requests_locked?: boolean };
+  room: DebateRoom & {
+    speaker_requests_locked?: boolean;
+    queue_auto_advance?: boolean;
+    mic_user_id?: string | null;
+  };
   participants: StageParticipant[];
   currentUser: User;
   myRole: StageRole;
@@ -148,6 +152,19 @@ export default function HostControls({ room, participants, currentUser, myRole, 
         .eq("id", room.id)
     );
 
+  /* ── Speaker queue: bring the front of the line to the mic, or let it
+     advance automatically whenever the mic frees (open-mic mode). ── */
+  const bringUpNext = () =>
+    run("advance", async () => supabase.rpc("advance_speaker_queue", { p_room: room.id }));
+
+  const toggleAutoAdvance = () =>
+    run("auto", async () =>
+      supabase
+        .from("debate_rooms")
+        .update({ queue_auto_advance: !room.queue_auto_advance })
+        .eq("id", room.id)
+    );
+
   const muteAllSpeakers = () =>
     run("muteall", async () =>
       supabase
@@ -203,6 +220,30 @@ export default function HostControls({ room, participants, currentUser, myRole, 
           <div className="ag-host-body">
             {tab === "requests" && (
               <>
+                <div className="ag-host-row ag-host-queuectl">
+                  <button
+                    className="ag-host-act primary"
+                    disabled={busy !== null || requests.length === 0}
+                    onClick={bringUpNext}
+                    title={
+                      room.mic_user_id
+                        ? "Swap the mic to the next person in line"
+                        : "Bring the front of the line to the mic"
+                    }
+                  >
+                    🎤 Bring up next
+                  </button>
+                  {isPrimaryHost && (
+                    <button
+                      className={`ag-host-act ${room.queue_auto_advance ? "primary" : ""}`}
+                      disabled={busy !== null}
+                      onClick={toggleAutoAdvance}
+                      title="When on, the mic passes to the next in line automatically whenever it frees"
+                    >
+                      Auto-advance: {room.queue_auto_advance ? "On" : "Off"}
+                    </button>
+                  )}
+                </div>
                 {requests.length === 0 && <div className="ag-host-empty">No raised hands.</div>}
                 {requests.map((p) => (
                   <div key={p.id} className="ag-host-row">

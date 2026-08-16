@@ -5,7 +5,7 @@
    speaker-view toggle. The 2D data logic (who's on stage, who's seated)
    lives in the page; this component just lays it out. */
 
-import AgoraScene3D, { type AgoraView } from "./AgoraScene3D";
+import AgoraScene3D, { type AgoraView, type ScreenFeeds } from "./AgoraScene3D";
 
 export interface StagePerson {
   id: string;
@@ -32,6 +32,14 @@ interface Props {
   viewerCount: number;
   view: AgoraView;
   onSwitchView: () => void;
+  /** Live camera feeds routed onto the stage holo screens. */
+  screenFeeds?: ScreenFeeds;
+  /** Speaker queue (front first, mic holder excluded) for the center aisle. */
+  speakerQueue?: SeatedPerson[];
+  /** Current mic holder — stands at the medallion mic. */
+  micHolder?: SeatedPerson | null;
+  /** Mic holder is actually speaking right now. */
+  micLive?: boolean;
 }
 
 function hashString(s: string): number {
@@ -126,11 +134,24 @@ export default function Amphitheater({
   viewerCount,
   view,
   onSwitchView,
+  screenFeeds,
+  speakerQueue,
+  micHolder,
+  micLive,
 }: Props) {
   const inSpeaker = view === "speaker";
   return (
     <div className="ag-theater">
-      <AgoraScene3D roomId={roomId} audience={audience} viewerCount={viewerCount} view={view} />
+      <AgoraScene3D
+        roomId={roomId}
+        audience={audience}
+        viewerCount={viewerCount}
+        view={view}
+        feeds={screenFeeds}
+        queue={speakerQueue}
+        micHolder={micHolder}
+        micLive={micLive}
+      />
 
       {/* The discussion strip: hosts and promoted speakers, above the rail */}
       {stageStrip.length > 0 && (

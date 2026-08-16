@@ -15,9 +15,13 @@ import { TOPICS } from "@/types/database";
 import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
+import AgoraAssistant from "@/components/AgoraAssistant";
+import AgoraVideoDock from "@/components/agora/AgoraVideoDock";
+import ReactionOverlay from "@/components/agora/ReactionOverlay";
+import { useAgoraCall } from "@/components/agora/useAgoraCall";
 import HostControls from "@/components/agora/HostControls";
 import InvitePrompt from "@/components/agora/InvitePrompt";
-import { type StageParticipant, deriveStageRole, isHostRole } from "@/components/agora/stage";
+import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
 import type { User } from "@supabase/supabase-js";
 import "../agora.css";
 
@@ -42,7 +46,14 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
-  const [room, setRoom] = useState<(DebateRoom & { speaker_requests_locked?: boolean }) | null>(null);
+  const [room, setRoom] = useState<
+    | (DebateRoom & {
+        speaker_requests_locked?: boolean;
+        queue_auto_advance?: boolean;
+        mic_user_id?: string | null;
+      })
+    | null
+  >(null);
   const [participants, setParticipants] = useState<StageParticipant[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -188,6 +199,23 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
     return "audience" as const;
   }, [myParticipation, currentUser, room]);
 
+  /* ── Live call (LiveKit) ───────────────────────────────────────────
+     Everyone connects: on-stage roles with publish rights, listeners and
+     guests subscribe-only. The buttons below drive this, and the active-
+     speaker set feeds the stage rings with real voice activity. */
+  const myUsername =
+    myParticipation?.user?.username ??
+    currentUser?.email?.split("@")[0] ??
+    "Guest";
+  const call = useAgoraCall({
+    roomId,
+    userId: currentUser?.id ?? null,
+    username: myUsername,
+    canPublish: onStage(myRole),
+    ready: loaded && !!room,
+  });
+  const [reactOpen, setReactOpen] = useState(false);
+
   /* ── Stage composition ─────────────────────────────────────────────
      Debaters keep their PRO/CON panels. Everyone else on stage (hosts,
      co-hosts, promoted speakers) forms the discussion strip. The
@@ -201,7 +229,8 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
       id: p.user_id,
       username: p.user?.username ?? "?",
       avatarUrl: p.user?.avatar_url ?? null,
-      speaking: !p.mic_muted,
+      /* Real voice activity once the call is up; DB heartbeat otherwise. */
+      speaking: call.connected ? call.speakingIds.has(p.user_id) : !p.mic_muted,
       stageRole,
     });
     return {
@@ -212,18 +241,110 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
         .sort((a, b) => rank(a.stageRole) - rank(b.stageRole))
         .map(toStage),
       audience: withRoles
-        .filter(({ p, stageRole }) => p.role === "spectator" && stageRole === "audience")
+        .filter(
+          ({ p, stageRole }) =>
+            p.role === "spectator" &&
+            stageRole === "audience" &&
+            /* Queue members and the mic holder leave their seats — they
+               stand in the center aisle / at the medallion instead. */
+            !p.hand_raised_at &&
+            p.user_id !== room.mic_user_id
+        )
         .map(({ p }) => ({
           id: p.user_id,
           username: p.user?.username ?? "?",
           avatarUrl: p.user?.avatar_url ?? null,
         })),
     };
-  }, [participants, room]);
+  }, [participants, room, call.connected, call.speakingIds]);
 
   function rank(role: string) {
     return role === "host" ? 0 : role === "cohost" ? 1 : 2;
   }
+
+  /* ── Speaker queue (derived — the DB timestamps ARE the queue) ─────
+     Order: hand_raised_at asc, user_id tiebreak — identical to the
+     advance_speaker_queue RPC, so every client sees the same line. */
+  const micHolder = useMemo(() => {
+    const uid = room?.mic_user_id;
+    if (!uid) return null;
+    const p = participants.find((x) => x.user_id === uid && !x.left_at);
+    return p
+      ? { id: p.user_id, username: p.user?.username ?? "?", avatarUrl: p.user?.avatar_url ?? null }
+      : null;
+  }, [room?.mic_user_id, participants]);
+
+  const speakerQueue = useMemo(() => {
+    if (!room) return [];
+    return sortRequests(
+      participants.filter(
+        (p) =>
+          !p.left_at &&
+          p.hand_raised_at &&
+          p.user_id !== room.mic_user_id &&
+          !isHostRole(deriveStageRole(p, room))
+      )
+    ).map((p) => ({
+      id: p.user_id,
+      username: p.user?.username ?? "?",
+      avatarUrl: p.user?.avatar_url ?? null,
+    }));
+  }, [participants, room]);
+
+  const amMicHolder = !!currentUser && room?.mic_user_id === currentUser.id;
+  const myQueuePos = useMemo(() => {
+    if (!currentUser) return null;
+    const idx = speakerQueue.findIndex((p) => p.id === currentUser.id);
+    return idx < 0 ? null : idx + 1;
+  }, [speakerQueue, currentUser]);
+
+  /* Auto-advance driver: in open-mic mode the host's client brings up the
+     front of the line whenever the mic is free. Host-gated server-side too. */
+  const advanceGuardRef = useRef(0);
+  useEffect(() => {
+    if (!room || !currentUser || !isHostRole(myRole)) return;
+    if (!room.queue_auto_advance || room.mic_user_id || room.status !== "live") return;
+    if (speakerQueue.length === 0) return;
+    const now = Date.now();
+    if (now - advanceGuardRef.current < 2000) return;
+    advanceGuardRef.current = now;
+    supabase
+      .rpc("advance_speaker_queue", { p_room: roomId })
+      .then(({ error }) => {
+        if (error) console.warn("auto-advance failed", error.message);
+        fetchAll();
+      });
+  }, [room, currentUser, myRole, speakerQueue.length, roomId, supabase, fetchAll]);
+
+  async function stepDownFromMic() {
+    try {
+      await supabase.rpc("step_down_from_mic", { p_room: roomId });
+      fetchAll();
+    } catch (e) {
+      console.warn("step down failed", e);
+    }
+  }
+
+  /* ── Stage screen routing ──────────────────────────────────────────
+     Live cameras land on the holo screens over the stage: PRO's camera
+     on the frame-left screen, CON's on the right. Non-debater cameras
+     (host, co-host, promoted speakers) fill whichever screen is free. */
+  const screenFeeds = useMemo(() => {
+    const tiles = call.videoTiles;
+    if (tiles.length === 0) return undefined;
+    const keyOf = (t: (typeof tiles)[number]) => `${t.identity}:${t.local ? "l" : "r"}`;
+    const proIds = new Set(proSpeakers.map((s) => s.id));
+    const conIds = new Set(conSpeakers.map((s) => s.id));
+    const pro = tiles.find((t) => proIds.has(t.identity)) ?? null;
+    const con = tiles.find((t) => t !== pro && conIds.has(t.identity)) ?? null;
+    const rest = tiles.filter((t) => t !== pro && t !== con);
+    const proFeed = pro ?? rest.shift() ?? null;
+    const conFeed = con ?? rest.shift() ?? null;
+    return {
+      pro: proFeed ? { key: keyOf(proFeed), track: proFeed.track } : null,
+      con: conFeed ? { key: keyOf(conFeed), track: conFeed.track } : null,
+    };
+  }, [call.videoTiles, proSpeakers, conSpeakers]);
 
   /* ── Raise / lower hand ────────────────────────────────────────────
      Signed-in listeners only. Landing in the Agora doesn't create a
@@ -237,28 +358,38 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
     if (!currentUser || !room || handBusy) return;
     setHandBusy(true);
     try {
-      const ts = handRaised ? null : new Date().toISOString();
-      if (myParticipation) {
-        await supabase
-          .from("debate_participants")
-          .update({ hand_raised_at: ts })
-          .eq("id", myParticipation.id);
-      } else {
-        const { data: existing } = await supabase
-          .from("debate_participants")
-          .select("id")
-          .eq("room_id", roomId)
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
-        if (existing) {
+      /* Server-stamped raise (Postgres now() is the one true clock, so the
+         queue order is identical on every client). Falls back to the
+         legacy client-side write if the RPC isn't migrated yet. */
+      const { error } = await supabase.rpc("raise_hand", {
+        p_room: roomId,
+        p_raised: !handRaised,
+      });
+      if (error) {
+        if (!/function|schema/i.test(error.message)) throw new Error(error.message);
+        const ts = handRaised ? null : new Date().toISOString();
+        if (myParticipation) {
           await supabase
             .from("debate_participants")
-            .update({ role: "spectator", stance: null, left_at: null, joined_at: new Date().toISOString(), hand_raised_at: ts })
-            .eq("id", existing.id);
+            .update({ hand_raised_at: ts })
+            .eq("id", myParticipation.id);
         } else {
-          await supabase
+          const { data: existing } = await supabase
             .from("debate_participants")
-            .insert({ room_id: roomId, user_id: currentUser.id, role: "spectator", stance: null, hand_raised_at: ts });
+            .select("id")
+            .eq("room_id", roomId)
+            .eq("user_id", currentUser.id)
+            .maybeSingle();
+          if (existing) {
+            await supabase
+              .from("debate_participants")
+              .update({ role: "spectator", stance: null, left_at: null, joined_at: new Date().toISOString(), hand_raised_at: ts })
+              .eq("id", existing.id);
+          } else {
+            await supabase
+              .from("debate_participants")
+              .insert({ room_id: roomId, user_id: currentUser.id, role: "spectator", stance: null, hand_raised_at: ts });
+          }
         }
       }
       fetchAll();
@@ -367,6 +498,10 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
           viewerCount={room.viewer_count ?? 0}
           view={view}
           onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
+          screenFeeds={screenFeeds}
+          speakerQueue={speakerQueue}
+          micHolder={micHolder}
+          micLive={!!(room.mic_user_id && call.speakingIds.has(room.mic_user_id))}
         />
 
         {/* ── Host controls (hosts and co-hosts only) ── */}
@@ -390,24 +525,111 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
           />
         )}
 
+        {/* ── Live camera tiles + floating reactions ── */}
+        <AgoraVideoDock tiles={call.videoTiles} />
+        <ReactionOverlay reactions={call.reactions} />
+
+        {/* ── Queue position pill: the number reinforces what the 3D line
+              already shows — your character physically nearing the mic ── */}
+        {currentUser && (amMicHolder || myQueuePos !== null) && (
+          <div
+            className={`ag-queue-pill ${
+              amMicHolder ? "is-mic" : myQueuePos === 1 ? "is-next" : ""
+            }`}
+          >
+            {amMicHolder ? (
+              <>🎤 You have the mic</>
+            ) : myQueuePos === 1 ? (
+              <>✨ YOU&apos;RE NEXT</>
+            ) : (
+              <>
+                #{myQueuePos} in queue · {myQueuePos! - 1} ahead of you
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Mic/camera failure toast — a silent dead button is worse ── */}
+        {call.mediaError && (
+          <div className="ag-media-error" role="alert">
+            <span>{call.mediaError}</span>
+            <button onClick={call.clearMediaError} aria-label="Dismiss">×</button>
+          </div>
+        )}
+
         {/* ── Bottom control bar ── */}
         <footer className="ag-controls">
+          {amMicHolder ? (
+            <button className="ag-ctl ag-ctl--live" title="Give up the mic" onClick={stepDownFromMic}>
+              🎤 <span>Step Down</span>
+            </button>
+          ) : (
+            <button
+              className={`ag-ctl ${handRaised ? "ag-ctl--active" : ""}`}
+              title={raiseTitle}
+              disabled={!canRaise || requestsLocked || handBusy}
+              onClick={toggleHand}
+            >
+              ✋ <span>{handRaised ? "Lower Hand" : "Raise Hand"}</span>
+            </button>
+          )}
+          <div className="ag-react-wrap">
+            {reactOpen && (
+              <div className="ag-react-picker">
+                {["👏", "❤️", "😂", "🔥", "👍", "🤯"].map((e) => (
+                  <button
+                    key={e}
+                    className="ag-react-emoji"
+                    onClick={() => {
+                      call.sendReaction(e);
+                      setReactOpen(false);
+                    }}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              className={`ag-ctl ${reactOpen ? "ag-ctl--active" : ""}`}
+              title={call.connected ? "Send a reaction" : "Connecting…"}
+              disabled={!call.connected}
+              onClick={() => setReactOpen((v) => !v)}
+            >
+              😊 <span>React</span>
+            </button>
+          </div>
           <button
-            className={`ag-ctl ${handRaised ? "ag-ctl--active" : ""}`}
-            title={raiseTitle}
-            disabled={!canRaise || requestsLocked || handBusy}
-            onClick={toggleHand}
+            className={`ag-ctl ${call.micOn ? "ag-ctl--live" : ""}`}
+            title={
+              !onStage(myRole)
+                ? "Mic — speakers only"
+                : !call.connected
+                  ? "Connecting…"
+                  : call.micOn
+                    ? "Mute your mic"
+                    : "Unmute your mic"
+            }
+            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+            onClick={call.toggleMic}
           >
-            ✋ <span>{handRaised ? "Lower Hand" : "Raise Hand"}</span>
+            🎙️ <span>{call.micOn ? "Mute" : "Mic"}</span>
           </button>
-          <button className="ag-ctl" title="React — coming soon" disabled>
-            😊 <span>React</span>
-          </button>
-          <button className="ag-ctl" title="Mic — speakers only" disabled>
-            🎙️ <span>Mic</span>
-          </button>
-          <button className="ag-ctl" title="Camera — speakers only" disabled>
-            📹 <span>Camera</span>
+          <button
+            className={`ag-ctl ${call.camOn ? "ag-ctl--live" : ""}`}
+            title={
+              !onStage(myRole)
+                ? "Camera — speakers only"
+                : !call.connected
+                  ? "Connecting…"
+                  : call.camOn
+                    ? "Turn camera off"
+                    : "Turn camera on"
+            }
+            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+            onClick={call.toggleCam}
+          >
+            📹 <span>{call.mediaBusy ? "…" : "Camera"}</span>
           </button>
           <button className="ag-ctl ag-ctl--leave" onClick={() => router.push("/")}>
             📞 <span>Leave</span>
@@ -416,6 +638,11 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
       </div>
 
       <AgoraSidebar roomId={roomId} currentUser={currentUser} />
+
+      {/* Agora AI assistant — the full pipeline (Gemini + retrieval + history)
+          lives behind /api/agora; this is its surface in the amphitheater,
+          which is where every room entry routes now. */}
+      <AgoraAssistant motion={room.motion} roomId={roomId} topicKey={room.topic_key} />
     </div>
   );
 }
