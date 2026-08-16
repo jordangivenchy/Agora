@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   container?: HTMLElement | null;
@@ -66,6 +67,7 @@ export default function NotificationsBell({ container }: Props) {
   const [items, setItems] = useState<NotifRow[]>([]);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  useEscapeClose(open, () => setOpen(false));
 
   const unread = items.filter((n) => !n.read_at).length;
 

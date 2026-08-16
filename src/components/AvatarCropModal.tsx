@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -40,6 +41,7 @@ async function getCroppedBlob(imageSrc: string, cropPx: Area, size = 512): Promi
 }
 
 export default function AvatarCropModal({ open, src, onCancel, onApply }: Props) {
+  useEscapeClose(open && !!src, onCancel);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);

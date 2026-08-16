@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
 import type { Stance } from "@/types/database";
 import { useRouter } from "next/navigation";
@@ -62,6 +63,7 @@ function defaultScheduleValue() {
 export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  useEscapeClose(open, onClose);
 
   const [motion, setMotion] = useState("");
   const [topicKey, setTopicKey] = useState("politics-law");

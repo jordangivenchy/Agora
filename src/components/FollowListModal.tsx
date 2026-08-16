@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -43,6 +44,7 @@ export default function FollowListModal({
   open, userId, mode, onClose, onOpenProfile,
 }: Props) {
   const supabase = createClient();
+  useEscapeClose(open, onClose);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

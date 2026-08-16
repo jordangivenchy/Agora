@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import AvatarCropModal from "./AvatarCropModal";
 
 interface Props {
@@ -32,6 +33,7 @@ export default function EditProfileModal({
   onClose, onSaved,
 }: Props) {
   const supabase = createClient();
+  useEscapeClose(open, onClose);
 
   const [username, setUsername] = useState(initialUsername || "");
   const [displayName, setDisplayName] = useState(initialDisplayName || "");

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -73,15 +74,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
     };
   }, [open]);
 
-  // ESC to close
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  useEscapeClose(open, onClose);
 
   function handleNodeClick(key: NodeKey) {
     if (key === "debates") {

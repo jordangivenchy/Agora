@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS } from "@/types/database";
 import EditProfileModal from "./EditProfileModal";
 import FollowListModal from "./FollowListModal";
@@ -61,6 +62,7 @@ function initials(name: string) {
 
 export default function UserProfileModal({ userId, onClose, onOpenProfile }: Props) {
   const supabase = createClient();
+  useEscapeClose(userId !== null, onClose);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [debates, setDebates] = useState<LiveOrScheduledDebate[]>([]);
   const [me, setMe] = useState<string | null>(null);

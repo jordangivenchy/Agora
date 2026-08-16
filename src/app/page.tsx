@@ -8,9 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import CreateRoomModal from "@/components/CreateRoomModal";
-import DashboardModal from "@/components/DashboardModal";
 import UserProfileModal from "@/components/UserProfileModal";
-import DebatesPage from "@/components/DebatesPage";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
 import NotificationsBell from "@/components/NotificationsBell";
@@ -69,8 +67,6 @@ function fmtViewers(n: number): string {
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [showDebates, setShowDebates] = useState(false);
   const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
@@ -283,8 +279,6 @@ export default function Home() {
 
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
-    const onDashboard = () => setShowDashboard(true);
-    const onDebates = () => setShowDebates(true);
     const onProfile = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       const w = window as unknown as { __AGORA_DATA__?: { user?: { id?: string } } };
@@ -308,15 +302,11 @@ export default function Home() {
       window.location.reload();
     };
     window.addEventListener("agora:create", onCreate);
-    window.addEventListener("agora:dashboard", onDashboard);
-    window.addEventListener("agora:debates", onDebates);
     window.addEventListener("agora:profile", onProfile);
     window.addEventListener("agora:tab", onTab);
     window.addEventListener("agora:logout", onLogout);
     return () => {
       window.removeEventListener("agora:create", onCreate);
-      window.removeEventListener("agora:dashboard", onDashboard);
-      window.removeEventListener("agora:debates", onDebates);
       window.removeEventListener("agora:profile", onProfile);
       window.removeEventListener("agora:tab", onTab);
       window.removeEventListener("agora:logout", onLogout);
@@ -376,15 +366,6 @@ export default function Home() {
         initialMotion={createPrefill?.motion}
         initialTopic={createPrefill?.topic}
       />
-      <DashboardModal
-        open={showDashboard}
-        onClose={() => setShowDashboard(false)}
-        onOpenDebates={() => {
-          setShowDashboard(false);
-          setShowDebates(true);
-        }}
-      />
-      <DebatesPage open={showDebates} onClose={() => setShowDebates(false)} />
       <UserProfileModal
         userId={profileUserId}
         onClose={() => setProfileUserId(null)}

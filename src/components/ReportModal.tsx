@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 export interface ReportTarget {
   userId: string;
@@ -33,6 +34,7 @@ export default function ReportModal({
   onClose: () => void;
 }) {
   const supabase = createClient();
+  useEscapeClose(!!target, onClose);
   const [reason, setReason] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);

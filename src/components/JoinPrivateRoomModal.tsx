@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -16,6 +17,7 @@ type JoinChoice =
 export default function JoinPrivateRoomModal({ open, onClose }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  useEscapeClose(open, onClose);
 
   const [code, setCode] = useState("");
   const [choice, setChoice] = useState<JoinChoice>({ role: "debater", stance: "PRO" });

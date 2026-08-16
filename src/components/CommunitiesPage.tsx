@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   open: boolean;
@@ -196,16 +197,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   useEffect(() => { if (open) loadCommunities(); }, [open, loadCommunities]);
   useEffect(() => { if (open) loadPosts(); }, [open, loadPosts]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (openPost) setOpenPost(null);
-      else onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, openPost]);
+  useEscapeClose(open, () => (openPost ? setOpenPost(null) : onClose()));
 
   /* ── actions ── */
 

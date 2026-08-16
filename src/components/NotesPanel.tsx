@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
   isOpen: boolean;
@@ -98,15 +99,7 @@ export default function NotesPopout({ isOpen, onClose, roomId, userId }: Props) 
     };
   }, []);
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
+  useEscapeClose(isOpen, onClose);
 
   return (
     <div

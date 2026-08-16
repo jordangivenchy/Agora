@@ -5638,9 +5638,6 @@ body { background: transparent; }
 .sidebar-link:hover .nav-icon-wrap { opacity: 1 !important; }
 .nav-label { font-weight: inherit !important; letter-spacing: -0.005em !important; }
 
-/* Breathing room where the nav changes topic (Communities onward) */
-.sidebar-link[data-nav-id="communities"] { margin-top: 12px !important; }
-
 /* ── Dashboard card: softer container, chart kept ────────────────── */
 .dashboard-btn {
   margin: 10px 4px 2px !important;
@@ -5691,4 +5688,52 @@ body { background: transparent; }
   color: rgba(255,255,255,0.16) !important;
   font-size: 10.5px !important;
   letter-spacing: 0.02em !important;
+}
+
+/* ═══ Sidebar rebalance (post-Dashboard removal) ═══
+   Fewer items now, so the nav reads better spread across the sidebar's top
+   half with roomier, larger links. */
+
+/* The collapsed subscriptions sub-list is a zero-height flex child; hide it
+   fully so space-evenly doesn't allot it a spacing slot. */
+.subs-channel-sublist:not(.visible) { display: none !important; }
+
+.sidebar-nav {
+  /* Half the sidebar's height (sidebar = viewport minus navbar and margins) */
+  min-height: calc((100vh - var(--nav-height) - 24px) / 2) !important;
+  justify-content: space-evenly !important;
+  gap: 8px !important;
+  padding: 14px 12px 10px !important;
+}
+.sidebar-link {
+  height: auto !important;
+  min-height: 54px !important;
+}
+.nav-inner {
+  padding: 12px 16px !important;
+  gap: 13px !important;
+}
+.nav-icon-wrap {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 11px !important;
+}
+.nav-icon-wrap svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+.nav-label {
+  font-size: 16px !important;
+}
+
+/* ═══ Responsive logo: scale the wordmark with the window ═══ */
+.nav-logo img {
+  height: clamp(19px, 2.7vw, 34px) !important;
+}
+
+/* Keep the centered search from overlapping the logo / account buttons on
+   narrow windows: cap its width to the space the navbar actually has.
+   (Below 600px the search hides entirely — see the mobile block above.) */
+#navSearchWrap {
+  width: clamp(180px, calc(100vw - 520px), 480px) !important;
 }

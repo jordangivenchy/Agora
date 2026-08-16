@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import type { User } from "@supabase/supabase-js";
 import NotificationsBell from "@/components/NotificationsBell";
 
@@ -45,6 +46,7 @@ export default function Navbar({
   } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const supabase = createClient();
+  useEscapeClose(showDropdown, () => setShowDropdown(false));
 
   // Hydrate the `public.users` row so we display the user's edited profile
   // rather than the stale OAuth metadata that Supabase auth returns. Retries
@@ -87,6 +89,7 @@ export default function Navbar({
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
+  useEscapeClose(showResults, () => setShowResults(false));
 
   // Single subscription path: onAuthStateChange fires INITIAL_SESSION on
   // subscribe, which both populates `user` and triggers loadProfile. Calling

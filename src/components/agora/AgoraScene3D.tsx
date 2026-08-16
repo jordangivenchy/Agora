@@ -383,7 +383,8 @@ function buildChairsAndCrowd(
   const chairMat = new THREE.MeshStandardMaterial({ flatShading: true });
   const cushions = new THREE.InstancedMesh(cushionGeo, chairMat, n);
   const backs = new THREE.InstancedMesh(backGeo, chairMat.clone(), n);
-  cushions.castShadow = backs.castShadow = true;
+  // No castShadow: hundreds of chair/crowd casters would dominate the shadow
+  // pass for shadows that are invisible under the night lighting anyway.
 
   // Crowd: head + torso for every occupied seat.
   const occupiedIdx = seats.map((_, i) => i).filter((i) => occupancy.has(i));
@@ -393,7 +394,6 @@ function buildChairsAndCrowd(
   const personMat = new THREE.MeshStandardMaterial({ flatShading: true });
   const heads = new THREE.InstancedMesh(headGeo, personMat, Math.max(1, occupiedIdx.length));
   const torsos = new THREE.InstancedMesh(torsoGeo, personMat.clone(), Math.max(1, occupiedIdx.length));
-  heads.castShadow = torsos.castShadow = true;
   heads.count = torsos.count = occupiedIdx.length;
 
   seats.forEach((seat, i) => {
@@ -1131,9 +1131,15 @@ export default function AgoraScene3D({
     const host = hostRef.current;
     if (!host) return;
 
-    /* ── Renderer / scene / camera ── */
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    /* ── Renderer / scene / camera ──
+       Fill rate dominates on weak GPUs: cap the buffer at 1.5× and skip
+       MSAA when the display is dense enough to hide jaggies on its own. */
+    const dpr = Math.min(window.devicePixelRatio, 1.5);
+    const renderer = new THREE.WebGLRenderer({
+      antialias: dpr < 1.5,
+      powerPreference: "high-performance",
+    });
+    renderer.setPixelRatio(dpr);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
@@ -1220,12 +1226,43 @@ export default function AgoraScene3D({
     const t0 = performance.now();
     let lastFrame = t0;
     const DAMP = 2.8; // ≈ the old 0.045/frame feel at 60fps
+
+    /* Adaptive quality: if a device can't hold ~45fps over a ~3s window,
+       step down once per window — first to a 1× buffer, then shadows off.
+       Steps are one-way; a machine that struggled once will struggle again,
+       and oscillating quality is worse than stable-but-plainer. */
+    let quality = 2;
+    let frameAcc = 0;
+    let frameN = 0;
+    const stepDown = () => {
+      quality -= 1;
+      if (quality === 1) {
+        renderer.setPixelRatio(1);
+      } else {
+        renderer.shadowMap.enabled = false;
+        scene.traverse((o) => {
+          const mat = (o as THREE.Mesh).material;
+          if (!mat) return;
+          (Array.isArray(mat) ? mat : [mat]).forEach((m) => (m.needsUpdate = true));
+        });
+      }
+    };
+
     const animate = () => {
       raf = requestAnimationFrame(animate);
       const now = performance.now();
       const dt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
       lastFrame = now;
       const t = (now - t0) / 1000;
+      if (quality > 0) {
+        frameAcc += dt;
+        frameN += 1;
+        if (frameAcc >= 3) {
+          if (frameN / frameAcc < 45) stepDown();
+          frameAcc = 0;
+          frameN = 0;
+        }
+      }
       torches.forEach((torch, i) => {
         const { base, flick } = torch.userData as { base: number; flick: number };
         torch.intensity =

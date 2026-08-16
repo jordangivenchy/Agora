@@ -2288,6 +2288,53 @@ document.addEventListener('pointermove', (e) => {
     stars = generateStars(canvas.width, canvas.height);
   }
 
+  /* Live window drags fire resize continuously; regenerating every star each
+     event reallocates the whole array dozens of times per second and visibly
+     re-rolls the sky. Instead: rescale the stars we have (cheap, keeps the
+     sky covered while dragging), then regenerate once after the drag settles
+     so density and distribution end up correct for the final size. */
+  let regenTimer = null;
+  function onWindowResize() {
+    const ow = canvas.width  || 1;
+    const oh = canvas.height || 1;
+    const nw = window.innerWidth;
+    const nh = window.innerHeight;
+    if (nw === ow && nh === oh) return;
+    canvas.width  = nw;
+    canvas.height = nh;
+    const sx = nw / ow;
+    const sy = nh / oh;
+    for (let i = 0; i < stars.length; i++) {
+      stars[i].ox *= sx;
+      stars[i].oy *= sy;
+    }
+    clearTimeout(regenTimer);
+    regenTimer = setTimeout(function () {
+      stars = generateStars(canvas.width, canvas.height);
+    }, 200);
+  }
+
+  /* One cached radial-glow sprite per close star, built at its peak-twinkle
+     warm color. Stamped with drawImage + globalAlpha each frame instead of
+     allocating a fresh radial gradient per star per frame. */
+  function glowSpriteFor(s) {
+    if (s.glowSprite) return s.glowSprite;
+    const R = Math.ceil(s.radius * 3.5) + 1;
+    const c = document.createElement('canvas');
+    c.width = c.height = R * 2;
+    const g2 = c.getContext('2d');
+    const gr = 255;
+    const gg = Math.round(s.baseColor[1] + (208 - s.baseColor[1]) * 0.8);
+    const gb = Math.round(s.baseColor[2] * 0.1);
+    const grad = g2.createRadialGradient(R, R, 0, R, R, R);
+    grad.addColorStop(0, 'rgba(' + gr + ',' + gg + ',' + gb + ',1)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g2.fillStyle = grad;
+    g2.fillRect(0, 0, R * 2, R * 2);
+    s.glowSprite = c;
+    return c;
+  }
+
   function render() {
     // React re-injects the MVP markup on remount, which orphans the canvas
     // this closure captured at boot — leaving the visible one forever blank.
@@ -2345,31 +2392,39 @@ document.addEventListener('pointermove', (e) => {
 
       opacity = Math.min(1, Math.max(0, opacity));
 
-      // Soft glow for close stars (top ~7%): drawn before the star point
+      // Soft glow for close stars (top ~7%): a pre-rendered sprite stamped
+      // with globalAlpha. The old per-frame createRadialGradient allocated a
+      // gradient object for every glowing star on every frame — at this
+      // opacity (≤0.09) the sprite's fixed peak color is indistinguishable.
       if (s.isClose && s.twinkleSpeed !== null) {
         const glowOpacity = twinklePeak * 0.09;
         if (glowOpacity > 0.005) {
-          const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 3.5);
-          grad.addColorStop(0, `rgba(${r},${g},${b},${glowOpacity.toFixed(3)})`);
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.radius * 3.5, 0, Math.PI * 2);
-          ctx.fillStyle = grad;
-          ctx.fill();
+          const sp = glowSpriteFor(s);
+          ctx.globalAlpha = glowOpacity;
+          ctx.drawImage(sp, s.x - sp.width / 2, s.y - sp.height / 2);
+          ctx.globalAlpha = 1;
         }
       }
 
-      // Star point
+      // Star point — stable stars reuse a cached color string instead of
+      // building a fresh rgba() string (and reparsing it) every frame.
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${opacity.toFixed(3)})`;
+      if (s.isClose && s.twinkleSpeed !== null) {
+        ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+      } else {
+        if (!s.rgbStr) s.rgbStr = 'rgb(' + r + ',' + g + ',' + b + ')';
+        ctx.fillStyle = s.rgbStr;
+      }
+      ctx.globalAlpha = opacity;
       ctx.fill();
+      ctx.globalAlpha = 1;
     }
 
     requestAnimationFrame(render);
   }
 
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', onWindowResize);
   resize();
   render();
 })();

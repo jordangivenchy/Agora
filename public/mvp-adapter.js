@@ -133,7 +133,6 @@
       if (href === '#logout') window.dispatchEvent(new CustomEvent('agora:logout'));
       else if (href === '#settings') go('/settings');
       else if (href === '#profile') window.dispatchEvent(new CustomEvent('agora:profile'));
-      else if (href === '#debates') window.dispatchEvent(new CustomEvent('agora:debates'));
     });
   });
 
@@ -160,7 +159,7 @@
     }
   }
 
-  /* "View all →" opens the Explore page; leaderboard link opens Dashboard. */
+  /* "View all →" opens the Explore page. */
   document.querySelectorAll('.view-all').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
@@ -168,14 +167,6 @@
       if (explore) explore.click();
     });
   });
-  document.addEventListener('click', function (e) {
-    if (e.target && e.target.closest && e.target.closest('.elo-explore-link')) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.dispatchEvent(new CustomEvent('agora:dashboard'));
-    }
-  }, true);
-
   /* Create button opens the real CreateRoomModal (document-level capture
      fires before the MVP's own target listener, so we can intercept). */
   if (!window.__agoraCreateHooked) {
@@ -186,11 +177,6 @@
         e.stopPropagation();
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('agora:create'));
-      } else if (e.target.closest('.dashboard-btn')) {
-        // Open the app's real DashboardModal instead of the MVP's demo one.
-        e.stopPropagation();
-        e.preventDefault();
-        window.dispatchEvent(new CustomEvent('agora:dashboard'));
       } else {
         // Sidebar tabs that open real React pages.
         var tab = e.target.closest('[data-nav-id="trending"], [data-nav-id="communities"], [data-nav-id="news"]');

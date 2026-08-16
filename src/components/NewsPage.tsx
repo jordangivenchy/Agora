@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedNewsItem } from "@/lib/seed-content";
 
 interface Props {
@@ -99,12 +100,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
     })();
   }, [open, supabase]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  useEscapeClose(open, onClose);
 
   const pct = useMemo(() => {
     if (!daily) return { pro: 50, total: 0 };

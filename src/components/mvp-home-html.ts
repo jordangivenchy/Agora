@@ -52,9 +52,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <a class="avatar-menu-item" href="#profile" role="menuitem">
           <span class="avatar-menu-icon">👤</span>Profile
         </a>
-        <a class="avatar-menu-item" href="#debates" role="menuitem">
-          <span class="avatar-menu-icon">📋</span>My discussions
-        </a>
         <a class="avatar-menu-item" href="#settings" role="menuitem">
           <span class="avatar-menu-icon">⚙️</span>Settings
         </a>
@@ -243,23 +240,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <div class="glass-channel-list" id="subsChannelList"></div>
       </div>
 
-      <!-- Dashboard (hero nav item) — bar-chart preview, multicolor -->
-      <a class="sidebar-link dashboard-btn" href="#" data-nav-id="dashboard">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55);">Dashboard</span>
-          <span style="color:rgba(162,155,254,0.7);font-size:11px;">→</span>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:10px;align-items:flex-end;">
-          <div style="width:24px;height:22px;border-radius:6px;background:linear-gradient(180deg,rgba(142,249,252,0.6),rgba(142,249,252,0.22));border:0.5px solid rgba(142,249,252,0.35);"></div>
-          <div style="width:24px;height:35px;border-radius:6px;background:linear-gradient(180deg,rgba(142,252,157,0.6),rgba(142,252,157,0.22));border:0.5px solid rgba(142,252,157,0.35);"></div>
-          <div style="width:24px;height:28px;border-radius:6px;background:linear-gradient(180deg,rgba(252,252,142,0.6),rgba(252,252,142,0.22));border:0.5px solid rgba(252,252,142,0.35);"></div>
-          <div style="width:24px;height:40px;border-radius:6px;background:linear-gradient(180deg,rgba(252,208,142,0.6),rgba(252,208,142,0.22));border:0.5px solid rgba(252,208,142,0.35);"></div>
-          <div style="width:24px;height:32px;border-radius:6px;background:linear-gradient(180deg,rgba(204,142,252,0.6),rgba(204,142,252,0.22));border:0.5px solid rgba(204,142,252,0.35);"></div>
-        </div>
-      </a>
 
       <!-- Communities -->
-      <a class="sidebar-link" href="#" data-nav-id="communities" style="margin-top:8px;">
+      <a class="sidebar-link" href="#" data-nav-id="communities">
         <span class="nav-hover-shimmer"></span>
         <span class="nav-light-slit"></span>
         <div class="nav-light-beam"><div class="nav-light-beam-cone"></div><div class="nav-light-beam-center"></div><div class="nav-light-beam-glow"></div></div>

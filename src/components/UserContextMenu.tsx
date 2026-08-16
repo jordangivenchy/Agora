@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import { visibleActions, type MenuActionId } from "@/lib/userMenuPermissions";
 import {
   UserMenuCtx,
@@ -121,21 +122,16 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
   const close = useCallback(() => setMenu(null), []);
 
-  // Close on outside click / Escape.
+  useEscapeClose(!!menu, close);
+
+  // Close on outside click.
   useEffect(() => {
     if (!menu) return;
     function onDoc(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) close();
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-    }
     document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDoc);
   }, [menu, close]);
 
   // Clamp inside the viewport.

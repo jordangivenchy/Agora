@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedClip } from "@/lib/seed-content";
 
 interface Props {
@@ -126,14 +127,7 @@ export default function TrendingPage({ open, onClose }: Props) {
     if (open) load();
   }, [open, load]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") (activeShort ? setActiveShort(null) : onClose());
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, activeShort, onClose]);
+  useEscapeClose(open, () => (activeShort ? setActiveShort(null) : onClose()));
 
   const toggleHeart = useCallback((id: string) => {
     setHearted((h) => ({ ...h, [id]: !h[id] }));

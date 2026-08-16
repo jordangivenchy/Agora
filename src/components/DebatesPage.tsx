@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS } from "@/types/database";
 
 interface Props {
@@ -141,15 +142,7 @@ export default function DebatesPage({ open, onClose }: Props) {
     load();
   }, [supabase, load]);
 
-  // ESC
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  useEscapeClose(open, onClose);
 
   // Past debates = everything except not-yet-started scheduled ones (those are
   // shown in the Upcoming section).
