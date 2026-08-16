@@ -1737,7 +1737,7 @@ function init() {
 
   renderCarousel();
   renderSidebarChannels();
-  renderFriends();
+  // renderFriends() — React FriendsSection owns #friendsSection now.
   renderTopicButtons();
   renderTopicStrip();
   renderDebateGrid();
@@ -2346,6 +2346,12 @@ document.addEventListener('pointermove', (e) => {
       canvas = liveCanvas;
       ctx = canvas.getContext('2d');
       resize();
+    }
+
+    // Self-heal against missed resize events (embedded panes and some
+    // restore paths never fire one) — two int compares per frame.
+    if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+      onWindowResize();
     }
 
     // Smooth mouse lerp

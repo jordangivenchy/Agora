@@ -196,7 +196,7 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
           borderRadius: "50%",
           background: "linear-gradient(135deg,#60a5fa,#2563eb)",
           color: "#eff6ff",
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontWeight: 800,
           fontSize: 18,
           zIndex: 60,
@@ -226,12 +226,12 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
           <div className="flex items-center gap-2 mb-2">
             <span
               className="flex items-center justify-center"
-              style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#60a5fa,#2563eb)", color: "#eff6ff", fontSize: 12, fontFamily: "'Syne', sans-serif", fontWeight: 700 }}
+              style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#60a5fa,#2563eb)", color: "#eff6ff", fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
             >
               A
             </span>
             <div>
-              <p className="m-0 text-[12px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>Agora</p>
+              <p className="m-0 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>Agora</p>
               <p className="m-0 text-[9px]" style={{ color: "#8b8b94" }}>
                 neutral fact-checks with sources — both sides see my answers
               </p>

@@ -7,9 +7,11 @@
 import { useEffect, useRef } from "react";
 import type { Track } from "livekit-client";
 import type { VideoTile } from "./useAgoraCall";
+import { useUserMenu } from "../userMenuContext";
 
 function Tile({ tile }: { tile: VideoTile }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const { openUserMenu } = useUserMenu();
 
   useEffect(() => {
     const host = hostRef.current;
@@ -27,7 +29,15 @@ function Tile({ tile }: { tile: VideoTile }) {
   return (
     <div className="ag-video-tile" title={tile.username}>
       <div ref={hostRef} className="ag-video-host" />
-      <span className="ag-video-name">
+      <span
+        className="ag-video-name"
+        style={tile.local ? undefined : { cursor: "pointer" }}
+        onClick={
+          tile.local
+            ? undefined
+            : (e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: tile.identity, username: tile.username })
+        }
+      >
         {tile.local ? "You" : tile.username}
       </span>
     </div>

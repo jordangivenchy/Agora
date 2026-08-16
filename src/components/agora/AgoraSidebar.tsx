@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { useUserMenu } from "../userMenuContext";
 import type { User } from "@supabase/supabase-js";
 
 interface Message {
@@ -59,6 +60,7 @@ const CHAT_RULES = [
 const CHAT_JOINED_KEY = "agora-chat-joined";
 
 export default function AgoraSidebar({ roomId, currentUser }: Props) {
+  const { openUserMenu } = useUserMenu();
   const [supabase] = useState(() => createClient());
   const [tab, setTab] = useState<"chat" | "qa">("chat");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -152,12 +154,27 @@ export default function AgoraSidebar({ roomId, currentUser }: Props) {
                 const name = msg.user?.username || "User";
                 return (
                   <div key={msg.id} className="ag-chat-msg">
-                    <div className="ag-chat-avatar" style={{ background: getUserColor(msg.user_id) }}>
-                      {name.charAt(0).toUpperCase()}
+                    <div
+                      className="ag-chat-avatar"
+                      style={{ background: getUserColor(msg.user_id), overflow: "hidden", cursor: "pointer" }}
+                      onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
+                    >
+                      {msg.user?.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={msg.user.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        name.charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div className="ag-chat-body">
                       <div className="ag-chat-meta">
-                        <span className="ag-chat-name">{name}</span>
+                        <span
+                          className="ag-chat-name"
+                          style={{ cursor: "pointer" }}
+                          onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
+                        >
+                          {name}
+                        </span>
                         <span className="ag-chat-time">{fmtTime(msg.created_at)}</span>
                       </div>
                       <div className="ag-chat-text">{msg.content}</div>

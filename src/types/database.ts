@@ -89,7 +89,6 @@ export interface QueueEntry {
 
 export const TOPICS = [
   { key: "politics-law", label: "Politics & Law", emoji: "⚖️", color: "#4a9eff" },
-  { key: "ethics", label: "Ethics", emoji: "🙏", color: "#fd79a8" },
   { key: "sports", label: "Sports", emoji: "🏆", color: "#fd9644" },
   { key: "culture", label: "Culture", emoji: "🎭", color: "#e056b8" },
   { key: "economics", label: "Economics", emoji: "💰", color: "#00b894" },

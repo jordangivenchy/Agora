@@ -10,8 +10,10 @@
      suspended, rate-limited by trigger)
    Guests can read everything; any interaction routes to /login. */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { useUserMenu } from "./userMenuContext";
+import UserAvatar from "./UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
 
 interface Props {
@@ -120,6 +122,26 @@ function VoteBox({
 }
 
 export default function CommunitiesPage({ open, onClose }: Props) {
+  const { openUserMenu } = useUserMenu();
+
+  /* @author → unified user context menu (needs an id; system posts skip it). */
+  const authorSpan = (authorId: string | null, username: string) =>
+    authorId ? (
+      <span
+        onClick={(e) => {
+          e.stopPropagation();
+          openUserMenu({ x: e.clientX, y: e.clientY }, { userId: authorId, username });
+        }}
+        className="cursor-pointer inline-flex items-center gap-1"
+        style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
+      >
+        <UserAvatar size={14} username={username} avatarUrl={avatars[authorId]} seed={authorId} />
+        @{username}
+      </span>
+    ) : (
+      <>@{username}</>
+    );
+
   const [supabase] = useState(() => createClient());
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -176,6 +198,25 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     );
   }, [supabase]);
 
+  /* The posts/comments RPCs don't return avatars; fetch them per author id
+     once and cache — profile photos then appear next to every author name. */
+  const [avatars, setAvatars] = useState<Record<string, string | null>>({});
+  const requestedAvatars = useRef<Set<string>>(new Set());
+  const fetchAvatars = useCallback(async (ids: (string | null)[]) => {
+    const missing = [...new Set(ids.filter((id): id is string => !!id))]
+      .filter((id) => !requestedAvatars.current.has(id));
+    if (!missing.length) return;
+    missing.forEach((id) => requestedAvatars.current.add(id));
+    const { data } = await supabase.from("users").select("id, avatar_url").in("id", missing);
+    if (data) {
+      setAvatars((m) => {
+        const next = { ...m };
+        for (const u of data as { id: string; avatar_url: string | null }[]) next[u.id] = u.avatar_url;
+        return next;
+      });
+    }
+  }, [supabase]);
+
   const loadPosts = useCallback(async () => {
     setLoadingPosts(true);
     const { data, error: err } = await supabase.rpc("get_community_posts", {
@@ -186,13 +227,17 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     setLoadingPosts(false);
     if (err) { setError(err.message); return; }
     setError(null);
-    setPosts((data ?? []) as Post[]);
-  }, [supabase, selected, sort]);
+    const rows = (data ?? []) as Post[];
+    setPosts(rows);
+    fetchAvatars(rows.map((p) => p.author_id));
+  }, [supabase, selected, sort, fetchAvatars]);
 
   const loadComments = useCallback(async (postId: string) => {
     const { data } = await supabase.rpc("get_post_comments", { p_post: postId });
-    setComments((data ?? []) as Comment[]);
-  }, [supabase]);
+    const rows = (data ?? []) as Comment[];
+    setComments(rows);
+    fetchAvatars(rows.map((c) => c.author_id));
+  }, [supabase, fetchAvatars]);
 
   useEffect(() => { if (open) loadCommunities(); }, [open, loadCommunities]);
   useEffect(() => { if (open) loadPosts(); }, [open, loadPosts]);
@@ -401,7 +446,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 </button>
               )}
               <span className="text-[11px]" style={{ color: "#8b8b94" }}>
-                @{c.author_username} · {timeAgo(c.created_at)}
+                {authorSpan(c.author_id, c.author_username)} · {timeAgo(c.created_at)}
               </span>
               {isCollapsed && hidden > 0 && (
                 <span className="text-[10px]" style={{ color: "#c9b06a" }}>
@@ -499,7 +544,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
 
         {/* header */}
         <div className="flex items-center gap-3.5 mb-4 flex-wrap">
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
             Communities
           </span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>
@@ -577,7 +622,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
               >
                 <span
                   className="flex items-center justify-center shrink-0"
-                  style={{ width: 26, height: 26, borderRadius: 8, background: c.color, color: "#fff", fontSize: 12, fontFamily: "'Syne', sans-serif", fontWeight: 700 }}
+                  style={{ width: 26, height: 26, borderRadius: 8, background: c.color, color: "#fff", fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
                 >
                   {c.name.charAt(0).toUpperCase()}
                 </span>
@@ -625,9 +670,9 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                   <VoteBox post={openPost} onVote={vote} size={14} />
                   <div className="flex-1 min-w-0">
                     <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-                      {openPost.community_name} · @{openPost.author_username} · {timeAgo(openPost.created_at)}
+                      {openPost.community_name} · {authorSpan(openPost.author_id, openPost.author_username)} · {timeAgo(openPost.created_at)}
                     </p>
-                    <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                    <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                       {openPost.title}
                     </h2>
                     {openPost.body && (
@@ -801,7 +846,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
                         {selected === "all" && <><span style={{ color: "#c9b06a" }}>{p.community_name}</span> · </>}
-                        @{p.author_username} · {timeAgo(p.created_at)}
+                        {authorSpan(p.author_id, p.author_username)} · {timeAgo(p.created_at)}
                       </p>
                       <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#f5f5f0" }}>
                         {p.title}

@@ -19,7 +19,9 @@ export type { MenuRoomContext, MenuChatContext, OpenMenuOptions } from "./userMe
 
 const ROW_META: Record<MenuActionId, { emoji: string; label: string; danger?: boolean; soon?: boolean }> = {
   view_profile:     { emoji: "👤", label: "View profile" },
-  whisper:          { emoji: "💬", label: "Whisper", soon: true },
+  message:          { emoji: "💬", label: "Message" },
+  favorite:         { emoji: "⭐", label: "Add to favorites" }, // label swapped dynamically
+  invite_room:      { emoji: "📨", label: "Invite to this room" },
   follow:           { emoji: "🔔", label: "Follow" }, // label swapped dynamically
   mute_audio:       { emoji: "🔇", label: "Mute their audio" },
   hide_camera:      { emoji: "📷", label: "Hide their camera" },
@@ -53,6 +55,7 @@ interface Relationship {
   following: boolean;
   followedBy: boolean;
   blocked: boolean;
+  favorite: boolean;
 }
 
 /* ── Provider ───────────────────────────────────────────────── */
@@ -105,15 +108,17 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
       // Relationship data loads async; rows depending on it enable when ready.
       (async () => {
-        const [{ data: prof }, { data: blocks }] = await Promise.all([
+        const [{ data: prof }, { data: blocks }, { data: favs }] = await Promise.all([
           supabase.rpc("get_user_profile", { p_user: target.userId }),
           supabase.from("user_blocks").select("blocked_id").eq("blocked_id", target.userId),
+          supabase.from("user_favorites").select("favorite_id").eq("favorite_id", target.userId),
         ]);
         const row = Array.isArray(prof) ? prof[0] : prof;
         setRel({
           following: !!row?.is_following,
           followedBy: !!row?.is_followed_by,
           blocked: !!blocks && blocks.length > 0,
+          favorite: !!favs && favs.length > 0,
         });
       })();
     },
@@ -163,8 +168,45 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
         setProfileUserId(target.userId);
         break;
 
-      case "whisper":
-        return; // disabled row; no-op
+      case "message":
+        window.dispatchEvent(
+          new CustomEvent("agora:dm", { detail: { userId: target.userId, username: target.username } })
+        );
+        break;
+
+      case "favorite": {
+        if (!me) return;
+        if (rel?.favorite) {
+          await supabase.from("user_favorites").delete().eq("user_id", me.id).eq("favorite_id", target.userId);
+          showToast(`Removed @${target.username} from favorites`);
+        } else {
+          const { error } = await supabase
+            .from("user_favorites")
+            .insert({ user_id: me.id, favorite_id: target.userId });
+          if (error) showToast("Failed: " + error.message);
+          else showToast(`⭐ @${target.username} added to favorites`);
+        }
+        break;
+      }
+
+      case "invite_room": {
+        const m = window.location.pathname.match(/^\/(?:agora|rooms)\/([0-9a-f-]{36})/i);
+        if (!m) return;
+        const { error } = await supabase.rpc("invite_friend_to_room", {
+          p_user: target.userId,
+          p_room: m[1],
+        });
+        if (error) {
+          showToast(
+            error.message.includes("not_friends")
+              ? "You can only invite friends (you both follow each other)."
+              : "Couldn't send the invite."
+          );
+        } else {
+          showToast(`Invite sent to @${target.username}`);
+        }
+        break;
+      }
 
       case "follow": {
         if (!rel) return;
@@ -326,7 +368,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
     ? visibleActions({
         signedIn: !!me,
         isSelf: me?.id === menu.target.userId,
-        inRoom: !!menu.opts.room,
+        inRoom: !!menu.opts.room || /^\/(?:agora|rooms)\/[0-9a-f-]{36}/i.test(window.location.pathname),
         targetIsDebater: !!menu.opts.room?.targetIsDebater,
         targetIsSpectator: !!menu.opts.room?.targetIsSpectator,
         isHost: !!menu.opts.room?.isHost,
@@ -339,6 +381,10 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
   function rowLabel(id: MenuActionId): string {
     if (!menu) return ROW_META[id].label;
+    if (id === "favorite") {
+      if (!rel) return "Favorites…";
+      return rel.favorite ? "Remove from favorites" : "Add to favorites";
+    }
     if (id === "follow") {
       if (!rel) return "Follow…";
       if (rel.following) return "Unfollow";
@@ -353,7 +399,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
   function rowDisabled(id: MenuActionId): boolean {
     if (ROW_META[id].soon) return true;
-    if ((id === "follow" || id === "block") && !rel) return true;
+    if ((id === "follow" || id === "block" || id === "favorite") && !rel) return true;
     return false;
   }
 

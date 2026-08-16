@@ -15,8 +15,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 <!-- ─── TOP NAV ─── -->
 <nav class="nav">
   <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
-  <a class="nav-logo" href="#">
-    <img src="/logo.png" alt="AgoraSphere">
+  <a class="nav-logo" href="#" aria-label="AgoraSphere">
+    <span class="nav-logo-text">Agora<span class="nav-logo-sphere">Sphere</span></span>
   </a>
   <div class="nav-search agora-search-shell" id="navSearchWrap">
     <div class="search-active-indicator"></div>
@@ -90,7 +90,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <span class="filter-group-title">Category</span>
         <button class="filter-pill active" data-filter-group="category" onclick="_dsFilter(this)">All</button>
         <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Politics</button>
-        <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Ethics</button>
         <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Economics</button>
         <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Science &amp; Tech</button>
         <button class="filter-pill" data-filter-group="category" onclick="_dsFilter(this)">Philosophy</button>
@@ -357,7 +356,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <div class="explore-filter-pills" id="epCategoryFilter">
         <button class="explore-pill active" onclick="_epFilter(this,'category')">All</button>
         <button class="explore-pill" onclick="_epFilter(this,'category')">Politics</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">Ethics</button>
         <button class="explore-pill" onclick="_epFilter(this,'category')">Economics</button>
         <button class="explore-pill" onclick="_epFilter(this,'category')">Science &amp; Tech</button>
         <button class="explore-pill" onclick="_epFilter(this,'category')">Philosophy</button>

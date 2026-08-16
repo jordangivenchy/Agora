@@ -340,7 +340,7 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard }: P
                         width: 36,
                         height: 36,
                         background: avatarColor(f.username),
-                        fontFamily: "'Syne', sans-serif",
+                        fontFamily: "'Space Grotesk', sans-serif",
                         fontSize: 11,
                         fontWeight: 600,
                         boxShadow: "0 2px 8px rgba(0,0,0,0.3)",

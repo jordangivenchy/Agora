@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Wordmark from "@/components/Wordmark";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { User } from "@supabase/supabase-js";
@@ -188,7 +189,7 @@ export default function Navbar({
     >
       {/* Logo */}
       <a href="/" className="flex items-center gap-2.5 shrink-0 no-underline">
-        <img src="/logo.png" alt="AgoraSphere" className="h-[22px] w-auto" />
+        <Wordmark size={22} />
       </a>
 
       {/* Search */}
@@ -307,7 +308,7 @@ export default function Navbar({
                       width: 32,
                       height: 32,
                       background: avatarColor(u.username),
-                      fontFamily: "'Syne', sans-serif",
+                      fontFamily: "'Space Grotesk', sans-serif",
                       fontWeight: 700,
                       fontSize: 11,
                     }}
@@ -432,7 +433,7 @@ export default function Navbar({
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm"
                     style={{
                       background: "var(--accent-purple)",
-                      fontFamily: "'Syne', sans-serif",
+                      fontFamily: "'Space Grotesk', sans-serif",
                       fontWeight: 700,
                     }}
                   >

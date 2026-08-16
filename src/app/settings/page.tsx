@@ -123,7 +123,7 @@ function SectionCard({ title, sub, children }: { title: string; sub?: string; ch
   return (
     <div style={card} className="mb-4 overflow-hidden">
       <div className="px-4 pt-4 pb-1">
-        <p className="m-0 text-[14px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
+        <p className="m-0 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
           {title}
         </p>
         {sub && <p className="m-0 mt-0.5 text-[11px]" style={{ color: "#8b8b94" }}>{sub}</p>}
@@ -362,7 +362,7 @@ export default function SettingsPage() {
             <div className="flex items-center gap-3.5 px-4 py-3">
               <span
                 className="flex items-center justify-center shrink-0 overflow-hidden"
-                style={{ width: 52, height: 52, borderRadius: "50%", background: "#2c5382", color: "#fff", fontSize: 20, fontFamily: "'Syne', sans-serif", fontWeight: 700 }}
+                style={{ width: 52, height: 52, borderRadius: "50%", background: "#2c5382", color: "#fff", fontSize: 20, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
               >
                 {profile.avatar_url
                   ? // eslint-disable-next-line @next/next/no-img-element
@@ -550,7 +550,7 @@ export default function SettingsPage() {
         return (
           <div style={{ ...card, border: "0.5px solid rgba(239,68,68,0.35)" }} className="mb-4 overflow-hidden">
             <div className="px-4 pt-4 pb-1">
-              <p className="m-0 text-[14px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#fca5a5" }}>
+              <p className="m-0 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#fca5a5" }}>
                 Delete account
               </p>
               <p className="m-0 mt-1 text-[11px] leading-relaxed" style={{ color: "#9a9aa2" }}>
@@ -629,7 +629,7 @@ export default function SettingsPage() {
           <a href="/" className="hidden md:inline-block" style={{ ...btnGhost, padding: "6px 12px", textDecoration: "none" }}>
             ← Home
           </a>
-          <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
+          <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
             {mobilePanelOpen ? activeMeta?.label : "Settings"}
           </h1>
           <span

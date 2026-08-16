@@ -180,7 +180,7 @@ body {
 }
 
 .stage-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 16px;
   font-weight: 800;
   color: #fff;
@@ -212,7 +212,7 @@ body {
 .live-badge-stage {
   background: #e84040;
   color: #fff;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -311,7 +311,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 44px;
   font-weight: 800;
   color: rgba(255,255,255,0.12);
@@ -922,7 +922,7 @@ body {
   flex-shrink: 0;
 }
 .chat-title-text {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: rgba(238,238,245,0.9);
@@ -1020,7 +1020,7 @@ body {
 .notes-titlebar:active { cursor: grabbing; }
 
 .notes-title-text {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 800;
   color: #fff;
@@ -1113,7 +1113,7 @@ body {
 }
 
 .leave-modal-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: #fff;
@@ -1219,7 +1219,7 @@ body {
 }
 
 .join-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: rgba(238,238,245,0.9);
@@ -1287,7 +1287,7 @@ body {
 }
 
 .join-btn-label {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 18px;
   font-weight: 800;
 }

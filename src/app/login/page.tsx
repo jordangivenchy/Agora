@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Wordmark from "@/components/Wordmark";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
@@ -180,7 +181,7 @@ export default function LoginPage() {
       <main className="relative flex flex-col items-center w-full" style={{ maxWidth: "400px" }}>
         {/* Brand */}
         <a href="/" className="no-underline mb-8 flex items-center gap-2.5">
-          <img src="/logo.png" alt="AgoraSphere" className="h-[26px] w-auto" />
+          <Wordmark size={26} />
         </a>
 
         {/* Card */}

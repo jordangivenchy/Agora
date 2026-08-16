@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase-browser";
 import type { QueueEntry } from "@/types/database";
 import type { User } from "@supabase/supabase-js";
+import { useUserMenu } from "./userMenuContext";
+import UserAvatar from "./UserAvatar";
 
 interface Props {
   queue: QueueEntry[];
@@ -12,6 +14,23 @@ interface Props {
 
 export default function QueuePanel({ queue, roomId, currentUser }: Props) {
   const supabase = createClient();
+  const { openUserMenu } = useUserMenu();
+
+  const nameSpan = (entry: QueueEntry) => {
+    const username = (entry.user as { username?: string })?.username;
+    if (!username) return <span>User</span>;
+    const avatarUrl = (entry.user as { avatar_url?: string | null })?.avatar_url;
+    return (
+      <span
+        onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: entry.user_id, username })}
+        className="cursor-pointer inline-flex items-center gap-1.5"
+        style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
+      >
+        <UserAvatar size={16} username={username} avatarUrl={avatarUrl} seed={entry.user_id} />
+        {username}
+      </span>
+    );
+  };
 
   const proQueue = queue.filter((q) => q.stance === "PRO");
   const conQueue = queue.filter((q) => q.stance === "CON");
@@ -54,7 +73,7 @@ export default function QueuePanel({ queue, roomId, currentUser }: Props) {
             {proQueue.map((entry, i) => (
               <div key={entry.id} className="flex items-center gap-2 text-xs text-text-muted">
                 <span className="text-text-muted">#{i + 1}</span>
-                <span>{(entry.user as { username?: string })?.username || "User"}</span>
+                {nameSpan(entry)}
               </div>
             ))}
           </div>
@@ -68,7 +87,7 @@ export default function QueuePanel({ queue, roomId, currentUser }: Props) {
             {conQueue.map((entry, i) => (
               <div key={entry.id} className="flex items-center gap-2 text-xs text-text-muted">
                 <span className="text-text-muted">#{i + 1}</span>
-                <span>{(entry.user as { username?: string })?.username || "User"}</span>
+                {nameSpan(entry)}
               </div>
             ))}
           </div>

@@ -41,6 +41,19 @@ export interface ScreenFeeds {
   con?: ScreenFeed | null;
 }
 
+/** Whoever holds a stage screen when their camera is off — the screen shows
+    their profile photo (or an initial glyph) instead of the placeholder. */
+export interface ScreenOccupant {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface ScreenOccupants {
+  pro?: ScreenOccupant | null;
+  con?: ScreenOccupant | null;
+}
+
 export type AgoraView = "audience" | "speaker";
 
 interface Props {
@@ -50,6 +63,8 @@ interface Props {
   view: AgoraView;
   /** Live camera feeds for the stage screens (pro = frame-left, con = right). */
   feeds?: ScreenFeeds;
+  /** Screen holders without live video — profile card instead of placeholder. */
+  occupants?: ScreenOccupants;
   /** Speaker queue, front first (mic holder excluded). Members leave their
       seats and stand in the center aisle, closest-to-mic = next. */
   queue?: SeatedPerson[];
@@ -639,7 +654,6 @@ interface HoloSlot {
   side: "pro" | "con";
   panel: THREE.Mesh;
   baseMat: THREE.MeshBasicMaterial;
-  silhouette: THREE.Group;
 }
 
 /* Plane aspect used for cover-cropping live video onto the screens. */
@@ -677,41 +691,40 @@ function buildHoloScreens(scene: THREE.Scene): {
       screen.add(bar);
     }
 
-    /* Placeholder occupant — an empty-video-call silhouette so the panel
-       reads as "a debater goes here": head, shoulders, and a nameplate
-       bar, tinted by side. The camera looks toward +z, so world +x is
-       frame-left: +x carries PRO purple, −x carries CON blue, matching
-       the HTML rail below. */
-    const tint = sign > 0 ? 0xa78bfa : 0x7ab8ff;
-    const figMat = new THREE.MeshBasicMaterial({ color: tint });
-    /* Children inherit the group's 180° turn, so local +z already faces
-       the viewer — no extra rotation on the flat shapes. Head and
-       shoulders are spaced apart (classic avatar-glyph gap) and sit at
-       different depths, so the two shapes never intersect. The whole
-       silhouette lives in its own group so a live camera feed can hide
-       it and take over the panel. */
-    const silhouette = new THREE.Group();
-    const head = new THREE.Mesh(new THREE.CircleGeometry(1.4, 28), figMat);
-    head.position.set(0, 2.0, 0.08);
-    silhouette.add(head);
-    const shoulders = new THREE.Mesh(new THREE.CircleGeometry(2.6, 28, 0, Math.PI), figMat);
-    shoulders.position.set(0, -2.1, 0.07);
-    silhouette.add(shoulders);
-    const plate = new THREE.Mesh(
-      new THREE.BoxGeometry(4.2, 0.55, 0.04),
-      new THREE.MeshBasicMaterial({ color: 0x1c1c1f, transparent: true, opacity: 0.9 })
-    );
-    plate.position.set(0, -3.3, 0.07);
-    silhouette.add(plate);
-    const plateDot = new THREE.Mesh(
-      new THREE.CircleGeometry(0.14, 12),
-      new THREE.MeshBasicMaterial({ color: tint })
-    );
-    plateDot.position.set(-1.6, -3.3, 0.1);
-    silhouette.add(plateDot);
-    screen.add(silhouette);
+    /* Empty-seat state — same dark card background as an occupant's
+       profile card, with a dashed grey ring and "?" (matching the HTML
+       rail's "Open seat" chip). Drawn once into the base material's
+       texture; occupant cards and live video simply replace the material. */
+    {
+      const canvas = document.createElement("canvas");
+      canvas.width = 760;
+      canvas.height = 440;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#0a0c12";
+      ctx.fillRect(0, 0, 760, 440);
+      const cx = 380;
+      const cy = 205;
+      const r = 104;
+      ctx.strokeStyle = "rgba(255,255,255,0.28)";
+      ctx.lineWidth = 5;
+      ctx.setLineDash([14, 12]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.font = "700 92px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("?", cx, cy + 4);
+      const emptyTex = new THREE.CanvasTexture(canvas);
+      emptyTex.colorSpace = THREE.SRGBColorSpace;
+      baseMat.color.set(0xffffff);
+      baseMat.map = emptyTex;
+      baseMat.needsUpdate = true;
+    }
 
-    slots.push({ side: sign > 0 ? "pro" : "con", panel, baseMat, silhouette });
+    slots.push({ side: sign > 0 ? "pro" : "con", panel, baseMat });
 
     // Centers pushed apart so the doubled panels sit edge to edge with a
     // slim central gap, rising over the scaenae crest like projections.
@@ -923,6 +936,7 @@ export default function AgoraScene3D({
   viewerCount,
   view,
   feeds,
+  occupants,
   queue,
   micHolder,
   micLive,
@@ -945,6 +959,106 @@ export default function AgoraScene3D({
   feedsRef.current = feeds;
   const hasLiveFeedRef = useRef(false);
 
+  /* Profile cards for screen holders with no live camera. Drawn onto a
+     CanvasTexture: initial glyph immediately, photo swapped in when it
+     loads. Keyed on id+avatar so identical props are a no-op. */
+  const occupantsRef = useRef<ScreenOccupants | undefined>(occupants);
+  occupantsRef.current = occupants;
+  const activeCardsRef = useRef<
+    Map<string, { key: string; tex: THREE.CanvasTexture; mat: THREE.MeshBasicMaterial }>
+  >(new Map());
+
+  const clearCard = (slot: HoloSlot) => {
+    const card = activeCardsRef.current.get(slot.side);
+    if (!card) return;
+    card.tex.dispose();
+    card.mat.dispose();
+    if (slot.panel.material === card.mat) slot.panel.material = slot.baseMat;
+    activeCardsRef.current.delete(slot.side);
+  };
+
+  const drawCard = (
+    ctx: CanvasRenderingContext2D,
+    o: ScreenOccupant,
+    tint: string,
+    img?: HTMLImageElement
+  ) => {
+    const W = 760;
+    const H = 440;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#0a0c12";
+    ctx.fillRect(0, 0, W, H);
+    const cx = W / 2;
+    const cy = 178;
+    const r = 104;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.closePath();
+    if (img) {
+      ctx.clip();
+      const s = Math.max((r * 2) / img.width, (r * 2) / img.height);
+      ctx.drawImage(img, cx - (img.width * s) / 2, cy - (img.height * s) / 2, img.width * s, img.height * s);
+    } else {
+      ctx.fillStyle = tint;
+      ctx.fill();
+      ctx.fillStyle = "rgba(10,12,18,0.85)";
+      ctx.font = "700 96px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText((o.username || "?").charAt(0).toUpperCase(), cx, cy + 6);
+    }
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = tint;
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "700 44px 'Space Grotesk', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(o.username, cx, 356);
+  };
+
+  const applyOccupants = () => {
+    const slots = holoSlotsRef.current;
+    if (!slots) return;
+    for (const slot of slots) {
+      const wanted = occupantsRef.current?.[slot.side] ?? null;
+      const hasVideo = activeFeedsRef.current.has(slot.side);
+      const key = wanted ? `${wanted.id}:${wanted.avatarUrl ?? ""}` : "";
+      const card = activeCardsRef.current.get(slot.side);
+      if (card && (hasVideo || !wanted || card.key !== key)) clearCard(slot);
+      if (!wanted || hasVideo || activeCardsRef.current.has(slot.side)) continue;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 760;
+      canvas.height = 440;
+      const ctx = canvas.getContext("2d")!;
+      const tint = slot.side === "pro" ? "#a78bfa" : "#7ab8ff";
+      drawCard(ctx, wanted, tint);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.center.set(0.5, 0.5);
+      const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, toneMapped: false });
+      slot.panel.material = mat;
+      activeCardsRef.current.set(slot.side, { key, tex, mat });
+
+      if (wanted.avatarUrl) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          if (activeCardsRef.current.get(slot.side)?.key !== key) return;
+          drawCard(ctx, wanted, tint, img);
+          tex.needsUpdate = true;
+        };
+        img.src = wanted.avatarUrl;
+      }
+    }
+  };
+
   const clearFeed = (slot: HoloSlot) => {
     const active = activeFeedsRef.current.get(slot.side);
     if (!active) return;
@@ -953,7 +1067,6 @@ export default function AgoraScene3D({
     active.tex.dispose();
     active.mat.dispose();
     slot.panel.material = slot.baseMat;
-    slot.silhouette.visible = true;
     activeFeedsRef.current.delete(slot.side);
   };
 
@@ -975,10 +1088,9 @@ export default function AgoraScene3D({
       const tex = new THREE.VideoTexture(el);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.center.set(0.5, 0.5);
-      /* The panels are viewed from their back face (the group is turned
-         180° toward the audience), which mirrors the image — flip X so
-         faces and text read correctly. */
-      tex.repeat.x = -1;
+      /* No X flip: canvas nameplate text proved the speaker-view camera
+         sees these panels unmirrored (a -1 flip rendered text backwards),
+         so video needs no correction either. */
       /* Cover-crop once the video reports its size. */
       const fit = () => {
         const vw = el.videoWidth;
@@ -1002,15 +1114,17 @@ export default function AgoraScene3D({
         toneMapped: false,
       });
       slot.panel.material = mat;
-      slot.silhouette.visible = false;
       activeFeedsRef.current.set(slot.side, { key: wanted.key, track: wanted.track, el, tex, mat });
     }
     hasLiveFeedRef.current = activeFeedsRef.current.size > 0;
+    applyOccupants(); // cards fill whichever screens video left alone
   };
   const applyFeedsRef = useRef(applyFeeds);
   applyFeedsRef.current = applyFeeds;
   const clearFeedRef = useRef(clearFeed);
   clearFeedRef.current = clearFeed;
+  const clearCardRef = useRef(clearCard);
+  clearCardRef.current = clearCard;
 
   /* ── Speaker queue members ────────────────────────────────────────
      One Group per person, diffed by id: joining teleports you in (short
@@ -1114,6 +1228,15 @@ export default function AgoraScene3D({
   useEffect(() => {
     applyFeedsRef.current();
   }, [feedKey]);
+
+  /* Occupant cards re-apply on holder/avatar change (applyFeeds runs the
+     card pass too, so feed changes are already covered). */
+  const occKey = [occupants?.pro, occupants?.con]
+    .map((o) => (o ? `${o.id}:${o.avatarUrl ?? ""}:${o.username}` : ""))
+    .join("|");
+  useEffect(() => {
+    applyFeedsRef.current();
+  }, [occKey]);
 
   /* The long-lived world (renderer, scene, camera, render loop) is built once
      per room. The crowd is the only data-driven part, so it lives in its own
@@ -1317,7 +1440,10 @@ export default function AgoraScene3D({
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
-      holo.slots.forEach((slot) => clearFeedRef.current(slot));
+      holo.slots.forEach((slot) => {
+        clearFeedRef.current(slot);
+        clearCardRef.current(slot);
+      });
       holoSlotsRef.current = null;
       hasLiveFeedRef.current = false;
       queueGroupRef.current = null;

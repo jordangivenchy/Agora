@@ -109,7 +109,7 @@ export default function FollowListModal({
         <div className="flex items-start justify-between mb-3">
           <h2
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Space Grotesk', sans-serif",
               fontSize: 16,
               fontWeight: 700,
               color: "var(--text-primary)",
@@ -218,7 +218,7 @@ export default function FollowListModal({
                     width: 36,
                     height: 36,
                     background: avatarColor(r.username),
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontWeight: 700,
                     fontSize: 13,
                   }}

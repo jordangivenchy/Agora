@@ -8,8 +8,10 @@
 export type MenuActionId =
   // standard
   | "view_profile"
-  | "whisper"
+  | "message"
   | "follow"
+  | "favorite"
+  | "invite_room"
   | "mute_audio"
   | "hide_camera"
   | "block"
@@ -73,7 +75,8 @@ export function visibleActions(p: MenuPermissionInput): MenuSections {
 
   if (!p.hideViewProfile) standard.push("view_profile");
   if (p.signedIn) {
-    standard.push("whisper", "follow");
+    standard.push("message", "follow", "favorite");
+    if (p.inRoom) standard.push("invite_room");
     // Local AV controls only make sense for someone publishing media.
     if (p.inRoom && p.targetIsDebater) {
       standard.push("mute_audio", "hide_camera");

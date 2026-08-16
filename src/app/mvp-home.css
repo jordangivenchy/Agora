@@ -374,7 +374,7 @@ body {
 .avatar-initial {
   position: relative;
   z-index: 2;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: rgba(255,255,255,0.92);
@@ -793,7 +793,7 @@ body {
   width: 34px; height: 34px;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px; font-weight: 700;
   flex-shrink: 0; color: white;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.18),
@@ -916,7 +916,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 600;
   color: white;
@@ -1149,7 +1149,7 @@ body {
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.06);
   margin-left: -8px;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 9px;
   font-weight: 600;
   color: white;
@@ -1231,7 +1231,7 @@ body {
 }
 
 /* ─── CAROUSEL ─── */
-.carousel-section { margin-bottom: 40px; }
+.carousel-section { margin-bottom: 18px; }
 
 /* News ticker row (NewsTicker.tsx portals into #newsTickerHost) */
 .hide-scrollbar { scrollbar-width: none; }
@@ -1282,7 +1282,7 @@ body {
   z-index: 10;
   background: var(--danger);
   color: white;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
@@ -1325,7 +1325,7 @@ body {
 }
 
 .carousel-motion {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: white;
@@ -1411,7 +1411,7 @@ a.carousel-watch-btn { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: white;
@@ -1419,7 +1419,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .panel-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: white;
@@ -1445,7 +1445,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .panel-stance {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 28px;
   font-weight: 800;
   padding: 4px 22px;
@@ -1524,7 +1524,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .browse-section { margin-bottom: 0; }
 
 .browse-heading {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 48px;
   font-weight: 800;
   background: linear-gradient(135deg, #FFB700, #FF7B00);
@@ -1662,7 +1662,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .btn-label {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
@@ -1740,7 +1740,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .strip-info { min-width: 0; }
 
 .strip-label {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
   display: block;
@@ -1815,7 +1815,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .strip-rising-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-primary);
@@ -1870,7 +1870,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .section-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
@@ -1942,7 +1942,7 @@ a.carousel-watch-btn { text-decoration: none; }
   top: 10px; left: 10px;
   background: var(--danger);
   color: white;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 9px;
   font-weight: 700;
   padding: 3px 8px;
@@ -1991,7 +1991,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .debate-card:hover .card-watch-overlay { opacity: 1; }
 
 .card-watch-label {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
   color: #1a0e00;
@@ -2005,7 +2005,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .card-body { padding: 12px; }
 
 .card-motion {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
@@ -2038,7 +2038,7 @@ a.carousel-watch-btn { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 8px;
   font-weight: 700;
   color: white;
@@ -2055,7 +2055,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .card-elo {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: var(--accent-purple-light);
@@ -2162,7 +2162,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .empty-icon { font-size: 40px; margin-bottom: 4px; }
 
 .empty-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
@@ -2188,7 +2188,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 .search-empty-icon { font-size: 32px; opacity: 0.5; }
 .search-empty-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: var(--text-muted);
@@ -2241,7 +2241,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .upcoming-info { min-width: 0; text-align: left; }
 
 .upcoming-motion {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
@@ -2277,7 +2277,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .elo-module-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
@@ -2328,7 +2328,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .elo-row:hover { background: rgba(255,255,255,0.03); }
 
 .elo-rank {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-dim);
@@ -2346,7 +2346,7 @@ a.carousel-watch-btn { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: white;
@@ -2356,7 +2356,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .elo-info { flex: 1; min-width: 0; }
 
 .elo-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
@@ -2380,7 +2380,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .elo-score {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: var(--accent-purple-light);
@@ -2479,7 +2479,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .room-live-badge {
   background: var(--danger);
   color: white;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 10px;
   font-weight: 700;
   padding: 3px 8px;
@@ -2497,7 +2497,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-motion {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
@@ -2608,7 +2608,7 @@ a.carousel-watch-btn { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 26px;
   font-weight: 700;
   color: white;
@@ -2618,7 +2618,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-debater-name-label {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: white;
@@ -2628,7 +2628,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-stance-badge {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -2661,7 +2661,7 @@ a.carousel-watch-btn { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 800;
   color: var(--text-muted);
@@ -2685,7 +2685,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-vote-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
@@ -2730,7 +2730,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-vote-bar-label {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 700;
 }
@@ -2760,7 +2760,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .room-vote-pct-dot.con { background: var(--con-color); }
 
 .room-vote-pct-num {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;
 }
@@ -2779,7 +2779,7 @@ a.carousel-watch-btn { text-decoration: none; }
   height: 44px;
   border-radius: 8px;
   border: 1.5px solid;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -2855,7 +2855,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-elo-stakes-val {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
   color: var(--accent-purple-light);
@@ -2881,7 +2881,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .room-feed-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
@@ -2926,7 +2926,7 @@ a.carousel-watch-btn { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 7px;
   font-weight: 700;
   color: white;
@@ -2934,7 +2934,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 .feed-arg-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-primary);
@@ -3030,7 +3030,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .toast-content { flex: 1; min-width: 0; }
 
 .toast-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-primary);
@@ -3358,7 +3358,7 @@ body { background: transparent; }
 
 /* ── BROWSE HEADING — amber-to-white gradient ── */
 .browse-heading {
-  font-family: 'Syne', sans-serif !important;
+  font-family: 'Space Grotesk', sans-serif !important;
   font-weight: 800 !important;
   font-size: clamp(36px, 4vw, 52px) !important;
   letter-spacing: -1.5px !important;
@@ -3410,7 +3410,7 @@ body { background: transparent; }
 .category-btn.active .btn-live-line { color: var(--v5-amber) !important; }
 .category-btn .btn-shadow { display: none !important; }
 
-/* ── SECTION HEADER — Syne 700 20px + amber underline ── */
+/* ── SECTION HEADER — Space Grotesk 700 20px + amber underline ── */
 .section-header {
   display: flex !important;
   justify-content: space-between !important;
@@ -3418,7 +3418,7 @@ body { background: transparent; }
   margin-bottom: 18px;
 }
 .section-title {
-  font-family: 'Syne', sans-serif !important;
+  font-family: 'Space Grotesk', sans-serif !important;
   font-size: 20px !important;
   font-weight: 700 !important;
   color: var(--v5-text) !important;
@@ -3475,7 +3475,7 @@ body { background: transparent; }
   flex-direction: column;
 }
 .tsb-topic-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: #eeeef5;
@@ -3658,7 +3658,7 @@ body { background: transparent; }
 
 /* ── Row 2: motion ── */
 .hc-motion {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 15px;
   font-weight: 600;
   color: #eeeef5;
@@ -3823,7 +3823,7 @@ body { background: transparent; }
   border-bottom: 1px solid var(--v5-divider) !important;
 }
 .elo-module-title {
-  font-family: 'Syne', sans-serif !important;
+  font-family: 'Space Grotesk', sans-serif !important;
   font-size: 16px !important; font-weight: 700 !important;
   color: var(--v5-text) !important;
 }
@@ -3855,7 +3855,7 @@ body { background: transparent; }
 .elo-rank.silver { color: rgba(238,238,245,0.5) !important; }
 .elo-rank.bronze { color: rgba(200,140,80,0.8) !important; }
 .elo-name {
-  font-family: 'Syne', sans-serif !important;
+  font-family: 'Space Grotesk', sans-serif !important;
   font-size: 13px !important; font-weight: 600 !important;
   color: var(--v5-text) !important;
 }
@@ -4444,7 +4444,7 @@ body { background: transparent; }
 }
 
 .explore-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 26px;
   font-weight: 700;
   margin: 0 0 5px;
@@ -5209,7 +5209,7 @@ body { background: transparent; }
   width: 32px; height: 32px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px; font-weight: 700;
   color: white;
   border: 1px solid rgba(255,255,255,0.14);
@@ -5383,7 +5383,7 @@ body { background: transparent; }
   position: absolute;
   top: 20px; left: 50%;
   transform: translateX(-50%);
-  font-family: 'Syne', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-weight: 700; font-size: 14px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -5460,7 +5460,7 @@ body { background: transparent; }
   display: none; z-index: 50;
 }
 .dash-node-card.visible { display: block; }
-.dash-node-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: white; margin-bottom: 4px; }
+.dash-node-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; color: white; margin-bottom: 4px; }
 .dash-node-card-date  { font-size: 10px; color: rgba(255,255,255,0.4); font-family: 'DM Mono','DM Sans',monospace; margin-bottom: 8px; }
 .dash-node-card-content { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5; margin-bottom: 10px; }
 .dash-node-card-status {
@@ -5739,3 +5739,78 @@ body { background: transparent; }
 #navSearchWrap {
   width: clamp(180px, calc(100vw - 520px), 480px) !important;
 }
+
+/* ═══ Text wordmark (replaces logo.png) — scales with the window ═══ */
+.nav-logo-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: clamp(16px, 2.05vw, 26px);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #f5f5f0;
+  white-space: nowrap;
+}
+.nav-logo-sphere { color: #3b6cf6; }
+
+/* ═══ Friend list actions (React friends panel) ═══ */
+.friend-action-btn {
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.75);
+  border-radius: 8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.friend-action-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); }
+.friend-action-btn--join {
+  background: rgba(34,197,94,0.15);
+  border-color: rgba(34,197,94,0.4);
+  color: #6fd3a0;
+  font-weight: 600;
+}
+.friend-action-btn--join:hover { background: rgba(34,197,94,0.28); }
+.friend-list-divider {
+  margin: 14px 14px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+}
+
+/* ═══ Unread DM badge on the nav Messages button ═══ */
+#nav-messages-btn { position: relative; }
+.nav-dm-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #7c6ef7;
+  color: white;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(5,5,8,0.9);
+}
+
+/* ═══ Friend list format polish ═══ */
+/* The 100px name cap predates the overlay's flex layout — let ellipsis
+   do the work against the real available width. */
+.friend-overlay-list .friend-name { max-width: none !important; }
+.friend-overlay-list .friend-info { gap: 2px !important; }
+.friend-overlay-list .friend-status { font-size: 11px !important; }
+.friend-overlay-list .friend-item { gap: 9px !important; padding: 8px 10px !important; }
+.friend-action-btn--join { height: 24px; padding: 0 9px; font-size: 10.5px; letter-spacing: 0.02em; }

@@ -5,7 +5,8 @@
    speaker-view toggle. The 2D data logic (who's on stage, who's seated)
    lives in the page; this component just lays it out. */
 
-import AgoraScene3D, { type AgoraView, type ScreenFeeds } from "./AgoraScene3D";
+import AgoraScene3D, { type AgoraView, type ScreenFeeds, type ScreenOccupants } from "./AgoraScene3D";
+import { useUserMenu } from "../userMenuContext";
 
 export interface StagePerson {
   id: string;
@@ -61,6 +62,7 @@ function colorFor(id: string): string {
 }
 
 function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: StagePerson[] }) {
+  const { openUserMenu } = useUserMenu();
   const speakingCount = speakers.filter((s) => s.speaking).length || speakers.length;
   /* No stance labels — the panel leads with who's actually on stage. */
   const title =
@@ -84,8 +86,19 @@ function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: Stage
       <div className="ag-stage-avatars">
         {speakers.length === 0 && <div className="ag-stage-avatar ag-stage-avatar--empty">?</div>}
         {speakers.slice(0, 4).map((s) => (
-          <div key={s.id} className="ag-stage-avatar" style={{ background: colorFor(s.id) }} title={s.username}>
-            {(s.username || "?").charAt(0).toUpperCase()}
+          <div
+            key={s.id}
+            className="ag-stage-avatar"
+            style={{ background: colorFor(s.id), overflow: "hidden", cursor: "pointer" }}
+            title={s.username}
+            onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: s.id, username: s.username })}
+          >
+            {s.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={s.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              (s.username || "?").charAt(0).toUpperCase()
+            )}
             {s.speaking && <span className="ag-speaking-ring" />}
           </div>
         ))}
@@ -105,10 +118,21 @@ function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: Stage
    stage, not toggling state. */
 function StripChip({ person }: { person: StagePerson }) {
   const role = person.stageRole ?? "speaker";
+  const { openUserMenu } = useUserMenu();
   return (
-    <div className={`ag-strip-chip role-${role}`} title={`${person.username} — ${role}`}>
-      <div className="ag-strip-avatar" style={{ background: colorFor(person.id) }}>
-        {(person.username || "?").charAt(0).toUpperCase()}
+    <div
+      className={`ag-strip-chip role-${role}`}
+      title={`${person.username} — ${role}`}
+      style={{ cursor: "pointer" }}
+      onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: person.id, username: person.username })}
+    >
+      <div className="ag-strip-avatar" style={{ background: colorFor(person.id), overflow: "hidden" }}>
+        {person.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={person.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          (person.username || "?").charAt(0).toUpperCase()
+        )}
         {person.speaking && <span className="ag-speaking-ring" />}
         {(role === "host" || role === "cohost") && (
           <span className={`ag-crown ${role}`} aria-label={role}>
@@ -140,6 +164,17 @@ export default function Amphitheater({
   micLive,
 }: Props) {
   const inSpeaker = view === "speaker";
+
+  /* Screen holders: the lead PRO/CON speakers own the stage screens, so a
+     camera-off debater shows their profile card instead of the placeholder. */
+  const occupants: ScreenOccupants = {
+    pro: proSpeakers[0]
+      ? { id: proSpeakers[0].id, username: proSpeakers[0].username, avatarUrl: proSpeakers[0].avatarUrl }
+      : null,
+    con: conSpeakers[0]
+      ? { id: conSpeakers[0].id, username: conSpeakers[0].username, avatarUrl: conSpeakers[0].avatarUrl }
+      : null,
+  };
   return (
     <div className="ag-theater">
       <AgoraScene3D
@@ -148,6 +183,7 @@ export default function Amphitheater({
         viewerCount={viewerCount}
         view={view}
         feeds={screenFeeds}
+        occupants={occupants}
         queue={speakerQueue}
         micHolder={micHolder}
         micLive={micLive}

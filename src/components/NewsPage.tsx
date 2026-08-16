@@ -128,7 +128,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
     >
       <div className="max-w-[900px] mx-auto px-6 py-5">
         <div className="flex items-center gap-3.5 mb-4">
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
           <span className="text-[12px] ml-auto whitespace-nowrap" style={{ color: "#8b8b94" }}>
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
@@ -148,7 +148,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
               </span>
               <span className="text-[11px]" style={{ color: "#8b8b94" }}>resets in {resetCountdown()}</span>
             </div>
-            <p className="m-0 mb-2.5" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 21, color: "#f7f3e8" }}>
+            <p className="m-0 mb-2.5" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 21, color: "#f7f3e8" }}>
               "{daily?.motion}"
             </p>
             <div className="flex items-center gap-3 mb-3 flex-wrap">

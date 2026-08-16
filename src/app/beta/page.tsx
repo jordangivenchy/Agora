@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BetaStarfield from "@/components/BetaStarfield";
+import Wordmark from "@/components/Wordmark";
 
 /* Closed-beta door: enter the invite code once, get a 30-day pass cookie
    (issued by /api/beta), and continue to wherever you were headed. */
@@ -58,15 +59,12 @@ function BetaGateForm() {
           textAlign: "center",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo.png"
-          alt="AgoraSphere"
-          style={{ height: 34, margin: "0 auto 18px", display: "block", mixBlendMode: "screen" }}
-        />
+        <div style={{ marginBottom: 18 }}>
+          <Wordmark size={27} />
+        </div>
         <h1
           style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 20,
             fontWeight: 700,
             color: "rgba(255,255,255,0.92)",

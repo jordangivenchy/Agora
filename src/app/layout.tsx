@@ -3,6 +3,8 @@ import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 import UserMenuProvider from "@/components/UserContextMenu";
 import SettingsBoot from "@/components/SettingsBoot";
+import PresenceBoot from "@/components/PresenceBoot";
+import MessagesDock from "@/components/messages/MessagesDock";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -31,11 +33,19 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+        {/* Literal font-family names ('Space Grotesk', 'DM Sans', 'DM Mono')
+            are referenced throughout the CSS, so these load under their real
+            names here — next/font's hashed families only cover the body
+            default. Space Grotesk tops out at 700; 800 usages clamp down. */}
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-full flex flex-col font-[family-name:var(--font-dm-sans)]">
         <SettingsBoot />
-        <UserMenuProvider>{children}</UserMenuProvider>
+        <PresenceBoot />
+        <UserMenuProvider>
+          {children}
+          <MessagesDock />
+        </UserMenuProvider>
       </body>
     </html>
   );

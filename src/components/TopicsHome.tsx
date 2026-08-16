@@ -16,6 +16,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
+import TopicIcon from "./topicIcons";
+import { useUserMenu } from "./userMenuContext";
+import UserAvatar from "./UserAvatar";
 
 interface Props {
   container: HTMLElement | null;
@@ -42,8 +45,8 @@ type RoomRow = {
   scheduled_start: string | null;
   created_at: string;
   viewer_count: number | null;
-  host: { username: string } | null;
-  participants: { role: string; stance: string | null; left_at: string | null; user: { username: string } | null }[] | null;
+  host: { id: string; username: string; avatar_url: string | null } | null;
+  participants: { role: string; stance: string | null; left_at: string | null; user: { id: string; username: string; avatar_url: string | null } | null }[] | null;
 };
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -82,6 +85,29 @@ const rowCard: React.CSSProperties = {
 
 export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [supabase] = useState(() => createClient());
+  const { openUserMenu } = useUserMenu();
+
+  /* Clickable username → unified user context menu (profile, follow, report). */
+  const nameSpan = (u: { id: string; username: string; avatar_url?: string | null } | null | undefined) =>
+    u ? (
+      <span
+        onClick={(e) => {
+          e.stopPropagation();
+          openUserMenu({ x: e.clientX, y: e.clientY }, { userId: u.id, username: u.username });
+        }}
+        className="inline-flex items-center gap-1"
+        style={{
+          cursor: "pointer",
+          verticalAlign: "middle",
+          lineHeight: 1,
+          textDecoration: "underline dotted rgba(255,255,255,0.25)",
+          textUnderlineOffset: 2,
+        }}
+      >
+        <UserAvatar size={13} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
+        {u.username}
+      </span>
+    ) : null;
   const [userId, setUserId] = useState<string | null>(null);
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
@@ -99,7 +125,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       supabase.rpc("get_debate_topics"),
       supabase
         .from("debate_rooms")
-        .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, host:users!host_id(username), participants:debate_participants(role, stance, left_at, user:users(username))")
+        .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, host:users!host_id(id, username, avatar_url), participants:debate_participants(role, stance, left_at, user:users(id, username, avatar_url))")
         .in("status", ["live", "created", "scheduled"])
         .order("created_at", { ascending: false })
         .limit(80),
@@ -223,10 +249,22 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
   const speakerLine = (r: RoomRow) => {
     const seated = (r.participants ?? [])
-      .filter((p) => p.role === "debater" && !p.left_at && p.user?.username)
-      .map((p) => p.user!.username);
-    if (seated.length) return seated.join(" vs ");
-    return r.host?.username ? `hosted by ${r.host.username}` : "speakers TBD";
+      .filter((p) => p.role === "debater" && !p.left_at && p.user?.username);
+    if (seated.length) {
+      return seated.map((p, i) => (
+        <span key={p.user!.id} className="inline-flex items-center gap-1">
+          {i > 0 && <span>vs</span>}
+          {nameSpan(p.user)}
+        </span>
+      ));
+    }
+    return r.host?.username ? (
+      <span className="inline-flex items-center gap-1">
+        <span>hosted by</span> {nameSpan(r.host)}
+      </span>
+    ) : (
+      "speakers TBD"
+    );
   };
 
   const toggleReminder = async (r: RoomRow) => {
@@ -247,13 +285,12 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   };
 
   return createPortal(
-    <div style={{ fontFamily: "'DM Sans', sans-serif", margin: "26px 0 6px" }}>
+    // No top margin: the carousel section's 40px bottom margin is the
+    // uniform section gap used across the page.
+    <div style={{ fontFamily: "'DM Sans', sans-serif", margin: "0 0 6px" }}>
       <div className="flex items-baseline gap-3 flex-wrap mb-3">
-        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 19, color: "#f5f5f0" }}>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 19, color: "#f5f5f0" }}>
           Browse
-        </span>
-        <span className="text-[12px]" style={{ color: "#8b8b94" }}>
-          Pick a field — queue on a question and get matched, or join a room
         </span>
       </div>
 
@@ -272,11 +309,17 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           const live = rooms.filter((r) => r.topic_key === cat.key && r.status === "live").length;
           const scheduled = rooms.filter((r) => r.topic_key === cat.key && isScheduled(r)).length;
           const open = rooms.filter((r) => r.topic_key === cat.key && r.status !== "live" && !isScheduled(r)).length;
-          const sub = live > 0 ? `${live} live`
-            : waiting > 0 ? `${waiting} waiting`
-            : open > 0 ? `${open} open`
-            : scheduled > 0 ? `${scheduled} scheduled`
-            : "quiet";
+          /* Status line: active states get a glowing dot + small-caps count;
+             quiet stays a bare dim word so busy tabs pop against it. */
+          const status = live > 0
+            ? { label: `${live} LIVE`, color: "#ff5c5c", dot: true, pulse: true }
+            : waiting > 0
+              ? { label: `${waiting} WAITING`, color: "#f4d47c", dot: true, pulse: false }
+              : open > 0
+                ? { label: `${open} OPEN`, color: "#6fd3a0", dot: true, pulse: false }
+                : scheduled > 0
+                  ? { label: `${scheduled} SCHEDULED`, color: "#a99df2", dot: true, pulse: false }
+                  : { label: "quiet", color: "#565660", dot: false, pulse: false };
           return (
             <button
               key={cat.key}
@@ -292,12 +335,42 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 fontFamily: "inherit",
               }}
             >
-              <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: active ? "#f4d47c" : "#f5f5f0", whiteSpace: "nowrap" }}>
-                {cat.emoji} {cat.label}
-                {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: "#f4d47c" }}>●</span>}
-              </span>
-              <span className="block text-[10px] mt-0.5" style={{ color: live > 0 ? "#e05a5a" : waiting > 0 ? "#f4d47c" : "#6b6b74", whiteSpace: "nowrap" }}>
-                {sub}
+              {/* Icon left of the whole text block; label + status stack beside it. */}
+              <span className="flex items-center gap-2.5" style={{ color: active ? "#f4d47c" : "#f5f5f0" }}>
+                <TopicIcon topicKey={cat.key} size={17} />
+                <span className="flex flex-col items-start">
+                  <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: active ? "#f4d47c" : "#f5f5f0", whiteSpace: "nowrap" }}>
+                    {cat.label}
+                    {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: "#f4d47c" }}>●</span>}
+                  </span>
+                  <span
+                    className="flex items-center gap-1 mt-0.5"
+                    style={{
+                      color: status.color,
+                      whiteSpace: "nowrap",
+                      fontSize: status.dot ? 9 : 10,
+                      fontWeight: status.dot ? 700 : 400,
+                      letterSpacing: status.dot ? "0.07em" : 0,
+                      fontStyle: status.dot ? "normal" : "italic",
+                      opacity: status.dot ? 1 : 0.8,
+                    }}
+                  >
+                    {status.dot && (
+                      <span
+                        className={status.pulse ? "animate-pulse" : undefined}
+                        style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: 999,
+                          background: status.color,
+                          boxShadow: `0 0 6px ${status.color}`,
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    {status.label}
+                  </span>
+                </span>
               </span>
             </button>
           );
@@ -315,7 +388,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
         {/* Selected field: popular rooms */}
         <div className="flex items-center gap-3 mb-0.5">
-          <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
+          <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
             POPULAR ROOMS
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -359,16 +432,18 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             style={rowCard}
           >
             <div className="flex-1 min-w-[220px]">
-              <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+              <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                 {r.motion}
               </p>
-              <p className="m-0 mt-1 text-[11px]" style={{ color: "#8b8b94" }}>
+              <p className="m-0 mt-1 text-[11px] flex items-center flex-wrap gap-x-1" style={{ color: "#8b8b94" }}>
                 {r.status === "live" && (
-                  <span style={{ color: "#e05a5a" }}>● Live{r.viewer_count ? ` · ${r.viewer_count} watching` : ""} · </span>
+                  <span style={{ color: "#e05a5a" }}>● Live{r.viewer_count ? ` · ${r.viewer_count} watching` : ""} ·</span>
                 )}
-                {r.host?.username ? `by ${r.host.username} · ` : ""}
-                {FORMAT_LABEL[r.format] ?? r.format}
-                {r.status === "created" ? " · waiting for speakers" : ""}
+                {r.host?.username ? <><span>by</span> {nameSpan(r.host)} <span>·</span></> : null}
+                <span>
+                  {FORMAT_LABEL[r.format] ?? r.format}
+                  {r.status === "created" ? " · waiting for speakers" : ""}
+                </span>
               </p>
             </div>
             <button
@@ -389,7 +464,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
         {/* Selected field: queue questions */}
         <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-          <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
+          <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
             QUEUE
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -406,7 +481,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               }}
             >
               <div className="flex-1 min-w-[220px]">
-                <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                   {t.question}
                 </p>
                 <p className="m-0 mt-1 text-[11px]" style={{ color: "#6b6b74" }}>
@@ -483,7 +558,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {selScheduled.length > 0 && (
           <>
             <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-              <span className="text-[11px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+              <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
                 SCHEDULED
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -510,13 +585,13 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                   </p>
                 </div>
                 <div className="flex-1 min-w-[200px]">
-                  <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                  <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                     {r.motion}
                   </p>
-                  <p className="m-0 mt-1 text-[11px]" style={{ color: "#8b8b94" }}>
-                    {speakerLine(r)} · {FORMAT_LABEL[r.format] ?? r.format}
+                  <p className="m-0 mt-1 text-[11px] flex items-center flex-wrap gap-x-1" style={{ color: "#8b8b94" }}>
+                    {speakerLine(r)} <span>· {FORMAT_LABEL[r.format] ?? r.format}</span>
                     <span style={{ color: (reminders[r.id]?.count ?? 0) > 0 ? "#f4d47c" : "#6b6b74" }}>
-                      {" "}· 🔔 {reminders[r.id]?.count ?? 0} signed up
+                      · 🔔 {reminders[r.id]?.count ?? 0} signed up
                     </span>
                   </p>
                 </div>

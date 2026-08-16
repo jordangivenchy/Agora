@@ -11,6 +11,7 @@ import CreateRoomModal from "@/components/CreateRoomModal";
 import UserProfileModal from "@/components/UserProfileModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
+import FriendsSection from "@/components/friends/FriendsSection";
 import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
@@ -69,6 +70,8 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
+  const [friendsHost, setFriendsHost] = useState<HTMLElement | null>(null);
+  const [sidebarHost, setSidebarHost] = useState<HTMLElement | null>(null);
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
@@ -88,6 +91,10 @@ export default function Home() {
     // Portal targets living inside the MVP markup: the Browse section
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
+    const fs = document.getElementById("friendsSection");
+    if (fs) fs.innerHTML = ""; // clear any MVP demo markup before React owns it
+    setFriendsHost(fs);
+    setSidebarHost(document.getElementById("sidebar"));
     setBellHost(document.getElementById("notifBellHost"));
     setNewsHost(document.getElementById("newsTickerHost"));
   }, []);
@@ -96,7 +103,7 @@ export default function Home() {
      Called on boot, on realtime changes, and every 30s as a live tracker. */
   const loadData = useCallback(async () => {
       try {
-        const [{ data: auth }, { data: roomsData }, { count: memberCount }, { data: friendRows }] = await Promise.all([
+        const [{ data: auth }, { data: roomsData }, { count: memberCount }] = await Promise.all([
           supabase.auth.getUser(),
           supabase
             .from("debate_rooms")
@@ -105,7 +112,6 @@ export default function Home() {
             .order("created_at", { ascending: false })
             .limit(24),
           supabase.from("users").select("*", { count: "exact", head: true }),
-          supabase.rpc("get_friends"),
         ]);
 
         const rooms = roomsData ?? [];
@@ -164,7 +170,6 @@ export default function Home() {
         const data = {
           debates,
           user: user ? { id: user.id, name: user.user_metadata?.name ?? user.email ?? "U" } : null,
-          friends: (friendRows ?? []).map((f: { username: string }) => ({ name: f.username })),
           stats: {
             activeRooms: rooms.length,
             members: memberCount ?? 0,
@@ -244,12 +249,7 @@ export default function Home() {
     }
     w.__MVP_BOOTED__ = true;
 
-    const fonts = document.createElement("link");
-    fonts.rel = "stylesheet";
-    fonts.href =
-      "https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap";
-    document.head.appendChild(fonts);
-
+    // Fonts come from next/font in the root layout — no injected stylesheet.
     const three = document.createElement("script");
     three.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
     three.onload = () => {
@@ -342,6 +342,7 @@ export default function Home() {
       <NotificationsBell container={bellHost} />
       <NewsTicker container={newsHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
+      <FriendsSection container={friendsHost} sidebar={sidebarHost} />
       <TopicsHome
         container={fieldsHost}
         onCreateLobby={async (topic) => {

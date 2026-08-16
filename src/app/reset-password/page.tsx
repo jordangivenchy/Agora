@@ -124,7 +124,7 @@ function ResetPasswordInner() {
         <a href="/" className="no-underline mb-8 flex items-center gap-2.5">
           <span
             className="text-[26px] font-bold tracking-tight"
-            style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
+            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-primary)" }}
           >
             <span style={{ color: "var(--accent-blue)" }}>A</span>goraSphere
           </span>

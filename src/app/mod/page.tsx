@@ -154,7 +154,7 @@ export default function ModPage() {
           }}>
             ← Home
           </a>
-          <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
+          <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
             Moderation
           </h1>
           <span className="text-[11px]" style={{ color: "#8b8b94" }}>

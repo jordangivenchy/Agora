@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef, use } from "react";
+import Wordmark from "@/components/Wordmark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
@@ -782,8 +783,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         {/* Header — back arrow removed; leave via disconnect button */}
         <div className="stage-header">
           <a href="/" title="AgoraSphere home" style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="AgoraSphere" style={{ height: 16, width: "auto" }} />
+            <Wordmark size={16} />
           </a>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p className="stage-eyebrow">Motion before the house</p>
@@ -807,7 +807,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                   background: "rgba(226,185,107,0.15)",
                   color: "#e2b96b",
                   border: "1px solid rgba(226,185,107,0.4)",
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: "'Space Grotesk', sans-serif",
                   fontSize: 10,
                   fontWeight: 800,
                   letterSpacing: "0.08em",
@@ -866,7 +866,7 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
                       "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(34,197,94,0.08) 100%)",
                     border: "1px solid rgba(34,197,94,0.45)",
                     color: "#22c55e",
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontSize: 12,
                     fontWeight: 800,
                     letterSpacing: "0.05em",

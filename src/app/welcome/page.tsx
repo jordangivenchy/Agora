@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Wordmark from "@/components/Wordmark";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import AvatarCropModal from "@/components/AvatarCropModal";
@@ -189,7 +190,7 @@ export default function WelcomePage() {
 
       <main className="relative flex flex-col items-center w-full" style={{ maxWidth: "420px" }}>
         {/* Brand */}
-        <img src="/logo.png" alt="AgoraSphere" className="h-[22px] w-auto mb-7" />
+        <Wordmark size={22} className="mb-7" />
 
         <div
           className="w-full"

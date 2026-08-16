@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant } from "@/types/database";
+import { useUserMenu } from "./userMenuContext";
+import UserAvatar from "./UserAvatar";
 
 interface Props {
   room: DebateRoom & {
@@ -12,7 +14,24 @@ interface Props {
 }
 
 export default function RoomCard({ room }: Props) {
+  const { openUserMenu } = useUserMenu();
   const topic = TOPICS.find((t) => t.key === room.topic_key);
+
+  /* Card lives inside a room link — names open the user menu instead. */
+  const nameProps = (d?: DebateParticipant & { user?: { username: string } }) => {
+    const username = d?.user?.username;
+    return d && username
+      ? {
+          onClick: (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openUserMenu({ x: e.clientX, y: e.clientY }, { userId: d.user_id, username });
+          },
+          style: { cursor: "pointer" as const, textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 },
+        }
+      : {};
+  };
+
   const debaters = room.participants.filter((p) => p.role === "debater" && !p.left_at);
   const proDebater = debaters.find((d) => d.stance === "PRO");
   const conDebater = debaters.find((d) => d.stance === "CON");
@@ -221,13 +240,10 @@ export default function RoomCard({ room }: Props) {
           {room.motion}
         </h3>
 
-        {/* Debaters row */}
+        {/* Debaters row — each name travels with its avatar */}
         <div className="flex items-center gap-1.5 mb-2">
-          <MiniAvatar
-            name={proDebater?.user?.username}
-            color={topic?.color || "#00b894"}
-          />
           <span
+            className="flex items-center gap-1.5 min-w-0"
             style={{
               fontFamily: "'DM Sans', sans-serif",
               fontSize: "11px",
@@ -238,7 +254,25 @@ export default function RoomCard({ room }: Props) {
               flex: 1,
             }}
           >
-            {proDebater?.user?.username || "Waiting"} vs {conDebater?.user?.username || "Waiting"}
+            <span {...nameProps(proDebater)} className="inline-flex items-center gap-1.5">
+              <UserAvatar
+                size={20}
+                username={proDebater?.user?.username}
+                avatarUrl={proDebater?.user?.avatar_url}
+                seed={proDebater?.user_id}
+              />
+              {proDebater?.user?.username || "Waiting"}
+            </span>
+            <span>vs</span>
+            <span {...nameProps(conDebater)} className="inline-flex items-center gap-1.5">
+              <UserAvatar
+                size={20}
+                username={conDebater?.user?.username}
+                avatarUrl={conDebater?.user?.avatar_url}
+                seed={conDebater?.user_id}
+              />
+              {conDebater?.user?.username || "Waiting"}
+            </span>
           </span>
         </div>
 
@@ -298,7 +332,7 @@ function MiniAvatar({ name, color }: { name?: string; color: string }) {
         width: "20px",
         height: "20px",
         background: name ? color : "var(--bg-tertiary)",
-        fontFamily: "'Syne', sans-serif",
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: "8px",
         fontWeight: 700,
       }}

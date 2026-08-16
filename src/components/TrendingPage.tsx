@@ -210,7 +210,7 @@ export default function TrendingPage({ open, onClose }: Props) {
           )}
           {!activeShort && (
             <>
-              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
                 Trending
               </span>
               <div className="flex gap-2 flex-1 flex-wrap">
@@ -358,7 +358,7 @@ export default function TrendingPage({ open, onClose }: Props) {
             </div>
 
             <div className="flex flex-col p-4" style={{ ...card, width: 320, borderRadius: 14 }}>
-              <p className="mb-3 text-[14px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
+              <p className="mb-3 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
                 Comments{" "}
                 <span className="text-[11px] font-normal" style={{ color: "#8b8b94", fontFamily: "'DM Sans', sans-serif" }}>
                   {activeShort.comments.length + (localComments[activeShort.id]?.length ?? 0)}
@@ -424,7 +424,7 @@ export default function TrendingPage({ open, onClose }: Props) {
             <div className="p-4 mb-5" style={{ ...card, background: "rgba(18,18,24,0.6)" }}>
               <div className="flex items-center gap-2.5 mb-3">
                 <span className="inline-flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: 7, background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", fontSize: 12 }}>▶</span>
-                <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0" }}>Shorts</span>
+                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0" }}>Shorts</span>
                 <span className="text-[11px]" style={{ color: "#8b8b94" }}>the best 60 seconds of every debate</span>
                 <button
                   onClick={() => fileRef.current?.click()}
@@ -475,7 +475,7 @@ export default function TrendingPage({ open, onClose }: Props) {
             {/* Video grid — real rooms */}
             {rooms.length === 0 ? (
               <div className="p-4 text-center" style={card}>
-                <p className="m-0 mb-2 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>
+                <p className="m-0 mb-2 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                   Nothing trending yet
                 </p>
                 <p className="m-0 mb-3 text-[12px]" style={{ color: "#8b8b94" }}>

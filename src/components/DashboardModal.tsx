@@ -146,7 +146,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
         <div
           className="absolute top-6 left-0 right-0 text-center pointer-events-none"
           style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 18,
             fontWeight: 700,
             letterSpacing: "0.08em",
@@ -291,7 +291,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
                 <div
                   className="mt-2 text-center whitespace-nowrap"
                   style={{
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: "0.06em",
@@ -322,7 +322,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
                   >
                     <div
                       style={{
-                        fontFamily: "'Syne', sans-serif",
+                        fontFamily: "'Space Grotesk', sans-serif",
                         fontSize: 13,
                         fontWeight: 700,
                         color: "var(--text-primary)",

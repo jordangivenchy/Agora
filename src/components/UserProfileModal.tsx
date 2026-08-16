@@ -214,7 +214,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
         <div className="flex items-start justify-between mb-3">
           <h2
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Space Grotesk', sans-serif",
               fontSize: "15px",
               fontWeight: 700,
               color: "var(--text-primary)",
@@ -289,7 +289,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                     width: 64,
                     height: 64,
                     background: avatarColor(profile.username),
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontWeight: 700,
                     fontSize: 20,
                   }}
@@ -402,7 +402,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                       "linear-gradient(135deg, rgba(108,92,231,0.22) 0%, rgba(108,92,231,0.14) 100%)",
                     border: "1px solid rgba(108,92,231,0.45)",
                     color: "rgba(200,190,255,0.96)",
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontSize: 12.5,
                     fontWeight: 700,
                     letterSpacing: "0.03em",
@@ -429,7 +429,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                       ? "1px solid rgba(255,255,255,0.12)"
                       : "1px solid rgba(108,92,231,0.45)",
                     color: profile.is_following ? "rgba(255,255,255,0.78)" : "rgba(200,190,255,0.96)",
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Space Grotesk', sans-serif",
                     fontSize: 12.5,
                     fontWeight: 700,
                     letterSpacing: "0.03em",
@@ -543,7 +543,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                       {d.stance && (
                         <span
                           style={{
-                            fontFamily: "'Syne', sans-serif",
+                            fontFamily: "'Space Grotesk', sans-serif",
                             fontSize: 10,
                             fontWeight: 800,
                             letterSpacing: "0.08em",

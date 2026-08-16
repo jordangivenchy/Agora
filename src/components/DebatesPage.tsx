@@ -215,7 +215,7 @@ export default function DebatesPage({ open, onClose }: Props) {
         <div className="text-center mb-10">
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Space Grotesk', sans-serif",
               fontSize: 28,
               fontWeight: 700,
               color: "var(--text-primary)",
@@ -373,7 +373,7 @@ function SectionHeading({ title, count }: { title: string; count: number }) {
     <div className="flex items-center gap-2 mb-3">
       <div
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize: 16,
           fontWeight: 700,
           color: "var(--text-primary)",
@@ -423,7 +423,7 @@ function StatCard({ label, value, color }: { label: string; value: string; color
       </div>
       <div
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize: 24,
           fontWeight: 700,
           color: color ?? "var(--text-primary)",
@@ -449,7 +449,7 @@ function EmptyState({ title, sub }: { title: ReactNode; sub: string }) {
     >
       <div
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize: 15,
           fontWeight: 600,
           color: "var(--text-primary)",
@@ -550,7 +550,7 @@ function ScheduledRowCard({
         <span
           className="shrink-0"
           style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: "0.08em",
@@ -690,7 +690,7 @@ function HistoryRowCard({ row }: { row: HistoryRow }) {
         <span
           className="shrink-0"
           style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: "0.08em",

@@ -136,28 +136,22 @@
     });
   });
 
-  /* Messages has no backend yet — remove rather than leave dead. */
+  /* Messages button opens the React DM dock. */
   var msgWrap = document.getElementById('nav-messages-btn');
-  if (msgWrap) msgWrap.style.display = 'none';
+  if (msgWrap) {
+    msgWrap.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('agora:messages'));
+    });
+  }
 
   /* Subscriptions has no backend yet — remove rather than leave dead. */
   var subsLink = document.querySelector('[data-nav-id="subscriptions"]');
   if (subsLink) subsLink.style.setProperty('display', 'none', 'important');
 
-  /* Real friends replace the demo list; hide the section (and its demo
-     "add" button) when the user has no friends yet. */
-  if (Array.isArray(D0.friends)) {
-    FRIENDS.length = 0;
-    D0.friends.forEach(function (f) {
-      FRIENDS.push({ name: f.name, status: 'online', tag: '', tagLabel: '' });
-    });
-    var fs = document.getElementById('friendsSection');
-    if (FRIENDS.length === 0) {
-      if (fs) fs.style.display = 'none';
-    } else if (typeof renderFriends === 'function') {
-      try { renderFriends(); } catch (err) { if (fs) fs.style.display = 'none'; }
-    }
-  }
+  /* Friends section is rendered by React (FriendsSection) — the demo
+     renderer stays idle. */
 
   /* "View all →" opens the Explore page. */
   document.querySelectorAll('.view-all').forEach(function (a) {

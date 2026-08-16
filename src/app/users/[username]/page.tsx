@@ -60,7 +60,7 @@ export default function UserProfilePage({
       >
         <h1
           style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 18,
             fontWeight: 700,
             color: "var(--text-primary)",

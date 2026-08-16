@@ -11,11 +11,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { useUserMenu } from "./userMenuContext";
+import UserAvatar from "./UserAvatar";
 import type { DebateRoom, Stance } from "@/types/database";
 
-type Debater = { username: string; stance: Stance | null };
+type Debater = { id: string | null; username: string; avatarUrl: string | null; stance: Stance | null };
 
 export default function ResultsScreen({ room }: { room: DebateRoom }) {
+  const { openUserMenu } = useUserMenu();
   const supabase = createClient();
   const router = useRouter();
   const [votes, setVotes] = useState<{ pro: number; con: number } | null>(null);
@@ -27,7 +30,7 @@ export default function ResultsScreen({ room }: { room: DebateRoom }) {
         supabase.from("debate_votes").select("stance").eq("room_id", room.id),
         supabase
           .from("debate_participants")
-          .select("stance, role, user:users(username)")
+          .select("stance, role, user:users(id, username, avatar_url)")
           .eq("room_id", room.id)
           .eq("role", "debater"),
       ]);
@@ -39,6 +42,8 @@ export default function ResultsScreen({ room }: { room: DebateRoom }) {
       setDebaters(
         (partRes.data ?? []).map((p) => ({
           stance: p.stance as Stance | null,
+          id: (p.user as unknown as { id: string } | null)?.id ?? null,
+          avatarUrl: (p.user as unknown as { avatar_url: string | null } | null)?.avatar_url ?? null,
           username:
             (p.user as unknown as { username: string } | null)?.username ?? "unknown",
         }))
@@ -68,11 +73,23 @@ export default function ResultsScreen({ room }: { room: DebateRoom }) {
     return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
   })();
 
-  const names = (side: Stance) =>
-    debaters
-      .filter((d) => d.stance === side)
-      .map((d) => d.username)
-      .join(", ") || "—";
+  const names = (side: Stance) => {
+    const list = debaters.filter((d) => d.stance === side);
+    if (!list.length) return "—";
+    return list.map((d, i) => (
+      <span key={`${d.username}-${i}`}>
+        {i > 0 && ", "}
+        <span
+          className="inline-flex items-center gap-1"
+          style={d.id ? { cursor: "pointer", textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 } : undefined}
+          onClick={d.id ? (e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: d.id!, username: d.username }) : undefined}
+        >
+          <UserAvatar size={16} username={d.username} avatarUrl={d.avatarUrl} seed={d.id ?? d.username} />
+          {d.username}
+        </span>
+      </span>
+    ));
+  };
 
   const hairline = "1px solid rgba(255,255,255,0.07)";
 

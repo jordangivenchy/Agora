@@ -37,19 +37,23 @@ type NotifRow = {
 function notifText(n: NotifRow): string {
   switch (n.type) {
     case "new_follower":
-      return `${n.actor_username ?? "Someone"} started following you`;
+      return `${n.actor_username ?? "Someone"} wants to be your friend`;
+    case "friend_accepted":
+      return `${n.actor_username ?? "Someone"} accepted your friend request — you're now friends 🎉`;
     case "room_live":
       return `${n.actor_username ?? "A speaker"} is live: “${n.room_motion ?? "a discussion"}”`;
     case "room_starting_soon":
       return `Starting soon: “${n.room_motion ?? "a discussion"}”`;
+    case "room_invite":
+      return `${n.actor_username ?? "A friend"} invited you to “${n.room_motion ?? "their room"}”`;
     default:
       return "New activity";
   }
 }
 
 function notifHref(n: NotifRow): string | null {
-  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon")) return `/agora/${n.room_id}`;
-  if (n.actor_id && n.type === "new_follower") return `/?profile=${n.actor_id}`;
+  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon" || n.type === "room_invite")) return `/agora/${n.room_id}`;
+  if (n.actor_id && (n.type === "new_follower" || n.type === "friend_accepted")) return `/?profile=${n.actor_id}`;
   return null;
 }
 
@@ -65,6 +69,8 @@ export default function NotificationsBell({ container }: Props) {
   const [supabase] = useState(() => createClient());
   const [userId, setUserId] = useState<string | null>(null);
   const [items, setItems] = useState<NotifRow[]>([]);
+  const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   useEscapeClose(open, () => setOpen(false));
@@ -77,7 +83,17 @@ export default function NotificationsBell({ container }: Props) {
     setUserId(uid);
     if (!uid) return;
     const { data } = await supabase.rpc("get_notifications", { p_limit: 30 });
-    setItems((data ?? []) as NotifRow[]);
+    const rows = (data ?? []) as NotifRow[];
+    setItems(rows);
+    const actorIds = [...new Set(rows.filter((n) => n.type === "new_follower" && n.actor_id).map((n) => n.actor_id!))];
+    if (actorIds.length) {
+      const { data: follows } = await supabase
+        .from("user_follows")
+        .select("following_id")
+        .eq("follower_id", uid)
+        .in("following_id", actorIds);
+      setFollowedBack(new Set(((follows ?? []) as { following_id: string }[]).map((f) => f.following_id)));
+    }
   }, [supabase]);
 
   useEffect(() => { load(); }, [load]);
@@ -99,7 +115,11 @@ export default function NotificationsBell({ container }: Props) {
             const body =
               row.type === "room_starting_soon" ? "A discussion you set a reminder for starts soon."
               : row.type === "room_live" ? "A discussion you follow just went live."
-              : "You have a new follower.";
+              : row.type === "friend_accepted"
+                ? "Friend request accepted — you're now friends."
+                : row.type === "room_invite"
+                  ? "A friend invited you to a room."
+                  : "Someone wants to be your friend.";
             const n = new Notification("AgoraSphere", { body });
             n.onclick = () => {
               window.focus();
@@ -199,7 +219,7 @@ export default function NotificationsBell({ container }: Props) {
             zIndex: 300,
           }}
         >
-          <p className="m-0 px-4 py-3 text-[12px]" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#f5f5f0", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <p className="m-0 px-4 py-3 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
             Notifications
           </p>
           {items.length === 0 && (
@@ -207,7 +227,7 @@ export default function NotificationsBell({ container }: Props) {
               Nothing yet — follow speakers and set reminders to hear when things go live.
             </p>
           )}
-          {items.map((n) => {
+          {items.filter((n) => !dismissed.has(n.id)).map((n) => {
             const href = notifHref(n);
             return (
               <button
@@ -223,10 +243,37 @@ export default function NotificationsBell({ container }: Props) {
                 }}
               >
                 <span className="text-[13px]" style={{ marginTop: 1 }}>
-                  {n.type === "new_follower" ? "👤" : n.type === "room_starting_soon" ? "🔔" : "🔴"}
+                  {n.type === "new_follower" ? "👤" : n.type === "friend_accepted" ? "🤝" : n.type === "room_invite" ? "📨" : n.type === "room_starting_soon" ? "🔔" : "🔴"}
                 </span>
                 <span className="flex-1 text-[12.5px]" style={{ color: "#d5d5dc", lineHeight: 1.45 }}>
-                  {notifText(n)}
+                  {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)
+                    ? `${n.actor_username ?? "Someone"} started following you`
+                    : notifText(n)}
+                  {n.type === "new_follower" && n.actor_id && !followedBack.has(n.actor_id) && (
+                    <span className="flex gap-2 mt-1.5">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const { error } = await supabase.rpc("follow_user", { p_target: n.actor_id });
+                          if (!error) setFollowedBack((s) => new Set(s).add(n.actor_id!));
+                        }}
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-md cursor-pointer"
+                        style={{ background: "#7c6ef7", color: "white", border: "none" }}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDismissed((s) => new Set(s).add(n.id));
+                        }}
+                        className="text-[11px] px-2.5 py-1 rounded-md cursor-pointer"
+                        style={{ background: "rgba(255,255,255,0.07)", color: "#c9c9d4", border: "1px solid rgba(255,255,255,0.12)" }}
+                      >
+                        Dismiss
+                      </button>
+                    </span>
+                  )}
                 </span>
                 <span className="text-[10.5px] shrink-0" style={{ color: "#6b6b74", marginTop: 2 }}>
                   {timeAgo(n.created_at)}
