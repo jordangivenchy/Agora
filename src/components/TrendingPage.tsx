@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { SEED_SHORTS, type SeedClip } from "@/lib/seed-content";
+import type { SeedClip } from "@/lib/seed-content";
 
 interface Props {
   open: boolean;
@@ -188,7 +188,8 @@ export default function TrendingPage({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const shorts: Clip[] = [...dbClips, ...SEED_SHORTS.map((s) => ({ ...s, isSeed: true }))];
+  // Real uploads only — the fictional demo reel is gone.
+  const shorts: Clip[] = [...dbClips];
 
   return (
     <div
@@ -304,7 +305,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   {activeShort.opponent && <> — from "{activeShort.motion}"</>}
                 </p>
                 {activeShort.roomId ? (
-                  <a href={`/rooms/${activeShort.roomId}`} className="text-[11px] no-underline" style={{ color: "#9cc4f0" }}>
+                  <a href={`/agora/${activeShort.roomId}`} className="text-[11px] no-underline" style={{ color: "#9cc4f0" }}>
                     watch full debate ⤢
                   </a>
                 ) : activeShort.opponent ? (
@@ -354,11 +355,11 @@ export default function TrendingPage({ open, onClose }: Props) {
                   onClick={() => window.dispatchEvent(new CustomEvent("agora:tab", { detail: "battle" }))}
                   className="inline-flex items-center justify-center cursor-pointer"
                   style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontSize: 16 }}
-                  title="Debate this topic in Battle"
+                  title="Discuss this topic"
                 >
-                  ⚔
+                  ✦
                 </button>
-                <p className="text-[10px] mt-1" style={{ color: "#9cc4f0" }}>Battle</p>
+                <p className="text-[10px] mt-1" style={{ color: "#9cc4f0" }}>Topics</p>
               </div>
             </div>
 
@@ -398,7 +399,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   </div>
                 ))}
                 {activeShort.comments.length === 0 && !(localComments[activeShort.id]?.length) && (
-                  <p className="text-[11px]" style={{ color: "#8b8b94" }}>No comments yet — start the argument.</p>
+                  <p className="text-[11px]" style={{ color: "#8b8b94" }}>No comments yet — start the discussion.</p>
                 )}
               </div>
               <form
@@ -451,6 +452,11 @@ export default function TrendingPage({ open, onClose }: Props) {
                 <p className="m-0 mb-2 text-[11px]" style={{ color: uploadMsg.includes("✓") ? "#97c459" : "#f4d47c" }}>{uploadMsg}</p>
               )}
               <div className="flex gap-3 overflow-x-auto pb-1">
+                {shorts.length === 0 && (
+                  <p className="m-0 py-6 text-[11px]" style={{ color: "#8b8b94" }}>
+                    No clips yet — record a discussion and clip your best moment.
+                  </p>
+                )}
                 {shorts.map((s) => (
                   <button
                     key={s.id}
@@ -486,13 +492,13 @@ export default function TrendingPage({ open, onClose }: Props) {
                   className="cursor-pointer text-[12px] font-medium px-4 py-2 rounded-lg border-none"
                   style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
                 >
-                  ⚔ Start the first one
+                  ✦ Start the first one
                 </button>
               </div>
             ) : (
               <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                 {rooms.map((r, i) => (
-                  <a key={r.id} href={`/rooms/${r.id}`} className="no-underline">
+                  <a key={r.id} href={`/agora/${r.id}`} className="no-underline">
                     <div
                       className="relative mb-2"
                       style={{ aspectRatio: "16/9", borderRadius: 12, background: GRID_GRADIENTS[i % GRID_GRADIENTS.length], border: "0.5px solid #3a3a44" }}

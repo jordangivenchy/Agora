@@ -18,14 +18,32 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // Already signed in? Straight to the app.
+  // Already signed in? Straight to the app — unless the account is
+  // suspended, in which case end the session here with an explanation.
+  // The DB blocks all writes for suspended accounts regardless; this
+  // gate just keeps them from landing in an app that half-works.
   useEffect(() => {
+    let cancelled = false;
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) router.replace("/");
+      if (!session?.user) return;
+      (async () => {
+        const { data: suspended } = await supabase.rpc("is_suspended");
+        if (cancelled) return;
+        if (suspended === true) {
+          await supabase.auth.signOut();
+          setBusy(false);
+          setError("This account is suspended. Contact support if you believe this is a mistake.");
+          return;
+        }
+        router.replace("/");
+      })();
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [router, supabase]);
 
   function friendlyError(message: string): string {
@@ -69,19 +87,20 @@ export default function LoginPage() {
         setMode("signin");
         return;
       }
-      router.replace("/");
+      // Redirect happens in the auth listener above, after the
+      // suspension check. A direct replace here would race past it.
     } else {
       setBusy(true);
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-      setBusy(false);
       if (error) {
+        setBusy(false);
         setError(friendlyError(error.message));
         return;
       }
-      router.replace("/");
+      // Redirect (or suspension notice) comes from the auth listener.
     }
   }
 
@@ -223,7 +242,7 @@ export default function LoginPage() {
               marginBottom: "6px",
             }}
           >
-            {mode === "signin" ? "Welcome back" : "Welcome to the arena"}
+            {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p
             className="text-center"
@@ -235,8 +254,8 @@ export default function LoginPage() {
             }}
           >
             {mode === "signin"
-              ? "Sign in to debate, vote, and follow debaters."
-              : "Join live debates, challenge ideas, and sharpen your arguments."}
+              ? "Sign in to speak, vote, and follow people."
+              : "Join live discussions, share your perspective, and be heard."}
           </p>
 
           {/* Error / notice banners */}
@@ -447,7 +466,7 @@ export default function LoginPage() {
           className="no-underline transition-colors"
           style={{ marginTop: "14px", fontSize: "12.5px", color: "var(--text-muted)", fontWeight: 500 }}
         >
-          ← Browse debates without signing in
+          ← Browse discussions without signing in
         </a>
       </main>
     </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
+import NotificationsBell from "@/components/NotificationsBell";
 
 interface SearchResult {
   id: string;
@@ -346,6 +347,8 @@ export default function Navbar({
       <div className="flex items-center gap-3 ml-auto shrink-0">
         {user ? (
           <>
+            <NotificationsBell />
+
             {/* Join Private button */}
             <button
               onClick={onJoinPrivate}

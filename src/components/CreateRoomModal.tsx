@@ -76,10 +76,11 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   const [formatVariant, setFormatVariant] = useState<string | null>(null);
   const [curriculum, setCurriculum] = useState("agora-general");
 
-  // Prefill (News → "Start debate")
+  // Prefill (News → "Start debate"; Topics → "Create a lobby" passes only
+  // the field of study, no motion)
   useEffect(() => {
-    if (open && initialMotion) {
-      setMotion(initialMotion);
+    if (open) {
+      if (initialMotion) setMotion(initialMotion);
       if (initialTopic) setTopicKey(initialTopic);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,7 +134,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
 
   if (!open && !navigating) return null;
 
-  // Navigation spinner (seamless transition into /rooms/[id])
+  // Navigation spinner (seamless transition into /agora/[id])
   if (navigating) {
     return (
       <div
@@ -179,7 +180,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       return;
     }
     if (proSize + conSize > 20) {
-      setError("Total debaters can't exceed 20");
+      setError("Total speakers can't exceed 20");
       return;
     }
 
@@ -282,7 +283,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       // during navigation, the user can see the action button and retry.
       setLoading(false);
       setNavigating(true);
-      router.push(`/rooms/${roomId}`);
+      router.push(`/agora/${roomId}`);
       return;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create room";
@@ -400,7 +401,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 onClose();
               } else {
                 setNavigating(true);
-                router.push(`/rooms/${createdInvite.roomId}`);
+                router.push(`/agora/${createdInvite.roomId}`);
               }
             }}
             className="w-full cursor-pointer transition-all"
@@ -477,7 +478,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               color: "var(--text-primary)",
             }}
           >
-            Create a Debate
+            Start a discussion
           </h2>
           <button
             onClick={onClose}
@@ -521,7 +522,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
             )}
 
             {/* Motion */}
-            <FieldGroup label="Motion / Topic">
+            <FieldGroup label="Topic">
               <input
                 type="text"
                 value={motion}
@@ -852,7 +853,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                     }}
                   >
                     {allowSpectators
-                      ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; debaters must use the invite code."
+                      ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; speakers must use the invite code."
                       : "Room is completely hidden from all listings and search. Only people with the invite code can enter."}
                   </p>
                 </>
