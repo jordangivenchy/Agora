@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import BetaStarfield from "@/components/BetaStarfield";
 
 /* Closed-beta door: enter the invite code once, get a 30-day pass cookie
    (issued by /api/beta), and continue to wherever you were headed. */
@@ -41,10 +42,13 @@ function BetaGateForm() {
       className="min-h-screen flex items-center justify-center p-6"
       style={{ background: "#050508" }}
     >
+      <BetaStarfield />
       <form
         onSubmit={submit}
         className="w-full"
         style={{
+          position: "relative",
+          zIndex: 1,
           maxWidth: 380,
           borderRadius: 20,
           padding: "36px 32px",
