@@ -1,7 +1,41 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { BETA_COOKIE, sha256Hex } from "@/lib/betaGate";
+
+/* Paths that must work without a beta pass: the gate itself, and endpoints
+   hit by machines that carry their own auth (Apify webhook, Vercel cron)
+   or by auth redirects landing from emails/OAuth. */
+const BETA_EXEMPT = [
+  "/beta",
+  "/api/beta",
+  "/api/webhook",
+  "/api/cron",
+  "/auth",
+  "/logo.png",
+];
 
 export async function proxy(request: NextRequest) {
+  /* ── Closed-beta gate (armed only while BETA_INVITE_CODE is set) ── */
+  const betaCode = process.env.BETA_INVITE_CODE;
+  if (betaCode) {
+    const { pathname } = request.nextUrl;
+    const exempt = BETA_EXEMPT.some(
+      (p) => pathname === p || pathname.startsWith(p + "/")
+    );
+    if (!exempt) {
+      const pass = request.cookies.get(BETA_COOKIE)?.value;
+      if (!pass || pass !== (await sha256Hex(betaCode))) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/beta";
+        url.search = "";
+        if (pathname !== "/") {
+          url.searchParams.set("next", pathname + request.nextUrl.search);
+        }
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
