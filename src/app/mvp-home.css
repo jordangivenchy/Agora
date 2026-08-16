@@ -5580,21 +5580,23 @@ body { background: transparent; }
   box-shadow: none !important;
 }
 
-/* Active marker: one amber pill on the left edge */
+/* Active marker: one amber pill on the left edge, centered and scaled to
+   the tab. `inset: auto` must come before the explicit sides — it's the
+   shorthand and would otherwise reset the `top`/`left` set earlier. */
 .sidebar-link.active::before {
   content: "" !important;
   display: block !important;
   position: absolute !important;
+  inset: auto !important;
   left: 0 !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   width: 3px !important;
-  height: 18px !important;
+  height: 55% !important;
   border-radius: 0 3px 3px 0 !important;
   background: #e2b96b !important;
   box-shadow: 0 0 10px rgba(226,185,107,0.5) !important;
   animation: none !important;
-  inset: auto !important;
   z-index: 6 !important;
 }
 .sidebar-link.active::after { content: none !important; display: none !important; }
