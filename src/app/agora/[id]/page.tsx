@@ -346,6 +346,18 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
     };
   }, [call.videoTiles, proSpeakers, conSpeakers]);
 
+  /* Self-preview only while the camera is warming up: once your own feed
+     lands on a stage screen the whole amphitheater is watching it, and the
+     little dock tile is a redundant duplicate. Others' tiles stay. */
+  const dockTiles = useMemo(() => {
+    const onScreen = new Set(
+      [screenFeeds?.pro?.key, screenFeeds?.con?.key].filter(Boolean)
+    );
+    return call.videoTiles.filter(
+      (t) => !(t.local && onScreen.has(`${t.identity}:l`))
+    );
+  }, [call.videoTiles, screenFeeds]);
+
   /* ── Raise / lower hand ────────────────────────────────────────────
      Signed-in listeners only. Landing in the Agora doesn't create a
      participant row, so the first raise seats you in the room (upsert,
@@ -526,7 +538,7 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
         )}
 
         {/* ── Live camera tiles + floating reactions ── */}
-        <AgoraVideoDock tiles={call.videoTiles} />
+        <AgoraVideoDock tiles={dockTiles} />
         <ReactionOverlay reactions={call.reactions} />
 
         {/* ── Queue position pill: the number reinforces what the 3D line

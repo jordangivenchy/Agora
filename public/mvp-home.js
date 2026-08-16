@@ -409,6 +409,8 @@ function snapCarousel(track) {
 
 function goToSlide(index) {
   const track = document.getElementById('carouselTrack');
+  // The autoplay interval outlives the homepage DOM on SPA navigation.
+  if (!track) return;
   const N = CAROUSEL_DATA.length;
   if (!N) return;
   if (N === 1) { currentSlide = 0; return; }
