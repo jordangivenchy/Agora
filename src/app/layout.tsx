@@ -31,6 +31,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable} h-full`}>
       <head>
+        {/* Back/forward cache guard: some restores replay the cached HTML
+            shell without executing the inline React flight scripts —
+            self.__next_f stays empty, hydration never happens, and the
+            user sees a dead black page. Detect that shell after a
+            back_forward load and reload once (session flag stops loops). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener("load",function(){setTimeout(function(){try{var nav=performance.getEntriesByType("navigation")[0];var dead=!self.__next_f||self.__next_f.length===0;if(nav&&nav.type==="back_forward"&&dead){if(!sessionStorage.getItem("ag-bf-reload")){sessionStorage.setItem("ag-bf-reload","1");location.reload();}}else{sessionStorage.removeItem("ag-bf-reload");}}catch(e){}},150);});`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Literal font-family names ('Space Grotesk', 'DM Sans', 'DM Mono')

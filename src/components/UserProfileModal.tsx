@@ -7,6 +7,7 @@ import { TOPICS } from "@/types/database";
 import EditProfileModal from "./EditProfileModal";
 import FollowListModal from "./FollowListModal";
 import { useUserMenu } from "./userMenuContext";
+import { userPath } from "@/lib/urls";
 
 interface Props {
   userId: string | null;
@@ -226,7 +227,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
           <div className="flex items-center gap-3">
             {profile && (
               <a
-                href={`/users/${profile.username}`}
+                href={userPath(profile.username)}
                 title="Open profile page"
                 className="no-underline"
                 style={{

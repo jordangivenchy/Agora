@@ -6,6 +6,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
 import type { Stance } from "@/types/database";
 import { useRouter } from "next/navigation";
+import { roomPath } from "@/lib/urls";
 
 interface Props {
   open: boolean;
@@ -285,7 +286,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       // during navigation, the user can see the action button and retry.
       setLoading(false);
       setNavigating(true);
-      router.push(`/agora/${roomId}`);
+      router.push(roomPath({ id: roomId, motion }));
       return;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create room";

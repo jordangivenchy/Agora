@@ -1,5 +1,6 @@
-/* Text wordmark — replaces the old logo.png image. Space Grotesk to match
-   the display type everywhere else; two-tone kept from the original mark. */
+/* Brand wordmark — the logo.png image mark. (A text-based version briefly
+   replaced it; the image is the canonical logo.) `size` is the rendered
+   height in px, matching how the old inline <img> tags were sized. */
 
 export default function Wordmark({
   size = 22,
@@ -9,20 +10,12 @@ export default function Wordmark({
   className?: string;
 }) {
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo.png"
+      alt="AgoraSphere"
       className={className}
-      style={{
-        display: "inline-block",
-        fontFamily: "'Space Grotesk', sans-serif",
-        fontWeight: 700,
-        fontSize: size,
-        letterSpacing: "-0.03em",
-        lineHeight: 1,
-        whiteSpace: "nowrap",
-        color: "#f5f5f0",
-      }}
-    >
-      Agora<span style={{ color: "#3b6cf6" }}>Sphere</span>
-    </span>
+      style={{ height: size, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+    />
   );
 }

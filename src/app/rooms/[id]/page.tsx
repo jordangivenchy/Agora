@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef, use } from "react";
 import Wordmark from "@/components/Wordmark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { parseRoomParam } from "@/lib/urls";
 import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant, Stance, QueueEntry } from "@/types/database";
 import DebateVideo from "@/components/DebateVideo";
@@ -23,8 +24,29 @@ type QueueWithUser = QueueEntry & {
   user: { username: string; avatar_url: string | null };
 };
 
+/* Param may be a full uuid or a slug ending in an 8-char id prefix. */
 export default function RoomPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: roomId } = use(params);
+  const { id: rawParam } = use(params);
+  const router = useRouter();
+  const [supabase] = useState(() => createClient());
+  const parsed = useMemo(() => parseRoomParam(rawParam), [rawParam]);
+  const [resolvedId, setResolvedId] = useState<string | null>(parsed.uuid ?? null);
+  useEffect(() => {
+    if (parsed.uuid || !parsed.prefix) {
+      if (!parsed.uuid && !parsed.prefix) router.replace("/");
+      return;
+    }
+    supabase.rpc("resolve_room_prefix", { p_prefix: parsed.prefix }).then(({ data }) => {
+      if (data) setResolvedId(data as string);
+      else router.replace("/");
+    });
+  }, [parsed, router, supabase]);
+
+  if (!resolvedId) return null;
+  return <ClassicRoom roomId={resolvedId} />;
+}
+
+function ClassicRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cameFromInvite = searchParams?.get("via") === "invite";

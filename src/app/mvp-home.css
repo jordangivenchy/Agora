@@ -5740,18 +5740,6 @@ body { background: transparent; }
   width: clamp(180px, calc(100vw - 520px), 480px) !important;
 }
 
-/* ═══ Text wordmark (replaces logo.png) — scales with the window ═══ */
-.nav-logo-text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: clamp(16px, 2.05vw, 26px);
-  letter-spacing: -0.03em;
-  line-height: 1;
-  color: #f5f5f0;
-  white-space: nowrap;
-}
-.nav-logo-sphere { color: #3b6cf6; }
-
 /* ═══ Friend list actions (React friends panel) ═══ */
 .friend-action-btn {
   border: 1px solid rgba(255,255,255,0.1);
@@ -5814,3 +5802,47 @@ body { background: transparent; }
 .friend-overlay-list .friend-status { font-size: 11px !important; }
 .friend-overlay-list .friend-item { gap: 9px !important; padding: 8px 10px !important; }
 .friend-action-btn--join { height: 24px; padding: 0 9px; font-size: 10.5px; letter-spacing: 0.02em; }
+
+/* ═══ Reddit-style comment threads: curved elbows + sibling rails ═══ */
+.cm-children {
+  margin-left: 14px;   /* rail sits under the parent's avatar column */
+  padding-left: 26px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* Depth cap: keep true nesting but stop indenting/drawing lines */
+.cm-children--flat { margin-left: 0; padding-left: 0; }
+.cm-children--flat > .cm-child::before,
+.cm-children--flat > .cm-child::after { display: none; }
+
+.cm-child { position: relative; }
+/* Curved elbow from the parent's rail into this reply's author row */
+.cm-child::after {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: -14px; /* starts exactly at the parent card's bottom edge */
+  width: 26px; /* horizontal arm ends exactly at the reply card's left edge */
+  height: 35px;
+  border-left: 2px solid #30303a;
+  border-bottom: 2px solid #30303a;
+  border-bottom-left-radius: 14px;
+  pointer-events: none;
+}
+/* Rail continuing down to later siblings. Starts level with the elbow's
+   top so the straight line runs THROUGH the T-junction — the elbow's
+   radius curves away from the vertical, and without this overlap each
+   branch point shows a bald gap where the curve departs. */
+.cm-child::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: -14px;
+  bottom: -14px;
+  width: 2px;
+  background: #30303a; /* solid: overdraw with the elbow can't double up */
+  pointer-events: none;
+}
+.cm-child:last-child::before { display: none; }

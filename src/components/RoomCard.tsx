@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant } from "@/types/database";
 import { useUserMenu } from "./userMenuContext";
+import { roomPath } from "@/lib/urls";
 import UserAvatar from "./UserAvatar";
 
 interface Props {
@@ -60,7 +61,7 @@ export default function RoomCard({ room }: Props) {
 
   return (
     <Link
-      href={`/agora/${room.id}`}
+      href={roomPath(room)}
       className="room-card block cursor-pointer transition-all"
       style={{
         background: "var(--bg-secondary)",

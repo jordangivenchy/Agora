@@ -9,7 +9,9 @@
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import useEscapeClose from "@/lib/useEscapeClose";
 import { createClient } from "@/lib/supabase-browser";
+import { parseRoomParam } from "@/lib/urls";
 import type { DebateRoom } from "@/types/database";
 import { TOPICS } from "@/types/database";
 import Amphitheater from "@/components/agora/Amphitheater";
@@ -41,8 +43,36 @@ interface PendingInvite {
   inviterName: string;
 }
 
+/* Route param may be a full uuid (legacy links) or a slug ending in an
+   8-char id prefix (pretty links) — resolve to the uuid, then render. */
 export default function AgoraPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: roomId } = use(params);
+  const { id: rawParam } = use(params);
+  const router = useRouter();
+  const [supabase] = useState(() => createClient());
+  const parsed = useMemo(() => parseRoomParam(rawParam), [rawParam]);
+  const [resolvedId, setResolvedId] = useState<string | null>(parsed.uuid ?? null);
+  useEffect(() => {
+    if (parsed.uuid || !parsed.prefix) {
+      if (!parsed.uuid && !parsed.prefix) router.replace("/");
+      return;
+    }
+    supabase.rpc("resolve_room_prefix", { p_prefix: parsed.prefix }).then(({ data }) => {
+      if (data) setResolvedId(data as string);
+      else router.replace("/");
+    });
+  }, [parsed, router, supabase]);
+
+  if (!resolvedId) {
+    return (
+      <div className="ag-root ag-loading">
+        <div className="ag-spinner" />
+      </div>
+    );
+  }
+  return <AgoraRoom roomId={resolvedId} />;
+}
+
+function AgoraRoom({ roomId }: { roomId: string }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
@@ -58,6 +88,9 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [following, setFollowing] = useState(false);
+  /* Host leave flow: leaving as host asks whether to close the stage. */
+  const [leavePrompt, setLeavePrompt] = useState(false);
+  const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
   const [invite, setInvite] = useState<PendingInvite | null>(null);
@@ -191,6 +224,8 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
     () => (currentUser ? participants.find((p) => p.user_id === currentUser.id) ?? null : null),
     [participants, currentUser]
   );
+  useEscapeClose(leavePrompt, () => setLeavePrompt(false));
+
   const myRole = useMemo(() => {
     if (!room) return "audience" as const;
     if (myParticipation) return deriveStageRole(myParticipation, room);
@@ -357,6 +392,64 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
       (t) => !(t.local && onScreen.has(`${t.identity}:l`))
     );
   }, [call.videoTiles, screenFeeds]);
+
+  /* Walking in seats you: signed-in visitors get a spectator row right
+     away, so you're visible in the crowd the moment you arrive — raising
+     a hand is for speaking, not for existing. Returning visitors get
+     their old row restored (left_at cleared) with role untouched, so a
+     re-entering host or speaker lands back where they belong. */
+  const seatAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (seatAttemptedRef.current) return;
+    if (!loaded || !currentUser || !room || room.status === "ended") return;
+    if (myParticipation) {
+      seatAttemptedRef.current = true;
+      return;
+    }
+    seatAttemptedRef.current = true;
+    (async () => {
+      try {
+        const { data: existing } = await supabase
+          .from("debate_participants")
+          .select("id, left_at")
+          .eq("room_id", roomId)
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        if (!existing) {
+          await supabase
+            .from("debate_participants")
+            .insert({ room_id: roomId, user_id: currentUser.id, role: "spectator", stance: null });
+        } else if (existing.left_at) {
+          await supabase
+            .from("debate_participants")
+            .update({ left_at: null, joined_at: new Date().toISOString() })
+            .eq("id", existing.id);
+        }
+        fetchAll();
+      } catch {
+        /* seating is cosmetic — the room still works unlisted */
+      }
+    })();
+  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll]);
+
+  /* Leaving vacates the seat (best effort — a closed tab can't stamp out). */
+  const vacateSeat = useCallback(() => {
+    if (!currentUser || !myParticipation) return;
+    supabase
+      .from("debate_participants")
+      .update({ left_at: new Date().toISOString(), hand_raised_at: null })
+      .eq("id", myParticipation.id)
+      .then(undefined, () => {});
+  }, [currentUser, myParticipation, supabase]);
+
+  /* Stage closed (by the host, here or elsewhere): give the banner a
+     beat to read, then walk everyone out. Also catches visitors landing
+     on an already-ended room link. */
+  useEffect(() => {
+    if (!loaded || room?.status !== "ended") return;
+    const t = setTimeout(() => router.push("/"), 2600);
+    return () => clearTimeout(t);
+  }, [loaded, room?.status, router]);
 
   /* ── Raise / lower hand ────────────────────────────────────────────
      Signed-in listeners only. Landing in the Agora doesn't create a
@@ -527,6 +620,49 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
           />
         )}
 
+        {/* ── Host leave prompt: close the stage or just step out ── */}
+        {leavePrompt && room?.status !== "ended" && (
+          <div className="ag-invite" role="dialog" aria-label="Leave options">
+            <span className="ag-invite-text">
+              You&apos;re the <strong>host</strong> — close the stage for everyone, or just step out?
+            </span>
+            <div className="ag-invite-actions">
+              <button
+                className="ag-invite-decline"
+                disabled={closingStage}
+                onClick={() => {
+                  vacateSeat();
+                  router.push("/");
+                }}
+              >
+                Just leave
+              </button>
+              <button
+                className="ag-invite-join"
+                style={{ background: "#c0392b" }}
+                disabled={closingStage}
+                onClick={async () => {
+                  setClosingStage(true);
+                  await supabase
+                    .from("debate_rooms")
+                    .update({ status: "ended", ended_at: new Date().toISOString() })
+                    .eq("id", roomId);
+                  router.push("/");
+                }}
+              >
+                {closingStage ? "Closing…" : "Close stage"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Stage closed: everyone gets walked out ── */}
+        {room?.status === "ended" && (
+          <div className="ag-invite" role="status">
+            <span className="ag-invite-text">The host closed the stage — taking you back home.</span>
+          </div>
+        )}
+
         {/* ── Invite prompt ── */}
         {invite && (
           <InvitePrompt
@@ -643,7 +779,17 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
           >
             📹 <span>{call.mediaBusy ? "…" : "Camera"}</span>
           </button>
-          <button className="ag-ctl ag-ctl--leave" onClick={() => router.push("/")}>
+          <button
+            className="ag-ctl ag-ctl--leave"
+            onClick={() => {
+              if (isHostRole(myRole)) {
+                setLeavePrompt(true);
+              } else {
+                vacateSeat();
+                router.push("/");
+              }
+            }}
+          >
             📞 <span>Leave</span>
           </button>
         </footer>

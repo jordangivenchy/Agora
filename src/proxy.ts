@@ -36,6 +36,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  /* Handle style: /@username is the public spelling of /users/username. */
+  if (request.nextUrl.pathname.startsWith("/@")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/users/" + request.nextUrl.pathname.slice(2);
+    return NextResponse.rewrite(url);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

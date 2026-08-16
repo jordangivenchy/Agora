@@ -16,7 +16,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 <nav class="nav">
   <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
   <a class="nav-logo" href="#" aria-label="AgoraSphere">
-    <span class="nav-logo-text">Agora<span class="nav-logo-sphere">Sphere</span></span>
+    <img src="/logo.png" alt="AgoraSphere">
   </a>
   <div class="nav-search agora-search-shell" id="navSearchWrap">
     <div class="search-active-indicator"></div>

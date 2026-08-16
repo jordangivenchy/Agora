@@ -428,12 +428,8 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     const isCollapsed = collapsed.has(c.id);
     const hidden = commentTree.subtreeSize(c.id);
     return (
-      <div key={c.id} style={{ marginLeft: depth > 0 ? 18 : 0 }}>
-        <div
-          className="pl-3 mb-2"
-          style={depth > 0 ? { borderLeft: "2px solid rgba(255,255,255,0.08)" } : undefined}
-        >
-          <div className="px-3.5 py-2.5" style={{ ...card, borderRadius: 10 }}>
+      <div key={c.id} className="cm-node">
+        <div className="px-4 py-3" style={{ ...card, borderRadius: 14 }}>
             <div className="flex items-center gap-2 flex-wrap">
               {kids.length > 0 && (
                 <button
@@ -520,9 +516,16 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 )}
               </>
             )}
-          </div>
-          {!isCollapsed && kids.map((k) => renderThread(k, depth < MAX_INDENT ? depth + 1 : depth))}
         </div>
+        {!isCollapsed && kids.length > 0 && (
+          <div className={depth < MAX_INDENT ? "cm-children" : "cm-children cm-children--flat"}>
+            {kids.map((k) => (
+              <div key={k.id} className="cm-child">
+                {renderThread(k, depth + 1)}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -537,7 +540,10 @@ export default function CommunitiesPage({ open, onClose }: Props) {
         bottom: 0,
         zIndex: 50,
         fontFamily: "'DM Sans', sans-serif",
-        background: "var(--bg-primary, #0a0a0c)",
+        /* Translucent veil instead of solid: the homepage star canvas
+           lives behind this overlay (the MVP main content is hidden
+           while a tab is open), so the sky shows through. */
+        background: "rgba(8,8,12,0.35)",
       }}
     >
       <div className="max-w-[1100px] mx-auto px-6 py-5">
@@ -738,7 +744,9 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                     No comments yet — start the discussion.
                   </p>
                 ) : (
-                  commentTree.roots.map((root) => renderThread(root, 0))
+                  <div className="flex flex-col" style={{ gap: 16 }}>
+                    {commentTree.roots.map((root) => renderThread(root, 0))}
+                  </div>
                 )}
               </div>
             ) : (
