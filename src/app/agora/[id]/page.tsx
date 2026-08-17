@@ -111,6 +111,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
+  /* Chat rail collapsed → the stage runs the full width of the page, for
+     watching without the chat in frame. Lives here rather than in the
+     rail because the collapsed class drives layout on .ag-root. */
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [handBusy, setHandBusy] = useState(false);
@@ -669,7 +673,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         : "Raise your hand to request to speak";
 
   return (
-    <div className="ag-root">
+    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}`}>
       <div className="ag-main">
         {/* ── Top bar ── */}
         {broadcast && (
@@ -970,7 +974,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
       </div>
 
-      {!broadcast && <AgoraSidebar roomId={roomId} currentUser={currentUser} />}
+      {!broadcast && (
+        <AgoraSidebar
+          roomId={roomId}
+          currentUser={currentUser}
+          collapsed={railCollapsed}
+          onToggleCollapsed={() => setRailCollapsed((v) => !v)}
+        />
+      )}
 
       {/* Agora AI assistant — the full pipeline (Gemini + retrieval + history)
           lives behind /api/agora; this is its surface in the amphitheater,

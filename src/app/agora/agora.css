@@ -3,18 +3,61 @@
    Palette: night-time forest around a stone theater — deep greens at the
    edges, warm stone at center, purple (PRO) vs blue (CON). */
 
+/* The night continues past the 3D canvas. The scene only covers the main
+   column — the right rail is a flex sibling, and pulling the canvas under
+   it would drag the whole composition off-centre — so the page itself
+   carries the same sky, in CSS, behind the chat. The old palette here was
+   a set of green forest gradients, which is what made the area around the
+   rail read as a different colour from the stars.
+
+   Values track SKY.zenith / SKY.horizon in sceneTokens.ts; if the sky is
+   retuned there, match it here. */
 .ag-root {
   display: flex;
   min-height: 100vh;
+  /* Shared by both columns: the footer band's height. The controls on the
+     left and the chat composer on the right both size to it, which is
+     what makes their top edges read as one line across the page. */
+  --ag-controls-h: 70px;
+  --ag-rail-w: 320px;
   background:
-    radial-gradient(ellipse 60% 50% at 50% 45%, #23201c 0%, transparent 70%),
-    radial-gradient(ellipse 80% 60% at 10% 0%, #0d1a10 0%, transparent 60%),
-    radial-gradient(ellipse 80% 60% at 90% 0%, #0c1810 0%, transparent 60%),
-    radial-gradient(ellipse 90% 50% at 50% 110%, #0e1a11 0%, transparent 65%),
-    #0a0d0a;
+    radial-gradient(ellipse 70% 50% at 50% 100%, #0d1526 0%, transparent 70%),
+    #05070f;
   color: #e7e9ee;
   font-family: "DM Sans", "Segoe UI", sans-serif;
   overflow: hidden;
+}
+
+/* A sparse CSS starfield over that base, matching the WebGL field's
+   character: a handful of small, dim, unevenly placed points. The tile is
+   deliberately an odd size so the repeat doesn't read as a grid, and it
+   sits behind every panel — the chat card's own translucency lets a
+   little of it through. */
+.ag-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%, rgba(230, 236, 255, 0.5), transparent 60%),
+    radial-gradient(1.2px 1.2px at 34% 62%, rgba(191, 208, 255, 0.38), transparent 60%),
+    radial-gradient(1.8px 1.8px at 58% 9%, rgba(230, 236, 255, 0.42), transparent 60%),
+    radial-gradient(1px 1px at 73% 44%, rgba(159, 178, 224, 0.34), transparent 60%),
+    radial-gradient(1.4px 1.4px at 88% 76%, rgba(191, 208, 255, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 21% 88%, rgba(159, 178, 224, 0.3), transparent 60%),
+    radial-gradient(1.2px 1.2px at 46% 33%, rgba(191, 208, 255, 0.28), transparent 60%),
+    radial-gradient(1.5px 1.5px at 92% 24%, rgba(230, 236, 255, 0.36), transparent 60%),
+    radial-gradient(1px 1px at 66% 92%, rgba(159, 178, 224, 0.3), transparent 60%);
+  background-size: 737px 641px;
+  background-repeat: repeat;
+}
+
+/* Above the starfield layer: the rail is otherwise a static box and would
+   paint underneath a positioned pseudo-element. */
+.ag-sidebar {
+  position: relative;
+  z-index: 1;
 }
 
 .ag-loading {
@@ -39,7 +82,7 @@
 }
 
 .ag-main {
-  position: relative; /* anchors host controls + invite prompt */
+  position: relative; /* anchors the scene, host controls, invite prompt */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -50,6 +93,7 @@
 /* ── Top bar ── */
 
 .ag-topbar {
+  position: relative; /* lifts it above the full-bleed scene behind */
   display: flex;
   align-items: center;
   gap: 16px;
@@ -166,13 +210,18 @@
 
 /* ── Theater ── */
 
+/* Full-bleed: the scene covers the whole main column, including behind
+   the topbar, so the night sky is one continuous field with the topbar
+   floating on it. It used to be a flex row between topbar and controls,
+   which put a hard seam and a different background colour above the
+   stars. Taken out of flow, so the footer pins itself with margin-top. */
 .ag-theater {
-  position: relative;
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  z-index: 0;
 }
 
 /* The 3D scene fills the theater area; the stage rail floats over it */
@@ -190,27 +239,45 @@
 
 /* ── Stage ── */
 
+/* The rail is now just the view toggle, floating free over the scene —
+   the two speaker panels moved onto the 3D screens themselves. It keeps
+   the participant panels' glass language (translucent navy, frosted
+   backdrop, thin light border) so the WebGL and HTML layers read as one
+   system, but it no longer spans the width or bottoms out against the
+   stone: the environment shows through on either side of it. */
+
 .ag-stage {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  /* The scene now runs under the footer, so clear it explicitly. */
+  bottom: calc(var(--ag-controls-h) + 18px);
   transform: translateX(-50%);
-  width: min(860px, 88%);
-  height: 158px;
-  background: rgba(10, 10, 14, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: none;
-  border-radius: 18px 18px 0 0;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  padding: 0 22px;
+  z-index: 2;
 }
 
-/* Center column: just the view toggle between the two panels */
+/* The scene darkens into the rail rather than meeting it at a hard line
+   (brief §19): a short gradient veil rising off the bottom edge, behind
+   the rail and above the canvas. */
+/* Now runs to the very bottom edge rather than stopping at the old bar:
+   with the buttons floating directly on the scene, this gradient is what
+   keeps them legible over whatever the stage is doing behind them. */
+.ag-theater::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(150px, 26vh, 280px);
+  background: linear-gradient(to top, rgba(5, 7, 15, 0.75), rgba(5, 7, 15, 0));
+  pointer-events: none;
+  /* Above the canvas, below the rail — the veil sits between the
+     environment and the product UI, which is exactly the layer order the
+     rest of the scene follows. */
+  z-index: 1;
+}
 
 .ag-stage-center {
   display: flex;
@@ -219,58 +286,13 @@
   flex-shrink: 0;
 }
 
-.ag-stage-panel {
-  flex: 1;
-  max-width: 270px;
-  background: rgba(14, 12, 22, 0.9);
-  border-radius: 14px;
-  padding: 12px 16px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+/* `.ag-speaking-ring` stays: the discussion strip (StripChip) still uses
+   it to ring a talking avatar. The participant panels no longer do — a
+   speaking debater is shown by the halo around their 3D box instead.
 
-.ag-stage-panel--pro { border-color: rgba(167, 139, 250, 0.45); color: #c4b5fd; }
-.ag-stage-panel--con { border-color: rgba(122, 184, 255, 0.45); color: #93c5fd; }
-
-.ag-stage-panel-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.ag-stage-panel-count {
-  font-size: 11px;
-  color: #9aa0ac;
-  margin: 2px 0 8px;
-}
-
-.ag-stage-avatars {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.ag-stage-avatar {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-}
-
-.ag-stage-avatar--empty {
-  background: rgba(255, 255, 255, 0.08);
-  color: #8a8f9c;
-  border-style: dashed;
-}
+   Removed with the speaker panels: .ag-stage-panel(+--pro/--con/-head/
+   -count), .ag-stage-avatars, .ag-stage-avatar(--empty), .ag-wave and its
+   ag-wave-bounce keyframes. All were SpeakerPanel-only. */
 
 .ag-speaking-ring {
   position: absolute;
@@ -280,36 +302,27 @@
   animation: ag-pulse 1.4s ease-in-out infinite;
 }
 
-.ag-wave {
-  display: flex;
-  align-items: flex-end;
-  gap: 2.5px;
-  height: 18px;
-}
+/* Center button: the speaker-view toggle */
 
-.ag-wave span {
-  width: 3px;
-  border-radius: 2px;
-  background: currentColor;
-  opacity: 0.75;
-  animation: ag-wave-bounce 1s ease-in-out infinite;
-}
-
-@keyframes ag-wave-bounce {
-  0%, 100% { height: 4px; }
-  50% { height: 16px; }
-}
-
-/* Center button: the future speaker-view toggle */
-
+/* Standing alone over the scene now, so it carries the glass itself
+   rather than inheriting it from a rail behind it. */
 .ag-switch-view {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 18px;
   border-radius: 12px;
-  background: rgba(18, 16, 26, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(
+    135deg,
+    rgba(24, 29, 48, 0.72),
+    rgba(9, 12, 24, 0.62)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: #cfd3dc;
   cursor: pointer;
   white-space: nowrap;
@@ -328,32 +341,60 @@
 
 /* ── Bottom controls ── */
 
+/* No bar and no dividing line: the night runs all the way to the bottom
+   edge and the buttons float on it. The row still reserves its height so
+   the scene's lower furniture (view toggle, ground veil) has something to
+   clear — it just doesn't paint anything itself. */
 .ag-controls {
+  position: relative; /* above the full-bleed scene */
+  /* The scene is out of flow now, so the footer pins itself to the
+     bottom of the column instead of being pushed there by the theater. */
+  margin-top: auto;
+  box-sizing: border-box;
+  min-height: var(--ag-controls-h);
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 12px 0 16px;
-  background: rgba(8, 8, 10, 0.85);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0 12px;
+  background: none;
+  border-top: none;
   z-index: 5;
 }
 
+/* Glass pills. They used to be a 5%-white wash, which only read because
+   an opaque bar sat behind them; floating on the starfield they need a
+   surface of their own — the same one the view toggle and chat card use. */
 .ag-ctl {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    135deg,
+    rgba(24, 29, 48, 0.72),
+    rgba(9, 12, 24, 0.62)
+  );
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
   color: #cfd3dc;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.ag-ctl:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.ag-ctl:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    rgba(38, 44, 68, 0.8),
+    rgba(16, 20, 36, 0.7)
+  );
+  border-color: rgba(255, 255, 255, 0.2);
+}
 .ag-ctl:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .ag-ctl--active {
@@ -688,22 +729,79 @@
 /* ── Right rail ── */
 
 .ag-sidebar {
-  width: 320px;
+  width: var(--ag-rail-w);
   flex-shrink: 0;
+  /* Explicit: the footer band's alignment depends on this column being
+     exactly 100vh *including* its 14px top padding. That's Tailwind
+     preflight's default, but it's load-bearing here, so it's stated. */
+  box-sizing: border-box;
   height: 100vh;
   overflow-y: auto;
-  padding: 14px 14px 14px 0;
+  /* No bottom inset: the chat card runs to the very bottom so its footer
+     can form the right half of the page's footer band. */
+  padding: 14px 14px 0 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: width 0.28s ease, padding 0.28s ease;
 }
 
+/* ── Collapsed rail ──
+   The stage takes the full page width. The rail's width comes from the
+   shared variable, so zeroing it collapses the column, the footer band
+   behind it, and the scene's own resize (ResizeObserver on the canvas
+   host) all in one move. Padding has to go too: with border-box, a 0
+   width still resolves to the 14px of padding. */
+.ag-root.rail-collapsed {
+  --ag-rail-w: 0px;
+}
+
+.rail-collapsed .ag-sidebar {
+  padding-right: 0;
+  overflow: hidden;
+}
+
+/* Folds downward and fades as it goes, rather than being clipped away
+   sideways by the narrowing column. `visibility` is held until the fold
+   finishes, then flipped — a zero-width card would otherwise keep its
+   tabs and composer in the tab order while invisible. */
+.rail-collapsed .ag-chat-card {
+  transform: translateY(26px);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
+}
+
+.ag-chat-card {
+  transition: transform 0.28s ease, opacity 0.2s ease, visibility 0s linear 0s;
+}
+
+/* (The rail's opaque footer band is gone with the controls bar — the sky
+   now runs unbroken to the bottom edge on both sides.) */
+
+/* Glass, so the night reads *behind* the chat rather than the rail being
+   a solid column: translucent navy over the starfield, frosted, with a
+   drop shadow that lifts the card off the sky. Same treatment as the
+   participant panels and the view toggle. */
 .ag-card {
-  background: rgba(16, 14, 24, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  /* Positioned so it paints above the rail's footer band, which is a
+     positioned pseudo-element and would otherwise cover the card's bottom
+     70px — including the composer inside it. */
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(24, 29, 48, 0.62),
+    rgba(9, 12, 24, 0.5)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 14px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow:
+    0 16px 50px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .ag-card-title {
@@ -723,6 +821,11 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  /* Squared off at the bottom: the card now meets the footer band, and
+     rounded corners there would leave two notches of sky in it. */
+  border-bottom: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .ag-tabs {
@@ -745,6 +848,57 @@
 
 .ag-tab:hover { color: #cfd3dc; }
 .ag-tab.active { color: #fff; border-bottom-color: #7c5cff; }
+
+/* Collapse control, sharing the tab row. `flex: 0` keeps it from taking a
+   third of the row the way the two tabs do. */
+.ag-rail-collapse {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  align-self: stretch;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7079;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.ag-rail-collapse:hover { color: #cfd3dc; }
+
+/* Shown only while collapsed: a small handle at the right edge, sitting
+   just above the footer band. Fixed, so it is unaffected by the rail
+   having no width left to live in. */
+.ag-rail-restore {
+  position: fixed;
+  right: 14px;
+  bottom: calc(var(--ag-controls-h) + 14px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(24, 29, 48, 0.72),
+    rgba(9, 12, 24, 0.62)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  color: #cfd3dc;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ag-rail-restore:hover { border-color: #7c5cff; }
+.ag-rail-restore svg { color: #a78bfa; }
 
 .ag-chat-scroll {
   flex: 1;
@@ -798,12 +952,23 @@
   overflow-wrap: break-word;
 }
 
+/* Keeps the controls' height so the composer still sits level with the
+   button row, but no fill of its own — it's part of the glass card now
+   that the opaque band is gone. The hairline is card structure, dividing
+   messages from composer; it isn't the page-wide bar that was removed. */
 .ag-chat-inputrow {
-  padding: 10px 12px;
+  box-sizing: border-box;
+  min-height: var(--ag-controls-h);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: none;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .ag-chat-input {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   padding: 10px 14px;
   border-radius: 10px;
@@ -817,10 +982,16 @@
 .ag-chat-input:focus { border-color: #7c5cff; }
 
 .ag-chat-signin {
-  padding: 12px;
+  box-sizing: border-box;
+  min-height: var(--ag-controls-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
   text-align: center;
   font-size: 12px;
   color: #8a8f9c;
+  background: none;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
@@ -912,6 +1083,76 @@
   .ag-main { height: auto; min-height: 78vh; }
   .ag-sidebar { width: auto; height: auto; padding: 0 14px 14px; }
   .ag-chat-card { min-height: 260px; }
+
+  /* Stacked layout: the rail sits below the scene and the page scrolls,
+     so there is no shared footer line to meet. The card goes back to a
+     fully rounded, inset panel and the band behind it is dropped. */
+  .ag-sidebar::after { display: none; }
+  .ag-chat-card {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+  }
+  .ag-chat-inputrow,
+  .ag-chat-signin {
+    min-height: 0;
+    padding: 10px 12px;
+    background: none;
+  }
+
+  /* Collapsing is a side-by-side idea. Stacked, the chat already sits
+     below the stage and out of the way, so the controls come off and the
+     collapsed state is neutralised rather than left half-applied. */
+  .ag-rail-collapse,
+  .ag-rail-restore { display: none; }
+
+  .rail-collapsed .ag-sidebar {
+    width: auto;
+    padding: 0 14px 14px;
+    overflow: visible;
+  }
+
+  .rail-collapsed .ag-chat-card {
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* ── Environment: responsive + reduced motion ──────────────────────
+   The environment gives ground before the participants do. As the frame
+   narrows the rail shortens and the ground veil shrinks; the 3D camera
+   widens its lens in step (see resize() in AgoraScene3D) so the two
+   participant panels stay fully on screen at every size. */
+
+@media (max-width: 860px) {
+  /* Still has to clear the button row — the veil is the only thing behind
+     the controls now, so it can't shrink below their height. */
+  .ag-theater::after { height: clamp(130px, 22vh, 220px); }
+}
+
+@media (max-width: 620px) {
+  /* Phone: the environment becomes decoration. With the speaker panels
+     gone the rail is a single button, so it only needs to shed its
+     caption to stay compact. */
+  /* The footer wraps to two rows on a phone, so the reserved height goes
+     up with it — otherwise the toggle (and the ground veil) tuck in
+     behind the controls. */
+  .ag-main { --ag-controls-h: 90px; }
+  .ag-stage { bottom: calc(var(--ag-controls-h) + 12px); }
+  .ag-switch-view { padding: 8px; }
+  .ag-switch-view span { display: none; }
+  /* The wide phone lens pulls far more ground into frame, which left the
+     lit platform dominating the lower half. A deeper veil sinks it back
+     to a decorative hint without touching the desktop framing. */
+  .ag-theater::after { height: clamp(150px, 30vh, 300px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The scene's own motion (camera breathe, star twinkle, warm-pool
+     flicker, and the speaking halo's breathing) is disabled in the render
+     loop; this covers what's left in the DOM. */
+  .ag-speaking-ring { animation: none; }
 }
 
 /* ── Live call: reactions, emoji picker, video dock ─────────────── */
