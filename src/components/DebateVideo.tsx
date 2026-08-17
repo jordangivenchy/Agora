@@ -93,6 +93,10 @@ export default function DebateVideo({
       connect={true}
       video={isDebater && !joinCameraOff}
       audio={isDebater && !joinMuted}
+      /* Cost controls, mirroring the amphitheater hook: publishers stop
+         encoding simulcast layers nobody watches, and subscriber quality
+         adapts to the on-screen tile size. */
+      options={{ dynacast: true, adaptiveStream: true }}
       className="stage-body"
       data-lk-theme="default"
     >

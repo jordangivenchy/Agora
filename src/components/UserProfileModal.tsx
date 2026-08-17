@@ -8,6 +8,7 @@ import EditProfileModal from "./EditProfileModal";
 import FollowListModal from "./FollowListModal";
 import { useUserMenu } from "./userMenuContext";
 import { userPath } from "@/lib/urls";
+import VerifiedBadge from "./VerifiedBadge";
 
 interface Props {
   userId: string | null;
@@ -29,6 +30,7 @@ interface ProfileRow {
   is_following: boolean;
   is_followed_by: boolean;
   is_friend: boolean;
+  verified: boolean;
 }
 
 interface LiveOrScheduledDebate {
@@ -311,6 +313,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                   }}
                 >
                   <span className="truncate">{profile.display_name || profile.username}</span>
+                  {profile.verified && <VerifiedBadge size={16} />}
                   {profile.is_friend && (
                     <span
                       style={{

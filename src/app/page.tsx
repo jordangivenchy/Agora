@@ -277,12 +277,51 @@ export default function Home() {
     });
   }, [activeTab, booted]);
 
+  /* Deep link from profile pages: /?dm=<userId> opens that DM thread once
+     the dock is mounted. */
+  useEffect(() => {
+    if (!booted) return;
+    const dm = new URLSearchParams(window.location.search).get("dm");
+    if (!dm) return;
+    window.history.replaceState(null, "", "/");
+    (async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("id, username, avatar_url")
+        .eq("id", dm)
+        .maybeSingle();
+      if (data) {
+        window.dispatchEvent(
+          new CustomEvent("agora:dm", {
+            detail: { userId: data.id, username: data.username, avatarUrl: data.avatar_url },
+          })
+        );
+      }
+    })();
+  }, [booted, supabase]);
+
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
     const onProfile = (e: Event) => {
       const detail = (e as CustomEvent).detail;
+      if (typeof detail === "string" && detail) {
+        // Someone else: quick-look modal.
+        setProfileUserId(detail);
+        return;
+      }
+      // Own profile (nav avatar → Profile): go straight to the full page.
       const w = window as unknown as { __AGORA_DATA__?: { user?: { id?: string } } };
-      setProfileUserId(typeof detail === "string" && detail ? detail : w.__AGORA_DATA__?.user?.id ?? null);
+      const myId = w.__AGORA_DATA__?.user?.id;
+      if (!myId) return;
+      supabase
+        .from("users")
+        .select("username")
+        .eq("id", myId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.username) window.location.href = `/@${encodeURIComponent(data.username)}`;
+          else setProfileUserId(myId);
+        });
     };
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;

@@ -248,6 +248,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     username: myUsername,
     canPublish: onStage(myRole),
     ready: loaded && !!room,
+    highQuality: view === "speaker",
   });
   const [reactOpen, setReactOpen] = useState(false);
 
@@ -695,6 +696,20 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               </>
             )}
           </div>
+        )}
+
+        {/* ── Autoplay-blocked prompt: without this, listeners sit in
+              silence with no idea the browser muted the room ── */}
+        {call.audioBlocked && (
+          <button
+            className="ag-invite cursor-pointer"
+            style={{ border: "1px solid #f4d47c", bottom: 140 }}
+            onClick={call.enableAudio}
+          >
+            <span className="ag-invite-text">
+              🔊 Your browser muted the room — <strong>tap to listen</strong>
+            </span>
+          </button>
         )}
 
         {/* ── Mic/camera failure toast — a silent dead button is worse ── */}

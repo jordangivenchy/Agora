@@ -463,7 +463,11 @@ export default function Navbar({
                   <button
                     onClick={() => {
                       setShowDropdown(false);
-                      onOpenProfile(user.id);
+                      if (profile?.username) {
+                        window.location.href = `/@${encodeURIComponent(profile.username)}`;
+                      } else {
+                        onOpenProfile(user.id);
+                      }
                     }}
                     className="w-full text-left flex items-center gap-2.5 cursor-pointer transition-all"
                     style={{

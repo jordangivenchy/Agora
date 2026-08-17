@@ -11,6 +11,8 @@ import {
 } from "./userMenuContext";
 import ReportModal, { type ReportTarget } from "./ReportModal";
 import UserProfileModal from "./UserProfileModal";
+import ProfileView from "./ProfileView";
+import { userPath } from "@/lib/urls";
 
 export { useUserMenu } from "./userMenuContext";
 export type { MenuRoomContext, MenuChatContext, OpenMenuOptions } from "./userMenuContext";
@@ -68,6 +70,9 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
   const [rel, setRel] = useState<Relationship | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  /* In-room profile drawer: the debate keeps playing underneath. */
+  const [drawerUsername, setDrawerUsername] = useState<string | null>(null);
+  useEscapeClose(!!drawerUsername, () => setDrawerUsername(null));
   const [modPanelTarget, setModPanelTarget] = useState<{ userId: string; username: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -164,9 +169,12 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
     };
 
     switch (id) {
-      case "view_profile":
-        setProfileUserId(target.userId);
+      case "view_profile": {
+        const inRoom = /^\/(agora|rooms)\//.test(window.location.pathname);
+        if (inRoom) setDrawerUsername(target.username);
+        else window.location.href = userPath(target.username);
         break;
+      }
 
       case "message":
         window.dispatchEvent(
@@ -183,7 +191,12 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
           const { error } = await supabase
             .from("user_favorites")
             .insert({ user_id: me.id, favorite_id: target.userId });
-          if (error) showToast("Failed: " + error.message);
+          if (error)
+            showToast(
+              error.message.includes("row-level security")
+                ? "Favorites are for friends — you both need to follow each other."
+                : "Failed: " + error.message
+            );
           else showToast(`⭐ @${target.username} added to favorites`);
         }
         break;
@@ -383,7 +396,9 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
     if (!menu) return ROW_META[id].label;
     if (id === "favorite") {
       if (!rel) return "Favorites…";
-      return rel.favorite ? "Remove from favorites" : "Add to favorites";
+      if (rel.favorite) return "Remove from favorites";
+      if (!(rel.following && rel.followedBy)) return "Add to favorites (friends only)";
+      return "Add to favorites";
     }
     if (id === "follow") {
       if (!rel) return "Follow…";
@@ -400,6 +415,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
   function rowDisabled(id: MenuActionId): boolean {
     if (ROW_META[id].soon) return true;
     if ((id === "follow" || id === "block" || id === "favorite") && !rel) return true;
+    if (id === "favorite" && rel && !rel.favorite && !(rel.following && rel.followedBy)) return true;
     return false;
   }
 
@@ -450,6 +466,50 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
       )}
 
       <ReportModal target={reportTarget} onClose={() => setReportTarget(null)} />
+
+      {drawerUsername && (
+        <div
+          className="fixed inset-0 z-[950]"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={() => setDrawerUsername(null)}
+        >
+          <aside
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-0 top-0 h-full overflow-y-auto"
+            style={{
+              width: "min(620px, 94vw)",
+              background: "rgba(9,9,14,0.97)",
+              borderLeft: "1px solid rgba(255,255,255,0.10)",
+              boxShadow: "-24px 0 64px rgba(0,0,0,0.55)",
+              backdropFilter: "blur(10px)",
+              animation: "ag-drawer-in 0.25s cubic-bezier(0.2, 0.9, 0.3, 1)",
+            }}
+          >
+            <div className="flex items-center justify-between px-5 pt-4">
+              <span style={{ color: "#8b8b94", fontSize: 12.5, fontFamily: "'DM Sans', sans-serif" }}>
+                Profile — the debate keeps playing
+              </span>
+              <button
+                onClick={() => setDrawerUsername(null)}
+                className="cursor-pointer"
+                aria-label="Close profile"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  border: "none",
+                  background: "rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.7)",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <ProfileView username={drawerUsername} embedded />
+          </aside>
+          <style>{`@keyframes ag-drawer-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }`}</style>
+        </div>
+      )}
 
       <UserProfileModal
         userId={profileUserId}

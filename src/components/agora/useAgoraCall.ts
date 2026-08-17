@@ -19,9 +19,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ConnectionState,
   RemoteTrack,
+  RemoteTrackPublication,
   Room,
   RoomEvent,
   Track,
+  VideoPresets,
+  VideoQuality,
 } from "livekit-client";
 
 export interface Reaction {
@@ -44,6 +47,9 @@ interface Options {
   username: string;
   /** True for host / cohost / speaker: request a publishing token. */
   canPublish: boolean;
+  /** Viewer is in the close-up speaker view — pull full-res video.
+      In the distant audience view the medium layer is indistinguishable. */
+  highQuality?: boolean;
   /** Gate connection until the page has loaded the room. */
   ready: boolean;
 }
@@ -52,16 +58,32 @@ type DataMsg = { t: "reaction"; e: string; u: string };
 
 let reactionSeq = 1;
 
-export function useAgoraCall({ roomId, userId, username, canPublish, ready }: Options) {
+export function useAgoraCall({ roomId, userId, username, canPublish, ready, highQuality = false }: Options) {
   const [connected, setConnected] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
   /** Human-readable reason the last mic/camera toggle failed (toast fodder). */
   const [mediaError, setMediaError] = useState<string | null>(null);
+  /* Browser refused audio autoplay — the UI shows a tap-to-listen prompt. */
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [speakingIds, setSpeakingIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [videoTiles, setVideoTiles] = useState<VideoTile[]>([]);
+  const hqRef = useRef(highQuality);
+  hqRef.current = highQuality;
+
+  /* Switching views retunes already-subscribed video layers. */
+  useEffect(() => {
+    const room = roomRef.current;
+    if (!room || canPublish) return;
+    const q = highQuality ? VideoQuality.HIGH : VideoQuality.MEDIUM;
+    room.remoteParticipants.forEach((p) => {
+      p.videoTrackPublications.forEach((pub) => {
+        if (pub.isSubscribed) pub.setVideoQuality(q);
+      });
+    });
+  }, [highQuality, canPublish]);
 
   const roomRef = useRef<Room | null>(null);
   /* One guest identity per mount, so reconnects don't multiply "viewers". */
@@ -118,7 +140,15 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready }: Op
     if (!ready || !roomId) return;
 
     const identity = userId ?? guestIdRef.current;
-    const room = new Room();
+    /* Cost controls: dynacast stops the publisher encoding simulcast
+       layers nobody is subscribed to; capture capped at 720p; audience
+       subscribers cap themselves at the medium layer below — together
+       these keep per-viewer bandwidth a fraction of full-res. */
+    const room = new Room({
+      dynacast: true,
+      videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+      publishDefaults: { simulcast: true },
+    });
     roomRef.current = room;
     let cancelled = false;
     const audioEls: HTMLMediaElement[] = [];
@@ -150,7 +180,15 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready }: Op
         if (!token || cancelled) return;
 
         room
-          .on(RoomEvent.TrackSubscribed, (track) => {
+          .on(RoomEvent.TrackSubscribed, (track, publication) => {
+            /* Audience members render video on the distant holo screens or
+               small dock tiles — the 360p simulcast layer is all they can
+               see. On-stage participants keep full quality. */
+            if (!canPublish && track.kind === Track.Kind.Video) {
+              (publication as RemoteTrackPublication).setVideoQuality(
+                hqRef.current ? VideoQuality.HIGH : VideoQuality.MEDIUM
+              );
+            }
             attachAudio(track);
             refreshTiles();
           })
@@ -188,8 +226,14 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready }: Op
         setConnected(true);
         refreshTiles();
 
-        /* Browsers block autoplaying audio until a gesture — resume on the
-           first interaction so listeners actually hear the stage. */
+        /* Browsers block autoplaying audio until a gesture. Track the real
+           playback status (silently swallowing it = listeners hear nothing
+           and never know why), resume on first interaction, and let the UI
+           show a tap-to-listen prompt while blocked. */
+        setAudioBlocked(!room.canPlaybackAudio);
+        room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+          setAudioBlocked(!room.canPlaybackAudio);
+        });
         const resume = () => {
           room.startAudio().catch(() => {});
           document.removeEventListener("pointerdown", resume);
@@ -283,6 +327,11 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready }: Op
     camOn,
     mediaBusy,
     mediaError,
+    audioBlocked,
+    enableAudio: () => {
+      const room = roomRef.current;
+      if (room) room.startAudio().catch(() => {});
+    },
     clearMediaError: () => setMediaError(null),
     toggleMic,
     toggleCam,
