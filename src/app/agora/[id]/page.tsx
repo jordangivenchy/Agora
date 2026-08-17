@@ -99,11 +99,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   /* Egress compositor mode: LiveKit's headless browser loads this page with
      ?token&url appended — render the amphitheater alone (no chrome) and
      signal readiness so the restream starts filming. */
-  const broadcast = useMemo(() => {
-    if (typeof window === "undefined") return false;
+  const broadcastCreds = useMemo(() => {
+    if (typeof window === "undefined") return null;
     const sp = new URLSearchParams(window.location.search);
-    return sp.has("token") && sp.has("url");
+    const token = sp.get("token");
+    const serverUrl = sp.get("url");
+    return token && serverUrl ? { token, serverUrl } : null;
   }, []);
+  const broadcast = !!broadcastCreds;
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
@@ -263,6 +266,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     canPublish: onStage(myRole),
     ready: loaded && !!room,
     highQuality: view === "speaker",
+    external: broadcastCreds,
   });
 
   useEffect(() => {

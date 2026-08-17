@@ -52,13 +52,17 @@ interface Options {
   highQuality?: boolean;
   /** Gate connection until the page has loaded the room. */
   ready: boolean;
+  /** Egress compositor mode: connect with the recorder token LiveKit put in
+      the page URL instead of minting our own (hidden, subscribe-only — and
+      it doesn't need the beta cookie our token API sits behind). */
+  external?: { serverUrl: string; token: string } | null;
 }
 
 type DataMsg = { t: "reaction"; e: string; u: string };
 
 let reactionSeq = 1;
 
-export function useAgoraCall({ roomId, userId, username, canPublish, ready, highQuality = false }: Options) {
+export function useAgoraCall({ roomId, userId, username, canPublish, ready, highQuality = false, external = null }: Options) {
   const [connected, setConnected] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
@@ -163,6 +167,18 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
 
     (async () => {
       try {
+        if (external) {
+          await room.connect(external.serverUrl, external.token);
+          if (cancelled) return;
+          setConnected(true);
+          refreshTiles();
+          setAudioBlocked(!room.canPlaybackAudio);
+          room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+            setAudioBlocked(!room.canPlaybackAudio);
+          });
+          room.startAudio().catch(() => {});
+          return;
+        }
         const res = await fetch("/api/livekit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -256,7 +272,9 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       setSpeakingIds(new Set());
       setVideoTiles([]);
     };
-  }, [ready, roomId, userId, canPublish, pushReaction, refreshTiles]);
+    // `external` is stable for the life of a broadcast page load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, roomId, userId, canPublish, pushReaction, refreshTiles, external?.token]);
 
   /* Turn a getUserMedia / publish failure into something a user can act on.
      Swallowing these (the old behavior) made the buttons look dead. */
