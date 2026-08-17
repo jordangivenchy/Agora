@@ -10,7 +10,7 @@
    All writes go straight to Supabase; realtime pushes the result to every
    client. Actions that need the stage migration fail soft with a hint. */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -44,6 +44,57 @@ export default function HostControls({ room, participants, currentUser, myRole, 
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("requests");
+  /* Restream (RTMP → TikTok/Twitch/YouTube) — primary host only. */
+  const [rtmpUrl, setRtmpUrl] = useState("");
+  const [egressId, setEgressId] = useState<string | null>(null);
+  const [egressBusy, setEgressBusy] = useState(false);
+  const [egressError, setEgressError] = useState<string | null>(null);
+  const [egressPortrait, setEgressPortrait] = useState(true);
+
+  useEffect(() => {
+    // Resync on open: an egress started earlier (or from another tab)
+    // should show as running.
+    if (!open) return;
+    fetch("/api/egress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId: room.id, action: "status" }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && typeof d.egressId !== "undefined") setEgressId(d.egressId);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, room.id]);
+
+  const toggleEgress = async () => {
+    setEgressBusy(true);
+    setEgressError(null);
+    try {
+      const body = egressId
+        ? { roomId: room.id, action: "stop", egressId }
+        : { roomId: room.id, action: "start", rtmpUrl, portrait: egressPortrait };
+      const res = await fetch("/api/egress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setEgressError(d.error || "Restream failed");
+      } else if (egressId) {
+        setEgressId(null);
+      } else {
+        setEgressId(d.egressId);
+        setRtmpUrl("");
+      }
+    } catch {
+      setEgressError("Restream failed — try again.");
+    } finally {
+      setEgressBusy(false);
+    }
+  };
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -335,6 +386,67 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                   <button className="ag-host-act wide danger" disabled={busy !== null} onClick={endDiscussion}>
                     End discussion
                   </button>
+                )}
+                {isPrimaryHost && (
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
+                      RESTREAM {egressId && <span style={{ color: "#e05a5a" }}>● LIVE</span>}
+                    </div>
+                    {!egressId && (
+                      <input
+                        value={rtmpUrl}
+                        onChange={(e) => setRtmpUrl(e.target.value)}
+                        placeholder="rtmp://… ingest URL + stream key"
+                        spellCheck={false}
+                        style={{
+                          width: "100%",
+                          height: 32,
+                          marginBottom: 6,
+                          borderRadius: 8,
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          background: "rgba(255,255,255,0.05)",
+                          color: "white",
+                          fontSize: 11.5,
+                          padding: "0 10px",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    )}
+                    {!egressId && (
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 11.5,
+                          color: "rgba(255,255,255,0.6)",
+                          marginBottom: 6,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={egressPortrait}
+                          onChange={(e) => setEgressPortrait(e.target.checked)}
+                        />
+                        Portrait (TikTok) — uncheck for Twitch/YouTube
+                      </label>
+                    )}
+                    <button
+                      className={`ag-host-act wide${egressId ? " danger" : ""}`}
+                      disabled={egressBusy || (!egressId && !rtmpUrl.trim())}
+                      onClick={toggleEgress}
+                    >
+                      {egressBusy ? "…" : egressId ? "Stop restream" : "Go live on TikTok / RTMP"}
+                    </button>
+                    {egressError && (
+                      <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 5 }}>{egressError}</div>
+                    )}
+                    <div className="ag-host-finehint">
+                      Paste the RTMP server URL with your stream key appended (from TikTok LIVE
+                      Studio, Twitch, or YouTube). The stage broadcasts until you stop it.
+                    </div>
+                  </div>
                 )}
                 <div className="ag-host-finehint">
                   {myRole === "host" ? "You are the host." : "You are a co-host."} Hosts are set when

@@ -241,6 +241,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
         document.addEventListener("pointerdown", resume);
       } catch (e) {
         console.warn("agora call connect failed", e);
+        setMediaError("Couldn't connect to the live call — reload to retry.");
       }
     })();
 
@@ -328,6 +329,26 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     mediaBusy,
     mediaError,
     audioBlocked,
+    /* ?avdebug=1 overlay: where in the chain audio/video is breaking. */
+    debugSnapshot: () => {
+      const room = roomRef.current;
+      if (!room) return { state: "no-room" };
+      return {
+        state: room.state,
+        me: room.localParticipant?.identity,
+        canPublish,
+        canPlayAudio: room.canPlaybackAudio,
+        localTracks: [...room.localParticipant.trackPublications.values()].map(
+          (p) => `${p.kind}:${p.isMuted ? "muted" : "LIVE"}`
+        ),
+        remotes: [...room.remoteParticipants.values()].map((p) => ({
+          id: p.identity,
+          tracks: [...p.trackPublications.values()].map(
+            (t) => `${t.kind}:${t.isSubscribed ? "sub" : "NOT-SUB"}:${t.isMuted ? "muted" : "LIVE"}`
+          ),
+        })),
+      };
+    },
     enableAudio: () => {
       const room = roomRef.current;
       if (room) room.startAudio().catch(() => {});

@@ -19,9 +19,12 @@ export async function proxy(request: NextRequest) {
   const betaCode = process.env.BETA_INVITE_CODE;
   if (betaCode) {
     const { pathname } = request.nextUrl;
-    const exempt = BETA_EXEMPT.some(
-      (p) => pathname === p || pathname.startsWith(p + "/")
-    );
+    const sp = request.nextUrl.searchParams;
+    const exempt =
+      BETA_EXEMPT.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
+      /* LiveKit egress compositor filming a room for restream — it carries
+         its own room token in the URL and can't hold a beta cookie. */
+      (pathname.startsWith("/agora/") && sp.has("token") && sp.has("url"));
     if (!exempt) {
       const pass = request.cookies.get(BETA_COOKIE)?.value;
       if (!pass || pass !== (await sha256Hex(betaCode))) {

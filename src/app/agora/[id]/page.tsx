@@ -90,6 +90,20 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [following, setFollowing] = useState(false);
   /* Host leave flow: leaving as host asks whether to close the stage. */
   const [leavePrompt, setLeavePrompt] = useState(false);
+  /* ?avdebug=1 — live snapshot of the call plumbing for field debugging. */
+  const [avDebug, setAvDebug] = useState<Record<string, unknown> | null>(null);
+  const avDebugOn = useMemo(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("avdebug"),
+    []
+  );
+  /* Egress compositor mode: LiveKit's headless browser loads this page with
+     ?token&url appended — render the amphitheater alone (no chrome) and
+     signal readiness so the restream starts filming. */
+  const broadcast = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const sp = new URLSearchParams(window.location.search);
+    return sp.has("token") && sp.has("url");
+  }, []);
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
@@ -250,6 +264,27 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     ready: loaded && !!room,
     highQuality: view === "speaker",
   });
+
+  useEffect(() => {
+    if (!avDebugOn) return;
+    const t = setInterval(() => setAvDebug(call.debugSnapshot()), 1000);
+    return () => clearInterval(t);
+  }, [avDebugOn, call]);
+
+  useEffect(() => {
+    if (!broadcast) return;
+    setView("speaker");
+  }, [broadcast]);
+
+  const recordingSignaledRef = useRef(false);
+  useEffect(() => {
+    if (!broadcast || recordingSignaledRef.current) return;
+    if (loaded && room && call.connected) {
+      recordingSignaledRef.current = true;
+      // LiveKit egress template contract: filming begins on this log line.
+      console.log("START_RECORDING");
+    }
+  }, [broadcast, loaded, room, call.connected]);
   const [reactOpen, setReactOpen] = useState(false);
 
   /* ── Stage composition ─────────────────────────────────────────────
@@ -385,14 +420,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   /* Self-preview only while the camera is warming up: once your own feed
      lands on a stage screen the whole amphitheater is watching it, and the
      little dock tile is a redundant duplicate. Others' tiles stay. */
-  const dockTiles = useMemo(() => {
-    const onScreen = new Set(
-      [screenFeeds?.pro?.key, screenFeeds?.con?.key].filter(Boolean)
-    );
-    return call.videoTiles.filter(
-      (t) => !(t.local && onScreen.has(`${t.identity}:l`))
-    );
-  }, [call.videoTiles, screenFeeds]);
+  /* No self-preview: your own camera never docks — the stage holo screen
+     is the only place your feed shows (it's what everyone else sees). */
+  const dockTiles = useMemo(
+    () => call.videoTiles.filter((t) => !t.local),
+    [call.videoTiles]
+  );
 
   /* Walking in seats you: signed-in visitors get a spectator row right
      away, so you're visible in the crowd the moment you arrive — raising
@@ -561,6 +594,28 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     <div className="ag-root">
       <div className="ag-main">
         {/* ── Top bar ── */}
+        {broadcast && (
+          <style>{`.ag-switch-view { display: none !important; }`}</style>
+        )}
+        {broadcast && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 14,
+              right: 16,
+              zIndex: 60,
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontWeight: 700,
+              fontSize: 15,
+              color: "rgba(255,255,255,0.85)",
+              textShadow: "0 1px 8px rgba(0,0,0,0.8)",
+              pointerEvents: "none",
+            }}
+          >
+            Agora<span style={{ color: "#3b6cf6" }}>Sphere</span> · agorasphere.net
+          </div>
+        )}
+        {!broadcast && (
         <header className="ag-topbar">
           <button className="ag-back" onClick={() => router.push("/")} title="Back to home">
             ←
@@ -593,6 +648,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             </button>
           </div>
         </header>
+        )}
 
         {/* ── Amphitheater ── */}
         <Amphitheater
@@ -698,6 +754,29 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           </div>
         )}
 
+        {avDebugOn && avDebug && (
+          <pre
+            style={{
+              position: "absolute",
+              top: 90,
+              left: 12,
+              zIndex: 80,
+              maxWidth: 380,
+              maxHeight: "50vh",
+              overflow: "auto",
+              background: "rgba(0,0,0,0.85)",
+              border: "1px solid #444",
+              borderRadius: 10,
+              color: "#8f8",
+              fontSize: 11,
+              padding: 10,
+              margin: 0,
+            }}
+          >
+            {JSON.stringify(avDebug, null, 1)}
+          </pre>
+        )}
+
         {/* ── Autoplay-blocked prompt: without this, listeners sit in
               silence with no idea the browser muted the room ── */}
         {call.audioBlocked && (
@@ -721,6 +800,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         {/* ── Bottom control bar ── */}
+        {!broadcast && (
         <footer className="ag-controls">
           {amMicHolder ? (
             <button className="ag-ctl ag-ctl--live" title="Give up the mic" onClick={stepDownFromMic}>
@@ -808,14 +888,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             📞 <span>Leave</span>
           </button>
         </footer>
+        )}
       </div>
 
-      <AgoraSidebar roomId={roomId} currentUser={currentUser} />
+      {!broadcast && <AgoraSidebar roomId={roomId} currentUser={currentUser} />}
 
       {/* Agora AI assistant — the full pipeline (Gemini + retrieval + history)
           lives behind /api/agora; this is its surface in the amphitheater,
           which is where every room entry routes now. */}
-      <AgoraAssistant motion={room.motion} roomId={roomId} topicKey={room.topic_key} />
+      {!broadcast && <AgoraAssistant motion={room.motion} roomId={roomId} topicKey={room.topic_key} />}
     </div>
   );
 }
