@@ -11,12 +11,14 @@ import CreateRoomModal from "@/components/CreateRoomModal";
 import UserProfileModal from "@/components/UserProfileModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
+import DiscoverySearch from "@/components/DiscoverySearch";
 import FriendsSection from "@/components/friends/FriendsSection";
 import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
+import { displayName } from "@/lib/names";
 import "./mvp-home.css";
 
 const TOPIC_MAP: Record<string, string> = {
@@ -70,6 +72,7 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
+  const [searchHost, setSearchHost] = useState<HTMLElement | null>(null);
   const [friendsHost, setFriendsHost] = useState<HTMLElement | null>(null);
   const [sidebarHost, setSidebarHost] = useState<HTMLElement | null>(null);
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
@@ -91,6 +94,7 @@ export default function Home() {
     // Portal targets living inside the MVP markup: the Browse section
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
+    setSearchHost(document.getElementById("discoverySocial"));
     const fs = document.getElementById("friendsSection");
     if (fs) fs.innerHTML = ""; // clear any MVP demo markup before React owns it
     setFriendsHost(fs);
@@ -107,10 +111,10 @@ export default function Home() {
           supabase.auth.getUser(),
           supabase
             .from("debate_rooms")
-            .select(`*, participants:debate_participants(*, user:users(username, avatar_url))`)
+            .select(`*, participants:debate_participants(*, user:users(username, display_name, avatar_url))`)
             .in("status", ["live", "created", "scheduled"])
             .order("created_at", { ascending: false })
-            .limit(24),
+            .limit(100),
           supabase.from("users").select("*", { count: "exact", head: true }),
         ]);
 
@@ -139,10 +143,10 @@ export default function Home() {
           const total = v.pro + v.con;
           return {
             motion: room.motion,
-            debater1: proD?.user?.username ?? "Open seat",
+            debater1: proD?.user ? displayName(proD.user) : "Open seat",
             // Mirror debater1's fallback: an empty string renders its initial as
             // literal "undefined" in the card avatar.
-            debater2: conD?.user?.username ?? "Open seat",
+            debater2: conD?.user ? displayName(conD.user) : "Open seat",
             color1: PALETTE[i % PALETTE.length],
             color2: PALETTE[(i + 3) % PALETTE.length],
             elo: "—",
@@ -166,10 +170,19 @@ export default function Home() {
         });
 
         const user = auth?.user;
+        let profileName: string | null = null;
+        if (user) {
+          const { data: me } = await supabase
+            .from("users")
+            .select("username, display_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (me) profileName = displayName(me) || null;
+        }
         const liveRooms = rooms.filter((r) => r.status === "live");
         const data = {
           debates,
-          user: user ? { id: user.id, name: user.user_metadata?.name ?? user.email ?? "U" } : null,
+          user: user ? { id: user.id, name: profileName ?? user.user_metadata?.name ?? user.email ?? "U" } : null,
           stats: {
             activeRooms: rooms.length,
             members: memberCount ?? 0,
@@ -379,6 +392,7 @@ export default function Home() {
         </div>
       )}
       <NotificationsBell container={bellHost} />
+      <DiscoverySearch container={searchHost} />
       <NewsTicker container={newsHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FriendsSection container={friendsHost} sidebar={sidebarHost} />

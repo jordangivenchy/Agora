@@ -12,10 +12,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "./userMenuContext";
+import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
 import type { DebateRoom, Stance } from "@/types/database";
 
-type Debater = { id: string | null; username: string; avatarUrl: string | null; stance: Stance | null };
+/* `username` stays the raw handle (context-menu plumbing); `name` is what renders. */
+type Debater = { id: string | null; username: string; name: string; avatarUrl: string | null; stance: Stance | null };
 
 export default function ResultsScreen({ room }: { room: DebateRoom }) {
   const { openUserMenu } = useUserMenu();
@@ -30,7 +32,7 @@ export default function ResultsScreen({ room }: { room: DebateRoom }) {
         supabase.from("debate_votes").select("stance").eq("room_id", room.id),
         supabase
           .from("debate_participants")
-          .select("stance, role, user:users(id, username, avatar_url)")
+          .select("stance, role, user:users(id, username, display_name, avatar_url)")
           .eq("room_id", room.id)
           .eq("role", "debater"),
       ]);
@@ -40,13 +42,18 @@ export default function ResultsScreen({ room }: { room: DebateRoom }) {
         con: rows.filter((v) => v.stance === "CON").length,
       });
       setDebaters(
-        (partRes.data ?? []).map((p) => ({
-          stance: p.stance as Stance | null,
-          id: (p.user as unknown as { id: string } | null)?.id ?? null,
-          avatarUrl: (p.user as unknown as { avatar_url: string | null } | null)?.avatar_url ?? null,
-          username:
-            (p.user as unknown as { username: string } | null)?.username ?? "unknown",
-        }))
+        (partRes.data ?? []).map((p) => {
+          const u = p.user as unknown as
+            | { id: string; username: string; display_name?: string | null; avatar_url: string | null }
+            | null;
+          return {
+            stance: p.stance as Stance | null,
+            id: u?.id ?? null,
+            avatarUrl: u?.avatar_url ?? null,
+            username: u?.username ?? "unknown",
+            name: displayName(u) || "unknown",
+          };
+        })
       );
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,8 +91,8 @@ export default function ResultsScreen({ room }: { room: DebateRoom }) {
           style={d.id ? { cursor: "pointer", textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 } : undefined}
           onClick={d.id ? (e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: d.id!, username: d.username }) : undefined}
         >
-          <UserAvatar size={16} username={d.username} avatarUrl={d.avatarUrl} seed={d.id ?? d.username} />
-          {d.username}
+          <UserAvatar size={16} username={d.name} avatarUrl={d.avatarUrl} seed={d.id ?? d.username} />
+          {d.name}
         </span>
       </span>
     ));

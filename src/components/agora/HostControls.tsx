@@ -22,6 +22,7 @@ import {
   ROLE_LABEL,
 } from "./stage";
 import type { DebateRoom } from "@/types/database";
+import { displayName } from "@/lib/names";
 
 interface Props {
   room: DebateRoom & {
@@ -117,7 +118,12 @@ export default function HostControls({ room, participants, currentUser, myRole, 
     const q = search.trim().toLowerCase();
     return withRole
       .filter(({ role }) => role === "audience")
-      .filter(({ p }) => !q || (p.user?.username ?? "").toLowerCase().includes(q));
+      .filter(
+        ({ p }) =>
+          !q ||
+          (p.user?.username ?? "").toLowerCase().includes(q) ||
+          displayName(p.user).toLowerCase().includes(q)
+      );
   }, [withRole, search]);
   const stageList = useMemo(
     () => withRole.filter(({ role }) => onStageRole(role)),
@@ -462,7 +468,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
 }
 
 function RowIdentity({ p, role }: { p: StageParticipant; role: StageRole }) {
-  const name = p.user?.username ?? "?";
+  const name = displayName(p.user) || "?";
   return (
     <span className="ag-host-id">
       <span className={`ag-host-avatar role-${role}`}>{name.charAt(0).toUpperCase()}</span>

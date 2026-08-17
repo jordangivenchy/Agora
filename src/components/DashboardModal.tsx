@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { displayName } from "@/lib/names";
 
 interface Props {
   open: boolean;
@@ -32,7 +33,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
   const [activeKey, setActiveKey] = useState<NodeKey | null>(null);
   const rafRef = useRef<number | null>(null);
   const [supabase] = useState(() => createClient());
-  const [profile, setProfile] = useState<{ username: string; avatarUrl: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ username: string; name: string; avatarUrl: string | null } | null>(null);
 
   // Load the signed-in user's profile for the sphere center
   useEffect(() => {
@@ -43,15 +44,14 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
       if (!user) return;
       const { data: row } = await supabase
         .from("users")
-        .select("username, avatar_url")
+        .select("username, display_name, avatar_url")
         .eq("id", user.id)
         .single();
+      const fallback =
+        user.user_metadata?.name ?? user.email?.split("@")[0] ?? "You";
       setProfile({
-        username:
-          row?.username ??
-          user.user_metadata?.name ??
-          user.email?.split("@")[0] ??
-          "You",
+        username: row?.username ?? fallback,
+        name: (row && displayName(row)) || fallback,
         avatarUrl: row?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
       });
     })();
@@ -188,7 +188,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.avatarUrl}
-                  alt={profile.username}
+                  alt={profile.name}
                   style={{
                     width: 64,
                     height: 64,
@@ -213,7 +213,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
                     boxShadow: "0 0 24px rgba(108,92,231,0.35)",
                   }}
                 >
-                  {profile.username.charAt(0).toUpperCase()}
+                  {profile.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <p

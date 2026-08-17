@@ -13,6 +13,7 @@ import ReportModal, { type ReportTarget } from "./ReportModal";
 import UserProfileModal from "./UserProfileModal";
 import ProfileView from "./ProfileView";
 import { userPath } from "@/lib/urls";
+import { displayName } from "@/lib/names";
 
 export { useUserMenu } from "./userMenuContext";
 export type { MenuRoomContext, MenuChatContext, OpenMenuOptions } from "./userMenuContext";
@@ -68,6 +69,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [me, setMe] = useState<{ id: string; isModerator: boolean } | null>(null);
   const [rel, setRel] = useState<Relationship | null>(null);
+  const [targetDisplayName, setTargetDisplayName] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   /* In-room profile drawer: the debate keeps playing underneath. */
@@ -109,6 +111,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
   const openUserMenu = useCallback<UserMenuApi["openUserMenu"]>(
     (at, target, opts = {}) => {
       setRel(null);
+      setTargetDisplayName(null);
       setMenu({ x: at.x, y: at.y, target, opts });
 
       // Relationship data loads async; rows depending on it enable when ready.
@@ -119,6 +122,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
           supabase.from("user_favorites").select("favorite_id").eq("favorite_id", target.userId),
         ]);
         const row = Array.isArray(prof) ? prof[0] : prof;
+        setTargetDisplayName((row?.display_name as string | null) ?? null);
         setRel({
           following: !!row?.is_following,
           followedBy: !!row?.is_followed_by,
@@ -446,7 +450,14 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
           style={{ left: menu.x, top: menu.y }}
           role="menu"
         >
-          <div className="user-menu-header">@{menu.target.username}</div>
+          <div className="user-menu-header">
+            {displayName({ display_name: targetDisplayName, username: menu.target.username })}
+            {targetDisplayName?.trim() && (
+              <span style={{ display: "block", fontWeight: 400, fontSize: "0.85em", opacity: 0.6 }}>
+                @{menu.target.username}
+              </span>
+            )}
+          </div>
           {renderRows(sections.standard)}
           {sections.host.length > 0 && (
             <>

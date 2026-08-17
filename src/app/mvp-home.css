@@ -1,10 +1,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-primary: #0d0f1a;
-  --bg-secondary: #131627;
-  --bg-tertiary: #1a1e33;
-  --bg-sidebar: #0f1120;
+  --bg-primary: #0e0e10;
+  --bg-secondary: #18181b;
+  --bg-tertiary: #202023;
+  --bg-sidebar: #111113;
   --accent-purple: #1976D2;
   --accent-purple-light: #64B5F6;
   --accent-blue: #4a9eff;
@@ -546,9 +546,9 @@ body {
 /* ─── SIDEBAR ─── */
 .sidebar {
   position: fixed;
-  top: calc(var(--nav-height) + 12px);
+  top: calc(var(--nav-height) + 6px);
   left: 12px;
-  height: calc(100vh - var(--nav-height) - 24px);
+  height: calc(100vh - var(--nav-height) - 18px);
   width: var(--sidebar-width);
   z-index: 90;
   border-radius: 16px;
@@ -5526,7 +5526,7 @@ body { background: transparent; }
 .sidebar {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.012) 0%, rgba(255,255,255,0) 42%),
-    #07080d !important;
+    #0a0a0b !important;
   border: 1px solid rgba(255,255,255,0.07) !important;
   border-radius: 18px !important;
   box-shadow:
@@ -5537,8 +5537,8 @@ body { background: transparent; }
   animation: sidebarEntrance 0.4s cubic-bezier(0.25,0.46,0.45,0.94) both !important;
 }
 
-.sidebar-scroll-area { padding: 4px 0 0 !important; }
-.sidebar-nav { padding: 8px 8px 4px !important; gap: 1px !important; }
+.sidebar-scroll-area { padding: 0 !important; }
+.sidebar-nav { padding: 4px 8px 4px !important; gap: 1px !important; }
 
 /* ── Nav rows: flat, no per-item card ────────────────────────────── */
 .sidebar-link {

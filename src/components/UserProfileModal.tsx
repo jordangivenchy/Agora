@@ -9,6 +9,7 @@ import FollowListModal from "./FollowListModal";
 import { useUserMenu } from "./userMenuContext";
 import { userPath } from "@/lib/urls";
 import VerifiedBadge from "./VerifiedBadge";
+import { displayName } from "@/lib/names";
 
 interface Props {
   userId: string | null;
@@ -297,7 +298,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                     fontSize: 20,
                   }}
                 >
-                  {initials(profile.username)}
+                  {initials(displayName(profile) || profile.username)}
                 </div>
               )}
 
@@ -312,7 +313,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                     color: "var(--text-primary)",
                   }}
                 >
-                  <span className="truncate">{profile.display_name || profile.username}</span>
+                  <span className="truncate">{displayName(profile)}</span>
                   {profile.verified && <VerifiedBadge size={16} />}
                   {profile.is_friend && (
                     <span

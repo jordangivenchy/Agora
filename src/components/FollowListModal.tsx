@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { displayName } from "@/lib/names";
 
 interface Props {
   open: boolean;
@@ -16,6 +17,7 @@ interface Props {
 interface Row {
   id: string;
   username: string;
+  display_name?: string | null;
   avatar_url: string | null;
   bio: string | null;
   is_following_me?: boolean;
@@ -59,7 +61,21 @@ export default function FollowListModal({
       setError(rpcErr.message || "Could not load list");
       setRows([]);
     } else {
-      setRows((data as Row[]) || []);
+      const list = (data as Row[]) || [];
+      // The follow RPCs predate display names — join them in client-side.
+      if (list.length) {
+        const { data: names } = await supabase
+          .from("users")
+          .select("id, display_name")
+          .in("id", list.map((r) => r.id));
+        const byId = new Map(
+          ((names ?? []) as { id: string; display_name: string | null }[]).map((u) => [u.id, u.display_name])
+        );
+        list.forEach((r) => {
+          r.display_name = byId.get(r.id) ?? null;
+        });
+      }
+      setRows(list);
     }
     setLoading(false);
   }, [mode, userId, supabase]);
@@ -77,7 +93,9 @@ export default function FollowListModal({
 
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? rows.filter((r) => r.username.toLowerCase().includes(q))
+    ? rows.filter(
+        (r) => r.username.toLowerCase().includes(q) || displayName(r).toLowerCase().includes(q)
+      )
     : rows;
 
   const title = mode === "followers" ? "Followers" : "Following";
@@ -223,7 +241,7 @@ export default function FollowListModal({
                     fontSize: 13,
                   }}
                 >
-                  {initials(r.username)}
+                  {initials(displayName(r) || r.username)}
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -236,21 +254,20 @@ export default function FollowListModal({
                     color: "var(--text-primary)",
                   }}
                 >
-                  @{r.username}
+                  {displayName(r)}
                 </div>
-                {r.bio && (
-                  <div
-                    className="truncate"
-                    style={{
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 11.5,
-                      color: "rgba(255,255,255,0.45)",
-                      marginTop: 2,
-                    }}
-                  >
-                    {r.bio}
-                  </div>
-                )}
+                <div
+                  className="truncate"
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 11.5,
+                    color: "rgba(255,255,255,0.45)",
+                    marginTop: 2,
+                  }}
+                >
+                  @{r.username}
+                  {r.bio ? ` — ${r.bio}` : ""}
+                </div>
               </div>
             </button>
           ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
@@ -40,6 +40,35 @@ const CURRICULA: { key: string; label: string; desc: string }[] = [
 ];
 
 type TimeLimitChoice = "none" | "2" | "5" | "10" | "custom";
+
+const MAX_THUMB_BYTES = 5 * 1024 * 1024;
+
+/* Center-crop to a 512px square webp — cards render at 168px, so this keeps
+   uploads small without needing a crop UI. */
+async function makeSquareThumb(file: File): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas unavailable");
+    const s = Math.min(img.width, img.height);
+    ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.85));
+    if (!blob) throw new Error("thumbnail encode failed");
+    return blob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 /* Format a Date as the local "YYYY-MM-DDTHH:mm" string that datetime-local
    expects (toISOString would UTC-shift the value which confuses users). */
@@ -101,6 +130,12 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleAt, setScheduleAt] = useState<string>(defaultScheduleValue());
 
+  /* Optional card thumbnail — when unset, cards show the host's profile
+     picture. Uploaded after the room row exists (path is keyed on room id). */
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+  const thumbInputRef = useRef<HTMLInputElement | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState("");
@@ -126,6 +161,11 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       setAllowSpectators(false);
       setScheduleEnabled(false);
       setScheduleAt(defaultScheduleValue());
+      setThumbFile(null);
+      setThumbPreview((p) => {
+        if (p) URL.revokeObjectURL(p);
+        return null;
+      });
       setFormatVariant(null);
       setCurriculum("agora-general");
       setError("");
@@ -263,6 +303,23 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         await supabase
           .from("room_meta")
           .insert({ room_id: roomId, format_variant: formatVariant, curriculum });
+      }
+
+      // Best-effort thumbnail — cards fall back to the host's profile picture.
+      if (thumbFile) {
+        try {
+          const blob = await makeSquareThumb(thumbFile);
+          const path = `${user.id}/${roomId}.webp`;
+          const { error: upErr } = await supabase.storage
+            .from("thumbnails")
+            .upload(path, blob, { upsert: true, cacheControl: "3600", contentType: "image/webp" });
+          if (!upErr) {
+            const { data: urlData } = supabase.storage.from("thumbnails").getPublicUrl(path);
+            await supabase.from("debate_rooms").update({ thumbnail_url: urlData.publicUrl }).eq("id", roomId);
+          }
+        } catch {
+          /* cosmetic — the room is already created */
+        }
       }
 
       // For private rooms, show the invite code first; user presses Continue.
@@ -821,6 +878,95 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                   </p>
                 </>
               )}
+            </div>
+
+            {/* Thumbnail */}
+            <div
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "14px",
+                padding: "12px 14px",
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => thumbInputRef.current?.click()}
+                  className="cursor-pointer shrink-0 overflow-hidden"
+                  title={thumbPreview ? "Change thumbnail" : "Add a thumbnail"}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "12px",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px dashed rgba(255,255,255,0.18)",
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: 20,
+                    lineHeight: 1,
+                    padding: 0,
+                  }}
+                >
+                  {thumbPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumbPreview} alt="Thumbnail preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  ) : (
+                    "+"
+                  )}
+                </button>
+                <div className="flex-1">
+                  <p style={{ fontSize: "12.5px", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
+                    Thumbnail
+                  </p>
+                  <p style={{ marginTop: 2, fontSize: "11px", lineHeight: 1.5, color: "var(--text-dim)" }}>
+                    Optional cover for your room&rsquo;s card — defaults to your profile picture.
+                  </p>
+                </div>
+                {thumbPreview && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setThumbFile(null);
+                      setThumbPreview((p) => {
+                        if (p) URL.revokeObjectURL(p);
+                        return null;
+                      });
+                      if (thumbInputRef.current) thumbInputRef.current.value = "";
+                    }}
+                    className="cursor-pointer shrink-0"
+                    style={{
+                      fontSize: "11px",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
+                <input
+                  ref={thumbInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > MAX_THUMB_BYTES) {
+                      setError("Thumbnail is too large — 5 MB max.");
+                      return;
+                    }
+                    setError("");
+                    setThumbFile(file);
+                    setThumbPreview((p) => {
+                      if (p) URL.revokeObjectURL(p);
+                      return URL.createObjectURL(file);
+                    });
+                  }}
+                />
+              </div>
             </div>
 
             {/* Private Room */}

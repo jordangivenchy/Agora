@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { validateNewPassword } from "@/lib/passwordPolicy";
 import EditProfileModal from "@/components/EditProfileModal";
 import type { User } from "@supabase/supabase-js";
+import { displayName } from "@/lib/names";
 
 /* ── types ─────────────────────────────────────────────────── */
 
@@ -50,7 +51,7 @@ type ProfileRow = {
   is_moderator: boolean;
 };
 
-type BlockedUser = { id: string; username: string; avatar_url: string | null };
+type BlockedUser = { id: string; username: string; display_name?: string | null; avatar_url: string | null };
 
 type SectionKey =
   | "profile"
@@ -207,7 +208,7 @@ export default function SettingsPage() {
       const ids = (blockRes.data ?? []).map((b: { blocked_id: string }) => b.blocked_id);
       if (ids.length) {
         const { data: blockedUsers } = await supabase
-          .from("users").select("id, username, avatar_url").in("id", ids);
+          .from("users").select("id, username, display_name, avatar_url").in("id", ids);
         setBlocked((blockedUsers ?? []) as BlockedUser[]);
       } else {
         setBlocked([]);
@@ -367,11 +368,11 @@ export default function SettingsPage() {
                 {profile.avatar_url
                   ? // eslint-disable-next-line @next/next/no-img-element
                     <img src={profile.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : (profile.display_name || profile.username).charAt(0).toUpperCase()}
+                  : displayName(profile).charAt(0).toUpperCase()}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="m-0 text-[14px]" style={{ color: "#f5f5f0" }}>
-                  {profile.display_name || profile.username}
+                  {displayName(profile)}
                 </p>
                 <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>@{profile.username}</p>
                 {profile.bio && (
@@ -534,9 +535,12 @@ export default function SettingsPage() {
                     {u.avatar_url
                       ? // eslint-disable-next-line @next/next/no-img-element
                         <img src={u.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : u.username.charAt(0).toUpperCase()}
+                      : displayName(u).charAt(0).toUpperCase()}
                   </span>
-                  <span className="flex-1 text-[13px]" style={{ color: "#f5f5f0" }}>@{u.username}</span>
+                  <span className="flex-1 text-[13px]" style={{ color: "#f5f5f0" }}>
+                    {displayName(u)}{" "}
+                    <span className="text-[11px]" style={{ color: "#8b8b94" }}>@{u.username}</span>
+                  </span>
                   <button style={btnGhost} onClick={() => unblock(u)} disabled={unblockBusy === u.id}>
                     {unblockBusy === u.id ? "Unblocking…" : "Unblock"}
                   </button>

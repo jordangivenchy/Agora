@@ -9,7 +9,11 @@ import type { Track } from "livekit-client";
 import type { VideoTile } from "./useAgoraCall";
 import { useUserMenu } from "../userMenuContext";
 
-function Tile({ tile }: { tile: VideoTile }) {
+/* Tiles arrive labeled with the display name; the page attaches the raw
+   handle when it knows the seated row, so the user menu keeps working. */
+type DockTile = VideoTile & { handle?: string };
+
+function Tile({ tile }: { tile: DockTile }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const { openUserMenu } = useUserMenu();
 
@@ -35,7 +39,7 @@ function Tile({ tile }: { tile: VideoTile }) {
         onClick={
           tile.local
             ? undefined
-            : (e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: tile.identity, username: tile.username })
+            : (e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: tile.identity, username: tile.handle ?? tile.username })
         }
       >
         {tile.local ? "You" : tile.username}
@@ -44,7 +48,7 @@ function Tile({ tile }: { tile: VideoTile }) {
   );
 }
 
-export default function AgoraVideoDock({ tiles }: { tiles: VideoTile[] }) {
+export default function AgoraVideoDock({ tiles }: { tiles: DockTile[] }) {
   if (tiles.length === 0) return null;
   return (
     <div className="ag-video-dock">

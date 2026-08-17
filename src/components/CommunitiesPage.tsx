@@ -242,6 +242,65 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   useEffect(() => { if (open) loadCommunities(); }, [open, loadCommunities]);
   useEffect(() => { if (open) loadPosts(); }, [open, loadPosts]);
 
+  /* Deep link from the discovery search: open a specific post. The event
+     arrives right after the Communities nav click, so `open` may still be
+     flipping — stash the id and resolve once posts are in. */
+  const [pendingPostId, setPendingPostId] = useState<string | null>(null);
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent).detail?.postId;
+      if (typeof id === "string" && id) {
+        setSelected("all");
+        setOpenPost(null);
+        setPendingPostId(id);
+      }
+    };
+    document.addEventListener("agora:open-post", onOpen);
+    return () => document.removeEventListener("agora:open-post", onOpen);
+  }, []);
+  useEffect(() => {
+    if (!open || !pendingPostId || loadingPosts) return;
+    const hit = posts.find((p) => p.id === pendingPostId);
+    if (hit) {
+      setOpenPost(hit);
+      loadComments(hit.id);
+      setPendingPostId(null);
+      return;
+    }
+    /* Older than the loaded page — fetch the row directly. Vote totals load
+       as 0 in this synthetic view; comments are still real. */
+    const id = pendingPostId;
+    setPendingPostId(null);
+    (async () => {
+      const { data } = await supabase
+        .from("community_posts")
+        .select("id, community_id, author_id, title, body, created_at, community:communities(name), author:users!author_id(username)")
+        .eq("id", id)
+        .maybeSingle();
+      if (!data) return;
+      const d = data as unknown as {
+        id: string; community_id: string; author_id: string | null;
+        title: string; body: string | null; created_at: string;
+        community: { name: string } | null;
+        author: { username: string } | null;
+      };
+      setOpenPost({
+        id: d.id,
+        community_id: d.community_id,
+        community_name: d.community?.name ?? "",
+        author_id: d.author_id,
+        author_username: d.author?.username ?? "",
+        title: d.title,
+        body: d.body,
+        created_at: d.created_at,
+        score: 0,
+        my_vote: null,
+        comment_count: 0,
+      });
+      loadComments(d.id);
+    })();
+  }, [open, pendingPostId, loadingPosts, posts, loadComments, supabase]);
+
   useEscapeClose(open, () => (openPost ? setOpenPost(null) : onClose()));
 
   /* ── actions ── */

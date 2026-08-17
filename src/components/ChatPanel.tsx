@@ -4,13 +4,14 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import { useUserMenu } from "./userMenuContext";
+import { displayName } from "@/lib/names";
 
 interface Message {
   id: string;
   user_id: string;
   content: string;
   created_at: string;
-  user?: { username: string; avatar_url: string | null };
+  user?: { username: string; display_name?: string | null; avatar_url: string | null };
 }
 
 interface Props {
@@ -45,7 +46,7 @@ export default function ChatPanel({ roomId, currentUser, isOpen, onClose }: Prop
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
       .from("room_messages")
-      .select("*, user:users(username, avatar_url)")
+      .select("*, user:users(username, display_name, avatar_url)")
       .eq("room_id", roomId)
       .order("created_at", { ascending: true })
       .limit(100);
@@ -169,11 +170,11 @@ export default function ChatPanel({ roomId, currentUser, isOpen, onClose }: Prop
                   }}
                   title={
                     msg.user_id !== currentUser?.id
-                      ? `Click for options — ${msg.user?.username || "User"}`
+                      ? `Click for options — ${displayName(msg.user) || "User"}`
                       : undefined
                   }
                 >
-                  {msg.user?.username || "User"}
+                  {displayName(msg.user) || "User"}
                 </span>
                 <span className="chat-msg-text">{msg.content}</span>
               </div>

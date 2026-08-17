@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedClip } from "@/lib/seed-content";
+import { displayName } from "@/lib/names";
 
 interface Props {
   open: boolean;
@@ -29,7 +30,7 @@ type GridRoom = {
   viewer_count: number;
   status: string;
   created_at: string;
-  host?: { username: string } | null;
+  host?: { username: string; display_name?: string | null } | null;
 };
 
 const CHIP_FILTERS = ["All", "Politics", "Economics", "Science & Tech", "Philosophy", "Culture"];
@@ -79,14 +80,14 @@ export default function TrendingPage({ open, onClose }: Props) {
     const [{ data: roomRows }, { data: clipRows }] = await Promise.all([
       supabase
         .from("debate_rooms")
-        .select("id, motion, viewer_count, status, created_at, host:users!debate_rooms_host_id_fkey(username)")
+        .select("id, motion, viewer_count, status, created_at, host:users!debate_rooms_host_id_fkey(username, display_name)")
         .in("status", ["live", "created", "ended"])
         .eq("is_private", false)
         .order("created_at", { ascending: false })
         .limit(12),
       supabase
         .from("clips")
-        .select("id, title, duration_seconds, video_url, thumb_gradient, view_count, uploader_id, room_id, uploader:users!clips_uploader_id_fkey(username)")
+        .select("id, title, duration_seconds, video_url, thumb_gradient, view_count, uploader_id, room_id, uploader:users!clips_uploader_id_fkey(username, display_name)")
         .order("created_at", { ascending: false })
         .limit(12),
     ]);
@@ -519,12 +520,12 @@ export default function TrendingPage({ open, onClose }: Props) {
                         className="flex items-center justify-center shrink-0"
                         style={{ width: 32, height: 32, borderRadius: "50%", background: "#00b894", color: "#04342c", fontSize: 12, fontWeight: 500 }}
                       >
-                        {(r.host?.username ?? "?").charAt(0).toUpperCase()}
+                        {(displayName(r.host) || "?").charAt(0).toUpperCase()}
                       </span>
                       <div>
                         <p className="text-[13px] m-0" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{r.motion}</p>
                         <p className="text-[11px] mt-0.5 m-0" style={{ color: "#8b8b94" }}>
-                          {r.host?.username ?? "Unknown"} · {r.status === "live" ? "watching now" : ago(r.created_at)}
+                          {displayName(r.host) || "Unknown"} · {r.status === "live" ? "watching now" : ago(r.created_at)}
                         </p>
                       </div>
                     </div>

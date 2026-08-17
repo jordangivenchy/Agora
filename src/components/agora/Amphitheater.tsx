@@ -10,7 +10,10 @@ import { useUserMenu } from "../userMenuContext";
 
 export interface StagePerson {
   id: string;
+  /** Raw handle — user-menu plumbing, not for display. */
   username: string;
+  /** Display name (falls back to the handle upstream). */
+  name: string;
   avatarUrl: string | null;
   speaking: boolean;
   stageRole?: "host" | "cohost" | "speaker" | "audience";
@@ -18,7 +21,10 @@ export interface StagePerson {
 
 export interface SeatedPerson {
   id: string;
+  /** Raw handle — user-menu plumbing, not for display. */
   username: string;
+  /** Display name (falls back to the handle upstream). */
+  name: string;
   avatarUrl: string | null;
 }
 
@@ -33,6 +39,7 @@ interface Props {
   viewerCount: number;
   view: AgoraView;
   onSwitchView: () => void;
+  performanceMode?: boolean;
   /** Live camera feeds routed onto the stage holo screens. */
   screenFeeds?: ScreenFeeds;
   /** Speaker queue (front first, mic holder excluded) for the center aisle. */
@@ -69,7 +76,7 @@ function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: Stage
     speakers.length === 0
       ? "Open seat"
       : speakers.length === 1
-        ? speakers[0].username
+        ? speakers[0].name
         : `${speakers.length} debaters`;
   return (
     <div className={`ag-stage-panel ag-stage-panel--${side}`}>
@@ -90,14 +97,14 @@ function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: Stage
             key={s.id}
             className="ag-stage-avatar"
             style={{ background: colorFor(s.id), overflow: "hidden", cursor: "pointer" }}
-            title={s.username}
+            title={s.name}
             onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: s.id, username: s.username })}
           >
             {s.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={s.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              (s.username || "?").charAt(0).toUpperCase()
+              (s.name || "?").charAt(0).toUpperCase()
             )}
             {s.speaking && <span className="ag-speaking-ring" />}
           </div>
@@ -122,7 +129,7 @@ function StripChip({ person }: { person: StagePerson }) {
   return (
     <div
       className={`ag-strip-chip role-${role}`}
-      title={`${person.username} — ${role}`}
+      title={`${person.name} — ${role}`}
       style={{ cursor: "pointer" }}
       onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: person.id, username: person.username })}
     >
@@ -131,7 +138,7 @@ function StripChip({ person }: { person: StagePerson }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={person.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
-          (person.username || "?").charAt(0).toUpperCase()
+          (person.name || "?").charAt(0).toUpperCase()
         )}
         {person.speaking && <span className="ag-speaking-ring" />}
         {(role === "host" || role === "cohost") && (
@@ -144,7 +151,7 @@ function StripChip({ person }: { person: StagePerson }) {
           </span>
         )}
       </div>
-      <span className="ag-strip-name">{person.username}</span>
+      <span className="ag-strip-name">{person.name}</span>
     </div>
   );
 }
@@ -162,6 +169,7 @@ export default function Amphitheater({
   speakerQueue,
   micHolder,
   micLive,
+  performanceMode = false,
 }: Props) {
   const inSpeaker = view === "speaker";
 
@@ -169,10 +177,10 @@ export default function Amphitheater({
      camera-off debater shows their profile card instead of the placeholder. */
   const occupants: ScreenOccupants = {
     pro: proSpeakers[0]
-      ? { id: proSpeakers[0].id, username: proSpeakers[0].username, avatarUrl: proSpeakers[0].avatarUrl }
+      ? { id: proSpeakers[0].id, name: proSpeakers[0].name, avatarUrl: proSpeakers[0].avatarUrl }
       : null,
     con: conSpeakers[0]
-      ? { id: conSpeakers[0].id, username: conSpeakers[0].username, avatarUrl: conSpeakers[0].avatarUrl }
+      ? { id: conSpeakers[0].id, name: conSpeakers[0].name, avatarUrl: conSpeakers[0].avatarUrl }
       : null,
   };
   return (
@@ -184,6 +192,7 @@ export default function Amphitheater({
         view={view}
         feeds={screenFeeds}
         occupants={occupants}
+        performanceMode={performanceMode}
         queue={speakerQueue}
         micHolder={micHolder}
         micLive={micLive}

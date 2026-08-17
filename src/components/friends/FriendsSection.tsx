@@ -16,10 +16,12 @@ import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { useUserMenu } from "../userMenuContext";
 import UserAvatar from "../UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { displayName } from "@/lib/names";
 
 interface FriendRow {
   id: string;
   username: string;
+  display_name?: string | null;
   avatar_url: string | null;
 }
 
@@ -54,7 +56,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
       supabase.from("user_favorites").select("favorite_id"),
       supabase
         .from("user_follows")
-        .select("follower:users!follower_id(id, username, avatar_url)")
+        .select("follower:users!follower_id(id, username, display_name, avatar_url)")
         .eq("following_id", uid),
     ]);
     const fr = (friendsRes.data ?? []) as FriendRow[];
@@ -85,7 +87,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
     const t = setTimeout(async () => {
       const { data } = await supabase
         .from("users")
-        .select("id, username, avatar_url")
+        .select("id, username, display_name, avatar_url")
         .ilike("username", `${q}%`)
         .neq("id", me)
         .limit(6);
@@ -116,13 +118,15 @@ export default function FriendsSection({ container, sidebar }: Props) {
       const p = presence.get(f.id);
       return (favorites.has(f.id) ? 0 : 4) + (p?.room_id ? 0 : p ? 1 : 2);
     };
-    return [...friends].sort((a, b) => rank(a) - rank(b) || a.username.localeCompare(b.username));
+    return [...friends].sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b)));
   }, [friends, favorites, presence]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sorted;
-    return sorted.filter((f) => f.username.toLowerCase().includes(q));
+    return sorted.filter(
+      (f) => f.username.toLowerCase().includes(q) || displayName(f).toLowerCase().includes(q)
+    );
   }, [sorted, query]);
 
   const onlineCount = friends.filter((f) => presence.has(f.id)).length;
@@ -180,7 +184,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
             style={{ cursor: "pointer" }}
             onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: f.id, username: f.username })}
           >
-            {f.username}
+            {displayName(f)}
             {favorites.has(f.id) && <span style={{ marginLeft: 4 }}>⭐</span>}
           </span>
           <span className={`friend-status${online ? " online" : ""}`}>

@@ -45,7 +45,8 @@ export interface ScreenFeeds {
     their profile photo (or an initial glyph) instead of the placeholder. */
 export interface ScreenOccupant {
   id: string;
-  username: string;
+  /** Display name — this is what the holo nameplate renders. */
+  name: string;
   avatarUrl: string | null;
 }
 
@@ -65,6 +66,10 @@ interface Props {
   feeds?: ScreenFeeds;
   /** Screen holders without live video — profile card instead of placeholder. */
   occupants?: ScreenOccupants;
+  /** Egress compositor (software WebGL, no GPU): start at the quality
+      floor — 1x buffer, no shadows, no MSAA — instead of discovering it
+      through the adaptive step-down. */
+  performanceMode?: boolean;
   /** Speaker queue, front first (mic holder excluded). Members leave their
       seats and stand in the center aisle, closest-to-mic = next. */
   queue?: SeatedPerson[];
@@ -940,6 +945,7 @@ export default function AgoraScene3D({
   queue,
   micHolder,
   micLive,
+  performanceMode = false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   /* The view lives in a ref so switching cameras never rebuilds the
@@ -1006,7 +1012,7 @@ export default function AgoraScene3D({
       ctx.font = "700 96px 'Space Grotesk', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText((o.username || "?").charAt(0).toUpperCase(), cx, cy + 6);
+      ctx.fillText((o.name || "?").charAt(0).toUpperCase(), cx, cy + 6);
     }
     ctx.restore();
     ctx.beginPath();
@@ -1018,7 +1024,7 @@ export default function AgoraScene3D({
     ctx.font = "700 44px 'Space Grotesk', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(o.username, cx, 356);
+    ctx.fillText(o.name, cx, 356);
   };
 
   const applyOccupants = () => {
@@ -1232,7 +1238,7 @@ export default function AgoraScene3D({
   /* Occupant cards re-apply on holder/avatar change (applyFeeds runs the
      card pass too, so feed changes are already covered). */
   const occKey = [occupants?.pro, occupants?.con]
-    .map((o) => (o ? `${o.id}:${o.avatarUrl ?? ""}:${o.username}` : ""))
+    .map((o) => (o ? `${o.id}:${o.avatarUrl ?? ""}:${o.name}` : ""))
     .join("|");
   useEffect(() => {
     applyFeedsRef.current();
@@ -1257,13 +1263,13 @@ export default function AgoraScene3D({
     /* ── Renderer / scene / camera ──
        Fill rate dominates on weak GPUs: cap the buffer at 1.5× and skip
        MSAA when the display is dense enough to hide jaggies on its own. */
-    const dpr = Math.min(window.devicePixelRatio, 1.5);
+    const dpr = performanceMode ? 1 : Math.min(window.devicePixelRatio, 1.5);
     const renderer = new THREE.WebGLRenderer({
-      antialias: dpr < 1.5,
+      antialias: performanceMode ? false : dpr < 1.5,
       powerPreference: "high-performance",
     });
     renderer.setPixelRatio(dpr);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !performanceMode;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
 
@@ -1354,7 +1360,7 @@ export default function AgoraScene3D({
        step down once per window — first to a 1× buffer, then shadows off.
        Steps are one-way; a machine that struggled once will struggle again,
        and oscillating quality is worse than stable-but-plainer. */
-    let quality = 2;
+    let quality = performanceMode ? 0 : 2;
     let frameAcc = 0;
     let frameN = 0;
     const stepDown = () => {

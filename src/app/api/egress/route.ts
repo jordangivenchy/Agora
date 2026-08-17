@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EgressClient, EncodingOptionsPreset, StreamOutput, StreamProtocol } from "livekit-server-sdk";
+import { EgressClient, EncodingOptions, StreamOutput, StreamProtocol } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 
 /**
@@ -66,9 +66,15 @@ export async function POST(request: NextRequest) {
         {
           layout: "speaker",
           customBaseUrl: `${request.nextUrl.origin}/agora/${roomId}`,
-          encodingOptions: portrait
-            ? EncodingOptionsPreset.PORTRAIT_H264_720P_30
-            : EncodingOptionsPreset.H264_720P_30,
+          /* Explicit 1080p @ 6 Mbps: the animated 3D scene (stars, torch
+             flicker, camera drift) smears badly at preset 720p bitrates. */
+          encodingOptions: new EncodingOptions({
+            width: portrait ? 1080 : 1920,
+            height: portrait ? 1920 : 1080,
+            framerate: 30,
+            videoBitrate: 6000,
+            audioBitrate: 128,
+          }),
         }
       );
       return NextResponse.json({ egressId: info.egressId });

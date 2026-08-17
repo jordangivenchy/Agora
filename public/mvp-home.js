@@ -2066,6 +2066,11 @@ init();
   }
   window.openDiscovery = openDiscovery;
 
+  // The navbar search bar is the doorway: focusing or typing in it opens
+  // the overlay (which syncs the text and moves the caret there).
+  mainInput.addEventListener('focus', openDiscovery);
+  mainInput.addEventListener('input', openDiscovery);
+
   function closeDiscovery() {
     overlay.style.display = 'none';
     mainInput.value = '';
@@ -2102,6 +2107,9 @@ init();
   // ── Core filter + search function ──
   function _dsFilterResults(query) {
     const q = (query || '').toLowerCase().trim();
+
+    // Let the React layer (people + community-post results) follow the query.
+    document.dispatchEvent(new CustomEvent('agora:discovery-search', { detail: { query: q } }));
 
     // Active filter selections
     const catActive  = (document.querySelector('.filter-pill.active[data-filter-group="category"]')  || {}).textContent || '';

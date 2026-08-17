@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { displayName } from "@/lib/names";
 
 interface Props {
   container?: HTMLElement | null;
@@ -28,24 +29,29 @@ type NotifRow = {
   type: string;
   actor_id: string | null;
   actor_username: string | null;
+  actor_display_name?: string | null;
   room_id: string | null;
   room_motion: string | null;
   read_at: string | null;
   created_at: string;
 };
 
+function actorName(n: NotifRow): string {
+  return displayName({ display_name: n.actor_display_name, username: n.actor_username });
+}
+
 function notifText(n: NotifRow): string {
   switch (n.type) {
     case "new_follower":
-      return `${n.actor_username ?? "Someone"} wants to be your friend`;
+      return `${actorName(n) || "Someone"} wants to be your friend`;
     case "friend_accepted":
-      return `${n.actor_username ?? "Someone"} accepted your friend request — you're now friends 🎉`;
+      return `${actorName(n) || "Someone"} accepted your friend request — you're now friends 🎉`;
     case "room_live":
-      return `${n.actor_username ?? "A speaker"} is live: “${n.room_motion ?? "a discussion"}”`;
+      return `${actorName(n) || "A speaker"} is live: “${n.room_motion ?? "a discussion"}”`;
     case "room_starting_soon":
       return `Starting soon: “${n.room_motion ?? "a discussion"}”`;
     case "room_invite":
-      return `${n.actor_username ?? "A friend"} invited you to “${n.room_motion ?? "their room"}”`;
+      return `${actorName(n) || "A friend"} invited you to “${n.room_motion ?? "their room"}”`;
     default:
       return "New activity";
   }
@@ -84,6 +90,17 @@ export default function NotificationsBell({ container }: Props) {
     if (!uid) return;
     const { data } = await supabase.rpc("get_notifications", { p_limit: 30 });
     const rows = (data ?? []) as NotifRow[];
+    // get_notifications predates display names — join them in client-side.
+    const allActorIds = [...new Set(rows.filter((n) => n.actor_id).map((n) => n.actor_id!))];
+    if (allActorIds.length) {
+      const { data: actors } = await supabase.from("users").select("id, display_name").in("id", allActorIds);
+      const byId = new Map(
+        ((actors ?? []) as { id: string; display_name: string | null }[]).map((u) => [u.id, u.display_name])
+      );
+      rows.forEach((n) => {
+        n.actor_display_name = n.actor_id ? byId.get(n.actor_id) ?? null : null;
+      });
+    }
     setItems(rows);
     const actorIds = [...new Set(rows.filter((n) => n.type === "new_follower" && n.actor_id).map((n) => n.actor_id!))];
     if (actorIds.length) {
@@ -247,7 +264,7 @@ export default function NotificationsBell({ container }: Props) {
                 </span>
                 <span className="flex-1 text-[12.5px]" style={{ color: "#d5d5dc", lineHeight: 1.45 }}>
                   {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)
-                    ? `${n.actor_username ?? "Someone"} started following you`
+                    ? `${actorName(n) || "Someone"} started following you`
                     : notifText(n)}
                   {n.type === "new_follower" && n.actor_id && !followedBack.has(n.actor_id) && (
                     <span className="flex gap-2 mt-1.5">

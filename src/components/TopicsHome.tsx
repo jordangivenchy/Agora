@@ -19,6 +19,7 @@ import { TOPICS } from "@/types/database";
 import TopicIcon from "./topicIcons";
 import { useUserMenu } from "./userMenuContext";
 import { roomPath } from "@/lib/urls";
+import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
 
 interface Props {
@@ -46,8 +47,9 @@ type RoomRow = {
   scheduled_start: string | null;
   created_at: string;
   viewer_count: number | null;
-  host: { id: string; username: string; avatar_url: string | null } | null;
-  participants: { role: string; stance: string | null; left_at: string | null; user: { id: string; username: string; avatar_url: string | null } | null }[] | null;
+  thumbnail_url?: string | null;
+  host: { id: string; username: string; display_name?: string | null; avatar_url: string | null } | null;
+  participants: { role: string; stance: string | null; left_at: string | null; user: { id: string; username: string; display_name?: string | null; avatar_url: string | null } | null }[] | null;
 };
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -79,7 +81,7 @@ const EXPLORE_PILL: Record<string, string> = {
 };
 
 const rowCard: React.CSSProperties = {
-  background: "rgba(7,9,16,0.95)",
+  background: "rgba(11,11,13,0.95)",
   border: "0.5px solid #2e2e38",
   borderRadius: 12,
 };
@@ -89,7 +91,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const { openUserMenu } = useUserMenu();
 
   /* Clickable username → unified user context menu (profile, follow, report). */
-  const nameSpan = (u: { id: string; username: string; avatar_url?: string | null } | null | undefined) =>
+  const nameSpan = (u: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null | undefined) =>
     u ? (
       <span
         onClick={(e) => {
@@ -106,7 +108,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         }}
       >
         <UserAvatar size={13} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
-        {u.username}
+        {displayName(u)}
       </span>
     ) : null;
   const [userId, setUserId] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       supabase.rpc("get_debate_topics"),
       supabase
         .from("debate_rooms")
-        .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, host:users!host_id(id, username, avatar_url), participants:debate_participants(role, stance, left_at, user:users(id, username, avatar_url))")
+        .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url), participants:debate_participants(role, stance, left_at, user:users(id, username, display_name, avatar_url))")
         .in("status", ["live", "created", "scheduled"])
         .order("created_at", { ascending: false })
         .limit(80),
@@ -329,7 +331,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               onClick={() => setSelectedKey(cat.key)}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
-                background: "rgba(7,9,16,0.95)",
+                background: "rgba(11,11,13,0.95)",
                 border: active ? "1px solid #d9a238" : "0.5px solid #2e2e38",
                 boxShadow: active ? "0 0 12px rgba(217,162,56,0.25)" : "none",
                 borderRadius: 999,
@@ -414,7 +416,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           <button
             onClick={() => onCreateLobby(selCat.key)}
             className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg"
-            style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+            style={{ background: "rgba(255,255,255,0.07)", border: "0.5px solid #3a3a42", color: "#e0e0e6", fontFamily: "inherit" }}
           >
             + Create a room
           </button>
@@ -426,42 +428,110 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           </p>
         )}
 
-        {selRooms.map((r) => (
-          <div
-            key={r.id}
-            className="p-3.5 flex items-center gap-3.5 flex-wrap"
-            style={rowCard}
-          >
-            <div className="flex-1 min-w-[220px]">
-              <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                {r.motion}
-              </p>
-              <p className="m-0 mt-1 text-[11px] flex items-center flex-wrap gap-x-1" style={{ color: "#8b8b94" }}>
-                {r.status === "live" && (
-                  <span style={{ color: "#e05a5a" }}>● Live{r.viewer_count ? ` · ${r.viewer_count} watching` : ""} ·</span>
-                )}
-                {r.host?.username ? <><span>by</span> {nameSpan(r.host)} <span>·</span></> : null}
-                <span>
-                  {FORMAT_LABEL[r.format] ?? r.format}
-                  {r.status === "created" ? " · waiting for speakers" : ""}
-                </span>
-              </p>
-            </div>
-            <button
-              onClick={() => { window.location.href = roomPath(r); }}
-              className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
-              style={{
-                background: r.status === "live" ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
-                border: r.status === "live" ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
-                color: r.status === "live" ? "#412402" : "#9cc4f0",
-                fontFamily: "inherit",
-                fontWeight: r.status === "live" ? 600 : 400,
-              }}
-            >
-              {r.status === "live" ? "Watch" : "Join"}
-            </button>
+        {selRooms.length > 0 && (
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {selRooms.map((r) => (
+              <div
+                key={r.id}
+                role="link"
+                tabIndex={0}
+                onClick={() => { window.location.href = roomPath(r); }}
+                onKeyDown={(e) => { if (e.key === "Enter") window.location.href = roomPath(r); }}
+                className="cursor-pointer shrink-0"
+                style={{ ...rowCard, width: 168, height: 168, borderRadius: 16, overflow: "hidden", position: "relative" }}
+              >
+                {/* Host-picked thumbnail; their profile picture is the default */}
+                <div style={{ position: "absolute", inset: 0 }}>
+                  {r.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  ) : (
+                    <UserAvatar
+                      size={168}
+                      radius={0}
+                      username={r.host?.username}
+                      avatarUrl={r.host?.avatar_url}
+                      seed={r.host?.id}
+                    />
+                  )}
+                  {r.status === "live" ? (
+                    <span
+                      style={{
+                        position: "absolute", top: 8, left: 8,
+                        background: "#ef4444", color: "white",
+                        fontSize: 9.5, fontWeight: 700, letterSpacing: "0.06em",
+                        padding: "2px 7px", borderRadius: 6,
+                      }}
+                    >
+                      LIVE
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        position: "absolute", top: 8, left: 8,
+                        background: "rgba(59,130,246,0.85)", color: "white",
+                        fontSize: 9.5, fontWeight: 700, letterSpacing: "0.06em",
+                        padding: "2px 7px", borderRadius: 6,
+                      }}
+                    >
+                      OPEN
+                    </span>
+                  )}
+                  {/* Topic — plain muted text, matching the Explore cards */}
+                  <span
+                    style={{
+                      position: "absolute", top: 9, right: 10,
+                      color: "rgba(255,255,255,0.65)",
+                      fontSize: 10, fontWeight: 500,
+                      textShadow: "0 1px 4px rgba(0,0,0,0.9)",
+                    }}
+                  >
+                    {selCat.label}
+                  </span>
+                </div>
+                {/* Info overlaid on the photo — keeps the block a true square */}
+                <div
+                  className="px-2.5 pb-2 pt-6"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "linear-gradient(transparent, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.88))",
+                  }}
+                >
+                  <p
+                    className="m-0 text-[12px]"
+                    style={{
+                      color: "white",
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontWeight: 700,
+                      lineHeight: 1.25,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                    }}
+                  >
+                    {r.motion}
+                  </p>
+                  {r.host?.username && (
+                    <p className="m-0 mt-0.5 text-[10.5px] flex items-center gap-1" style={{ color: "rgba(255,255,255,0.8)" }}>
+                      <span>by</span> {nameSpan(r.host)}
+                    </p>
+                  )}
+                  <p className="m-0 mt-0.5 text-[9.5px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+                    {FORMAT_LABEL[r.format] ?? r.format}
+                    {r.status === "live"
+                      ? ` · ${r.viewer_count ?? 0} watching`
+                      : " · waiting for speakers"}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
 
         {/* Selected field: queue questions */}
         <div className="flex items-center gap-3 mt-2.5 mb-0.5">
@@ -564,60 +634,104 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
             </div>
-            {selScheduled.map((r) => (
-              <div
-                key={r.id}
-                className="p-3.5 flex items-center gap-3.5 flex-wrap"
-                style={rowCard}
-              >
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {selScheduled.map((r) => (
                 <div
-                  className="shrink-0 px-3 py-2 text-center rounded-lg"
-                  style={{ background: "rgba(35,24,52,0.85)", border: "0.5px solid #43315e", minWidth: 74 }}
-                >
-                  <p className="m-0 text-[11px]" style={{ color: "#c9a6f0", fontWeight: 600 }}>
-                    {r.scheduled_start
-                      ? new Date(r.scheduled_start).toLocaleDateString([], { month: "short", day: "numeric" })
-                      : "TBD"}
-                  </p>
-                  <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-                    {r.scheduled_start
-                      ? new Date(r.scheduled_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-                      : ""}
-                  </p>
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <p className="m-0 text-[13.5px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                    {r.motion}
-                  </p>
-                  <p className="m-0 mt-1 text-[11px] flex items-center flex-wrap gap-x-1" style={{ color: "#8b8b94" }}>
-                    {speakerLine(r)} <span>· {FORMAT_LABEL[r.format] ?? r.format}</span>
-                    <span style={{ color: (reminders[r.id]?.count ?? 0) > 0 ? "#f4d47c" : "#6b6b74" }}>
-                      · 🔔 {reminders[r.id]?.count ?? 0} signed up
-                    </span>
-                  </p>
-                </div>
-                <button
-                  onClick={() => toggleReminder(r)}
-                  disabled={busyId === r.id}
-                  className="cursor-pointer text-[12px] px-3.5 py-2 rounded-lg shrink-0"
-                  style={{
-                    background: reminders[r.id]?.amSet ? "rgba(226,185,107,0.14)" : "transparent",
-                    border: reminders[r.id]?.amSet ? "0.5px solid rgba(226,185,107,0.5)" : "0.5px solid #3a3a42",
-                    color: reminders[r.id]?.amSet ? "#f4d47c" : "#c0c0c8",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {reminders[r.id]?.amSet ? "🔔 Reminder set" : "🔔 Notify me"}
-                </button>
-                <button
+                  key={r.id}
+                  role="link"
+                  tabIndex={0}
                   onClick={() => { window.location.href = roomPath(r); }}
-                  className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
-                  style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+                  onKeyDown={(e) => { if (e.key === "Enter") window.location.href = roomPath(r); }}
+                  className="cursor-pointer shrink-0"
+                  style={{ ...rowCard, width: 168, height: 168, borderRadius: 16, overflow: "hidden", position: "relative" }}
                 >
-                  View
-                </button>
-              </div>
-            ))}
+                  {/* Host-picked thumbnail; their profile picture is the default */}
+                  <div style={{ position: "absolute", inset: 0 }}>
+                    {r.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ) : (
+                      <UserAvatar
+                        size={168}
+                        radius={0}
+                        username={r.host?.username}
+                        avatarUrl={r.host?.avatar_url}
+                        seed={r.host?.id}
+                      />
+                    )}
+                    <span
+                      style={{
+                        position: "absolute", top: 8, left: 8,
+                        background: "rgba(139,92,246,0.85)", color: "white",
+                        fontSize: 9.5, fontWeight: 700, letterSpacing: "0.06em",
+                        padding: "2px 7px", borderRadius: 6,
+                      }}
+                    >
+                      {r.scheduled_start
+                        ? new Date(r.scheduled_start).toLocaleDateString([], { month: "short", day: "numeric" }).toUpperCase()
+                        : "TBD"}
+                    </span>
+                    {/* Reminder bell — gold once set */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleReminder(r); }}
+                      disabled={busyId === r.id}
+                      title={reminders[r.id]?.amSet ? "Reminder set" : "Notify me"}
+                      className="cursor-pointer"
+                      style={{
+                        position: "absolute", top: 6, right: 6,
+                        width: 26, height: 26, borderRadius: "50%",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, lineHeight: 1, padding: 0,
+                        background: reminders[r.id]?.amSet ? "rgba(226,185,107,0.92)" : "rgba(0,0,0,0.55)",
+                        border: reminders[r.id]?.amSet ? "0.5px solid #d9a238" : "0.5px solid rgba(255,255,255,0.25)",
+                      }}
+                    >
+                      🔔
+                    </button>
+                  </div>
+                  {/* Info overlaid on the photo — keeps the block a true square */}
+                  <div
+                    className="px-2.5 pb-2 pt-6"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: "linear-gradient(transparent, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.88))",
+                    }}
+                  >
+                    <p
+                      className="m-0 text-[12px]"
+                      style={{
+                        color: "white",
+                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontWeight: 700,
+                        lineHeight: 1.25,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+                      }}
+                    >
+                      {r.motion}
+                    </p>
+                    {r.host?.username && (
+                      <p className="m-0 mt-0.5 text-[10.5px] flex items-center gap-1" style={{ color: "rgba(255,255,255,0.8)" }}>
+                        <span>by</span> {nameSpan(r.host)}
+                      </p>
+                    )}
+                    <p className="m-0 mt-0.5 text-[9.5px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+                      {r.scheduled_start
+                        ? new Date(r.scheduled_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                        : "Time TBD"}
+                      {" · "}{FORMAT_LABEL[r.format] ?? r.format}
+                      {" · 🔔 "}{reminders[r.id]?.count ?? 0}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </>
         )}
       </div>

@@ -15,10 +15,11 @@ import "@livekit/components-styles";
 import { Track, RoomEvent, type Participant } from "livekit-client";
 import type { DebateParticipant } from "@/types/database";
 import { uniqueViewerCount } from "@/lib/viewerCount";
+import { displayName } from "@/lib/names";
 import { useUserMenu, type MenuRoomContext } from "@/components/userMenuContext";
 
 type ParticipantWithUser = DebateParticipant & {
-  user: { username: string; avatar_url: string | null };
+  user: { username: string; display_name?: string | null; avatar_url: string | null };
 };
 
 /** Live connection/VAD state for a debater tile. */
@@ -660,7 +661,7 @@ function DebateStage({
           {raisedQueue.map((s, i) => (
             <span key={s.id} className="hand-queue-chip">
               <span className="hand-queue-pos">#{i + 1}</span>
-              {s.user?.username || "Spectator"}
+              {displayName(s.user) || "Spectator"}
               <span className="hand-queue-wait">{waitingLabel(s.hand_raised_at!)}</span>
             </span>
           ))}
@@ -721,8 +722,8 @@ function DebateStage({
             className={`audience-avatar-wrap${s.hand_raised_at ? " is-raised" : ""}`}
             title={
               s.hand_raised_at
-                ? `${s.user?.username || "Spectator"} — hand raised ${waitingLabel(s.hand_raised_at)}`
-                : s.user?.username || "Spectator"
+                ? `${displayName(s.user) || "Spectator"} — hand raised ${waitingLabel(s.hand_raised_at)}`
+                : displayName(s.user) || "Spectator"
             }
             onClick={
               s.user_id !== currentUserId ? (e) => openMemberMenu(e, s) : undefined
@@ -730,7 +731,7 @@ function DebateStage({
             style={s.user_id !== currentUserId ? { cursor: "pointer" } : undefined}
           >
             <div className={`audience-avatar ${hashColor(s.user?.username || "")}`}>
-              {getInitials(s.user?.username || "?")}
+              {getInitials(displayName(s.user) || "?")}
             </div>
             {s.hand_raised_at && <span className="audience-hand-badge">✋</span>}
           </div>
@@ -953,7 +954,7 @@ function SpeakerTile({
   const isLocal = debater?.user_id === currentUserId;
   const washClass = stance === "PRO" ? "wash-green" : "wash-red";
   const stanceClass = stance === "PRO" ? "stance-pro" : "stance-con";
-  const username = debater?.user?.username || "";
+  const username = displayName(debater?.user);
 
   // Render video only if track exists AND publication is not muted
   const showVideo = !!track && track.publication?.isMuted !== true && !hideVideoLocally;

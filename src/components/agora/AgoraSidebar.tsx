@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "../userMenuContext";
+import { displayName } from "@/lib/names";
 import type { User } from "@supabase/supabase-js";
 
 interface Message {
@@ -21,7 +22,7 @@ interface Message {
   user_id: string;
   content: string;
   created_at: string;
-  user?: { username: string; avatar_url: string | null };
+  user?: { username: string; display_name?: string | null; avatar_url: string | null };
 }
 
 interface Props {
@@ -79,7 +80,7 @@ export default function AgoraSidebar({ roomId, currentUser }: Props) {
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
       .from("room_messages")
-      .select("*, user:users(username, avatar_url)")
+      .select("*, user:users(username, display_name, avatar_url)")
       .eq("room_id", roomId)
       .order("created_at", { ascending: true })
       .limit(100);
@@ -151,13 +152,14 @@ export default function AgoraSidebar({ roomId, currentUser }: Props) {
                 <div className="ag-empty">No messages yet — say hello.</div>
               )}
               {messages.map((msg) => {
-                const name = msg.user?.username || "User";
+                const name = displayName(msg.user) || "User";
+                const handle = msg.user?.username || name;
                 return (
                   <div key={msg.id} className="ag-chat-msg">
                     <div
                       className="ag-chat-avatar"
                       style={{ background: getUserColor(msg.user_id), overflow: "hidden", cursor: "pointer" }}
-                      onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
+                      onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: handle })}
                     >
                       {msg.user?.avatar_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -171,7 +173,7 @@ export default function AgoraSidebar({ roomId, currentUser }: Props) {
                         <span
                           className="ag-chat-name"
                           style={{ cursor: "pointer" }}
-                          onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
+                          onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: handle })}
                         >
                           {name}
                         </span>

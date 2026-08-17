@@ -9,6 +9,7 @@ import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant, Stance, QueueEntry } from "@/types/database";
 import DebateVideo from "@/components/DebateVideo";
 import { sortAudience } from "@/lib/audienceOrder";
+import { displayName } from "@/lib/names";
 import SentimentBar from "@/components/SidePickerPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NotesPopout from "@/components/NotesPanel";
@@ -17,11 +18,11 @@ import ResultsScreen from "@/components/ResultsScreen";
 import type { User } from "@supabase/supabase-js";
 
 type ParticipantWithUser = DebateParticipant & {
-  user: { username: string; avatar_url: string | null };
+  user: { username: string; display_name?: string | null; avatar_url: string | null };
 };
 
 type QueueWithUser = QueueEntry & {
-  user: { username: string; avatar_url: string | null };
+  user: { username: string; display_name?: string | null; avatar_url: string | null };
 };
 
 /* Param may be a full uuid or a slug ending in an 8-char id prefix. */
@@ -150,7 +151,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
     try {
       const { data } = await supabase
         .from("debate_participants")
-        .select("*, user:users(username, avatar_url)")
+        .select("*, user:users(username, display_name, avatar_url)")
         .eq("room_id", roomId)
         .is("left_at", null);
       if (data) setParticipants(data as ParticipantWithUser[]);
@@ -167,7 +168,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
     try {
       const { data } = await supabase
         .from("debate_queue")
-        .select("*, user:users(username, avatar_url)")
+        .select("*, user:users(username, display_name, avatar_url)")
         .eq("room_id", roomId)
         .eq("status", "waiting")
         .order("entered_at", { ascending: true });
@@ -293,7 +294,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
   async function getLiveKitToken(role: string) {
     if (!currentUser) return;
     try {
-      const { data: profile } = await supabase.from("users").select("username").eq("id", currentUser.id).single();
+      const { data: profile } = await supabase.from("users").select("username, display_name").eq("id", currentUser.id).single();
 
       const res = await fetch("/api/livekit", {
         method: "POST",
@@ -301,7 +302,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
         body: JSON.stringify({
           roomId,
           userId: currentUser.id,
-          username: profile?.username || currentUser.email?.split("@")[0],
+          username: displayName(profile) || currentUser.email?.split("@")[0],
           role,
         }),
       });
@@ -777,6 +778,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
 
   const filteredQueue = queue.filter((entry) =>
     queueSearch.trim() === "" ||
+    (displayName(entry.user) || "").toLowerCase().includes(queueSearch.trim().toLowerCase()) ||
     (entry.user?.username || "").toLowerCase().includes(queueSearch.trim().toLowerCase())
   );
 
@@ -1024,7 +1026,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                       fontWeight: 600,
                     }}
                   >
-                    {entry.user?.username || "User"} · {entry.stance}
+                    {displayName(entry.user) || "User"} · {entry.stance}
                   </span>
                   <button
                     className="queue-approve-btn"

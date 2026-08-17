@@ -13,10 +13,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import UserAvatar from "../UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { displayName } from "@/lib/names";
 
 interface Thread {
   peer_id: string;
   peer_username: string;
+  peer_display_name?: string | null;
   peer_avatar_url: string | null;
   last_content: string;
   last_at: string;
@@ -35,6 +37,7 @@ interface Dm {
 interface Peer {
   id: string;
   username: string;
+  display_name?: string | null;
   avatarUrl: string | null;
 }
 
@@ -85,7 +88,19 @@ export default function MessagesDock() {
 
   const loadThreads = useCallback(async () => {
     const { data } = await supabase.rpc("get_dm_threads");
-    setThreads((data ?? []) as Thread[]);
+    const rows = (data ?? []) as Thread[];
+    // get_dm_threads predates display names — join them in client-side.
+    const ids = rows.map((t) => t.peer_id);
+    if (ids.length) {
+      const { data: names } = await supabase.from("users").select("id, display_name").in("id", ids);
+      const byId = new Map(
+        ((names ?? []) as { id: string; display_name: string | null }[]).map((u) => [u.id, u.display_name])
+      );
+      rows.forEach((t) => {
+        t.peer_display_name = byId.get(t.peer_id) ?? null;
+      });
+    }
+    setThreads(rows);
   }, [supabase]);
 
   const loadThread = useCallback(
@@ -97,6 +112,17 @@ export default function MessagesDock() {
         .order("created_at", { ascending: true })
         .limit(200);
       setMsgs((data ?? []) as Dm[]);
+      if (p.display_name === undefined) {
+        supabase
+          .from("users")
+          .select("display_name")
+          .eq("id", p.id)
+          .single()
+          .then(({ data: u }) => {
+            const dn = (u as { display_name: string | null } | null)?.display_name ?? null;
+            setPeer((cur) => (cur && cur.id === p.id ? { ...cur, display_name: dn } : cur));
+          });
+      }
       supabase.rpc("mark_dm_read", { p_peer: p.id }).then(loadThreads);
     },
     [supabase, loadThreads]
@@ -227,7 +253,7 @@ export default function MessagesDock() {
               ←
             </button>
             <UserAvatar size={22} username={peer.username} avatarUrl={peer.avatarUrl} seed={peer.id} />
-            <span style={{ color: "#f5f5f0", fontWeight: 600, fontSize: 13.5 }}>{peer.username}</span>
+            <span style={{ color: "#f5f5f0", fontWeight: 600, fontSize: 13.5 }}>{displayName(peer)}</span>
           </>
         ) : (
           <span style={{ color: "#f5f5f0", fontWeight: 700, fontSize: 14, fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -333,7 +359,12 @@ export default function MessagesDock() {
             <div
               key={t.peer_id}
               onClick={() => {
-                const p = { id: t.peer_id, username: t.peer_username, avatarUrl: t.peer_avatar_url };
+                const p = {
+                  id: t.peer_id,
+                  username: t.peer_username,
+                  display_name: t.peer_display_name ?? null,
+                  avatarUrl: t.peer_avatar_url,
+                };
                 setPeer(p);
                 setSendError(null);
                 setMsgs([]);
@@ -351,7 +382,7 @@ export default function MessagesDock() {
               <UserAvatar size={30} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, color: "#f5f5f0", fontSize: 13, fontWeight: t.unread > 0 ? 700 : 500 }}>
-                  {t.peer_username}
+                  {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
                 </p>
                 <p
                   style={{

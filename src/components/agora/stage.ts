@@ -12,7 +12,7 @@ export type StageRole = "host" | "cohost" | "speaker" | "audience";
 
 export type StageParticipant = DebateParticipant & {
   stage_role?: StageRole | null;
-  user: { username: string; avatar_url: string | null };
+  user: { username: string; display_name?: string | null; avatar_url: string | null };
 };
 
 export function deriveStageRole(

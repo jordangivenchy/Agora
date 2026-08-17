@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { createClient } from "@/lib/supabase-browser";
 import { parseRoomParam } from "@/lib/urls";
+import { displayName } from "@/lib/names";
 import type { DebateRoom } from "@/types/database";
 import { TOPICS } from "@/types/database";
 import Amphitheater from "@/components/agora/Amphitheater";
@@ -120,7 +121,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         supabase.from("debate_rooms").select("*").eq("id", roomId).maybeSingle(),
         supabase
           .from("debate_participants")
-          .select("*, user:users(username, avatar_url)")
+          .select("*, user:users(username, display_name, avatar_url)")
           .eq("room_id", roomId)
           .is("left_at", null),
       ]);
@@ -181,10 +182,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       try {
         const { data } = await supabase
           .from("users")
-          .select("username")
+          .select("username, display_name")
           .eq("id", inviterId)
           .maybeSingle();
-        if (data?.username) name = data.username;
+        if (data) name = displayName(data) || name;
       } catch {
         /* name is cosmetic */
       }
@@ -251,20 +252,34 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     return "audience" as const;
   }, [myParticipation, currentUser, room]);
 
+  /* ── Scheduled-debate door ─────────────────────────────────────────
+     A scheduled room opens 30 minutes before its start time. Until then
+     only the host may enter (to set up); everyone else waits outside. */
+  const opensAtMs = useMemo(() => {
+    if (!room?.scheduled_start || room.status === "live" || room.status === "ended") return null;
+    return new Date(room.scheduled_start).getTime() - 30 * 60 * 1000;
+  }, [room?.scheduled_start, room?.status]);
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  useEffect(() => {
+    if (opensAtMs === null || Date.now() >= opensAtMs) return;
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [opensAtMs]);
+  const gated = opensAtMs !== null && nowTs < opensAtMs && myRole !== "host" && !broadcast;
+
   /* ── Live call (LiveKit) ───────────────────────────────────────────
      Everyone connects: on-stage roles with publish rights, listeners and
      guests subscribe-only. The buttons below drive this, and the active-
      speaker set feeds the stage rings with real voice activity. */
   const myUsername =
-    myParticipation?.user?.username ??
-    currentUser?.email?.split("@")[0] ??
-    "Guest";
+    displayName(myParticipation?.user) ||
+    (currentUser?.email?.split("@")[0] ?? "Guest");
   const call = useAgoraCall({
     roomId,
     userId: currentUser?.id ?? null,
     username: myUsername,
     canPublish: onStage(myRole),
-    ready: loaded && !!room,
+    ready: loaded && !!room && !gated,
     highQuality: view === "speaker",
     external: broadcastCreds,
   });
@@ -303,6 +318,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     const toStage = ({ p, stageRole }: (typeof withRoles)[number]) => ({
       id: p.user_id,
       username: p.user?.username ?? "?",
+      name: displayName(p.user) || "?",
       avatarUrl: p.user?.avatar_url ?? null,
       /* Real voice activity once the call is up; DB heartbeat otherwise. */
       speaking: call.connected ? call.speakingIds.has(p.user_id) : !p.mic_muted,
@@ -328,6 +344,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         .map(({ p }) => ({
           id: p.user_id,
           username: p.user?.username ?? "?",
+          name: displayName(p.user) || "?",
           avatarUrl: p.user?.avatar_url ?? null,
         })),
     };
@@ -345,7 +362,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     if (!uid) return null;
     const p = participants.find((x) => x.user_id === uid && !x.left_at);
     return p
-      ? { id: p.user_id, username: p.user?.username ?? "?", avatarUrl: p.user?.avatar_url ?? null }
+      ? {
+          id: p.user_id,
+          username: p.user?.username ?? "?",
+          name: displayName(p.user) || "?",
+          avatarUrl: p.user?.avatar_url ?? null,
+        }
       : null;
   }, [room?.mic_user_id, participants]);
 
@@ -362,6 +384,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     ).map((p) => ({
       id: p.user_id,
       username: p.user?.username ?? "?",
+      name: displayName(p.user) || "?",
       avatarUrl: p.user?.avatar_url ?? null,
     }));
   }, [participants, room]);
@@ -427,8 +450,17 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   /* No self-preview: your own camera never docks — the stage holo screen
      is the only place your feed shows (it's what everyone else sees). */
   const dockTiles = useMemo(
-    () => call.videoTiles.filter((t) => !t.local),
-    [call.videoTiles]
+    () =>
+      call.videoTiles
+        .filter((t) => !t.local)
+        .map((t) => {
+          /* The tile label prefers the seated row's display name (the LiveKit
+             name already carries it for up-to-date clients); the raw handle
+             rides along for the user context menu. */
+          const u = participants.find((p) => p.user_id === t.identity)?.user;
+          return u ? { ...t, username: displayName(u) || t.username, handle: u.username } : t;
+        }),
+    [call.videoTiles, participants]
   );
 
   /* Walking in seats you: signed-in visitors get a spectator row right
@@ -439,7 +471,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const seatAttemptedRef = useRef(false);
   useEffect(() => {
     if (seatAttemptedRef.current) return;
-    if (!loaded || !currentUser || !room || room.status === "ended") return;
+    if (!loaded || !currentUser || !room || room.status === "ended" || gated) return;
     if (myParticipation) {
       seatAttemptedRef.current = true;
       return;
@@ -468,7 +500,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         /* seating is cosmetic — the room still works unlisted */
       }
     })();
-  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll]);
+  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll, gated]);
 
   /* Leaving vacates the seat (best effort — a closed tab can't stamp out). */
   const vacateSeat = useCallback(() => {
@@ -586,6 +618,48 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     );
   }
 
+  if (gated && opensAtMs !== null) {
+    const start = room.scheduled_start ? new Date(room.scheduled_start) : null;
+    const opens = new Date(opensAtMs);
+    const minsLeft = Math.max(1, Math.ceil((opensAtMs - nowTs) / 60000));
+    const countdown =
+      minsLeft >= 1440
+        ? `${Math.floor(minsLeft / 1440)}d ${Math.floor((minsLeft % 1440) / 60)}h`
+        : minsLeft >= 60
+          ? `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m`
+          : `${minsLeft}m`;
+    return (
+      <div
+        className="ag-root ag-loading"
+        style={{ textAlign: "center", padding: "0 24px", flexDirection: "column", gap: 0, alignItems: "center", justifyContent: "center" }}
+      >
+        <p className="m-0 text-[11px]" style={{ color: "#c9a6f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, letterSpacing: "0.08em" }}>
+          SCHEDULED DEBATE
+        </p>
+        <h1 className="m-0 mt-2 text-[22px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, maxWidth: 640 }}>
+          {room.motion}
+        </h1>
+        {start && (
+          <p className="m-0 mt-3 text-[13px]" style={{ color: "#c0c0c8" }}>
+            Starts {start.toLocaleDateString([], { month: "short", day: "numeric" })} at{" "}
+            {start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+          </p>
+        )}
+        <p className="m-0 mt-1.5 text-[12px]" style={{ color: "#8b8b94" }}>
+          Doors open 30 minutes before start — come back at{" "}
+          {opens.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (in {countdown}).
+        </p>
+        <button
+          onClick={() => router.push("/")}
+          className="cursor-pointer text-[12px] px-4 py-2 rounded-lg mt-5"
+          style={{ background: "rgba(255,255,255,0.07)", border: "0.5px solid #3a3a42", color: "#e0e0e6", fontFamily: "inherit" }}
+        >
+          ← Back to home
+        </button>
+      </div>
+    );
+  }
+
   const raiseTitle = !currentUser
     ? "Sign in to raise your hand"
     : requestsLocked
@@ -656,6 +730,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
         {/* ── Amphitheater ── */}
         <Amphitheater
+        performanceMode={broadcast}
           roomId={roomId}
           proSpeakers={proSpeakers}
           conSpeakers={conSpeakers}

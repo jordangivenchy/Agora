@@ -18,6 +18,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import FollowListModal from "@/components/FollowListModal";
 import Wordmark from "@/components/Wordmark";
 import EditProfileModal from "@/components/EditProfileModal";
+import { displayName } from "@/lib/names";
 
 interface Profile {
   id: string;
@@ -300,7 +301,7 @@ export default function ProfileView({
           <div className="flex-1 min-w-[240px]">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="m-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: "#f5f5f0" }}>
-                {profile.display_name || profile.username}
+                {displayName(profile)}
               </h1>
               {profile.verified && <VerifiedBadge size={20} />}
             </div>

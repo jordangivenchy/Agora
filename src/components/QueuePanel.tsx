@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { QueueEntry } from "@/types/database";
 import type { User } from "@supabase/supabase-js";
 import { useUserMenu } from "./userMenuContext";
+import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
 
 interface Props {
@@ -17,8 +18,10 @@ export default function QueuePanel({ queue, roomId, currentUser }: Props) {
   const { openUserMenu } = useUserMenu();
 
   const nameSpan = (entry: QueueEntry) => {
-    const username = (entry.user as { username?: string })?.username;
+    const user = entry.user as { username?: string; display_name?: string | null } | undefined;
+    const username = user?.username;
     if (!username) return <span>User</span>;
+    const name = displayName(user);
     const avatarUrl = (entry.user as { avatar_url?: string | null })?.avatar_url;
     return (
       <span
@@ -26,8 +29,8 @@ export default function QueuePanel({ queue, roomId, currentUser }: Props) {
         className="cursor-pointer inline-flex items-center gap-1.5"
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
-        <UserAvatar size={16} username={username} avatarUrl={avatarUrl} seed={entry.user_id} />
-        {username}
+        <UserAvatar size={16} username={name} avatarUrl={avatarUrl} seed={entry.user_id} />
+        {name}
       </span>
     );
   };

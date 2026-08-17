@@ -5,11 +5,14 @@ import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant } from "@/types/database";
 import { useUserMenu } from "./userMenuContext";
 import { roomPath } from "@/lib/urls";
+import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
 
 interface Props {
   room: DebateRoom & {
-    participants: (DebateParticipant & { user: { username: string; avatar_url: string | null } })[];
+    participants: (DebateParticipant & {
+      user: { username: string; display_name?: string | null; avatar_url: string | null };
+    })[];
     vote_counts: { pro: number; con: number };
   };
 }
@@ -258,21 +261,21 @@ export default function RoomCard({ room }: Props) {
             <span {...nameProps(proDebater)} className="inline-flex items-center gap-1.5">
               <UserAvatar
                 size={20}
-                username={proDebater?.user?.username}
+                username={displayName(proDebater?.user)}
                 avatarUrl={proDebater?.user?.avatar_url}
                 seed={proDebater?.user_id}
               />
-              {proDebater?.user?.username || "Waiting"}
+              {displayName(proDebater?.user) || "Waiting"}
             </span>
             <span>vs</span>
             <span {...nameProps(conDebater)} className="inline-flex items-center gap-1.5">
               <UserAvatar
                 size={20}
-                username={conDebater?.user?.username}
+                username={displayName(conDebater?.user)}
                 avatarUrl={conDebater?.user?.avatar_url}
                 seed={conDebater?.user_id}
               />
-              {conDebater?.user?.username || "Waiting"}
+              {displayName(conDebater?.user) || "Waiting"}
             </span>
           </span>
         </div>
