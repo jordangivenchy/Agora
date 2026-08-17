@@ -61,56 +61,12 @@ function colorFor(id: string): string {
   return AVATAR_COLORS[hashString(id) % AVATAR_COLORS.length];
 }
 
-function SpeakerPanel({ side, speakers }: { side: "pro" | "con"; speakers: StagePerson[] }) {
-  const { openUserMenu } = useUserMenu();
-  const speakingCount = speakers.filter((s) => s.speaking).length || speakers.length;
-  /* No stance labels — the panel leads with who's actually on stage. */
-  const title =
-    speakers.length === 0
-      ? "Open seat"
-      : speakers.length === 1
-        ? speakers[0].username
-        : `${speakers.length} debaters`;
-  return (
-    <div className={`ag-stage-panel ag-stage-panel--${side}`}>
-      <div className="ag-stage-panel-head">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
-          <path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <span className="ag-stage-panel-title">{title}</span>
-      </div>
-      <div className="ag-stage-panel-count">
-        {speakers.length === 0 ? "Waiting for a debater" : `${speakingCount} Speaking`}
-      </div>
-      <div className="ag-stage-avatars">
-        {speakers.length === 0 && <div className="ag-stage-avatar ag-stage-avatar--empty">?</div>}
-        {speakers.slice(0, 4).map((s) => (
-          <div
-            key={s.id}
-            className="ag-stage-avatar"
-            style={{ background: colorFor(s.id), overflow: "hidden", cursor: "pointer" }}
-            title={s.username}
-            onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: s.id, username: s.username })}
-          >
-            {s.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={s.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              (s.username || "?").charAt(0).toUpperCase()
-            )}
-            {s.speaking && <span className="ag-speaking-ring" />}
-          </div>
-        ))}
-      </div>
-      <div className="ag-wave" aria-hidden>
-        {Array.from({ length: 24 }, (_, i) => (
-          <span key={i} style={{ animationDelay: `${(i % 8) * 0.12}s` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
+/* The stage rail used to carry a SpeakerPanel per side — username, a
+   "N Speaking" line, avatar chips and an animated waveform. All of that
+   now lives on the 3D panels themselves: the name sits bottom-left over
+   the video like a broadcast lower-third, and speaking is shown as a soft
+   halo around the whole box rather than a bar chart beside it. What's
+   left in the DOM is the view toggle, floating on its own. */
 
 /* One person on the discussion strip: avatar with a role ring, a crown
    for hosts (outlined for co-hosts), a speaking ring when live. Entrance
@@ -167,6 +123,8 @@ export default function Amphitheater({
 
   /* Screen holders: the lead PRO/CON speakers own the stage screens, so a
      camera-off debater shows their profile card instead of the placeholder. */
+  /* Identity only. The panels show who holds each screen; they carry no
+     speaking state since the halo was removed. */
   const occupants: ScreenOccupants = {
     pro: proSpeakers[0]
       ? { id: proSpeakers[0].id, username: proSpeakers[0].username, avatarUrl: proSpeakers[0].avatarUrl }
@@ -198,9 +156,8 @@ export default function Amphitheater({
         </div>
       )}
 
-      {/* The stage rail: panels + emblem + view toggle over the 3D scene */}
+      {/* The stage rail: just the view toggle, floating over the scene */}
       <div className="ag-stage">
-        <SpeakerPanel side="pro" speakers={proSpeakers} />
         <div className="ag-stage-center">
           <button
             className="ag-switch-view"
@@ -217,7 +174,6 @@ export default function Amphitheater({
             </span>
           </button>
         </div>
-        <SpeakerPanel side="con" speakers={conSpeakers} />
       </div>
     </div>
   );

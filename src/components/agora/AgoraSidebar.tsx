@@ -27,6 +27,9 @@ interface Message {
 interface Props {
   roomId: string;
   currentUser: User | null;
+  /** Rail folded away so the stage can run full width. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 const USER_COLORS = [
@@ -59,7 +62,12 @@ const CHAT_RULES = [
 
 const CHAT_JOINED_KEY = "agora-chat-joined";
 
-export default function AgoraSidebar({ roomId, currentUser }: Props) {
+export default function AgoraSidebar({
+  roomId,
+  currentUser,
+  collapsed = false,
+  onToggleCollapsed,
+}: Props) {
   const { openUserMenu } = useUserMenu();
   const [supabase] = useState(() => createClient());
   const [tab, setTab] = useState<"chat" | "qa">("chat");
@@ -133,100 +141,134 @@ export default function AgoraSidebar({ roomId, currentUser }: Props) {
   }
 
   return (
-    <aside className="ag-sidebar">
-      <section className="ag-card ag-chat-card">
-        <div className="ag-tabs">
-          <button className={`ag-tab ${tab === "chat" ? "active" : ""}`} onClick={() => setTab("chat")}>
-            Chat
-          </button>
-          <button className={`ag-tab ${tab === "qa" ? "active" : ""}`} onClick={() => setTab("qa")}>
-            Q&amp;A
-          </button>
-        </div>
+    <>
+      {/* Restore handle — the only chat affordance left once the rail is
+          folded away. Fixed to the viewport so it survives the rail
+          collapsing to zero width. */}
+      {collapsed && (
+        <button
+          className="ag-rail-restore"
+          onClick={onToggleCollapsed}
+          aria-expanded={false}
+          title="Show chat"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>Chat</span>
+        </button>
+      )}
 
-        {tab === "chat" ? (
-          <>
-            <div className="ag-chat-scroll" ref={scrollRef} onScroll={handleScroll}>
-              {messages.length === 0 && (
-                <div className="ag-empty">No messages yet — say hello.</div>
-              )}
-              {messages.map((msg) => {
-                const name = msg.user?.username || "User";
-                return (
-                  <div key={msg.id} className="ag-chat-msg">
-                    <div
-                      className="ag-chat-avatar"
-                      style={{ background: getUserColor(msg.user_id), overflow: "hidden", cursor: "pointer" }}
-                      onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
-                    >
-                      {msg.user?.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={msg.user.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div className="ag-chat-body">
-                      <div className="ag-chat-meta">
-                        <span
-                          className="ag-chat-name"
-                          style={{ cursor: "pointer" }}
-                          onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
-                        >
-                          {name}
-                        </span>
-                        <span className="ag-chat-time">{fmtTime(msg.created_at)}</span>
-                      </div>
-                      <div className="ag-chat-text">{msg.content}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* The gate: rules first, input after */}
-            {joined === false ? (
-              <div className="ag-chat-gate">
-                <div className="ag-chat-gate-title">Chat rules</div>
-                <ul className="ag-chat-gate-rules">
-                  {CHAT_RULES.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-                <button className="ag-chat-join" onClick={joinChat}>
-                  Join chat
-                </button>
-                <div className="ag-chat-gate-note">
-                  Joining confirms you&apos;ve read the rules.
-                </div>
-              </div>
-            ) : joined === true ? (
-              currentUser ? (
-                <form className="ag-chat-inputrow" onSubmit={sendMessage}>
-                  <input
-                    className="ag-chat-input"
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Message #debate-chat"
-                    maxLength={200}
-                  />
-                </form>
-              ) : (
-                <div className="ag-chat-signin">
-                  <a href="/login">Sign in</a> to chat
-                </div>
-              )
-            ) : null}
-          </>
-        ) : (
-          <div className="ag-qa-placeholder">
-            <div className="ag-qa-icon">❓</div>
-            Audience questions will appear here.
-            <small>Q&amp;A is coming soon.</small>
+      <aside className="ag-sidebar" aria-hidden={collapsed}>
+        <section className="ag-card ag-chat-card">
+          <div className="ag-tabs">
+            <button className={`ag-tab ${tab === "chat" ? "active" : ""}`} onClick={() => setTab("chat")}>
+              Chat
+            </button>
+            <button className={`ag-tab ${tab === "qa" ? "active" : ""}`} onClick={() => setTab("qa")}>
+              Q&amp;A
+            </button>
+            <button
+              className="ag-rail-collapse"
+              onClick={onToggleCollapsed}
+              aria-expanded={!collapsed}
+              title="Hide chat — full-width stage"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
-        )}
-      </section>
-    </aside>
+
+          {tab === "chat" ? (
+            <>
+              <div className="ag-chat-scroll" ref={scrollRef} onScroll={handleScroll}>
+                {messages.length === 0 && (
+                  <div className="ag-empty">No messages yet — say hello.</div>
+                )}
+                {messages.map((msg) => {
+                  const name = msg.user?.username || "User";
+                  return (
+                    <div key={msg.id} className="ag-chat-msg">
+                      <div
+                        className="ag-chat-avatar"
+                        style={{ background: getUserColor(msg.user_id), overflow: "hidden", cursor: "pointer" }}
+                        onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
+                      >
+                        {msg.user?.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={msg.user.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="ag-chat-body">
+                        <div className="ag-chat-meta">
+                          <span
+                            className="ag-chat-name"
+                            style={{ cursor: "pointer" }}
+                            onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: msg.user_id, username: name })}
+                          >
+                            {name}
+                          </span>
+                          <span className="ag-chat-time">{fmtTime(msg.created_at)}</span>
+                        </div>
+                        <div className="ag-chat-text">{msg.content}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* The gate: rules first, input after */}
+              {joined === false ? (
+                <div className="ag-chat-gate">
+                  <div className="ag-chat-gate-title">Chat rules</div>
+                  <ul className="ag-chat-gate-rules">
+                    {CHAT_RULES.map((r) => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
+                  <button className="ag-chat-join" onClick={joinChat}>
+                    Join chat
+                  </button>
+                  <div className="ag-chat-gate-note">
+                    Joining confirms you&apos;ve read the rules.
+                  </div>
+                </div>
+              ) : joined === true ? (
+                currentUser ? (
+                  <form className="ag-chat-inputrow" onSubmit={sendMessage}>
+                    <input
+                      className="ag-chat-input"
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Message #debate-chat"
+                      maxLength={200}
+                    />
+                  </form>
+                ) : (
+                  <div className="ag-chat-signin">
+                    <a href="/login">Sign in</a> to chat
+                  </div>
+                )
+              ) : null}
+            </>
+          ) : (
+            <div className="ag-qa-placeholder">
+              <div className="ag-qa-icon">❓</div>
+              Audience questions will appear here.
+              <small>Q&amp;A is coming soon.</small>
+            </div>
+          )}
+        </section>
+      </aside>
+    </>
   );
 }
