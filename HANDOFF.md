@@ -124,6 +124,20 @@ in-app browser; signed-in flows need a real login (jordan1 etc.).
   Activate with `HLS_S3_ENDPOINT/REGION/BUCKET/ACCESS_KEY/SECRET` +
   `HLS_PUBLIC_BASE_URL` in Vercel (Supabase Storage's S3 endpoint works).
 
+## Reminder delivery (2026-08-17 session)
+
+Scheduled-debate reminders actually send now. pg_cron (`room-reminders`,
+every 2 min) runs `send_due_room_reminders()`: debates whose doors just
+opened (start − 30 min) get bell notifications inserted for every 🔔
+signup (`room_reminders.reminded_at` marks sent), then pg_net POSTs
+`{roomId}` to `/api/cron/reminders` (Bearer secret from `app_config` —
+RLS-locked table, service-role only) which fans out email (Resend path,
+once keys exist) and **web push**. Push is fully live: VAPID keys generated
+and stored in app_config, `push_subscriptions` table (RLS own-rows),
+`public/push-sw.js`, subscribe/unsubscribe endpoints under `/api/push/*`,
+and an enable toggle at the bottom of the notifications bell. The pg_net
+webhook 404s until the routes deploy; bell delivery works regardless.
+
 ## Known gaps / next steps
 
 1. **PostHog keys** from Alan → Vercel (trait cron + retrieval inert without them).

@@ -24,6 +24,13 @@ interface Props {
   container?: HTMLElement | null;
 }
 
+/* VAPID public key (base64url) → the BufferSource pushManager wants. */
+function urlBase64ToUint8Array(base64: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
 type NotifRow = {
   id: string;
   type: string;
@@ -103,6 +110,69 @@ export default function NotificationsBell({ container }: Props) {
   }, [supabase]);
 
   useEffect(() => { load(); }, [load]);
+
+  /* Web-push: reminders reach closed tabs. State reflects whether THIS
+     browser holds a live subscription. */
+  const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "busy">("off");
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushState("unsupported");
+      return;
+    }
+    navigator.serviceWorker
+      .getRegistration()
+      .then((reg) => reg?.pushManager.getSubscription())
+      .then((sub) => setPushState(sub ? "on" : "off"))
+      .catch(() => setPushState("off"));
+  }, []);
+
+  const togglePush = useCallback(async () => {
+    if (pushState === "busy" || pushState === "unsupported") return;
+    const wasOn = pushState === "on";
+    setPushState("busy");
+    try {
+      if (wasOn) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = await reg?.pushManager.getSubscription();
+        if (sub) {
+          await fetch("/api/push/subscribe", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          }).catch(() => {});
+          await sub.unsubscribe();
+        }
+        setPushState("off");
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        setPushState("off");
+        return;
+      }
+      const keyRes = await fetch("/api/push/vapid");
+      if (!keyRes.ok) {
+        setPushState("off");
+        return;
+      }
+      const { publicKey } = await keyRes.json();
+      const reg = await navigator.serviceWorker.register("/push-sw.js");
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
+      });
+      const json = sub.toJSON();
+      const saved = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint, keys: json.keys }),
+      });
+      setPushState(saved.ok ? "on" : "off");
+      if (!saved.ok) await sub.unsubscribe();
+    } catch {
+      setPushState(wasOn ? "on" : "off");
+    }
+  }, [pushState]);
 
   /* Realtime: RLS scopes the stream to my own rows. Re-load on insert so
      the actor/room names come joined; raise an OS notification when
@@ -287,6 +357,27 @@ export default function NotificationsBell({ container }: Props) {
               </button>
             );
           })}
+          {pushState !== "unsupported" && (
+            <button
+              onClick={togglePush}
+              disabled={pushState === "busy"}
+              className="w-full text-left px-4 py-2.5 text-[11.5px] flex items-center gap-2 cursor-pointer"
+              style={{
+                background: "transparent",
+                border: "none",
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                color: pushState === "on" ? "#8fd3a8" : "#9a9aa4",
+                fontFamily: "inherit",
+              }}
+            >
+              <span style={{ fontSize: 12 }}>{pushState === "on" ? "●" : "○"}</span>
+              {pushState === "busy"
+                ? "…"
+                : pushState === "on"
+                  ? "Push notifications on — reminders reach this device even with the tab closed"
+                  : "Enable push notifications for debate reminders"}
+            </button>
+          )}
         </div>
       )}
     </div>

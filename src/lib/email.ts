@@ -64,6 +64,24 @@ export function brandedEmail(title: string, bodyHtml: string): string {
 </body></html>`;
 }
 
+export function debateReminderEmail(motion: string, startsAt: Date, roomUrl: string): { subject: string; html: string } {
+  const time = startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return {
+    subject: `Starting soon: ${motion}`,
+    html: brandedEmail(
+      "Your debate starts in 30 minutes",
+      `<p style="font-size:15px;"><strong>&ldquo;${motion.replace(/</g, "&lt;")}&rdquo;</strong></p>
+       <p>Doors are open now — the debate begins at ${time}.</p>
+       <p style="margin-top:20px;">
+         <a href="${roomUrl}" style="display:inline-block;background:#4a9eff;color:#ffffff;
+            padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600;">
+           Take your seat →
+         </a>
+       </p>`
+    ),
+  };
+}
+
 export function passwordChangedEmail(): { subject: string; html: string } {
   return {
     subject: "Your AgoraSphere password was changed",
