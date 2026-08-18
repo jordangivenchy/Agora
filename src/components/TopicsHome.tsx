@@ -392,7 +392,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {/* Popular rooms (left) and scheduled debates (right) share a row;
             the queue grid sits underneath. Wraps to stacked on narrow screens. */}
         <div className="flex gap-5 items-start flex-wrap">
-        <div className="flex-1 min-w-0 flex flex-col gap-2" style={{ minWidth: 340 }}>
+        <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
         {/* Selected field: popular rooms */}
         <div className="flex items-center gap-3 mb-0.5">
           <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
@@ -539,7 +539,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
         </div>
         {selScheduled.length > 0 && (
-          <div className="min-w-0 flex flex-col gap-2" style={{ maxWidth: "48%" }}>
+          <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
         {/* Scheduled discussions — their own section, ordered by sign-ups */}
         <>
             <div className="flex items-center gap-3 mt-2.5 mb-0.5">
