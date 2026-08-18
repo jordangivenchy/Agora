@@ -5846,3 +5846,102 @@ body { background: transparent; }
   pointer-events: none;
 }
 .cm-child:last-child::before { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Sidebar redesign (2026-08-17) — final word, appended last on purpose.
+   One calm charcoal card: flat surface, stroke-weight rows, a single
+   gold accent for the active page. The old light-beam/sparkle/shimmer
+   theatrics and the rotating-hue active ring are retired.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* No theatrics. */
+.nav-hover-shimmer,
+.nav-light-slit,
+.nav-light-beam,
+.nav-light-shadow,
+.nav-sparkle,
+.sidebar::before,
+.sidebar::after,
+.sidebar-edge-blur,
+.sidebar-edge-tint { display: none !important; }
+
+.sidebar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.028) 0%, rgba(255,255,255,0) 120px),
+    #0c0c0e !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 16px 48px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.sidebar-scroll-area { padding: 6px 0 0 !important; }
+.sidebar-nav { padding: 8px 10px 6px !important; gap: 2px !important; display: flex; flex-direction: column; }
+
+/* Section label above the tabs — same voice as POPULAR ROOMS / QUEUE. */
+.sidebar-nav::before {
+  content: "MENU";
+  display: block;
+  padding: 2px 10px 7px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(238,238,245,0.28);
+}
+
+.sidebar-link {
+  height: 38px !important;
+  padding: 0 10px !important;
+  border-radius: 10px !important;
+  border-left: none !important;
+  color: rgba(238,238,245,0.55) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em;
+  isolation: auto !important;
+  transition: background 0.14s ease, color 0.14s ease !important;
+}
+.sidebar-link::before,
+.sidebar-link::after { display: none !important; animation: none !important; }
+
+.sidebar-link .nav-inner { display: flex; align-items: center; gap: 11px; width: 100%; }
+.sidebar-link .nav-icon-wrap {
+  display: flex; align-items: center; justify-content: center;
+  width: 18px; flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.14s ease;
+}
+.sidebar-link .nav-icon-wrap svg { width: 15px; height: 15px; }
+
+.sidebar-link:hover:not(.active) {
+  background: rgba(255,255,255,0.05) !important;
+  color: rgba(238,238,245,0.9) !important;
+}
+.sidebar-link:hover:not(.active) .nav-icon-wrap { opacity: 0.95; }
+
+/* Active: quiet gold — tinted wash, gold glyph + label, no side bar. */
+.sidebar-link.active {
+  background: linear-gradient(90deg, rgba(226,185,107,0.13), rgba(226,185,107,0.05)) !important;
+  color: #f0d9a8 !important;
+  border-left: none !important;
+  box-shadow: inset 0 0 0 1px rgba(226,185,107,0.16) !important;
+}
+.sidebar-link.active .nav-icon-wrap { opacity: 1; color: #e2b96b; }
+.sidebar-link.active .nav-label { font-weight: 600; }
+
+/* Bottom zone: hairline divider, dim one-line footer. */
+.sidebar-bottom-zone { padding: 0 10px 10px !important; margin-top: 10px !important; }
+.sidebar-footer {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin: 0 4px !important;
+  /* Left inset clears the floating N logo pinned to the corner. */
+  padding: 10px 6px 2px 40px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.02em;
+  color: rgba(238,238,245,0.22) !important;
+  text-align: left !important;
+}
