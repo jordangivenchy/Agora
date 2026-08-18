@@ -1,12 +1,25 @@
 "use client";
 
-/* Agora — the in-room AI assistant. A floating blue orb (bottom-left of
-   the stage) that opens a compact panel. Questions go to /api/agora
-   (Claude-powered, answers with sources); replies come back written and
-   spoken. Voice input: mic dictation, or hands-free "Hey, Agora" hotword
-   listening. */
+/* Agora — the in-room AI assistant. A floating orb (bottom-left of the
+   stage) that breathes, Shazam-style, while Agora is live-listening with
+   permission to jump in. Opens a compact panel with exactly three controls:
+   a text bar, a "hey agora" toggle (live interference on/off), and a
+   speaker toggle (voice on/off).
+
+   On a live stage, Agora always listens in the background — transcribing
+   the debater's own mic for fact-checking and argumentation-persona
+   analysis (see /api/agora/transcript). The "hey agora" toggle decides
+   whether it may INTERFERE: answer wake-phrase questions and speak up with
+   corrections. Listening itself keeps running either way; the pulsing orb
+   is the on-screen tell.
+
+   Voice replies use Kokoro (open-source neural TTS, in-browser) with the
+   OS voice as fallback — see lib/voice/tts. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase-browser";
+import { useDebateTranscription } from "@/lib/useDebateTranscription";
+import { speak as speakVoice, stopSpeaking, warmVoice } from "@/lib/voice/tts";
 
 interface Props {
   motion?: string;
@@ -14,6 +27,10 @@ interface Props {
      and bias evidence retrieval toward the room's topic. */
   roomId?: string;
   topicKey?: string;
+  /* True while the current user is a debater in a live room. Turns on
+     background listening (transcription → fact-checks + persona profile);
+     the orb pulses whenever Agora is also allowed to interfere. */
+  liveListening?: boolean;
 }
 
 type SRInstance = {
@@ -33,27 +50,49 @@ function getRecognition(): SRCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
+const INTERFERE_KEY = "agora-interfere";
+
+export default function AgoraAssistant({ motion, roomId, topicKey, liveListening }: Props) {
   const [openPanel, setOpenPanel] = useState(false);
   const [log, setLog] = useState<{ from: "you" | "agora"; text: string }[]>([]);
   const [draft, setDraft] = useState("");
-  const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [voiceOut, setVoiceOut] = useState(true);
-  const [hotword, setHotword] = useState(false);
+  /* May Agora butt in? Wake-phrase answers + spoken corrections. Persisted
+     so a debater's choice survives reloads; listening itself is not gated. */
+  const [interfere, setInterfere] = useState(true);
+  const [hotword, setHotword] = useState(false); // classic loop, off-stage only
   const hotwordRef = useRef(false);
   const hotwordRec = useRef<SRInstance | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    // Deferred so the stored preference applies without a synchronous
+    // setState inside the effect body (react-hooks/set-state-in-effect).
+    const t = setTimeout(() => {
+      try {
+        if (localStorage.getItem(INTERFERE_KEY) === "0") setInterfere(false);
+      } catch { /* storage unavailable */ }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const toggleInterfere = useCallback(() => {
+    setInterfere((v) => {
+      const next = !v;
+      try { localStorage.setItem(INTERFERE_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  /* Warm the neural voice once Agora could plausibly speak: on stage, or
+     the moment the panel opens. The model is ~80MB, cached after the first
+     download; until it's ready the OS voice covers. */
+  useEffect(() => {
+    if (liveListening || openPanel) warmVoice();
+  }, [liveListening, openPanel]);
+
   const speak = useCallback((text: string) => {
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      /* speech synthesis unavailable */
-    }
+    void speakVoice(text);
   }, []);
 
   const ask = useCallback(
@@ -84,30 +123,52 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
   );
   const askRef = useRef(ask);
   useEffect(() => { askRef.current = ask; }, [ask]);
+  const interfereRef = useRef(interfere);
+  useEffect(() => { interfereRef.current = interfere; }, [interfere]);
+  const voiceOutRef = useRef(voiceOut);
+  useEffect(() => { voiceOutRef.current = voiceOut; }, [voiceOut]);
 
-  /* One-shot dictation into the input */
-  const dictate = useCallback(() => {
-    const Ctor = getRecognition();
-    if (!Ctor) {
-      setLog((l) => [...l, { from: "agora", text: "Voice input isn't supported in this browser — type your question instead." }]);
-      return;
-    }
-    const rec = new Ctor();
-    rec.lang = "en-US";
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.onresult = (e) => setDraft(e.results[0][0].transcript);
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    setListening(true);
-    rec.start();
-  }, []);
+  /* ── Background listening: one recognizer transcribes the debater AND
+     carries "Hey Agora" (browsers allow a single live session). Always on
+     while on a live stage — the wake phrase only gets ANSWERED when
+     interference is on. ── */
+  const stageListen = useDebateTranscription({
+    roomId,
+    enabled: !!liveListening,
+    onHotword: (q) => { if (interfereRef.current) askRef.current(q); },
+  });
 
-  /* Hands-free "Hey, Agora" hotword loop */
+  /* ── Agora jumping in: corrections arrive over realtime. They always land
+     in the log; with interference on they open the panel and speak. ── */
+  useEffect(() => {
+    if (!roomId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`agora-interjections-${roomId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "agora_interjections", filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          const row = payload.new as { explanation?: string };
+          if (!row?.explanation) return;
+          setLog((l) => [...l, { from: "agora", text: `⚡ Fact check: ${row.explanation}` }]);
+          if (interfereRef.current) {
+            setOpenPanel(true);
+            if (voiceOutRef.current) speak(row.explanation);
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomId, speak]);
+
+  /* Classic hands-free loop for people NOT on stage (spectators, hosts off
+     mic): the "hey agora" button starts it — needs the explicit click for
+     the browser's mic permission anyway. */
   const toggleHotword = useCallback(() => {
     const Ctor = getRecognition();
     if (!Ctor) {
-      setLog((l) => [...l, { from: "agora", text: "Hands-free listening isn't supported in this browser — use the mic button or type instead." }]);
+      setLog((l) => [...l, { from: "agora", text: "Hands-free listening isn't supported in this browser — type your question instead." }]);
       return;
     }
     if (hotwordRef.current) {
@@ -149,7 +210,7 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
         hotwordRef.current = false;
         hotwordRec.current = null;
         setHotword(false);
-        setLog((l) => [...l, { from: "agora", text: "I can't keep the microphone open — check that mic access is allowed for this site (the icon in the address bar), then try hands-free again." }]);
+        setLog((l) => [...l, { from: "agora", text: "I can't keep the microphone open — check that mic access is allowed for this site (the icon in the address bar), then try again." }]);
         return;
       }
       setTimeout(() => {
@@ -165,7 +226,7 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
         hotwordRef.current = false;
         hotwordRec.current = null;
         setHotword(false);
-        setLog((l) => [...l, { from: "agora", text: "Microphone access was denied — allow it from the icon in the address bar to use hands-free listening. You can still type or use the dictation button." }]);
+        setLog((l) => [...l, { from: "agora", text: "Microphone access was denied — allow it from the icon in the address bar to use hands-free listening." }]);
       }
     }) as () => void;
     lastStart = Date.now();
@@ -175,19 +236,32 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
   useEffect(() => () => {
     hotwordRef.current = false;
     hotwordRec.current?.stop();
-    window.speechSynthesis?.cancel();
+    stopSpeaking();
   }, []);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [log, thinking]);
 
+  /* The "hey agora" control means the same thing everywhere — "may Agora
+     interfere?" — but off stage it also has to run its own ears. */
+  const interferenceActive = liveListening ? interfere : hotword;
+  const onInterferenceToggle = liveListening ? toggleInterfere : toggleHotword;
+  /* Shazam moment: pulse while actually hearing AND allowed to butt in. */
+  const orbLive = stageListen.listening && interfere;
+
   return (
     <>
       <button
         onClick={() => setOpenPanel((v) => !v)}
-        title='Ask Agora — or say "Hey, Agora"'
-        className="fixed cursor-pointer flex items-center justify-center border-none"
+        title={
+          orbLive
+            ? "Agora is listening — say “Hey, Agora …” or just debate; it fact-checks live"
+            : stageListen.listening
+              ? "Agora is listening in the background (interference off)"
+              : 'Ask Agora — or say "Hey, Agora"'
+        }
+        className={`fixed cursor-pointer flex items-center justify-center border-none ${orbLive ? "agora-orb-live" : ""}`}
         style={{
           left: 18,
           bottom: 84,
@@ -200,7 +274,7 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
           fontWeight: 800,
           fontSize: 18,
           zIndex: 60,
-          boxShadow: hotword ? "0 0 26px rgba(96,165,250,0.85)" : "0 0 22px rgba(37,99,235,0.5)",
+          boxShadow: orbLive || hotword ? "0 0 26px rgba(96,165,250,0.85)" : "0 0 22px rgba(37,99,235,0.5)",
         }}
       >
         A
@@ -232,21 +306,17 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
             </span>
             <div>
               <p className="m-0 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>Agora</p>
-              <p className="m-0 text-[9px]" style={{ color: "#8b8b94" }}>
-                neutral fact-checks with sources — both sides see my answers
+              <p className="m-0 text-[9px]" style={{ color: stageListen.listening ? "#9cc4f0" : "#8b8b94" }}>
+                {stageListen.listening
+                  ? interfere
+                    ? "listening — live fact-checks on"
+                    : "listening quietly — interference off"
+                  : "neutral fact-checks with sources — both sides see my answers"}
               </p>
             </div>
             <button
-              onClick={() => setVoiceOut((v) => !v)}
-              title={voiceOut ? "Spoken answers on" : "Spoken answers off"}
-              className="ml-auto cursor-pointer bg-transparent border-none text-[13px]"
-              style={{ color: voiceOut ? "#9cc4f0" : "#5a5a66" }}
-            >
-              {voiceOut ? "🔊" : "🔇"}
-            </button>
-            <button
               onClick={() => setOpenPanel(false)}
-              className="cursor-pointer bg-transparent border-none text-[13px]"
+              className="ml-auto cursor-pointer bg-transparent border-none text-[13px]"
               style={{ color: "#8b8b94" }}
             >
               ✕
@@ -256,11 +326,11 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
           <div ref={logRef} className="flex-1 overflow-y-auto flex flex-col gap-2 mb-2" style={{ minHeight: 60 }}>
             {log.length === 0 && (
               <p className="text-[11px] m-0" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
-                Ask for a fact-check, a statistic, or background on the motion. Turn on{" "}
-                <button onClick={toggleHotword} className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "#9cc4f0", textDecoration: "underline" }}>
-                  hands-free listening
-                </button>{" "}
-                and just say <span style={{ color: "#9cc4f0" }}>&ldquo;Hey, Agora…&rdquo;</span>
+                Ask for a fact-check, a statistic, or background on the motion — or just say{" "}
+                <span style={{ color: "#9cc4f0" }}>&ldquo;Hey, Agora…&rdquo;</span>
+                {liveListening
+                  ? " while you debate. I'm listening and will speak up if a claim needs correcting."
+                  : "."}
               </p>
             )}
             {log.map((m, i) => (
@@ -284,36 +354,8 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
             )}
           </div>
 
+          {/* Exactly three controls: text bar, "hey agora", speaker. */}
           <form className="flex gap-2 items-center" onSubmit={(e) => { e.preventDefault(); ask(draft); }}>
-            <button
-              type="button"
-              onClick={dictate}
-              className="flex items-center justify-center shrink-0 cursor-pointer"
-              title={listening ? "Listening…" : "Dictate a question"}
-              style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: listening ? "rgba(240,96,94,0.2)" : "rgba(20,20,26,0.85)",
-                border: listening ? "0.5px solid #f0605e" : "0.5px solid #34343c",
-                color: listening ? "#f0605e" : "#8b8b94", fontSize: 12,
-              }}
-            >
-              🎙
-            </button>
-            <button
-              type="button"
-              onClick={toggleHotword}
-              className="flex items-center justify-center shrink-0 cursor-pointer text-[9px] px-2 rounded-full"
-              title='Hands-free: listen for "Hey, Agora"'
-              style={{
-                height: 28,
-                background: hotword ? "rgba(37,99,235,0.25)" : "rgba(20,20,26,0.85)",
-                border: hotword ? "0.5px solid #60a5fa" : "0.5px solid #34343c",
-                color: hotword ? "#9cc4f0" : "#8b8b94",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {hotword ? "● listening" : "hey, agora"}
-            </button>
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -321,6 +363,48 @@ export default function AgoraAssistant({ motion, roomId, topicKey }: Props) {
               className="flex-1 text-[11px] px-3 py-1.5 rounded-full outline-none"
               style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#e5e5ec", minWidth: 0 }}
             />
+            <button
+              type="button"
+              onClick={onInterferenceToggle}
+              className="flex items-center justify-center shrink-0 cursor-pointer text-[9px] px-2 rounded-full"
+              title={
+                liveListening
+                  ? interferenceActive
+                    ? "Agora may jump in: wake-phrase answers and spoken corrections. Click to silence it (listening continues in the background)."
+                    : "Agora is muted in the debate — it still listens and takes style notes. Click to let it jump in again."
+                  : interferenceActive
+                    ? "Hands-free is on — say “Hey, Agora …” anytime. Click to stop."
+                    : 'Hands-free: listen for "Hey, Agora"'
+              }
+              style={{
+                height: 28,
+                background: interferenceActive ? "rgba(37,99,235,0.25)" : "rgba(20,20,26,0.85)",
+                border: interferenceActive ? "0.5px solid #60a5fa" : "0.5px solid #34343c",
+                color: interferenceActive ? "#9cc4f0" : "#8b8b94",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {interferenceActive ? "● hey agora" : "hey agora"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setVoiceOut((v) => {
+                  if (v) stopSpeaking();
+                  return !v;
+                });
+              }}
+              className="flex items-center justify-center shrink-0 cursor-pointer"
+              title={voiceOut ? "Agora speaks its answers — click to mute the voice" : "Agora is text-only — click for voice"}
+              style={{
+                width: 28, height: 28, borderRadius: "50%",
+                background: "rgba(20,20,26,0.85)",
+                border: voiceOut ? "0.5px solid #60a5fa" : "0.5px solid #34343c",
+                color: voiceOut ? "#9cc4f0" : "#5a5a66", fontSize: 12,
+              }}
+            >
+              {voiceOut ? "🔊" : "🔇"}
+            </button>
           </form>
         </div>
       )}
