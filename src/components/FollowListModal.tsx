@@ -17,7 +17,7 @@ interface Props {
 interface Row {
   id: string;
   username: string;
-  display_name?: string | null;
+  display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
   is_following_me?: boolean;
@@ -61,21 +61,7 @@ export default function FollowListModal({
       setError(rpcErr.message || "Could not load list");
       setRows([]);
     } else {
-      const list = (data as Row[]) || [];
-      // The follow RPCs predate display names — join them in client-side.
-      if (list.length) {
-        const { data: names } = await supabase
-          .from("users")
-          .select("id, display_name")
-          .in("id", list.map((r) => r.id));
-        const byId = new Map(
-          ((names ?? []) as { id: string; display_name: string | null }[]).map((u) => [u.id, u.display_name])
-        );
-        list.forEach((r) => {
-          r.display_name = byId.get(r.id) ?? null;
-        });
-      }
-      setRows(list);
+      setRows((data as Row[]) || []);
     }
     setLoading(false);
   }, [mode, userId, supabase]);

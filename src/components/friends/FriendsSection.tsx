@@ -21,7 +21,7 @@ import { displayName } from "@/lib/names";
 interface FriendRow {
   id: string;
   username: string;
-  display_name?: string | null;
+  display_name: string | null;
   avatar_url: string | null;
 }
 

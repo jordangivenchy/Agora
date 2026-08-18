@@ -25,6 +25,7 @@ import { useAgoraCall } from "@/components/agora/useAgoraCall";
 import HostControls from "@/components/agora/HostControls";
 import InvitePrompt from "@/components/agora/InvitePrompt";
 import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
+import { CamIcon, CamOffIcon, HandIcon, LeaveIcon, MicIcon, MicOffIcon, SmileIcon, StepDownIcon } from "@/components/agora/controlIcons";
 import type { User } from "@supabase/supabase-js";
 import "../agora.css";
 
@@ -270,6 +271,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     return () => clearInterval(t);
   }, [opensAtMs]);
   const gated = opensAtMs !== null && nowTs < opensAtMs && myRole !== "host" && !broadcast;
+
+  /* ── Seat heartbeat ────────────────────────────────────────────────
+     touch_seat stamps our participant row's last_seen_at; ghost seats
+     are swept server-side after 5 minutes of silence. */
+  const heartbeatOn =
+    !!currentUser && !!room && room.status !== "ended" && !gated && !broadcast;
+  useEffect(() => {
+    if (!heartbeatOn) return;
+    const beat = () => supabase.rpc("touch_seat", { p_room: roomId }).then(undefined, () => {});
+    beat();
+    const t = setInterval(beat, 60_000);
+    return () => clearInterval(t);
+  }, [heartbeatOn, roomId, supabase]);
 
   /* ── Live call (LiveKit) ───────────────────────────────────────────
      Everyone connects: on-stage roles with publish rights, listeners and
@@ -787,6 +801,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                     .from("debate_rooms")
                     .update({ status: "ended", ended_at: new Date().toISOString() })
                     .eq("id", roomId);
+                  /* Kill any restream with the stage — an egress left running
+                     films a black page and bills LiveKit minutes. */
+                  fetch("/api/egress", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ roomId, action: "stop_all" }),
+                  }).catch(() => {});
                   router.push("/");
                 }}
               >
@@ -887,7 +908,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         <footer className="ag-controls">
           {amMicHolder ? (
             <button className="ag-ctl ag-ctl--live" title="Give up the mic" onClick={stepDownFromMic}>
-              🎤 <span>Step Down</span>
+              <StepDownIcon /> <span>Step Down</span>
             </button>
           ) : (
             <button
@@ -896,7 +917,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               disabled={!canRaise || requestsLocked || handBusy}
               onClick={toggleHand}
             >
-              ✋ <span>{handRaised ? "Lower Hand" : "Raise Hand"}</span>
+              <HandIcon /> <span>{handRaised ? "Lower Hand" : "Raise Hand"}</span>
             </button>
           )}
           <div className="ag-react-wrap">
@@ -922,7 +943,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               disabled={!call.connected}
               onClick={() => setReactOpen((v) => !v)}
             >
-              😊 <span>React</span>
+              <SmileIcon /> <span>React</span>
             </button>
           </div>
           <button
@@ -939,7 +960,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
             onClick={call.toggleMic}
           >
-            🎙️ <span>{call.micOn ? "Mute" : "Mic"}</span>
+            {call.micOn ? <MicIcon /> : <MicOffIcon />} <span>{call.micOn ? "Mute" : "Mic"}</span>
           </button>
           <button
             className={`ag-ctl ${call.camOn ? "ag-ctl--live" : ""}`}
@@ -955,7 +976,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
             onClick={call.toggleCam}
           >
-            📹 <span>{call.mediaBusy ? "…" : "Camera"}</span>
+            {call.camOn ? <CamIcon /> : <CamOffIcon />} <span>{call.mediaBusy ? "…" : "Camera"}</span>
           </button>
           <button
             className="ag-ctl ag-ctl--leave"
@@ -968,7 +989,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               }
             }}
           >
-            📞 <span>Leave</span>
+            <LeaveIcon /> <span>Leave</span>
           </button>
         </footer>
         )}

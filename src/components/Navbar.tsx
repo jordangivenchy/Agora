@@ -10,6 +10,7 @@ import NotificationsBell from "@/components/NotificationsBell";
 interface SearchResult {
   id: string;
   username: string;
+  display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
 }
@@ -313,7 +314,7 @@ export default function Navbar({
                       fontSize: 11,
                     }}
                   >
-                    {initials(u.username)}
+                    {initials(u.display_name?.trim() || u.username)}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -326,20 +327,19 @@ export default function Navbar({
                       color: "var(--text-primary)",
                     }}
                   >
-                    {u.username}
+                    {u.display_name?.trim() || u.username}
                   </div>
-                  {u.bio && (
-                    <div
-                      className="truncate"
-                      style={{
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 11,
-                        color: "var(--text-dim)",
-                      }}
-                    >
-                      {u.bio}
-                    </div>
-                  )}
+                  <div
+                    className="truncate"
+                    style={{
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 11,
+                      color: "var(--text-dim)",
+                    }}
+                  >
+                    @{u.username}
+                    {u.bio ? ` — ${u.bio}` : ""}
+                  </div>
                 </div>
               </button>
             ))}

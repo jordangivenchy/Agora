@@ -387,6 +387,8 @@
   transition: background 0.15s, border-color 0.15s;
 }
 
+.ag-ctl svg { flex-shrink: 0; display: block; }
+
 .ag-ctl:hover:not(:disabled) {
   background: linear-gradient(
     135deg,

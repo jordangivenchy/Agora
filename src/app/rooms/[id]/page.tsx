@@ -121,6 +121,19 @@ function ClassicRoom({ roomId }: { roomId: string }) {
     return idx < 0 ? null : idx + 1;
   }, [myQueueEntry, queue]);
 
+  /* ── Seat heartbeat ────────────────────────────────────────────────
+     touch_seat stamps our participant row's last_seen_at; ghost seats
+     are swept server-side after 5 minutes of silence. */
+  const heartbeatOn = !!currentUser && !!room && room.status !== "ended";
+  useEffect(() => {
+    if (!heartbeatOn) return;
+    const beat = () => supabase.rpc("touch_seat", { p_room: roomId }).then(undefined, () => {});
+    beat();
+    const t = setInterval(beat, 60_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heartbeatOn, roomId]);
+
   const fetchRoom = useCallback(async () => {
     try {
       const { data, error } = await supabase

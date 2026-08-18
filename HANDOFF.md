@@ -82,19 +82,45 @@ The five original vars are **Production-only**, so branch Preview builds fail on
 dev server can fake failures — rerun standalone before believing one). UI verified in the
 in-app browser; signed-in flows need a real login (jordan1 etc.).
 
+## Backend hardening (2026-08-17 session — all applied live)
+
+- **Display names in RPCs**: search_users, get_friends, get_followers/following,
+  get_community_posts/comments (+ new `get_community_post` single fetch),
+  get_dm_threads, get_notifications all return display_name; clients consume it
+  (migration `20260829`). Client-side join workarounds removed.
+- **LiveKit tokens are server-verified**: `/api/livekit` derives identity from the
+  Supabase cookie session (no more client-claimed userId), names come from the DB,
+  and scheduled rooms 403 (`room_not_open`) until 30 min before start (host exempt).
+- **Search infra**: pg_trgm GIN indexes on users/community_posts/debate_rooms;
+  discovery search has a DB-backed ROOMS section (full coverage, not just the
+  homepage's fetch window).
+- **DM rate limit**: trigger caps 20 sends/min/sender (`dm_rate_limited`).
+- **Ghost seats**: `debate_participants.last_seen_at` + `touch_seat` heartbeat
+  (both room pages, 60s) + `sweep_ghost_seats()` — runs opportunistically from
+  /api/livekit and daily via `/api/cron/maintenance` (vercel.json 6:30).
+- **Trusted presence**: `user_presence` table written only via `touch_presence()`
+  (identity = auth.uid()) replaces the spoofable realtime presence channel;
+  presence.ts heartbeats 45s, stale after 90s.
+- **Egress auto-stop**: close-stage calls `/api/egress {action:"stop_all"}`;
+  the maintenance cron also kills egress running against ended rooms.
+- **OAuth avatar self-hosting**: maintenance cron copies googleusercontent
+  avatars into the avatars bucket (10/run).
+- **Grant audit done** (migration `20260831`): revoked anon execute on
+  advance_speaker_queue, raise_hand, step_down_from_mic, set_user_verified;
+  trigger/maintenance fns locked to service role. close_inactive_room keeps anon
+  by design (guests may suggest closure; RPC re-validates).
+- **Thumbnails**: Host Controls Room tab can change a room's thumbnail post-create.
+
 ## Known gaps / next steps
 
 1. **PostHog keys** from Alan → Vercel (trait cron + retrieval inert without them).
-2. **Custom SMTP + branded emails** (Resend); password-changed notification email.
-3. **Grant-drift audit** of non-profile RPCs (room/queue/password-reset) — never done.
+2. **Custom SMTP + branded emails** (Resend account + DNS needed); password-changed email.
+3. **HLS egress for audience at scale** (~300+ concurrent) — needs an S3/GCS bucket for
+   segments; WebRTC stays for stage.
 4. Restream niceties: first full TikTok run (Twitch verified end-to-end path except final
-   frames), viewer-count/URL surfacing, auto-stop when the stage closes.
-5. OAuth avatars: copy to own storage at signup (Google lh3 rate-limits bursts — display
-   fallback handles it, but self-hosting removes the dependency).
-6. HLS egress for audience at scale (~300+ concurrent sustained) — WebRTC stays for stage.
-7. Presence hardening: client-controlled payloads could spoof online status (LiveKit
-   realtime authorization would fix); DM rate limiting.
-8. Ghost seats on force-closed tabs (no `left_at` stamp) — presence sweep if it bites.
+   frames).
+5. Deploy note: at the moment the heartbeat code deploys, users on pre-deploy tabs don't
+   beat and get swept after 5 min (seat restored on next visit) — transient, cosmetic.
 
 ## Access notes (this machine)
 

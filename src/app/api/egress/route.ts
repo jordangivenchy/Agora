@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase-server";
 export async function POST(request: NextRequest) {
   try {
     const { roomId, action, rtmpUrl, egressId, portrait } = await request.json();
-    if (!roomId || !["start", "stop", "status"].includes(action)) {
+    if (!roomId || !["start", "stop", "stop_all", "status"].includes(action)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -45,6 +45,14 @@ export async function POST(request: NextRequest) {
     if (action === "status") {
       const active = await egress.listEgress({ roomName: roomId, active: true });
       return NextResponse.json({ egressId: active[0]?.egressId ?? null });
+    }
+
+    /* Closing the stage stops every restream with it — an egress left
+       running against an ended room films a black page and bills minutes. */
+    if (action === "stop_all") {
+      const active = await egress.listEgress({ roomName: roomId, active: true });
+      await Promise.allSettled(active.map((e) => egress.stopEgress(e.egressId)));
+      return NextResponse.json({ ok: true, stopped: active.length });
     }
 
     if (action === "start") {

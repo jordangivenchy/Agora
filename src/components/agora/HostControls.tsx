@@ -10,7 +10,7 @@
    All writes go straight to Supabase; realtime pushes the result to every
    client. Actions that need the stage migration fail soft with a hint. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -23,12 +23,14 @@ import {
 } from "./stage";
 import type { DebateRoom } from "@/types/database";
 import { displayName } from "@/lib/names";
+import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
 
 interface Props {
   room: DebateRoom & {
     speaker_requests_locked?: boolean;
     queue_auto_advance?: boolean;
     mic_user_id?: string | null;
+    thumbnail_url?: string | null;
   };
   participants: StageParticipant[];
   currentUser: User;
@@ -101,6 +103,43 @@ export default function HostControls({ room, participants, currentUser, myRole, 
   const [notice, setNotice] = useState<string | null>(null);
 
   const isPrimaryHost = currentUser.id === room.host_id;
+
+  /* Thumbnail changer — primary host only (storage RLS scopes writes to the
+     host's own folder). Upsert overwrites the old art, so no orphans. */
+  const [thumbUrl, setThumbUrl] = useState<string | null>(room.thumbnail_url ?? null);
+  const [thumbBusy, setThumbBusy] = useState(false);
+  const [thumbError, setThumbError] = useState<string | null>(null);
+  const thumbInputRef = useRef<HTMLInputElement | null>(null);
+
+  const changeThumbnail = async (file: File) => {
+    setThumbError(null);
+    if (file.size > MAX_THUMB_BYTES) {
+      setThumbError("Image too large — 5MB max.");
+      return;
+    }
+    setThumbBusy(true);
+    try {
+      const blob = await makeSquareThumb(file);
+      const path = `${room.host_id}/${room.id}.webp`;
+      const { error: upErr } = await supabase.storage
+        .from("thumbnails")
+        .upload(path, blob, { upsert: true, cacheControl: "3600", contentType: "image/webp" });
+      if (upErr) throw new Error(upErr.message);
+      const { data: urlData } = supabase.storage.from("thumbnails").getPublicUrl(path);
+      const { error: dbErr } = await supabase
+        .from("debate_rooms")
+        .update({ thumbnail_url: urlData.publicUrl })
+        .eq("id", room.id);
+      if (dbErr) throw new Error(dbErr.message);
+      /* Cache-bust the preview — the storage URL is stable across upserts. */
+      setThumbUrl(`${urlData.publicUrl}?t=${Date.now()}`);
+      onChanged();
+    } catch (e) {
+      setThumbError(e instanceof Error && e.message ? e.message : "Thumbnail update failed — try again.");
+    } finally {
+      setThumbBusy(false);
+    }
+  };
 
   const active = useMemo(
     () => participants.filter((p) => !p.left_at && p.user_id !== currentUser.id),
@@ -392,6 +431,66 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                   <button className="ag-host-act wide danger" disabled={busy !== null} onClick={endDiscussion}>
                     End discussion
                   </button>
+                )}
+                {isPrimaryHost && (
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
+                      THUMBNAIL
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {thumbUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={thumbUrl}
+                          alt="Room thumbnail"
+                          width={48}
+                          height={48}
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 8,
+                            objectFit: "cover",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 8,
+                            border: "1px dashed rgba(255,255,255,0.25)",
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <button
+                        className="ag-host-act"
+                        disabled={thumbBusy}
+                        onClick={() => thumbInputRef.current?.click()}
+                      >
+                        {thumbBusy ? "Uploading…" : thumbUrl ? "Change" : "Add image"}
+                      </button>
+                      <input
+                        ref={thumbInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (file) void changeThumbnail(file);
+                        }}
+                      />
+                    </div>
+                    {thumbError && (
+                      <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 5 }}>{thumbError}</div>
+                    )}
+                    <div className="ag-host-finehint">
+                      Square art shown on room cards. Center-cropped to 512px — 5MB max.
+                    </div>
+                  </div>
                 )}
                 {isPrimaryHost && (
                   <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>

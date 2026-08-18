@@ -10,8 +10,23 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { displayName } from "@/lib/names";
-import { userPath } from "@/lib/urls";
+import { userPath, roomPath } from "@/lib/urls";
 import UserAvatar from "./UserAvatar";
+
+type RoomRow = {
+  id: string;
+  motion: string;
+  status: string;
+  format: string;
+  scheduled_start: string | null;
+  thumbnail_url: string | null;
+  host: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
 
 type PersonRow = {
   id: string;
@@ -49,6 +64,7 @@ const rowStyle: React.CSSProperties = {
 export default function DiscoverySearch({ container }: { container: HTMLElement | null }) {
   const [supabase] = useState(() => createClient());
   const [query, setQuery] = useState("");
+  const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [people, setPeople] = useState<PersonRow[]>([]);
   const [posts, setPosts] = useState<PostRow[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,6 +80,7 @@ export default function DiscoverySearch({ container }: { container: HTMLElement 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (query.length < 2) {
+      setRooms([]);
       setPeople([]);
       setPosts([]);
       return;
@@ -75,7 +92,14 @@ export default function DiscoverySearch({ container }: { container: HTMLElement 
       const cleaned = query.replace(/[%_,()]/g, "");
       if (!cleaned) return;
       const term = `%${cleaned}%`;
-      const [peopleRes, postsRes] = await Promise.all([
+      const [roomsRes, peopleRes, postsRes] = await Promise.all([
+        supabase
+          .from("debate_rooms")
+          .select("id, motion, status, format, scheduled_start, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url)")
+          .in("status", ["live", "created", "scheduled"])
+          .ilike("motion", term)
+          .order("created_at", { ascending: false })
+          .limit(8),
         supabase
           .from("users")
           .select("id, username, display_name, avatar_url")
@@ -89,6 +113,7 @@ export default function DiscoverySearch({ container }: { container: HTMLElement 
           .limit(8),
       ]);
       if (seq.current !== mySeq) return; // a newer query superseded this one
+      setRooms((roomsRes.data ?? []) as unknown as RoomRow[]);
       setPeople((peopleRes.data ?? []) as PersonRow[]);
       setPosts((postsRes.data ?? []) as unknown as PostRow[]);
     }, 220);
@@ -98,7 +123,7 @@ export default function DiscoverySearch({ container }: { container: HTMLElement 
   }, [query, supabase]);
 
   if (!container) return null;
-  if (query.length < 2 || (people.length === 0 && posts.length === 0)) {
+  if (query.length < 2 || (rooms.length === 0 && people.length === 0 && posts.length === 0)) {
     return createPortal(null, container);
   }
 
@@ -110,8 +135,82 @@ export default function DiscoverySearch({ container }: { container: HTMLElement 
     }, 150);
   };
 
+  const openRoom = (r: RoomRow) => {
+    window.location.href = roomPath(r);
+  };
+
+  const roomTag = (r: RoomRow) => {
+    if (r.status === "live") {
+      return <span style={{ color: "#e05a5a", fontWeight: 700 }}>LIVE</span>;
+    }
+    if (r.status === "scheduled" && r.scheduled_start) {
+      return (
+        <span style={{ color: "#a78bfa", fontWeight: 600 }}>
+          {new Date(r.scheduled_start).toLocaleDateString([], { month: "short", day: "numeric" })}
+        </span>
+      );
+    }
+    return <span style={{ color: "#8b8b94" }}>Open</span>;
+  };
+
   return createPortal(
     <div style={{ margin: "4px 0 18px", display: "flex", flexDirection: "column", gap: 16 }}>
+      {rooms.length > 0 && (
+        <div>
+          <p style={sectionLabel}>ROOMS</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {rooms.map((r) => (
+              <div
+                key={r.id}
+                role="link"
+                tabIndex={0}
+                onClick={() => openRoom(r)}
+                onKeyDown={(e) => { if (e.key === "Enter") openRoom(r); }}
+                className="flex items-center gap-2.5"
+                style={rowStyle}
+              >
+                {r.thumbnail_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.thumbnail_url}
+                    alt=""
+                    width={34}
+                    height={34}
+                    style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                  />
+                ) : (
+                  <UserAvatar
+                    size={34}
+                    radius={8}
+                    username={r.host?.username ?? "?"}
+                    avatarUrl={r.host?.avatar_url ?? null}
+                    seed={r.host?.id ?? r.id}
+                  />
+                )}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p
+                    className="m-0 text-[12.5px]"
+                    style={{
+                      color: "#f5f5f0",
+                      fontWeight: 600,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {r.motion}
+                  </p>
+                  <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
+                    {roomTag(r)}
+                    {r.host ? <> · by {displayName(r.host)}</> : null}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {people.length > 0 && (
         <div>
           <p style={sectionLabel}>PEOPLE</p>

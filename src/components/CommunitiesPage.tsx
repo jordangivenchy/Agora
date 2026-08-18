@@ -36,6 +36,7 @@ type Post = {
   community_name: string;
   author_id: string | null;
   author_username: string;
+  author_display_name: string | null;
   title: string;
   body: string | null;
   created_at: string;
@@ -50,6 +51,7 @@ type Comment = {
   parent_id: string | null;
   author_id: string | null;
   author_username: string;
+  author_display_name: string | null;
   body: string;
   created_at: string;
   score: number;
@@ -124,8 +126,12 @@ function VoteBox({
 export default function CommunitiesPage({ open, onClose }: Props) {
   const { openUserMenu } = useUserMenu();
 
-  /* @author → unified user context menu (needs an id; system posts skip it). */
-  const authorSpan = (authorId: string | null, username: string) =>
+  /* Author label → unified user context menu (needs an id; system posts skip
+     it). Renders the display name when one exists (no @ prefix), otherwise
+     the @handle; the raw username still flows to openUserMenu. */
+  const authorLabel = (dn: string | null, username: string) =>
+    dn?.trim() || `@${username}`;
+  const authorSpan = (authorId: string | null, username: string, dn: string | null) =>
     authorId ? (
       <span
         onClick={(e) => {
@@ -136,10 +142,10 @@ export default function CommunitiesPage({ open, onClose }: Props) {
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
         <UserAvatar size={14} username={username} avatarUrl={avatars[authorId]} seed={authorId} />
-        @{username}
+        {authorLabel(dn, username)}
       </span>
     ) : (
-      <>@{username}</>
+      <>{authorLabel(dn, username)}</>
     );
 
   const [supabase] = useState(() => createClient());
@@ -267,39 +273,19 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       setPendingPostId(null);
       return;
     }
-    /* Older than the loaded page — fetch the row directly. Vote totals load
-       as 0 in this synthetic view; comments are still real. */
+    /* Older than the loaded page — fetch the single post via RPC, which
+       returns the same row shape as the feed (real score/my_vote/counts). */
     const id = pendingPostId;
     setPendingPostId(null);
     (async () => {
-      const { data } = await supabase
-        .from("community_posts")
-        .select("id, community_id, author_id, title, body, created_at, community:communities(name), author:users!author_id(username)")
-        .eq("id", id)
-        .maybeSingle();
-      if (!data) return;
-      const d = data as unknown as {
-        id: string; community_id: string; author_id: string | null;
-        title: string; body: string | null; created_at: string;
-        community: { name: string } | null;
-        author: { username: string } | null;
-      };
-      setOpenPost({
-        id: d.id,
-        community_id: d.community_id,
-        community_name: d.community?.name ?? "",
-        author_id: d.author_id,
-        author_username: d.author?.username ?? "",
-        title: d.title,
-        body: d.body,
-        created_at: d.created_at,
-        score: 0,
-        my_vote: null,
-        comment_count: 0,
-      });
-      loadComments(d.id);
+      const { data } = await supabase.rpc("get_community_post", { p_post: id });
+      const row = (data as Post[] | null)?.[0];
+      if (!row) return;
+      setOpenPost(row);
+      fetchAvatars([row.author_id]);
+      loadComments(row.id);
     })();
-  }, [open, pendingPostId, loadingPosts, posts, loadComments, supabase]);
+  }, [open, pendingPostId, loadingPosts, posts, loadComments, fetchAvatars, supabase]);
 
   useEscapeClose(open, () => (openPost ? setOpenPost(null) : onClose()));
 
@@ -501,7 +487,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 </button>
               )}
               <span className="text-[11px]" style={{ color: "#8b8b94" }}>
-                {authorSpan(c.author_id, c.author_username)} · {timeAgo(c.created_at)}
+                {authorSpan(c.author_id, c.author_username, c.author_display_name)} · {timeAgo(c.created_at)}
               </span>
               {isCollapsed && hidden > 0 && (
                 <span className="text-[10px]" style={{ color: "#c9b06a" }}>
@@ -735,7 +721,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                   <VoteBox post={openPost} onVote={vote} size={14} />
                   <div className="flex-1 min-w-0">
                     <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-                      {openPost.community_name} · {authorSpan(openPost.author_id, openPost.author_username)} · {timeAgo(openPost.created_at)}
+                      {openPost.community_name} · {authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)} · {timeAgo(openPost.created_at)}
                     </p>
                     <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                       {openPost.title}
@@ -913,7 +899,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
                         {selected === "all" && <><span style={{ color: "#c9b06a" }}>{p.community_name}</span> · </>}
-                        {authorSpan(p.author_id, p.author_username)} · {timeAgo(p.created_at)}
+                        {authorSpan(p.author_id, p.author_username, p.author_display_name)} · {timeAgo(p.created_at)}
                       </p>
                       <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#f5f5f0" }}>
                         {p.title}

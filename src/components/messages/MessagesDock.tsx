@@ -18,7 +18,7 @@ import { displayName } from "@/lib/names";
 interface Thread {
   peer_id: string;
   peer_username: string;
-  peer_display_name?: string | null;
+  peer_display_name: string | null;
   peer_avatar_url: string | null;
   last_content: string;
   last_at: string;
@@ -88,19 +88,7 @@ export default function MessagesDock() {
 
   const loadThreads = useCallback(async () => {
     const { data } = await supabase.rpc("get_dm_threads");
-    const rows = (data ?? []) as Thread[];
-    // get_dm_threads predates display names — join them in client-side.
-    const ids = rows.map((t) => t.peer_id);
-    if (ids.length) {
-      const { data: names } = await supabase.from("users").select("id, display_name").in("id", ids);
-      const byId = new Map(
-        ((names ?? []) as { id: string; display_name: string | null }[]).map((u) => [u.id, u.display_name])
-      );
-      rows.forEach((t) => {
-        t.peer_display_name = byId.get(t.peer_id) ?? null;
-      });
-    }
-    setThreads(rows);
+    setThreads((data ?? []) as Thread[]);
   }, [supabase]);
 
   const loadThread = useCallback(
@@ -112,6 +100,8 @@ export default function MessagesDock() {
         .order("created_at", { ascending: true })
         .limit(200);
       setMsgs((data ?? []) as Dm[]);
+      /* The "agora:dm" open-DM path constructs a Peer before any thread row
+         exists, so the display name isn't known yet — fetch it lazily. */
       if (p.display_name === undefined) {
         supabase
           .from("users")

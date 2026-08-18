@@ -29,7 +29,7 @@ type NotifRow = {
   type: string;
   actor_id: string | null;
   actor_username: string | null;
-  actor_display_name?: string | null;
+  actor_display_name: string | null;
   room_id: string | null;
   room_motion: string | null;
   read_at: string | null;
@@ -90,17 +90,6 @@ export default function NotificationsBell({ container }: Props) {
     if (!uid) return;
     const { data } = await supabase.rpc("get_notifications", { p_limit: 30 });
     const rows = (data ?? []) as NotifRow[];
-    // get_notifications predates display names — join them in client-side.
-    const allActorIds = [...new Set(rows.filter((n) => n.actor_id).map((n) => n.actor_id!))];
-    if (allActorIds.length) {
-      const { data: actors } = await supabase.from("users").select("id, display_name").in("id", allActorIds);
-      const byId = new Map(
-        ((actors ?? []) as { id: string; display_name: string | null }[]).map((u) => [u.id, u.display_name])
-      );
-      rows.forEach((n) => {
-        n.actor_display_name = n.actor_id ? byId.get(n.actor_id) ?? null : null;
-      });
-    }
     setItems(rows);
     const actorIds = [...new Set(rows.filter((n) => n.type === "new_follower" && n.actor_id).map((n) => n.actor_id!))];
     if (actorIds.length) {
