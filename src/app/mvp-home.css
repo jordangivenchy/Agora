@@ -5878,3 +5878,66 @@ body { background: transparent; }
 .nav-label {
   font-size: 13px !important;
 }
+
+/* ── Friends card at the compact 178px rail ────────────────────────
+   The card was sized for the 220px sidebar; at 178px the directory bar
+   and rows overflowed. Tighter paddings, smaller avatar chips, hard
+   ellipsis on every text line, and the stacked mini-avatars go — there
+   is no honest room for them. */
+.friends-header { padding: 0 12px 6px !important; }
+
+.friend-directory-bar {
+  margin: 6px 8px 0 !important;
+  padding: 8px 10px !important;
+  gap: 8px !important;
+  border-radius: 12px !important;
+}
+.friend-directory-icon {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+}
+.friend-directory-title {
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.friend-directory-sub {
+  font-size: 10px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.friend-directory-avatars { display: none !important; }
+
+.friend-item {
+  padding: 6px 8px !important;
+  margin: 0 6px !important;
+  gap: 8px !important;
+}
+.friend-avatar { width: 28px !important; height: 28px !important; }
+.friend-info { min-width: 0 !important; flex: 1 !important; }
+.friend-name {
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.friend-status {
+  font-size: 10.5px !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+}
+.friend-tag { font-size: 9px !important; }
+.friend-action-btn {
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 5px !important;
+  font-size: 10px !important;
+  flex-shrink: 0 !important;
+}
