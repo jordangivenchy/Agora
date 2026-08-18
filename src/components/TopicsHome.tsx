@@ -24,7 +24,7 @@ import UserAvatar from "./UserAvatar";
 
 interface Props {
   container: HTMLElement | null;
-  onCreateLobby: (topicKey: string) => void;
+  onCreateLobby: (topicKey: string, schedule?: boolean) => void;
 }
 
 type TopicRow = {
@@ -538,10 +538,11 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         )}
 
         </div>
-        {selScheduled.length > 0 && (
-          <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
-        {/* Scheduled discussions — their own section, ordered by sign-ups */}
-        <>
+        <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
+        {/* Scheduled discussions — their own section, ordered by sign-ups.
+            Empty topics keep the half: a standing invitation to fill it. */}
+        {selScheduled.length > 0 ? (
+          <>
             <div className="flex items-center gap-3 mt-2.5 mb-0.5">
               <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
                 SCHEDULED
@@ -647,8 +648,37 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               ))}
             </div>
           </>
-          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-0.5">
+              <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+                SCHEDULED
+              </span>
+              <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+            </div>
+            {/* Empty half earns its keep: a standing invitation to fill it. */}
+            <div
+              className="flex flex-col items-start justify-center gap-2 p-5"
+              style={{ ...rowCard, minHeight: 168, borderStyle: "dashed", borderColor: "#3a3145" }}
+            >
+              <p className="m-0 text-[13px]" style={{ color: "#c9c9d2", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                Nothing on the calendar in {selCat.label} yet.
+              </p>
+              <p className="m-0 text-[11.5px]" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
+                Schedule a debate and it headlines here — everyone who taps 🔔 gets
+                reminded when doors open, 30 minutes before start.
+              </p>
+              <button
+                onClick={() => onCreateLobby(selCat.key, true)}
+                className="cursor-pointer text-[12px] px-4 py-2 rounded-lg mt-1"
+                style={{ background: "rgba(35,24,52,0.85)", border: "0.5px solid #43315e", color: "#c9a6f0", fontFamily: "inherit" }}
+              >
+                Schedule a debate
+              </button>
+            </div>
+          </>
         )}
+        </div>
         </div>
 
         {/* Selected field: queue questions */}

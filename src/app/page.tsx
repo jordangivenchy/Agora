@@ -78,7 +78,7 @@ export default function Home() {
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
-  const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string } | null>(null);
+  const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string; schedule?: boolean } | null>(null);
   const [booted, setBooted] = useState(false);
   const [dbOffline, setDbOffline] = useState(false);
   const dataLandedRef = useRef(false);
@@ -398,10 +398,10 @@ export default function Home() {
       <FriendsSection container={friendsHost} sidebar={sidebarHost} />
       <TopicsHome
         container={fieldsHost}
-        onCreateLobby={async (topic) => {
+        onCreateLobby={async (topic, schedule) => {
           const { data: auth } = await supabase.auth.getUser();
           if (!auth?.user) { window.location.href = "/login"; return; }
-          setCreatePrefill({ motion: "", topic });
+          setCreatePrefill({ motion: "", topic, schedule });
           setShowCreate(true);
         }}
       />
@@ -419,6 +419,7 @@ export default function Home() {
         onClose={() => setShowCreate(false)}
         initialMotion={createPrefill?.motion}
         initialTopic={createPrefill?.topic}
+        initialSchedule={createPrefill?.schedule}
       />
       <UserProfileModal
         userId={profileUserId}

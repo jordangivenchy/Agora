@@ -15,6 +15,8 @@ interface Props {
   /* Optional prefill (e.g. "Start debate" from the News tab). */
   initialMotion?: string;
   initialTopic?: string;
+  /* Open with "Schedule for later" already on (the scheduled empty-state). */
+  initialSchedule?: boolean;
 }
 
 /* Agora Stoa format variants — each maps onto the base room shape the
@@ -62,7 +64,7 @@ function defaultScheduleValue() {
   return toLocalInputValue(d);
 }
 
-export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic }: Props) {
+export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule }: Props) {
   const router = useRouter();
   const supabase = createClient();
   useEscapeClose(open, onClose);
@@ -86,6 +88,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     if (open) {
       if (initialMotion) setMotion(initialMotion);
       if (initialTopic) setTopicKey(initialTopic);
+      if (initialSchedule) setScheduleEnabled(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialMotion, initialTopic]);
