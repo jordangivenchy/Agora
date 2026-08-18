@@ -79,6 +79,10 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   const [chatOpen, setChatOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
 
+  // LiveKit mute state mirrored for Agora's stage listening (true until the
+  // first activity report proves the mic is open).
+  const [stageMicMuted, setStageMicMuted] = useState(true);
+
   // Derive my participation directly from the participants array — single source of truth
   const myParticipation = useMemo(() => {
     if (!currentUser) return null;
@@ -476,6 +480,9 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
   const selfActivityRef = useRef({ lastBeat: 0, lastSpokeWrite: 0, lastMuted: null as boolean | null });
   const reportSelfActivity = useCallback(
     async (speaking: boolean, micMuted: boolean) => {
+      // Mirror LiveKit's mute state for Agora's stage listening — Agora only
+      // hears speakers whose mic is open to the room.
+      setStageMicMuted(micMuted);
       if (!currentUser || !myParticipation || myParticipation.role !== "debater") return;
       const now = Date.now();
       const s = selfActivityRef.current;
@@ -1237,7 +1244,18 @@ export default function RoomPage({ params }: { params: Promise<{ id: string }> }
         userId={currentUser?.id}
       />
 
-      <AgoraAssistant motion={room?.motion} roomId={roomId} topicKey={room?.topic_key} />
+      <AgoraAssistant
+        motion={room?.motion}
+        roomId={roomId}
+        topicKey={room?.topic_key}
+        liveListening={
+          myParticipation?.role === "debater" &&
+          !myParticipation.left_at &&
+          room?.status === "live" &&
+          isInRoom &&
+          !stageMicMuted
+        }
+      />
     </div>
   );
 }
