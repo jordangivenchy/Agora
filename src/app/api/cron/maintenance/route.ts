@@ -94,6 +94,12 @@ export async function GET(req: Request) {
     } else {
       report.egressStopped = "livekit_not_configured";
     }
+    // A dead room shouldn't advertise a stream that stopped with it.
+    await admin
+      .from("debate_rooms")
+      .update({ hls_url: null })
+      .eq("status", "ended")
+      .not("hls_url", "is", null);
   } catch (e) {
     report.egressStopped = `error: ${e instanceof Error ? e.message : "unknown"}`;
   }

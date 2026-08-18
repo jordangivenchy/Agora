@@ -66,6 +66,8 @@ function ResetPasswordInner() {
     // signed in with their new password, rather than having to log in
     // again immediately after proving they own the account.
     await supabase.rpc("log_security_event", { p_event_type: "password_changed" });
+    // Security notification email (no-op until Resend is configured).
+    fetch("/api/notify/password-changed", { method: "POST" }).catch(() => {});
     await supabase.auth.signOut({ scope: "others" });
 
     setBusy(false);

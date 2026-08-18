@@ -312,6 +312,8 @@ export default function SettingsPage() {
     else {
       setPwMsg({ kind: "ok", text: "Password updated." });
       setCurPw(""); setNewPw(""); setConfirmPw("");
+      // Security notification email (no-op until Resend is configured).
+      fetch("/api/notify/password-changed", { method: "POST" }).catch(() => {});
     }
   }
 

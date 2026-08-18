@@ -23,6 +23,7 @@ import AgoraVideoDock from "@/components/agora/AgoraVideoDock";
 import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall } from "@/components/agora/useAgoraCall";
 import HostControls from "@/components/agora/HostControls";
+import HlsPlayer from "@/components/agora/HlsPlayer";
 import InvitePrompt from "@/components/agora/InvitePrompt";
 import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
 import { CamIcon, CamOffIcon, HandIcon, LeaveIcon, MicIcon, MicOffIcon, SmileIcon, StepDownIcon } from "@/components/agora/controlIcons";
@@ -116,6 +117,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      watching without the chat in frame. Lives here rather than in the
      rail because the collapsed class drives layout on .ag-root. */
   const [railCollapsed, setRailCollapsed] = useState(false);
+  /* Audience overflow: watch the composited HLS stream instead of WebRTC. */
+  const [hlsOpen, setHlsOpen] = useState(false);
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [handBusy, setHandBusy] = useState(false);
@@ -733,6 +736,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             </div>
           </div>
           <div className="ag-topbar-actions">
+            {room.hls_url && !onStage(myRole) && (
+              <button
+                className="ag-follow"
+                title="Watch the broadcast stream instead of the live call"
+                onClick={() => setHlsOpen(true)}
+              >
+                Watch stream
+              </button>
+            )}
             <button
               className={`ag-follow ${following ? "on" : ""}`}
               onClick={() => setFollowing((f) => !f)}
@@ -815,6 +827,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               </button>
             </div>
           </div>
+        )}
+
+        {hlsOpen && room.hls_url && (
+          <HlsPlayer src={room.hls_url} onClose={() => setHlsOpen(false)} />
         )}
 
         {/* ── Stage closed: everyone gets walked out ── */}

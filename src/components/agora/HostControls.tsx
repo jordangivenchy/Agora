@@ -53,6 +53,12 @@ export default function HostControls({ room, participants, currentUser, myRole, 
   const [egressBusy, setEgressBusy] = useState(false);
   const [egressError, setEgressError] = useState<string | null>(null);
   const [egressPortrait, setEgressPortrait] = useState(true);
+  /* HLS broadcast for audience overflow — hidden until the S3 env exists. */
+  const [hlsConfigured, setHlsConfigured] = useState(false);
+  const [hlsEgressId, setHlsEgressId] = useState<string | null>(null);
+  const [hlsLive, setHlsLive] = useState(!!room.hls_url);
+  const [hlsBusy, setHlsBusy] = useState(false);
+  const [hlsError, setHlsError] = useState<string | null>(null);
 
   useEffect(() => {
     // Resync on open: an egress started earlier (or from another tab)
@@ -66,6 +72,8 @@ export default function HostControls({ room, participants, currentUser, myRole, 
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d && typeof d.egressId !== "undefined") setEgressId(d.egressId);
+        if (d && typeof d.hlsConfigured === "boolean") setHlsConfigured(d.hlsConfigured);
+        setHlsLive(!!room.hls_url);
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,6 +104,37 @@ export default function HostControls({ room, participants, currentUser, myRole, 
       setEgressError("Restream failed — try again.");
     } finally {
       setEgressBusy(false);
+    }
+  };
+
+  const toggleHls = async () => {
+    setHlsBusy(true);
+    setHlsError(null);
+    try {
+      const body = hlsLive
+        ? hlsEgressId
+          ? { roomId: room.id, action: "stop", egressId: hlsEgressId }
+          : { roomId: room.id, action: "stop_all" }
+        : { roomId: room.id, action: "start_hls" };
+      const res = await fetch("/api/egress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setHlsError(d.error === "hls_not_configured" ? "HLS storage isn't configured yet." : d.error || "HLS failed");
+      } else if (hlsLive) {
+        setHlsLive(false);
+        setHlsEgressId(null);
+      } else {
+        setHlsLive(true);
+        setHlsEgressId(d.egressId ?? null);
+      }
+    } catch {
+      setHlsError("HLS failed — try again.");
+    } finally {
+      setHlsBusy(false);
     }
   };
   const [search, setSearch] = useState("");
@@ -550,6 +589,27 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                     <div className="ag-host-finehint">
                       Paste the RTMP server URL with your stream key appended (from TikTok LIVE
                       Studio, Twitch, or YouTube). The stage broadcasts until you stop it.
+                    </div>
+                  </div>
+                )}
+                {isPrimaryHost && hlsConfigured && (
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
+                      HLS BROADCAST {hlsLive && <span style={{ color: "#e05a5a" }}>● LIVE</span>}
+                    </div>
+                    <button
+                      className={`ag-host-act wide${hlsLive ? " danger" : ""}`}
+                      disabled={hlsBusy}
+                      onClick={toggleHls}
+                    >
+                      {hlsBusy ? "…" : hlsLive ? "Stop HLS broadcast" : "Start HLS broadcast"}
+                    </button>
+                    {hlsError && (
+                      <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 5 }}>{hlsError}</div>
+                    )}
+                    <div className="ag-host-finehint">
+                      Gives the audience a low-cost stream view for big rooms — the stage stays
+                      on WebRTC; listeners can switch to the stream from the top bar.
                     </div>
                   </div>
                 )}

@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EgressClient, EncodingOptions, StreamOutput, StreamProtocol } from "livekit-server-sdk";
+import {
+  EgressClient,
+  EncodingOptions,
+  S3Upload,
+  SegmentedFileOutput,
+  SegmentedFileProtocol,
+  StreamOutput,
+  StreamProtocol,
+} from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 
 /**
@@ -15,7 +23,7 @@ import { createClient } from "@/lib/supabase-server";
 export async function POST(request: NextRequest) {
   try {
     const { roomId, action, rtmpUrl, egressId, portrait } = await request.json();
-    if (!roomId || !["start", "stop", "stop_all", "status"].includes(action)) {
+    if (!roomId || !["start", "start_hls", "stop", "stop_all", "status"].includes(action)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -42,9 +50,70 @@ export async function POST(request: NextRequest) {
     }
     const egress = new EgressClient(lkUrl.replace(/^wss?:\/\//, "https://"), apiKey, apiSecret);
 
+    /* HLS needs an S3-compatible bucket for segments (Supabase Storage's
+       S3 endpoint works). Configure in Vercel:
+         HLS_S3_ENDPOINT, HLS_S3_REGION, HLS_S3_BUCKET,
+         HLS_S3_ACCESS_KEY, HLS_S3_SECRET, HLS_PUBLIC_BASE_URL
+       Until then start_hls returns hls_not_configured and the UI hides. */
+    const hlsEnv = {
+      endpoint: process.env.HLS_S3_ENDPOINT,
+      region: process.env.HLS_S3_REGION,
+      bucket: process.env.HLS_S3_BUCKET,
+      accessKey: process.env.HLS_S3_ACCESS_KEY,
+      secret: process.env.HLS_S3_SECRET,
+      publicBase: process.env.HLS_PUBLIC_BASE_URL,
+    };
+    const hlsConfigured = Object.values(hlsEnv).every(Boolean);
+
     if (action === "status") {
       const active = await egress.listEgress({ roomName: roomId, active: true });
-      return NextResponse.json({ egressId: active[0]?.egressId ?? null });
+      return NextResponse.json({ egressId: active[0]?.egressId ?? null, hlsConfigured });
+    }
+
+    if (action === "start_hls") {
+      if (!hlsConfigured) {
+        return NextResponse.json({ error: "hls_not_configured" }, { status: 400 });
+      }
+      if (room.status !== "live") {
+        return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
+      }
+      const info = await egress.startRoomCompositeEgress(
+        roomId,
+        {
+          segments: new SegmentedFileOutput({
+            filenamePrefix: `${roomId}/seg`,
+            playlistName: `${roomId}/index.m3u8`,
+            livePlaylistName: `${roomId}/live.m3u8`,
+            segmentDuration: 4,
+            protocol: SegmentedFileProtocol.HLS_PROTOCOL,
+            output: {
+              case: "s3",
+              value: new S3Upload({
+                endpoint: hlsEnv.endpoint!,
+                region: hlsEnv.region!,
+                bucket: hlsEnv.bucket!,
+                accessKey: hlsEnv.accessKey!,
+                secret: hlsEnv.secret!,
+                forcePathStyle: true,
+              }),
+            },
+          }),
+        },
+        {
+          layout: "speaker",
+          customBaseUrl: `${request.nextUrl.origin}/agora/${roomId}`,
+          encodingOptions: new EncodingOptions({
+            width: 1920,
+            height: 1080,
+            framerate: 30,
+            videoBitrate: 4500,
+            audioBitrate: 128,
+          }),
+        }
+      );
+      const hlsUrl = `${hlsEnv.publicBase!.replace(/\/$/, "")}/${roomId}/live.m3u8`;
+      await supabase.from("debate_rooms").update({ hls_url: hlsUrl }).eq("id", roomId);
+      return NextResponse.json({ egressId: info.egressId, hlsUrl });
     }
 
     /* Closing the stage stops every restream with it — an egress left
@@ -52,6 +121,7 @@ export async function POST(request: NextRequest) {
     if (action === "stop_all") {
       const active = await egress.listEgress({ roomName: roomId, active: true });
       await Promise.allSettled(active.map((e) => egress.stopEgress(e.egressId)));
+      await supabase.from("debate_rooms").update({ hls_url: null }).eq("id", roomId);
       return NextResponse.json({ ok: true, stopped: active.length });
     }
 
@@ -93,6 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing egressId" }, { status: 400 });
     }
     await egress.stopEgress(egressId);
+    await supabase.from("debate_rooms").update({ hls_url: null }).eq("id", roomId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("egress error", e);

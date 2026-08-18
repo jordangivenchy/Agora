@@ -111,15 +111,25 @@ in-app browser; signed-in flows need a real login (jordan1 etc.).
   by design (guests may suggest closure; RPC re-validates).
 - **Thumbnails**: Host Controls Room tab can change a room's thumbnail post-create.
 
+## Code-complete, awaiting credentials only
+
+- **Emails (Resend)**: `src/lib/email.ts` (HTTP API, branded template) +
+  `/api/notify/password-changed`, fired from both password-change flows. No-ops
+  until `RESEND_API_KEY` (and optional `EMAIL_FROM`) are set — create the Resend
+  account, verify agorasphere.net DNS, paste the key. Supabase's own auth mails
+  (confirm/reset) still need SMTP settings in the Supabase dashboard.
+- **HLS egress**: `/api/egress` `start_hls` (segments → S3-compatible bucket),
+  `debate_rooms.hls_url` (migration `20260833`), Host Controls start/stop
+  (hidden until configured), audience "Watch stream" hls.js player, cron cleanup.
+  Activate with `HLS_S3_ENDPOINT/REGION/BUCKET/ACCESS_KEY/SECRET` +
+  `HLS_PUBLIC_BASE_URL` in Vercel (Supabase Storage's S3 endpoint works).
+
 ## Known gaps / next steps
 
 1. **PostHog keys** from Alan → Vercel (trait cron + retrieval inert without them).
-2. **Custom SMTP + branded emails** (Resend account + DNS needed); password-changed email.
-3. **HLS egress for audience at scale** (~300+ concurrent) — needs an S3/GCS bucket for
-   segments; WebRTC stays for stage.
-4. Restream niceties: first full TikTok run (Twitch verified end-to-end path except final
+2. Restream niceties: first full TikTok run (Twitch verified end-to-end path except final
    frames).
-5. Deploy note: at the moment the heartbeat code deploys, users on pre-deploy tabs don't
+3. Deploy note: at the moment the heartbeat code deploys, users on pre-deploy tabs don't
    beat and get swept after 5 min (seat restored on next visit) — transient, cosmetic.
 
 ## Access notes (this machine)
