@@ -716,7 +716,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
         {!broadcast && (
         <header className="ag-topbar">
-          <button className="ag-back" onClick={() => router.push("/")} title="Back to home">
+          <button
+            className="ag-back"
+            onClick={() => {
+              /* The stage lives and dies with its host: hosts confirm the
+                 close; everyone else just walks out. */
+              if (isHostRole(myRole) && room.status !== "ended") setLeavePrompt(true);
+              else {
+                vacateSeat();
+                router.push("/");
+              }
+            }}
+            title="Back to home"
+          >
             ←
           </button>
           <div className="ag-topbar-info">
@@ -786,22 +798,20 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           />
         )}
 
-        {/* ── Host leave prompt: close the stage or just step out ── */}
+        {/* ── Host leave prompt: the stage lives and dies with its host —
+              leaving always closes the room, so this is just a confirm. ── */}
         {leavePrompt && room?.status !== "ended" && (
-          <div className="ag-invite" role="dialog" aria-label="Leave options">
+          <div className="ag-invite" role="dialog" aria-label="Close stage confirmation">
             <span className="ag-invite-text">
-              You&apos;re the <strong>host</strong> — close the stage for everyone, or just step out?
+              You&apos;re the <strong>host</strong> — leaving closes the stage for everyone. Close it?
             </span>
             <div className="ag-invite-actions">
               <button
                 className="ag-invite-decline"
                 disabled={closingStage}
-                onClick={() => {
-                  vacateSeat();
-                  router.push("/");
-                }}
+                onClick={() => setLeavePrompt(false)}
               >
-                Just leave
+                Stay
               </button>
               <button
                 className="ag-invite-join"
