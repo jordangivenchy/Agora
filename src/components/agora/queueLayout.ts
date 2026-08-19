@@ -7,7 +7,9 @@
    tunnel that continues under the seating. Positions are feet-level —
    the scene adds body offsets. */
 
-export const MIC_POS = { x: 0, y: 0.45, z: -1.6 } as const;
+/* y is the marble floor's top surface. The raised medallion it used to
+   stand on is gone — the Marble Agora is one flat tablet. */
+export const MIC_POS = { x: 0, y: 0.17, z: -1.6 } as const;
 
 /** Slots standing in the open on the orchestra floor. */
 export const VISIBLE_SLOTS = 5;

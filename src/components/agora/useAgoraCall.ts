@@ -38,6 +38,17 @@ export interface VideoTile {
   username: string;
   track: Track;
   local: boolean;
+  /** Camera feed or a shared screen. Screens are routed to the cast stage
+      and must never land on a holo panel, so the two are distinguished at
+      the source rather than guessed at downstream. */
+  source: "camera" | "screen";
+}
+
+/** Stable React key for a tile. Identity alone collides the moment someone
+    shares a screen while their camera is on — they are two tiles from one
+    participant — so the source is part of the key. */
+export function tileKey(t: VideoTile) {
+  return `${t.identity}:${t.local ? "l" : "r"}:${t.source}`;
 }
 
 interface Options {
@@ -66,6 +77,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   const [connected, setConnected] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
+  const [screenOn, setScreenOn] = useState(false);
   /** Human-readable reason the last mic/camera toggle failed (toast fodder). */
   const [mediaError, setMediaError] = useState<string | null>(null);
   /* Browser refused audio autoplay — the UI shows a tap-to-listen prompt. */
@@ -106,7 +118,20 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     }, 3200);
   }, []);
 
-  /* Rebuild the video-dock tiles from the room's current camera tracks. */
+  /* Rebuild the tile list from every live video track in the room.
+
+     Two bugs lived here and both made screen sharing invisible:
+
+     1. Remote publications were filtered to Track.Source.Camera, so a
+        screen share published by anyone else reached the wire and was then
+        dropped on the floor — every viewer saw nothing. Sharing only ever
+        appeared to work because the sharer saw their own local track.
+     2. The local side used .find() across Camera *or* ScreenShare, which
+        returns exactly one. Sharing with your camera already on silently
+        replaced your face with your screen instead of yielding both.
+
+     Both are fixed by treating the two sources as peers and collecting
+     every matching publication rather than the first. */
   const refreshTiles = useCallback(() => {
     const room = roomRef.current;
     if (!room) {
@@ -114,29 +139,38 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       return;
     }
     const tiles: VideoTile[] = [];
-    const localCam = room.localParticipant
-      .getTrackPublications()
-      .find((p) => p.source === Track.Source.Camera && p.track && !p.isMuted);
-    if (localCam?.track) {
-      tiles.push({
-        identity: room.localParticipant.identity,
-        username: room.localParticipant.name || "You",
-        track: localCam.track,
-        local: true,
+
+    const sourceOf = (s: Track.Source): VideoTile["source"] | null =>
+      s === Track.Source.Camera ? "camera" : s === Track.Source.ScreenShare ? "screen" : null;
+
+    const collect = (
+      pubs: { source: Track.Source; track?: Track | null; isMuted: boolean }[],
+      identity: string,
+      username: string,
+      local: boolean
+    ) => {
+      pubs.forEach((pub) => {
+        const source = sourceOf(pub.source);
+        /* A muted *screen* publication is still worth showing: LiveKit
+           reports isMuted on a screen track that is merely paused, and
+           dropping it would blank the cast stage mid-share. Cameras keep
+           the muted check — a muted camera is one that is off. */
+        if (!source || !pub.track) return;
+        if (source === "camera" && pub.isMuted) return;
+        tiles.push({ identity, username, track: pub.track, local, source });
       });
-    }
+    };
+
+    collect(
+      room.localParticipant.getTrackPublications(),
+      room.localParticipant.identity,
+      room.localParticipant.name || "You",
+      true
+    );
     room.remoteParticipants.forEach((rp) => {
-      rp.getTrackPublications().forEach((pub) => {
-        if (pub.source === Track.Source.Camera && pub.track && !pub.isMuted) {
-          tiles.push({
-            identity: rp.identity,
-            username: rp.name || rp.identity,
-            track: pub.track,
-            local: false,
-          });
-        }
-      });
+      collect(rp.getTrackPublications(), rp.identity, rp.name || rp.identity, false);
     });
+
     setVideoTiles(tiles);
   }, []);
 
@@ -278,11 +312,14 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
 
   /* Turn a getUserMedia / publish failure into something a user can act on.
      Swallowing these (the old behavior) made the buttons look dead. */
-  const explainMediaError = (kind: "microphone" | "camera", e: unknown): string => {
+  const explainMediaError = (
+    kind: "microphone" | "camera" | "screen share",
+    e: unknown
+  ): string => {
     const name = e instanceof Error ? e.name : "";
     const msg = e instanceof Error ? e.message : String(e);
     if (name === "NotAllowedError" || /permission/i.test(msg))
-      return `${kind === "camera" ? "Camera" : "Mic"} access is blocked — click the camera icon in your browser's address bar (or System Settings on macOS) and allow it, then try again.`;
+      return `${kind === "camera" ? "Camera" : kind === "screen share" ? "Screen share" : "Mic"} access is blocked — click the camera icon in your browser's address bar (or System Settings on macOS) and allow it, then try again.`;
     if (name === "NotFoundError" || /requested device not found/i.test(msg))
       return `No ${kind} found on this device.`;
     if (name === "NotReadableError" || /could not start|in use/i.test(msg))
@@ -308,6 +345,33 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       setMediaBusy(false);
     }
   }, [micOn, mediaBusy]);
+
+  /* Screen share rides the same publish path as the camera, so it obeys
+     the same canPublish grant — a spectator cannot start one. Browsers
+     also give the user a "Stop sharing" control of their own, so the
+     track can end without us: the room's LocalTrackUnpublished event is
+     what keeps our state honest when that happens. */
+  const toggleScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room || mediaBusy) return;
+    setMediaBusy(true);
+    const next = !screenOn;
+    try {
+      await room.localParticipant.setScreenShareEnabled(next);
+      setScreenOn(next);
+      setMediaError(null);
+      refreshTiles();
+    } catch (e) {
+      /* Cancelling the OS picker throws — that is a choice, not a fault. */
+      const name = e instanceof Error ? e.name : "";
+      if (name !== "NotAllowedError" && name !== "AbortError") {
+        setMediaError(explainMediaError("screen share", e));
+      }
+      setScreenOn(false);
+    } finally {
+      setMediaBusy(false);
+    }
+  }, [mediaBusy, screenOn, refreshTiles]);
 
   const toggleCam = useCallback(async () => {
     const room = roomRef.current;
@@ -374,6 +438,8 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     clearMediaError: () => setMediaError(null),
     toggleMic,
     toggleCam,
+    screenOn,
+    toggleScreenShare,
     sendReaction,
     reactions,
     speakingIds,

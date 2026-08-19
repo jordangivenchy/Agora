@@ -19,9 +19,134 @@
      left and the chat composer on the right both size to it, which is
      what makes their top edges read as one line across the page. */
   --ag-controls-h: 70px;
+  /* How far the button row floats off the bottom edge. Deliberately its
+     own token rather than a bigger --ag-controls-h: that height is the
+     anchor the view toggle, the ground veil and the media-error toast all
+     measure from, so raising it would drag the whole lower composition up
+     with the buttons. This lifts the row alone. */
+  --ag-controls-lift: 18px;
+  /* Strength of the ground wash under the whole viewport. See
+     .ag-theater::after — raise it if the control row ever loses legibility
+     against a bright stage. */
+  --ag-veil-peak: 0.22;
+  /* The other half of matching the rail. Once the veil is this light, what
+     still separates the two sides is not darkness on the left — it is that
+     .ag-card lifts its own underside with
+     `inset 0 -70px 52px -46px rgba(255,255,255,0.07)` and the ground had
+     no equivalent. This is that same lift along the bottom of the screen,
+     so the card's glow reads as an accent on a lit ground rather than the
+     only lit thing on the page. Matched to the card's alpha on purpose;
+     they should be changed together. */
+  --ag-veil-lift: 0.07;
+  /* Two widths, deliberately: --ag-rail-w is the *layout* width and
+     animates to 0 on collapse, which is what gives the stage its space
+     back. --ag-rail-open-w is constant, and the card is sized from it so
+     the card never resizes — without that the panel squashes horizontally
+     instead of sliding, which reads as a squeeze rather than motion. */
   --ag-rail-w: 320px;
+  --ag-rail-open-w: 320px;
+  /* Liquid glass, one recipe for every floating control. The material is
+     a near-black translucent base whose "glass" comes entirely from the
+     box-shadow stack: paired inset highlights on opposite corners (the
+     bottom-right one brightest — a lens catching light off the ground
+     veil), a faint inner glow, then the drop. Three variants share the
+     same seven slots in the same order so state changes tween instead of
+     popping. White rim = a piece of UI is open; green rim = you are live
+     on the air. The stacks are the whole effect — the refraction filter
+     from the reference (feDisplacementMap over the backdrop) is left out
+     deliberately: it forces per-frame backdrop snapshots over an
+     animating WebGL canvas for a distortion the night sky barely shows. */
+  --ag-glass-bg: linear-gradient(160deg, rgba(16, 18, 26, 0.62), rgba(3, 4, 9, 0.68));
+  --ag-glass-bg-hover: linear-gradient(160deg, rgba(32, 35, 46, 0.68), rgba(10, 11, 18, 0.72));
+  /* The rim is kept in halves. An inset box-shadow paints above an
+     element's background but *below* its children, so on anything holding
+     a <video> the whole inset stack is buried — only what leaks past the
+     clipped corners survives, which is why a video box never looked as
+     solid as a button. Splitting the stack lets the insets be re-hung on
+     an overlay above the picture while the drops stay on the box itself.
+     --ag-glass-rim / -lit are recomposed from the halves, so every
+     existing consumer resolves to exactly the value it did before. */
+  --ag-glass-rim-inset:
+    inset 2.5px 2.5px 1px -2px rgba(255, 255, 255, 0.22),
+    inset -2.5px -2.5px 1px -2px rgba(255, 255, 255, 0.5),
+    inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.2),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.2),
+    inset 0 0 8px 4px rgba(255, 255, 255, 0.05);
+  --ag-glass-drop:
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 12px 32px rgba(0, 0, 0, 0.35);
+  --ag-glass-rim-inset-lit:
+    inset 2.5px 2.5px 1px -2px rgba(255, 255, 255, 0.4),
+    inset -2.5px -2.5px 1px -2px rgba(255, 255, 255, 0.75),
+    inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.35),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.35),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.1);
+  --ag-glass-drop-lit:
+    0 0 18px rgba(255, 255, 255, 0.14),
+    0 12px 32px rgba(0, 0, 0, 0.35);
+  --ag-glass-rim: var(--ag-glass-rim-inset), var(--ag-glass-drop);
+  /* The stage boxes' edge: the same five slots at a whisper. The buttons
+     keep the bright bottom-right catch — small objects need it to read as
+     glass at all — but at panel size the catch reads as a smudge of light
+     sitting on someone's picture. This is the "darker" edge from the top
+     of the boxes, applied all the way round. */
+  --ag-glass-rim-quiet:
+    inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.1),
+    inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.14),
+    inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.08),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.08),
+    inset 0 0 8px 4px rgba(255, 255, 255, 0.03);
+
+  --ag-glass-rim-lit: var(--ag-glass-rim-inset-lit), var(--ag-glass-drop-lit);
+  /* The lit states are solid, not glass: a control that is transmitting
+     should look like it was switched on, the way a call's accept button
+     does, rather than like the same dark pane with a coloured edge. Each
+     fill carries a dark glyph — white on a bright fill only reaches ~2:1,
+     while these clear 7:1, and the dark ink is what makes them read as
+     genuinely lit rather than tinted.
+
+     The rim keeps the base's seven slots in the same order (four edges,
+     inner glow, near glow, far drop) so switching between glass and solid
+     interpolates instead of snapping. */
+  --ag-on-green: #30d158;
+  --ag-on-green-hi: #4ade7a;
+  --ag-on-green-ink: #04240f;
+  --ag-on-yellow: #ffd60a;
+  --ag-on-yellow-hi: #ffe14d;
+  --ag-on-yellow-ink: #2e2200;
+  --ag-on-white: #f2f5fa;
+  --ag-on-white-hi: #ffffff;
+  --ag-on-white-ink: #0b0d14;
+  --ag-solid-rim:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.16),
+    inset 1px 0 0 rgba(255, 255, 255, 0.14),
+    inset -1px 0 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 8px 4px rgba(255, 255, 255, 0.06);
+
+  /* For glass sitting *on* glass (the topbar's own buttons): the same
+     seven slots at roughly half strength, so they read as inlaid rather
+     than as a second pane stacked on the first. */
+  --ag-glass-rim-inlay:
+    inset 2px 2px 1px -1.5px rgba(255, 255, 255, 0.14),
+    inset -2px -2px 1px -1.5px rgba(255, 255, 255, 0.28),
+    inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.12),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.12),
+    inset 0 0 6px 3px rgba(255, 255, 255, 0.03),
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.2);
+  --ag-glass-rim-live:
+    inset 2.5px 2.5px 1px -2px rgba(167, 243, 208, 0.3),
+    inset -2.5px -2.5px 1px -2px rgba(167, 243, 208, 0.6),
+    inset 1px 1px 1px -0.5px rgba(167, 243, 208, 0.3),
+    inset -1px -1px 1px -0.5px rgba(167, 243, 208, 0.3),
+    inset 0 0 10px 4px rgba(52, 211, 153, 0.1),
+    0 0 18px rgba(52, 211, 153, 0.25),
+    0 12px 32px rgba(0, 0, 0, 0.35);
   background:
-    radial-gradient(ellipse 70% 50% at 50% 100%, #0d1526 0%, transparent 70%),
+    /* Height tracks the dome shader's horizon band (pow 8.0) — both skies
+       tightened together so the seam at the rail's edge stays invisible. */
+    radial-gradient(ellipse 70% 22% at 50% 100%, #0d1526 0%, transparent 70%),
     #05070f;
   color: #e7e9ee;
   font-family: "DM Sans", "Segoe UI", sans-serif;
@@ -99,28 +224,45 @@
   gap: 16px;
   margin: 14px 18px 0;
   padding: 12px 18px;
-  background: rgba(16, 14, 24, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  /* Same liquid glass as the floating controls, so the header reads as a
+     pane of the same material rather than a different dark panel. The
+     corner-anchored inset highlights in --ag-glass-rim are what carry it
+     at this width — they catch the light at the bar's edges the way the
+     pills catch it at theirs. */
+  background: var(--ag-glass-bg);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 14px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim);
   z-index: 5;
 }
 
+/* Glass buttons riding on a glass bar: they carry a lighter rim than the
+   floating controls do, since they sit on the pane rather than on the
+   night, and a doubled-up full-strength stack would read as embossed. */
 .ag-back {
   width: 34px;
   height: 34px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ag-glass-bg);
   color: #e7e9ee;
   font-size: 16px;
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: var(--ag-glass-rim-inlay);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 }
 
 .ag-back:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--ag-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.4);
 }
+
+.ag-back:active { transform: scale(0.94); }
 
 .ag-topbar-info {
   flex: 1;
@@ -183,30 +325,67 @@
 .ag-follow {
   padding: 8px 18px;
   border-radius: 10px;
-  border: 1px solid #7c5cff;
-  background: transparent;
-  color: #b3a1ff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ag-glass-bg);
+  color: #cfd3dc;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  box-shadow: var(--ag-glass-rim-inlay);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 }
 
-.ag-follow:hover { background: rgba(124, 92, 255, 0.15); }
-.ag-follow.on { background: #7c5cff; color: #fff; }
+.ag-follow:hover {
+  background: var(--ag-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.ag-follow:active { transform: scale(0.97); }
+
+/* Following is an engaged state, so it takes the same white rim that
+   marks an open picker below — one vocabulary across the whole room. */
+.ag-follow.on {
+  background: linear-gradient(160deg, rgba(42, 46, 58, 0.62), rgba(14, 16, 24, 0.68));
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  box-shadow: var(--ag-glass-rim-lit);
+}
+
+.ag-follow.on:hover {
+  background: linear-gradient(160deg, rgba(52, 56, 68, 0.66), rgba(18, 20, 28, 0.7));
+  border-color: rgba(255, 255, 255, 0.7);
+}
 
 .ag-more {
   width: 34px;
   height: 34px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
+  background: var(--ag-glass-bg);
   color: #9aa0ac;
   font-size: 16px;
   cursor: pointer;
+  box-shadow: var(--ag-glass-rim-inlay);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
 }
 
-.ag-more:hover { background: rgba(255, 255, 255, 0.08); }
+.ag-more:hover {
+  background: var(--ag-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #e7e9ee;
+}
+
+.ag-more:active { transform: scale(0.94); }
 
 /* ── Theater ── */
 
@@ -226,9 +405,14 @@
 
 /* The 3D scene fills the theater area; the stage rail floats over it */
 
+/* Fixed to the viewport, not to the main column: the scene runs behind
+   the chat rail so the amphitheatre is visible through its glass. The
+   camera compensates with an off-axis frustum (see resize() in
+   AgoraScene3D), so the composition stays centred on the main column. */
 .ag-scene3d {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 0;
 }
 
 .ag-scene3d canvas {
@@ -264,14 +448,44 @@
 /* Now runs to the very bottom edge rather than stopping at the old bar:
    with the buttons floating directly on the scene, this gradient is what
    keeps them legible over whatever the stage is doing behind them. */
+/* Fixed, not absolute — and that one word is the whole point. As an
+   absolute child of .ag-theater this spanned the main column only, so it
+   stopped dead at the rail's edge and drew a vertical seam down the page:
+   the left half sat on veiled ground, the right half on raw scene. Fixed
+   positioning takes it out of the column and across the whole viewport,
+   so both halves stand on one continuous ground and there is no edge to
+   see. The 3D canvas is fixed for the same reason.
+
+   It still paints below the rail: .ag-theater carries z-index 0 and so
+   opens a stacking context, which the sidebar's z-index 1 sits above. */
 .ag-theater::after {
   content: "";
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   height: clamp(150px, 26vh, 280px);
-  background: linear-gradient(to top, rgba(5, 7, 15, 0.75), rgba(5, 7, 15, 0));
+  /* Two layers over one continuous ground: a wash that sinks the scene,
+     and a light rising off the very bottom.
+
+     Both peaks are tokens on .ag-root. The wash is down from its original
+     0.75 — affordable in a way it wasn't when this was written, because
+     the buttons then were translucent glass leaning on a dark ground for
+     contrast, whereas the lit ones now carry solid fills and the idle ones
+     a bright rim, so they hold against a lighter ground. */
+  background:
+    /* light rising off the ground, over the wash — mirrors the chat card's
+       lower inset so the two lower edges read as the same surface */
+    linear-gradient(
+      to top,
+      rgba(255, 255, 255, var(--ag-veil-lift)),
+      rgba(255, 255, 255, 0) 90px
+    ),
+    linear-gradient(
+      to top,
+      rgba(5, 7, 15, var(--ag-veil-peak)),
+      rgba(5, 7, 15, 0)
+    );
   pointer-events: none;
   /* Above the canvas, below the rail — the veil sits between the
      environment and the product UI, which is exactly the layer order the
@@ -312,32 +526,29 @@
   gap: 10px;
   padding: 9px 18px;
   border-radius: 12px;
-  background: linear-gradient(
-    135deg,
-    rgba(24, 29, 48, 0.72),
-    rgba(9, 12, 24, 0.62)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
-  box-shadow:
-    0 10px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: var(--ag-glass-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim);
   color: #cfd3dc;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s ease;
 }
 
 .ag-switch-view:hover {
-  border-color: #7c5cff;
-  background: rgba(28, 24, 40, 0.95);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: var(--ag-glass-bg-hover);
+}
+
+.ag-switch-view:active {
+  transform: scale(0.98);
 }
 
 .ag-switch-view span { display: flex; flex-direction: column; text-align: left; }
 .ag-switch-view strong { font-size: 13px; font-weight: 700; }
 .ag-switch-view small { font-size: 10.5px; color: #8a8f9c; }
-.ag-switch-view svg { color: #a78bfa; }
+.ag-switch-view svg { color: #dfe3ec; }
 
 /* ── Bottom controls ── */
 
@@ -351,58 +562,681 @@
      bottom of the column instead of being pushed there by the theater. */
   margin-top: auto;
   box-sizing: border-box;
-  min-height: var(--ag-controls-h);
+  /* The footer grows by the lift rather than the row sliding inside a
+     fixed box, so the buttons keep their full height and never get
+     squeezed by their own padding. */
+  min-height: calc(var(--ag-controls-h) + var(--ag-controls-lift));
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 0 12px;
+  /* The lift rides in the shorthand's bottom slot on purpose — a separate
+     padding-bottom above this line would be reset by it. */
+  padding: 0 12px var(--ag-controls-lift);
   background: none;
   border-top: none;
   z-index: 5;
 }
 
-/* Glass pills. They used to be a 5%-white wash, which only read because
-   an opaque bar sat behind them; floating on the starfield they need a
-   surface of their own — the same one the view toggle and chat card use. */
+/* Micro-expander: a circular icon that grows into a labelled pill on
+   hover, horizontally.
+
+   The reference animates to `width: auto`, which CSS cannot transition —
+   there is no numeric end value to interpolate toward. The grid
+   `0fr -> 1fr` trick is the equivalent that works natively: the label
+   lives in a second column whose fraction is animated, so the browser
+   resolves the real content width and the button expands to exactly the
+   label's size. No measuring, no JS, no motion library.
+
+   Glass surface as before — these float directly on the scene, so they
+   carry their own backdrop rather than relying on a bar behind them. */
 .ag-ctl {
-  display: flex;
+  display: grid;
+  grid-template-columns: 48px 0fr;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(
-    135deg,
-    rgba(24, 29, 48, 0.72),
-    rgba(9, 12, 24, 0.62)
-  );
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  /* `overflow: hidden` below zeroes a flex item's automatic minimum size,
+     so without this the row shrinks every pill to a 2px sliver. */
+  flex: 0 0 auto;
+  height: 48px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ag-glass-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim);
   color: #cfd3dc;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    grid-template-columns 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+
+/* Focus expands it too, so the label is reachable from the keyboard and
+   not just the mouse. */
+.ag-ctl:hover:not(:disabled),
+.ag-ctl:focus-visible:not(:disabled) {
+  grid-template-columns: 48px 1fr;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.ag-ctl-ico {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+}
+
+.ag-ctl-ico svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+/* min-width: 0 lets the column actually collapse to nothing; without it
+   the label's intrinsic width props the grid open and nothing animates. */
+.ag-ctl-label {
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-6px);
+  padding-right: 0;
+  transition:
+    opacity 0.2s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    padding-right 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ag-ctl:hover:not(:disabled) .ag-ctl-label,
+.ag-ctl:focus-visible:not(:disabled) .ag-ctl-label {
+  opacity: 1;
+  transform: none;
+  padding-right: 20px;
+  /* Trails the width slightly so the text arrives into space already
+     made for it rather than sliding out from under the icon. */
+  transition-delay: 0.1s, 0.1s, 0s;
 }
 
 .ag-ctl svg { flex-shrink: 0; display: block; }
 
 .ag-ctl:hover:not(:disabled) {
-  background: linear-gradient(
-    135deg,
-    rgba(38, 44, 68, 0.8),
-    rgba(16, 20, 36, 0.7)
-  );
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--ag-glass-bg-hover);
 }
+
+/* Press: the glass gives slightly under the finger. Scale, not
+   brightness — a translucent black base has nothing to brighten. */
+.ag-ctl:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* The one that must never be a mystery circle: Leave stays open, labelled
+   and red — and is the only control coloured while idle.
+
+   These values were previously shadowed by a second .ag-ctl--leave block
+   further down the file, so the #e0483d written here never actually
+   rendered; the button has always been #b3261e. Folded into one rule at
+   the colour that was really shipping. */
+.ag-ctl--leave {
+  grid-template-columns: 48px 1fr;
+  background: #b3261e;
+  border-color: #d33a31;
+  color: #fff;
+  backdrop-filter: none;
+}
+
+.ag-ctl--leave .ag-ctl-label {
+  opacity: 1;
+  transform: none;
+  padding-right: 20px;
+}
+
+.ag-ctl--leave:hover:not(:disabled) {
+  background: #d33a31;
+  border-color: #e0483d;
+}
+
+/* Tool drawer raised by the More button — same glass, same corner
+   language, sized so the four tiles land as true quadrants: 260 wide
+   minus 10px padding either side leaves 240, less the 8px gutter, so each
+   tile is 116px and `aspect-ratio: 1` squares it off. */
+.ag-more-menu {
+  position: absolute;
+  bottom: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  padding: 10px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(16, 18, 26, 0.85), rgba(3, 4, 9, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim), 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+  animation: agPickerIn 0.15s ease;
+}
+
+.ag-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* Three buttons and one anchor share this class — the Settings tile is a
+   real link so the browser handles the new tab natively. */
+.ag-tool {
+  position: relative;
+  aspect-ratio: 1;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #cfd3dc;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.ag-tool:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.34);
+  color: #fff;
+}
+
+.ag-tool:active:not(:disabled) { transform: scale(0.96); }
+
+.ag-tool-ico svg {
+  width: 23px;
+  height: 23px;
+  display: block;
+}
+
+.ag-tool-label { line-height: 1; }
+
+/* Not built yet, and saying so. The tile stays legible rather than being
+   dimmed into unreadability — the badge carries the message, so the label
+   doesn't have to be guessed at. */
+.ag-tool:disabled {
+  cursor: not-allowed;
+  color: #7f8595;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.ag-tool-soon {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #8a90a0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ag-more-item {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #cfd3dc;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ag-more-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
 .ag-ctl:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .ag-ctl--active {
-  background: rgba(124, 92, 255, 0.28);
-  border-color: #7c5cff;
-  color: #d6c9ff;
+  background: linear-gradient(160deg, rgba(42, 46, 58, 0.62), rgba(14, 16, 24, 0.68));
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  box-shadow: var(--ag-glass-rim-lit);
+}
+
+/* Outranks the generic hover (equal specificity, later in the file), so
+   opening a picker doesn't fall back to the plain hover surface. */
+.ag-ctl--active:hover:not(:disabled) {
+  background: linear-gradient(160deg, rgba(52, 56, 68, 0.66), rgba(18, 20, 28, 0.7));
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Cast stage: the screen-share takeover ─────────────────────────
+
+   Sits over the theater, under the topbar and the control row. It claims
+   the middle of the stage while anyone is sharing and vanishes the moment
+   nobody is — see AgoraCastStage for why this is flat DOM and not a third
+   panel in the 3D scene. */
+
+.ag-cast {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 88px;
+  bottom: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 74px);
+  /* Wider than the first cut (78% / 1080px): with two panes splitting the
+     row, the old cap left each debater a modest window in a sea of night.
+     The stage is the show — let it be most of the frame. */
+  width: min(88%, 1440px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* The focus layout sizes its 16:9 main surface from cqw/cqh. */
+  container-type: size;
+  /* Above the ground veil (1) and the stage rail (2), below the control
+     row (5) and the topbar (5). */
+  z-index: 3;
+  animation: agCastIn 0.22s ease;
+}
+
+@keyframes agCastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* The shared screen and the video boxes are one construction: the liquid
+   glass, exactly as the buttons wear it. Solid near-black ground (a video
+   is someone's rectangle of pixels — letterboxing it against anything
+   translucent makes the bars read as content), the paired corner
+   highlights of --ag-glass-rim-inset on an overlay above the picture, the
+   drops on the box, and nothing else. No border, no bezel, no second
+   frame. */
+
+/* Focus layout: main picture left, the room stacked beside it. */
+.ag-cast--focus {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* Monitor-shaped, not panoramic: the surface holds 16:9 — the standard
+   screen most shares actually are — instead of stretching to whatever
+   the stage area happens to be, which framed every share in a sea of
+   letterbox. Height is solved from the container: fill it, unless width
+   (minus the 240px column and gap) runs out first. */
+.ag-cast-main {
+  position: relative;
+  flex: none;
+  aspect-ratio: 16 / 9;
+  height: min(100cqh, calc((100cqw - 254px) * 9 / 16));
+  border-radius: 18px;
+  overflow: hidden;
+  background: #05070f;
+  box-shadow: var(--ag-glass-drop);
+}
+
+/* A pinned main is also the way back — click to let the default return. */
+.ag-cast-main--pinned { cursor: pointer; }
+
+/* The column: streamer first, then the debaters. Two or fewer stretch to
+   fill it (the sketch's extended card); more than two cap at two plus the
+   view-all toggle. */
+.ag-cast-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+  max-height: 100%;
+  justify-content: center;
+}
+
+.ag-cast-side .ag-cast-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  flex: none;
+}
+
+.ag-cast-side--stretch {
+  height: 100%;
+}
+
+.ag-cast-side--stretch .ag-cast-thumb {
+  flex: 1 1 0;
+  aspect-ratio: auto;
+  min-height: 96px;
+}
+
+.ag-cast-side--all {
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+
+.ag-cast-more {
+  flex: none;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: var(--ag-glass-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim-inlay);
+  color: #cfd3dc;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.ag-cast-more:hover {
+  background: var(--ag-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+/* The rim, hung above the picture. An inset box-shadow on the box itself
+   would paint below the <video> child and vanish — this overlay is the
+   whole reason the glass reads at all. Shared by surface and thumbs so
+   the row is the same object as the screen above it. */
+.ag-cast-main::after,
+.ag-cast-pane::after,
+.ag-cast-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--ag-glass-rim-quiet);
+  pointer-events: none;
+  z-index: 1;
+  transition: box-shadow 0.15s ease;
+}
+
+.ag-cast-surface {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ag-cast-surface video {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Duo mode: the two debater boxes, where the WebGL panels stood ── */
+
+.ag-cast-duo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 14px;
+  /* Centered 16:9 boxes, not full-height columns — the Discord shape.
+     Width drives the size; max-height keeps them inside the stage area
+     on short viewports. */
+  align-items: center;
+  justify-content: center;
+  /* The old panels' angled-in-space look, recovered in CSS: one shared
+     perspective on the parent (so both panes vanish toward the same
+     point) and a gentle toe-in per side. This costs nothing — the video
+     stays full-resolution DOM, just drawn through a 3D transform — so no
+     quality ladder is involved, in any view. */
+  perspective: 1700px;
+  perspective-origin: 50% 42%;
+}
+
+.ag-cast-pane {
+  position: relative;
+  flex: none;
+  width: calc(50% - 7px);
+  aspect-ratio: 16 / 9;
+  max-height: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #05070f;
+  box-shadow: var(--ag-glass-drop);
+}
+
+/* Cover-flow toe-in: each pane turns its inner edge toward the viewer,
+   facing the center of the stage like the amphitheater panels did. The
+   transform is composed from variables so the speaking lift can ride on
+   top of the rotation instead of replacing it. */
+.ag-cast-pane {
+  transform: rotateY(var(--pane-rot, 0deg)) translateY(var(--pane-lift, 0px));
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.ag-cast-pane--pinnable { cursor: pointer; }
+
+.ag-cast-pane--pro { --pane-rot: 9deg; }
+.ag-cast-pane--con { --pane-rot: -9deg; }
+
+.ag-cast-pane--speaking {
+  --pane-lift: -6px;
+  box-shadow: var(--ag-glass-drop-lit);
+}
+
+.ag-cast-pane--speaking::after {
+  box-shadow: var(--ag-glass-rim-inset);
+}
+
+/* Camera-off body: profile card, or the open seat. */
+.ag-pane-fill {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.ag-pane-avatar {
+  width: clamp(64px, 26%, 132px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+}
+
+/* The one piece of the old panels worth keeping: the ring is the side's
+   debate colour, so who argues what survives the move to DOM. */
+.ag-pane-avatar--pro { border: 3px solid #a78bfa; }
+.ag-pane-avatar--con { border: 3px solid #7ab8ff; }
+
+.ag-pane-initial {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e7e9ee;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: clamp(28px, 4vw, 52px);
+  font-weight: 700;
+}
+
+/* Unclaimed side — same dashed ring and "?" the rail's open-seat chip
+   uses, same as the old empty panel. */
+.ag-pane-empty {
+  width: clamp(64px, 26%, 132px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px dashed rgba(255, 255, 255, 0.28);
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: clamp(26px, 3.5vw, 46px);
+  font-weight: 700;
+}
+
+/* Camera-off thumbs in the share row aren't clickable — nothing to
+   enlarge — but they're people, not errors: full opacity, default
+   cursor. */
+.ag-cast-thumb:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+/* Who you are watching, bottom-left — the one thing a screen share must
+   never leave ambiguous. */
+.ag-cast-tag {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: linear-gradient(160deg, rgba(16, 18, 26, 0.82), rgba(3, 4, 9, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim-inlay);
+  color: #e7e9ee;
+  font-size: 12.5px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ag-cast-tag-ico {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.ag-cast-tag-ico svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  color: #9aa0ac;
+}
+
+.ag-cast-tag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* The name is the one interactive thing inside a tag that is otherwise
+     click-through, so it takes pointer events back. */
+  pointer-events: auto;
+}
+
+/* Reads as a state, not a label — same job as the row's green "live". */
+.ag-cast-tag-pill {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--ag-on-green);
+  color: var(--ag-on-green-ink);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* ── The boxes beside the main picture ── */
+
+.ag-cast-thumb {
+  position: relative;
+  padding: 0;
+  border: none;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #05070f;
+  box-shadow: var(--ag-glass-drop);
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Lifting on hover is the affordance: it says this panel can be moved into
+   the big slot, which nothing else about a video thumbnail suggests. */
+/* Hover lights both halves of the liquid glass at once — outer glow on
+   the box, lit rim on the overlay — so the pane brightens as one surface.
+   Speaking borrows the identical treatment: the box lifts and lights
+   while its person holds the floor, so "who is talking" reads the same
+   way "this is clickable" already did. */
+.ag-cast-thumb:hover,
+.ag-cast-thumb:focus-visible,
+.ag-cast-thumb--speaking {
+  box-shadow: var(--ag-glass-drop-lit);
+  transform: translateY(-3px);
+  outline: none;
+}
+
+.ag-cast-thumb:hover::after,
+.ag-cast-thumb:focus-visible::after,
+.ag-cast-thumb--speaking::after {
+  box-shadow: var(--ag-glass-rim-inset);
+}
+
+.ag-cast-thumb:active { transform: translateY(-1px) scale(0.985); }
+
+.ag-cast-thumb-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: linear-gradient(160deg, rgba(16, 18, 26, 0.82), rgba(3, 4, 9, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e7e9ee;
+  font-size: 11.5px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ag-cast-thumb-tag .ag-cast-tag-ico svg { width: 13px; height: 13px; }
+
+/* Phones: the row would eat the screen it sits under, so it shrinks and the
+   cast surface takes the space back. */
+@media (max-width: 620px) {
+  .ag-cast {
+    width: calc(100% - 24px);
+    top: 84px;
+    bottom: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 58px);
+  }
+  /* Phone: no room beside the main picture — the column becomes a row
+     underneath it. */
+  .ag-cast--focus { flex-direction: column; }
+  .ag-cast-main { height: auto; width: 100%; }
+  .ag-cast-side,
+  .ag-cast-side--stretch {
+    flex-direction: row;
+    width: 100%;
+    height: auto;
+  }
+  .ag-cast-side .ag-cast-thumb,
+  .ag-cast-side--stretch .ag-cast-thumb {
+    flex: 1 1 0;
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+  }
 }
 
 /* ── Discussion strip: hosts, co-hosts, promoted speakers ── */
@@ -720,32 +1554,30 @@
 
 .ag-invite-decline:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
 
-.ag-ctl--leave {
-  background: #b3261e;
-  border-color: #d33a31;
-  color: #fff;
-}
-
-.ag-ctl--leave:hover { background: #d33a31; }
-
 /* ── Right rail ── */
 
 .ag-sidebar {
   width: var(--ag-rail-w);
   flex-shrink: 0;
+  /* Flex items default to `min-width: auto`, which refuses to shrink below
+     the content's min-content width — the fixed-width card. Without this
+     the column stays stuck at 320px and nothing slides. */
+  min-width: 0;
   /* Explicit: the footer band's alignment depends on this column being
      exactly 100vh *including* its 14px top padding. That's Tailwind
      preflight's default, but it's load-bearing here, so it's stated. */
   box-sizing: border-box;
   height: 100vh;
   overflow-y: auto;
-  /* No bottom inset: the chat card runs to the very bottom so its footer
-     can form the right half of the page's footer band. */
-  padding: 14px 14px 0 0;
+  /* Inset on every side: the footer band it used to meet is gone, so the
+     card floats rather than docking to the bottom edge. */
+  padding: 14px 16px 16px 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: width 0.28s ease, padding 0.28s ease;
+  transition:
+    width 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ── Collapsed rail ──
@@ -763,47 +1595,68 @@
   overflow: hidden;
 }
 
-/* Folds downward and fades as it goes, rather than being clipped away
-   sideways by the narrowing column. `visibility` is held until the fold
-   finishes, then flipped — a zero-width card would otherwise keep its
-   tabs and composer in the tab order while invisible. */
+/* The slide. The card holds a constant width, so as the column narrows
+   the card is carried right with the column's left edge and clipped by
+   its overflow — it travels out of frame rather than being crushed. The
+   fade trails the movement so the clipped edge never snaps.
+
+   `visibility` flips only after the travel finishes: a card sitting at
+   zero width would otherwise keep its tabs and composer in the tab order
+   while invisible. */
 .rail-collapsed .ag-chat-card {
-  transform: translateY(26px);
   opacity: 0;
   visibility: hidden;
-  transition: transform 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
+  transition:
+    opacity 0.22s ease 0.06s,
+    visibility 0s linear 0.34s;
 }
 
 .ag-chat-card {
-  transition: transform 0.28s ease, opacity 0.2s ease, visibility 0s linear 0s;
+  /* Sized from the constant, never from the animating column. */
+  width: calc(var(--ag-rail-open-w) - 16px);
+  flex-shrink: 0;
+  transition:
+    opacity 0.24s ease,
+    visibility 0s linear 0s;
 }
 
 /* (The rail's opaque footer band is gone with the controls bar — the sky
    now runs unbroken to the bottom edge on both sides.) */
 
-/* Glass, so the night reads *behind* the chat rather than the rail being
-   a solid column: translucent navy over the starfield, frosted, with a
-   drop shadow that lifts the card off the sky. Same treatment as the
-   participant panels and the view toggle. */
+/* Real glass: no background colour at all.
+
+   The panel's substance comes from inset shadows rather than a fill —
+   the technique in the reference card, inverted for a dark UI. A dark
+   wash falls from the top (which is what keeps chat text legible without
+   a fill behind it), a faint light rises from the bottom, and a 1px
+   specular line rides the top edge. Take those away and the element is
+   literally transparent.
+
+   The blur is deliberately light. At the 40px it used to run, anything
+   behind became an even smear; at 12px, shapes stay recognisable — so a
+   meteor passing behind the panel reads as a meteor, softened, rather
+   than as a vague glow. That is the whole point of putting one there. */
 .ag-card {
-  /* Positioned so it paints above the rail's footer band, which is a
-     positioned pseudo-element and would otherwise cover the card's bottom
-     70px — including the composer inside it. */
+  /* Positioned so it paints above the starfield pseudo-element. */
   position: relative;
   z-index: 1;
-  background: linear-gradient(
-    135deg,
-    rgba(24, 29, 48, 0.62),
-    rgba(9, 12, 24, 0.5)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
   padding: 14px;
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(150%);
   box-shadow:
-    0 16px 50px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    /* dark wash from the top — this is the "background", and the only
+       thing standing between the chat text and whatever moves behind it */
+    inset 0 58px 46px -38px rgba(5, 7, 15, 0.34),
+    /* light rising from the bottom, the reference card's inverted lower
+       inset: enough to imply thickness, not enough to hide the sky */
+    inset 0 -70px 52px -46px rgba(255, 255, 255, 0.07),
+    /* specular rim along the top edge, and a whisper along the bottom */
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    /* lift off the sky */
+    0 24px 64px rgba(0, 0, 0, 0.45);
 }
 
 .ag-card-title {
@@ -823,11 +1676,6 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-  /* Squared off at the bottom: the card now meets the footer band, and
-     rounded corners there would leave two notches of sky in it. */
-  border-bottom: none;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .ag-tabs {
@@ -876,31 +1724,35 @@
 .ag-rail-restore {
   position: fixed;
   right: 14px;
-  bottom: calc(var(--ag-controls-h) + 14px);
+  /* Centred within the footer row's height, plus the same lift the row
+     takes, so it stays on the same line as Mic / Camera / Leave rather
+     than being left behind at the old height. */
+  height: 40px;
+  bottom: calc(((var(--ag-controls-h) - 40px) / 2) + var(--ag-controls-lift));
   z-index: 6;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 9px 14px;
   border-radius: 12px;
-  background: linear-gradient(
-    135deg,
-    rgba(24, 29, 48, 0.72),
-    rgba(9, 12, 24, 0.62)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  background: var(--ag-glass-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim);
   color: #cfd3dc;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s ease;
 }
 
-.ag-rail-restore:hover { border-color: #7c5cff; }
-.ag-rail-restore svg { color: #a78bfa; }
+.ag-rail-restore:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: var(--ag-glass-bg-hover);
+}
+
+.ag-rail-restore:active { transform: scale(0.98); }
+.ag-rail-restore svg { color: #dfe3ec; }
 
 .ag-chat-scroll {
   flex: 1;
@@ -959,13 +1811,11 @@
    that the opaque band is gone. The hairline is card structure, dividing
    messages from composer; it isn't the page-wide bar that was removed. */
 .ag-chat-inputrow {
-  box-sizing: border-box;
-  min-height: var(--ag-controls-h);
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 10px 12px 12px;
   background: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .ag-chat-input {
@@ -984,12 +1834,10 @@
 .ag-chat-input:focus { border-color: #7c5cff; }
 
 .ag-chat-signin {
-  box-sizing: border-box;
-  min-height: var(--ag-controls-h);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  padding: 14px 12px;
   text-align: center;
   font-size: 12px;
   color: #8a8f9c;
@@ -1086,21 +1934,8 @@
   .ag-sidebar { width: auto; height: auto; padding: 0 14px 14px; }
   .ag-chat-card { min-height: 260px; }
 
-  /* Stacked layout: the rail sits below the scene and the page scrolls,
-     so there is no shared footer line to meet. The card goes back to a
-     fully rounded, inset panel and the band behind it is dropped. */
-  .ag-sidebar::after { display: none; }
-  .ag-chat-card {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    border-bottom-left-radius: 14px;
-    border-bottom-right-radius: 14px;
-  }
-  .ag-chat-inputrow,
-  .ag-chat-signin {
-    min-height: 0;
-    padding: 10px 12px;
-    background: none;
-  }
+  /* (The footer-band overrides that used to live here are gone with the
+     band itself — the card is a floating bubble at every size now.) */
 
   /* Collapsing is a side-by-side idea. Stacked, the chat already sits
      below the stage and out of the way, so the controls come off and the
@@ -1141,7 +1976,12 @@
      up with it — otherwise the toggle (and the ground veil) tuck in
      behind the controls. */
   .ag-main { --ag-controls-h: 90px; }
-  .ag-stage { bottom: calc(var(--ag-controls-h) + 12px); }
+  /* The lift has to be in here too. On desktop the toggle is a fixed
+     anchor in the composition and deliberately stays put while the row
+     rises, but on a phone its only job is to clear a footer that has
+     wrapped to two rows — and the lift makes that footer 18px taller, so
+     without this term the toggle's lower edge tucks behind it. */
+  .ag-stage { bottom: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 12px); }
   .ag-switch-view { padding: 8px; }
   .ag-switch-view span { display: none; }
   /* The wide phone lens pulls far more ground into frame, which left the
@@ -1159,10 +1999,60 @@
 
 /* ── Live call: reactions, emoji picker, video dock ─────────────── */
 
+/* Transmitting: mic live, camera live, or you hold the floor. Solid
+   call-accept green, and the exact counterweight to Leave's red at the
+   other end of the row.
+
+   backdrop-filter is switched off on all three solids — nothing shows
+   through an opaque fill, so the blur would be a compositing layer
+   rendered every frame over a live WebGL canvas for no visible result. */
 .ag-ctl--live {
-  background: rgba(34, 197, 94, 0.22);
-  border-color: #22c55e;
-  color: #b5f5cd;
+  background: var(--ag-on-green);
+  border-color: var(--ag-on-green);
+  color: var(--ag-on-green-ink);
+  backdrop-filter: none;
+  box-shadow: var(--ag-solid-rim), 0 0 20px rgba(48, 209, 88, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Each solid needs its own hover: `.ag-ctl:hover:not(:disabled)` scores
+   higher than a lone modifier class, so without these the fill reverts to
+   grey glass under the cursor and the dark glyph turns white mid-hover. */
+.ag-ctl--live:hover:not(:disabled) {
+  background: var(--ag-on-green-hi);
+  border-color: var(--ag-on-green-hi);
+  color: var(--ag-on-green-ink);
+}
+
+/* Sharing your screen: solid white. It is the loudest thing you can do
+   to the room short of holding the mic, so it gets the brightest fill. */
+.ag-ctl--sharing {
+  background: var(--ag-on-white);
+  border-color: var(--ag-on-white);
+  color: var(--ag-on-white-ink);
+  backdrop-filter: none;
+  box-shadow: var(--ag-solid-rim), 0 0 20px rgba(226, 232, 240, 0.32), 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.ag-ctl--sharing:hover:not(:disabled) {
+  background: var(--ag-on-white-hi);
+  border-color: var(--ag-on-white-hi);
+  color: var(--ag-on-white-ink);
+}
+
+/* Reaction tray open: solid yellow. Transient rather than transmitting,
+   which is why it is the one warm fill in the row. */
+.ag-ctl--reacting {
+  background: var(--ag-on-yellow);
+  border-color: var(--ag-on-yellow);
+  color: var(--ag-on-yellow-ink);
+  backdrop-filter: none;
+  box-shadow: var(--ag-solid-rim), 0 0 20px rgba(255, 214, 10, 0.38), 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.ag-ctl--reacting:hover:not(:disabled) {
+  background: var(--ag-on-yellow-hi);
+  border-color: var(--ag-on-yellow-hi);
+  color: var(--ag-on-yellow-ink);
 }
 
 .ag-react-wrap { position: relative; display: flex; }
@@ -1176,9 +2066,10 @@
   gap: 4px;
   padding: 8px 10px;
   border-radius: 24px;
-  background: rgba(14, 14, 20, 0.95);
+  background: linear-gradient(160deg, rgba(16, 18, 26, 0.82), rgba(3, 4, 9, 0.86));
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--ag-glass-rim), 0 12px 32px rgba(0, 0, 0, 0.5);
   z-index: 20;
   animation: agPickerIn 0.15s ease;
 }

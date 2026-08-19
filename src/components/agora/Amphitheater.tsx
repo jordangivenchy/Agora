@@ -5,7 +5,7 @@
    speaker-view toggle. The 2D data logic (who's on stage, who's seated)
    lives in the page; this component just lays it out. */
 
-import AgoraScene3D, { type AgoraView, type ScreenFeeds, type ScreenOccupants } from "./AgoraScene3D";
+import AgoraScene3D, { type AgoraView } from "./AgoraScene3D";
 import { useUserMenu } from "../userMenuContext";
 
 export interface StagePerson {
@@ -40,8 +40,6 @@ interface Props {
   view: AgoraView;
   onSwitchView: () => void;
   performanceMode?: boolean;
-  /** Live camera feeds routed onto the stage holo screens. */
-  screenFeeds?: ScreenFeeds;
   /** Speaker queue (front first, mic holder excluded) for the center aisle. */
   speakerQueue?: SeatedPerson[];
   /** Current mic holder — stands at the medallion mic. */
@@ -121,26 +119,15 @@ export default function Amphitheater({
   viewerCount,
   view,
   onSwitchView,
-  screenFeeds,
   speakerQueue,
   micHolder,
   micLive,
   performanceMode = false,
 }: Props) {
   const inSpeaker = view === "speaker";
-
-  /* Screen holders: the lead PRO/CON speakers own the stage screens, so a
-     camera-off debater shows their profile card instead of the placeholder. */
-  /* Identity only. The panels show who holds each screen; they carry no
-     speaking state since the halo was removed. */
-  const occupants: ScreenOccupants = {
-    pro: proSpeakers[0]
-      ? { id: proSpeakers[0].id, name: proSpeakers[0].name, avatarUrl: proSpeakers[0].avatarUrl }
-      : null,
-    con: conSpeakers[0]
-      ? { id: conSpeakers[0].id, name: conSpeakers[0].name, avatarUrl: conSpeakers[0].avatarUrl }
-      : null,
-  };
+  /* The debaters' video moved out of the scene entirely: AgoraStage (DOM)
+     draws the two speaker boxes over this canvas, where the panels stood.
+     The scene keeps the environment — bowl, sky, stage, queue, crowd. */
   return (
     <div className="ag-theater">
       <AgoraScene3D
@@ -148,8 +135,6 @@ export default function Amphitheater({
         audience={audience}
         viewerCount={viewerCount}
         view={view}
-        feeds={screenFeeds}
-        occupants={occupants}
         performanceMode={performanceMode}
         queue={speakerQueue}
         micHolder={micHolder}

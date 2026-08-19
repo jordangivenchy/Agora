@@ -14,7 +14,6 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import type { Track } from "livekit-client";
 import {
   MIC_POS,
   PORTAL_Z,
@@ -22,38 +21,12 @@ import {
   renderedCount,
   slotPosition,
 } from "./queueLayout";
-import { GLASS, GROUND, PLATFORM, SCREEN, SKY, STAGE_LIGHT, STARS } from "./sceneTokens";
+import { GROUND, SCREEN, SKY, STAGE_LIGHT, STARS, STONE } from "./sceneTokens";
 
 export interface SeatedPerson {
   id: string;
   username: string;
   avatarUrl: string | null;
-}
-
-/** A live camera routed onto one of the stage holo screens. */
-export interface ScreenFeed {
-  /** Stable identity+track key — feed application is keyed on this. */
-  key: string;
-  track: Track;
-}
-
-export interface ScreenFeeds {
-  pro?: ScreenFeed | null;
-  con?: ScreenFeed | null;
-}
-
-/** Whoever holds a stage screen when their camera is off — the screen shows
-    their profile photo (or an initial glyph) instead of the placeholder. */
-export interface ScreenOccupant {
-  id: string;
-  /** Display name — this is what the holo nameplate renders. */
-  name: string;
-  avatarUrl: string | null;
-}
-
-export interface ScreenOccupants {
-  pro?: ScreenOccupant | null;
-  con?: ScreenOccupant | null;
 }
 
 export type AgoraView = "audience" | "speaker";
@@ -63,10 +36,6 @@ interface Props {
   audience: SeatedPerson[];
   viewerCount: number;
   view: AgoraView;
-  /** Live camera feeds for the stage screens (pro = frame-left, con = right). */
-  feeds?: ScreenFeeds;
-  /** Screen holders without live video — profile card instead of placeholder. */
-  occupants?: ScreenOccupants;
   /** Egress compositor (software WebGL, no GPU): start at the quality
       floor — 1x buffer, no shadows, no MSAA — instead of discovering it
       through the adaptive step-down. */
@@ -272,6 +241,401 @@ function buildSideStairs(scene: THREE.Scene) {
   }
 }
 
+/* Marble Agora: the discussion floor as one flat tablet of pale marble.
+
+   The photoreal weight is carried by two textures baked here at build
+   time from one seeded slab layout:
+
+   - The ALBEDO holds everything a camera would see in the reference:
+     concentric rings of individually-toned trapezoidal slabs, joint
+     lines, veining, speckle grain — and then the light itself, a warm
+     center bloom multiplied over a rim vignette. Baking the light into
+     the stone is the trick: that soft lit-from-within look is bounced
+     light, and no count of real-time point lights produces it.
+   - The BUMP map redraws the same joints and grain as height, so the
+     slabs catch the real lanterns at grazing angles.
+
+   The same albedo feeds the material's emissive channel at low
+   intensity (STONE.emissive), which is what keeps the tablet reading
+   under a night sky — fake GI, tunable with one number.
+
+   Geometry stays almost nothing: a stepped pair of cylinders and a
+   textured cap. The old medallion stack is gone and MIC_POS.y came down
+   to the flat top with it. Queue members still stand at slot y = 0
+   (tested math, untouched); the 0.17 surface under a distant figure is
+   the acceptable cost of a floor that looks like the reference. */
+function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
+  const cx = 0;
+  const cz = -1.6;
+  const rng = mulberry32(hashString("agora-marble"));
+
+  /* ── One slab layout, drawn twice ─────────────────────────────── */
+  const S = 2048;
+  type Slab = { a0: number; a1: number; r0: number; r1: number; tone: number };
+  const slabs: Slab[] = [];
+  const ringEdges = [0.0, 0.13, 0.3, 0.47, 0.64, 0.815, 1.0];
+  const ringCounts = [8, 10, 14, 18, 24, 30];
+  for (let ring = 0; ring < ringCounts.length; ring++) {
+    const n = ringCounts[ring];
+    const stagger = ring * 0.35 + rng() * 0.4;
+    /* Irregular widths: walk the circle handing each slab 0.72–1.28 of
+       the even share, then scale the walk to close exactly. Hand-cut
+       stone is never metronomic, and the reference's rings visibly
+       aren't — even division is one of the tells of a cheap render. */
+    const shares: number[] = [];
+    let total = 0;
+    for (let k = 0; k < n; k++) {
+      const w = 0.72 + rng() * 0.56;
+      shares.push(w);
+      total += w;
+    }
+    let acc = stagger * ((Math.PI * 2) / n);
+    for (let k = 0; k < n; k++) {
+      const w = (shares[k] / total) * Math.PI * 2;
+      slabs.push({
+        a0: acc,
+        a1: acc + w,
+        r0: ringEdges[ring],
+        r1: ringEdges[ring + 1],
+        tone: (rng() - 0.5) * 16, // per-slab lightness jitter, ±8
+      });
+      acc += w;
+    }
+  }
+
+  const slabPath = (ctx: CanvasRenderingContext2D, s: Slab, R: number, c: number) => {
+    ctx.beginPath();
+    ctx.arc(c, c, Math.max(s.r1 * R, 1), s.a0, s.a1);
+    if (s.r0 > 0.001) ctx.arc(c, c, s.r0 * R, s.a1, s.a0, true);
+    else ctx.lineTo(c, c);
+    ctx.closePath();
+  };
+
+  const albedo = document.createElement("canvas");
+  albedo.width = albedo.height = S;
+  {
+    const ctx = albedo.getContext("2d")!;
+    const c = S / 2;
+    const R = c * 0.985;
+    ctx.fillStyle = "#151310";
+    ctx.fillRect(0, 0, S, S);
+
+    for (const s of slabs) {
+      // Marble body: pale warm gray, per-slab tone, faint internal drift.
+      const l = 63 + s.tone;
+      slabPath(ctx, s, R, c);
+      const mid = (s.a0 + s.a1) / 2;
+      const mr = ((s.r0 + s.r1) / 2) * R;
+      const gx = c + mr * Math.cos(mid);
+      const gy = c + mr * Math.sin(mid);
+      const g = ctx.createLinearGradient(
+        gx - 90, gy - 90, gx + 90, gy + 90
+      );
+      g.addColorStop(0, `hsl(42, 11%, ${l + 2.5}%)`);
+      g.addColorStop(1, `hsl(40, 9%, ${l - 2.5}%)`);
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      // Veining, clipped to the slab: a few soft strokes both lighter
+      // and darker than the body, like real calcite drift.
+      ctx.save();
+      slabPath(ctx, s, R, c);
+      ctx.clip();
+      const veins = 2 + Math.floor(rng() * 3);
+      for (let v = 0; v < veins; v++) {
+        const vx = gx + (rng() - 0.5) * 180;
+        const vy = gy + (rng() - 0.5) * 180;
+        ctx.beginPath();
+        ctx.moveTo(vx, vy);
+        ctx.bezierCurveTo(
+          vx + (rng() - 0.5) * 220, vy + (rng() - 0.5) * 220,
+          vx + (rng() - 0.5) * 220, vy + (rng() - 0.5) * 220,
+          vx + (rng() - 0.5) * 320, vy + (rng() - 0.5) * 320
+        );
+        ctx.lineWidth = 1 + rng() * 2.2;
+        ctx.strokeStyle = rng() > 0.45
+          ? `rgba(240, 236, 226, ${0.05 + rng() * 0.07})`
+          : `rgba(88, 80, 66, ${0.05 + rng() * 0.06})`;
+        ctx.stroke();
+      }
+      // Weathering: one or two soft tonal blotches per slab — the
+      // per-slab staining that makes the reference read as real stone
+      // rather than a fill colour.
+      ctx.save();
+      slabPath(ctx, s, R, c);
+      ctx.clip();
+      const blotches = 1 + Math.floor(rng() * 2);
+      for (let b = 0; b < blotches; b++) {
+        const bx = gx + (rng() - 0.5) * 160;
+        const by = gy + (rng() - 0.5) * 160;
+        const br = 30 + rng() * 90;
+        const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        const dark = rng() > 0.35;
+        const alpha = 0.04 + rng() * 0.08;
+        bg.addColorStop(0, dark ? `rgba(74, 66, 52, ${alpha})` : `rgba(246, 240, 228, ${alpha})`);
+        bg.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(bx - br, by - br, br * 2, br * 2);
+      }
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // Joints, drawn after every body so they stay continuous.
+    for (const s of slabs) {
+      slabPath(ctx, s, R, c);
+      ctx.lineWidth = 9;
+      ctx.strokeStyle = "rgba(30, 27, 21, 0.18)"; // soft shoulder
+      ctx.stroke();
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "rgba(32, 28, 22, 0.9)"; // the joint itself
+      ctx.stroke();
+      // Chamfer catch-light along each slab's edge — stone edges are
+      // never razor-cut, and the bright line is what sells the bevel.
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = "rgba(255, 249, 238, 0.09)";
+      ctx.stroke();
+    }
+
+    // Grain: one-time speckle pass over the whole tablet.
+    for (let n = 0; n < 7000; n++) {
+      const a = rng() * Math.PI * 2;
+      const r = Math.sqrt(rng()) * R;
+      ctx.fillStyle = rng() > 0.5
+        ? `rgba(250, 246, 236, ${0.02 + rng() * 0.03})`
+        : `rgba(52, 47, 38, ${0.02 + rng() * 0.03})`;
+      ctx.fillRect(c + r * Math.cos(a), c + r * Math.sin(a), 2, 2);
+    }
+
+    // ── The baked light. Vignette first (multiply), then the warm
+    //    center bloom (screen), then a whisper of edge light at the rim.
+    ctx.globalCompositeOperation = "multiply";
+    const vig = ctx.createRadialGradient(c, c, R * 0.1, c, c, R);
+    /* Gentler than the first cut: the reference's rim is still clearly
+       pale marble — crushing the edge to near-black is what made the
+       whole tablet read as brown mush from the low camera. */
+    vig.addColorStop(0, "rgb(255, 255, 255)");
+    vig.addColorStop(0.62, "rgb(212, 206, 194)");
+    vig.addColorStop(1, "rgb(148, 141, 127)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, S, S);
+
+    ctx.globalCompositeOperation = "screen";
+    /* The bloom is the hero. Tight, hot, decisively warm — in the
+       reference it approaches white at dead center. */
+    const warm = ctx.createRadialGradient(c, c, 0, c, c, R * 0.55);
+    warm.addColorStop(0, "rgba(255, 226, 178, 0.85)");
+    warm.addColorStop(0.28, "rgba(255, 196, 128, 0.34)");
+    warm.addColorStop(1, "rgba(255, 178, 106, 0)");
+    ctx.fillStyle = warm;
+    ctx.fillRect(0, 0, S, S);
+
+    ctx.beginPath();
+    ctx.arc(c, c, R - 5, 0, Math.PI * 2);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(255, 214, 164, 0.22)";
+    ctx.stroke();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  const bump = document.createElement("canvas");
+  bump.width = bump.height = 1024;
+  {
+    const ctx = bump.getContext("2d")!;
+    const c = 512;
+    const R = c * 0.985;
+    ctx.fillStyle = "#808080";
+    ctx.fillRect(0, 0, 1024, 1024);
+    for (const s of slabs) {
+      slabPath(ctx, s, R, c);
+      ctx.fillStyle = `hsl(0, 0%, ${50 + s.tone * 0.5}%)`;
+      ctx.fill();
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "#2f2f2f"; // grooves read as depth
+      ctx.stroke();
+    }
+    for (let n = 0; n < 3500; n++) {
+      const a = rng() * Math.PI * 2;
+      const r = Math.sqrt(rng()) * R;
+      ctx.fillStyle = rng() > 0.5 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
+      ctx.fillRect(c + r * Math.cos(a), c + r * Math.sin(a), 2, 2);
+    }
+  }
+
+  /* Roughness: slabs polished-ish (mid-dark), joints rough (bright), a
+     little per-slab drift. This is what lets the lanterns lay sheen
+     streaks across the marble at grazing angles — the reference's floor
+     is clearly reflective, and a flat roughness never was. */
+  const rough = document.createElement("canvas");
+  rough.width = rough.height = 1024;
+  {
+    const ctx = rough.getContext("2d")!;
+    const c = 512;
+    const R = c * 0.985;
+    ctx.fillStyle = "#e6e6e6";
+    ctx.fillRect(0, 0, 1024, 1024);
+    for (const s of slabs) {
+      slabPath(ctx, s, R, c);
+      ctx.fillStyle = `hsl(0, 0%, ${44 + s.tone * 0.9 + rng() * 6}%)`;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#dadada"; // joints scatter light
+      ctx.stroke();
+    }
+  }
+
+  const albedoTex = new THREE.CanvasTexture(albedo);
+  albedoTex.colorSpace = THREE.SRGBColorSpace;
+  albedoTex.anisotropy = 16; // grazing angles are this floor's whole life
+  const bumpTex = new THREE.CanvasTexture(bump);
+  bumpTex.anisotropy = 8;
+  const roughTex = new THREE.CanvasTexture(rough);
+  roughTex.anisotropy = 8;
+
+  /* ── Geometry: step ring, tablet body, textured cap ────────────── */
+  const step = new THREE.Mesh(
+    new THREE.CylinderGeometry(STONE.stepRadius, STONE.stepRadius, STONE.stepRise, 96),
+    new THREE.MeshStandardMaterial({ color: STONE.stepColor, roughness: 0.9 })
+  );
+  step.position.set(cx, STONE.stepRise / 2, cz);
+  step.receiveShadow = true;
+  scene.add(step);
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(STONE.radius, STONE.radius, STONE.topY, 96, 1, true),
+    new THREE.MeshStandardMaterial({ color: STONE.sideColor, roughness: 0.9 })
+  );
+  body.position.set(cx, STONE.topY / 2, cz);
+  scene.add(body);
+
+  const cap = new THREE.Mesh(
+    new THREE.CircleGeometry(STONE.radius, 96),
+    new THREE.MeshStandardMaterial({
+      map: albedoTex,
+      bumpMap: bumpTex,
+      bumpScale: 0.014,
+      roughness: 1, // the map carries the real values
+      roughnessMap: roughTex,
+      emissive: 0xffffff,
+      emissiveMap: albedoTex,
+      emissiveIntensity: STONE.emissive,
+    })
+  );
+  cap.rotation.x = -Math.PI / 2;
+  cap.position.set(cx, STONE.topY + 0.002, cz);
+  cap.receiveShadow = true;
+  scene.add(cap);
+
+  /* ── Lanterns: the full ring, as the reference draws it — small
+     fixtures every ~36° with the arc over the queue corridor left
+     dark so the processional path stays legible. ── */
+  const lights: THREE.PointLight[] = [];
+  const lanternAngles = [8, 44, 80, 116, 152, 188, 224, 332];
+  const postGeo = new THREE.BoxGeometry(0.09, 0.52, 0.09);
+  const capGeo = new THREE.BoxGeometry(0.2, 0.06, 0.2);
+  const flameGeo = new THREE.BoxGeometry(0.12, 0.15, 0.12);
+  const postMat = new THREE.MeshStandardMaterial({ color: STONE.lanternPost, roughness: 1 });
+  const flameMat = new THREE.MeshBasicMaterial({ color: STONE.lanternFlame });
+  /* The halo around a lantern at night is atmosphere scattering — the
+     reference has it on every flame, and its absence is one more tell.
+     One shared additive sprite texture, one sprite per lantern. */
+  const haloTex = (() => {
+    const cnv = document.createElement("canvas");
+    cnv.width = cnv.height = 128;
+    const hc = cnv.getContext("2d")!;
+    const g = hc.createRadialGradient(64, 64, 2, 64, 64, 64);
+    g.addColorStop(0, "rgba(255, 205, 140, 0.85)");
+    g.addColorStop(0.25, "rgba(255, 180, 110, 0.28)");
+    g.addColorStop(1, "rgba(255, 170, 100, 0)");
+    hc.fillStyle = g;
+    hc.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(cnv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const haloMat = new THREE.SpriteMaterial({
+    map: haloTex,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+  });
+  for (const deg of lanternAngles) {
+    const a = deg * DEG;
+    const r = STONE.stepRadius + 0.75;
+    const x = cx + r * Math.cos(a);
+    const z = cz + r * Math.sin(a);
+    const post = new THREE.Mesh(postGeo, postMat);
+    post.position.set(x, 0.26, z);
+    scene.add(post);
+    const flame = new THREE.Mesh(flameGeo, flameMat);
+    flame.position.set(x, 0.53, z);
+    scene.add(flame);
+    const capMesh = new THREE.Mesh(capGeo, postMat);
+    capMesh.position.set(x, 0.63, z);
+    scene.add(capMesh);
+    const halo = new THREE.Sprite(haloMat);
+    halo.scale.setScalar(1.5);
+    halo.position.set(x, 0.53, z);
+    scene.add(halo);
+    /* Eight smaller lights instead of six: each dimmer and shorter-reach
+       so the ring reads as beads of warmth, not a floodlit perimeter. */
+    const light = new THREE.PointLight(STONE.lanternLight, 4.2, 6, 2);
+    light.position.set(x, 0.75, z);
+    light.userData = { base: 4.2, flick: 0.4 };
+    scene.add(light);
+    lights.push(light);
+  }
+
+  /* ── Fringe: grass tufts and scattered rocks, one draw each ────── */
+  {
+    const tuftGeo = new THREE.ConeGeometry(0.07, 0.26, 5);
+    const tufts = new THREE.InstancedMesh(
+      tuftGeo,
+      new THREE.MeshStandardMaterial({ color: STONE.grass, roughness: 1, flatShading: true }),
+      130
+    );
+    const dummy = new THREE.Object3D();
+    let n = 0;
+    while (n < 130) {
+      const a = rng() * Math.PI * 2;
+      const r = STONE.stepRadius + 0.2 + rng() * 1.8;
+      const x = cx + r * Math.cos(a);
+      const z = cz + r * Math.sin(a);
+      if (Math.abs(x) < 1.0 && z < -3.2) continue; // the queue corridor
+      dummy.position.set(x, 0.1, z);
+      dummy.rotation.set((rng() - 0.5) * 0.35, rng() * Math.PI, (rng() - 0.5) * 0.35);
+      dummy.scale.setScalar(0.7 + rng() * 0.8);
+      dummy.updateMatrix();
+      tufts.setMatrixAt(n++, dummy.matrix);
+    }
+    scene.add(tufts);
+
+    const rockGeo = new THREE.DodecahedronGeometry(0.14, 0);
+    const rocks = new THREE.InstancedMesh(
+      rockGeo,
+      new THREE.MeshStandardMaterial({ color: STONE.rockDark, roughness: 1, flatShading: true }),
+      36
+    );
+    let m = 0;
+    while (m < 36) {
+      const a = rng() * Math.PI * 2;
+      const r = STONE.stepRadius + 0.35 + rng() * 1.6;
+      const x = cx + r * Math.cos(a);
+      const z = cz + r * Math.sin(a);
+      if (Math.abs(x) < 1.0 && z < -3.2) continue;
+      dummy.position.set(x, 0.05, z);
+      dummy.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
+      dummy.scale.set(0.5 + rng(), 0.35 + rng() * 0.5, 0.5 + rng());
+      dummy.updateMatrix();
+      rocks.setMatrixAt(m++, dummy.matrix);
+    }
+    rocks.receiveShadow = true;
+    scene.add(rocks);
+  }
+
+  return lights;
+}
+
 function buildOrchestra(scene: THREE.Scene) {
   // Semicircular floor between the stage and the first row.
   const geo = new THREE.CircleGeometry(INNER_R, 48, 0, Math.PI);
@@ -287,132 +651,6 @@ function buildOrchestra(scene: THREE.Scene) {
   floor.position.y = 0.02;
   floor.receiveShadow = true;
   scene.add(floor);
-}
-
-function buildPlaza(scene: THREE.Scene) {
-  /* The stone heart of the orchestra, like the reference: a raised
-     circular medallion ringed by radial paver blocks. Pavers get a touch
-     of seeded jitter in height and rotation so the paving reads
-     hand-laid rather than machined. */
-  const rng = mulberry32(hashString("agora-plaza"));
-  /* Tangent to the stage platform's front edge (z ≈ 1.65) so the
-     medallion reads as part of the stage structure, like the reference. */
-  const center = new THREE.Vector3(0, 0, -1.6);
-
-  // Raised medallion: two stacked discs, lighter stone on top.
-  /* Disc heights are load-bearing: MIC_POS.y (0.45) and the queue's step
-     up from the path both anchor to this stack, so the geometry stays put
-     and only the stone tone comes down to match the new platform. */
-  const baseDisc = new THREE.Mesh(
-    new THREE.CylinderGeometry(3.1, 3.25, 0.22, 40),
-    new THREE.MeshStandardMaterial({ color: PLATFORM.stoneFace, roughness: 0.95 })
-  );
-  baseDisc.position.set(center.x, 0.11, center.z);
-  baseDisc.receiveShadow = true;
-  scene.add(baseDisc);
-  const topDisc = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.35, 2.35, 0.14, 36),
-    new THREE.MeshStandardMaterial({ color: PLATFORM.stoneEdge, roughness: 0.95 })
-  );
-  topDisc.position.set(center.x, 0.29, center.z);
-  topDisc.receiveShadow = true;
-  scene.add(topDisc);
-  // Dark inset at the very center — where the carved emblem will live.
-  const inset = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.15, 1.15, 0.05, 28),
-    new THREE.MeshStandardMaterial({ color: 0x413b31, roughness: 1 })
-  );
-  inset.position.set(center.x, 0.38, center.z);
-  scene.add(inset);
-
-  // Radial paver rings around the medallion.
-  const paverGeo = new THREE.BoxGeometry(1, 0.12, 0.72);
-  /* Muted to near the platform tone. The paving should be legible up
-     close in audience view and effectively invisible from the speaker
-     vantage, rather than a bright ring around the medallion. */
-  const shades = [0x4c473b, 0x453f35, 0x524c40];
-  const meshes = shades.map(
-    (c) =>
-      new THREE.InstancedMesh(
-        paverGeo,
-        new THREE.MeshStandardMaterial({ color: c, flatShading: true }),
-        160
-      )
-  );
-  const counts = shades.map(() => 0);
-  const dummy = new THREE.Object3D();
-  const RINGS = 2;
-  for (let ring = 0; ring < RINGS; ring++) {
-    const r = 3.9 + ring * 0.85;
-    const count = Math.floor((2 * Math.PI * r) / 1.12);
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + ring * 0.13;
-      const x = center.x + r * Math.cos(a);
-      const z = center.z - r * Math.sin(a);
-      // Keep pavers on the orchestra floor (inside the first terrace,
-      // not spilling onto the stage side).
-      if (Math.hypot(x, z) > INNER_R - 0.6 || z > 1.4) continue;
-      // Part around the speaker-queue path corridor so the stone band
-      // reaches the medallion without clipping through pavers.
-      if (Math.abs(x) < 0.85 && z < -3.2) continue;
-      const idx = Math.floor(rng() * shades.length);
-      dummy.position.set(x, 0.06 + rng() * 0.025, z);
-      dummy.rotation.set(0, a + Math.PI / 2 + (rng() - 0.5) * 0.06, 0);
-      dummy.scale.setScalar(0.94 + rng() * 0.12);
-      dummy.updateMatrix();
-      meshes[idx].setMatrixAt(counts[idx]++, dummy.matrix);
-    }
-  }
-  meshes.forEach((m, i) => {
-    m.count = counts[i];
-    m.receiveShadow = true;
-    scene.add(m);
-  });
-}
-
-/* The discussion platform: an architectural hint where a 17×1.1×7.5 stone
-   block used to be. Two shallow elliptical steps totalling ~0.31 units of
-   rise — under a third of the old platform — squashed along z so they read
-   as a low disc in perspective and duck behind the control rail rather
-   than competing with the screens (brief §4, §5). */
-function buildStage(scene: THREE.Scene) {
-  const edge = new THREE.MeshStandardMaterial({ color: PLATFORM.stoneEdge, roughness: 0.95 });
-  const face = new THREE.MeshStandardMaterial({ color: PLATFORM.stoneFace, roughness: 0.95 });
-
-  const step = (radius: number, rise: number, y: number, mat: THREE.Material) => {
-    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, rise, 64), mat);
-    mesh.position.set(0, y + rise / 2, PLATFORM.z);
-    mesh.scale.z = PLATFORM.squash;
-    mesh.receiveShadow = true;
-    scene.add(mesh);
-  };
-
-  step(PLATFORM.outerRadius, PLATFORM.outerRise, 0, face);
-  step(PLATFORM.innerRadius, PLATFORM.innerRise, PLATFORM.outerRise, edge);
-
-  /* Faint radial joints scribed across the upper step — segmentation you
-     notice only after the conversation. One instanced draw call. */
-  const jointGeo = new THREE.BoxGeometry(0.035, 0.012, PLATFORM.innerRadius * 0.94);
-  const joints = new THREE.InstancedMesh(
-    jointGeo,
-    new THREE.MeshStandardMaterial({ color: PLATFORM.jointColor, roughness: 1 }),
-    PLATFORM.jointCount
-  );
-  const dummy = new THREE.Object3D();
-  const topY = PLATFORM.outerRise + PLATFORM.innerRise;
-  for (let i = 0; i < PLATFORM.jointCount; i++) {
-    const a = (i / PLATFORM.jointCount) * Math.PI * 2;
-    dummy.position.set(
-      (Math.cos(a) * PLATFORM.innerRadius) / 2,
-      topY + 0.002,
-      PLATFORM.z + (Math.sin(a) * PLATFORM.innerRadius * PLATFORM.squash) / 2
-    );
-    dummy.rotation.set(0, -a, 0);
-    dummy.scale.set(1, 1, PLATFORM.squash);
-    dummy.updateMatrix();
-    joints.setMatrixAt(i, dummy.matrix);
-  }
-  scene.add(joints);
 }
 
 function buildChairsAndCrowd(
@@ -457,8 +695,13 @@ function buildChairsAndCrowd(
 
     const occupied = occupancy.has(i);
     const proSide = seat.side === "pro";
+    /* Empty seats sit far darker than they used to (0x2f2456 / 0x1d2f56):
+       with nobody in them the bowl read as a bright blue band across the
+       speaker vantage, fighting the starfield the camera now tilts up
+       into. Occupied seats keep their vivid side colours — people light
+       a theater, furniture doesn't. */
     color.setHex(
-      occupied ? (proSide ? 0x6d4ab8 : 0x3a6cc2) : proSide ? 0x2f2456 : 0x1d2f56
+      occupied ? (proSide ? 0x6d4ab8 : 0x3a6cc2) : proSide ? 0x1c1733 : 0x121b30
     );
     cushions.setColorAt(i, color);
     backs.setColorAt(i, color.clone().multiplyScalar(0.8));
@@ -595,300 +838,13 @@ function buildStageGlow(scene: THREE.Scene): THREE.PointLight[] {
   return [light];
 }
 
-/* The participant screens: translucent glass panels floating over the
-   discussion area. These are WebGL quads, not DOM — CSS backdrop-filter
-   can't reach them — so the glass is built from a frosted transmission
-   backing (which genuinely refracts the starfield behind it), a thin
-   light border, a top highlight, and a restrained per-side state colour.
-   Hidden in audience view; the render loop shows them for the speaker
-   vantage or whenever a live camera is on them. */
-interface HoloSlot {
-  side: "pro" | "con";
-  panel: THREE.Mesh;
-  baseMat: THREE.MeshBasicMaterial;
-  /** Name plate in the panel's bottom-left corner. */
-  nameMesh: THREE.Mesh;
-  nameMat: THREE.MeshBasicMaterial;
-  /** Rounded-corner mask, shared by the base material and occupant cards. */
-  cornerMask: THREE.CanvasTexture;
-}
-
-/* Rounded-rectangle mask used as an alphaMap on the content plane. Keeps
-   PlaneGeometry (and therefore the UVs the video cover-crop depends on)
-   while cutting the corners — a rounded ShapeGeometry would renumber the
-   UVs and break the crop maths. */
-function roundedMask(w: number, h: number, radius: number): THREE.CanvasTexture {
-  const px = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = px;
-  canvas.height = Math.round((px * h) / w);
-  const ctx = canvas.getContext("2d")!;
-  const r = (radius / w) * px;
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.roundRect(0, 0, canvas.width, canvas.height, r);
-  ctx.fill();
-  return new THREE.CanvasTexture(canvas);
-}
-
-/* A true rounded-rect outline: stroked, transparent inside. The border
-   used to be a *filled* rounded plane at low opacity, which laid a solid
-   translucent sheet over the whole panel instead of drawing an edge —
-   that was most of the washed-out "bleeding" around the boxes. */
-function roundedBorder(
-  w: number,
-  h: number,
-  radius: number,
-  thickness: number
-): THREE.CanvasTexture {
-  const px = 1024; // high enough that a hairline stroke stays crisp
-  const canvas = document.createElement("canvas");
-  canvas.width = px;
-  canvas.height = Math.round((px * h) / w);
-  const ctx = canvas.getContext("2d")!;
-  const lw = Math.max(1.5, (thickness / w) * px);
-  ctx.lineWidth = lw;
-  ctx.strokeStyle = "#fff";
-  ctx.beginPath();
-  /* Inset by half the stroke so the line lands fully inside the bitmap —
-     stroking on the exact edge clips the outer half and reads as an
-     uneven, thicker-on-some-sides border. */
-  ctx.roundRect(
-    lw / 2,
-    lw / 2,
-    canvas.width - lw,
-    canvas.height - lw,
-    (radius / w) * px
-  );
-  ctx.stroke();
-  return new THREE.CanvasTexture(canvas);
-}
-
-/* Rounded-rect outline as real geometry, for the glass backing. The
-   transmission pass doesn't reliably honour an alphaMap, so the glass
-   silhouette has to come from the mesh itself or its corners stay
-   square while everything in front of it is round. */
-function roundedShape(w: number, h: number, radius: number): THREE.Shape {
-  const x = -w / 2;
-  const y = -h / 2;
-  const r = Math.min(radius, w / 2, h / 2);
-  const shape = new THREE.Shape();
-  shape.moveTo(x + r, y);
-  shape.lineTo(x + w - r, y);
-  shape.absarc(x + w - r, y + r, r, -Math.PI / 2, 0, false);
-  shape.lineTo(x + w, y + h - r);
-  shape.absarc(x + w - r, y + h - r, r, 0, Math.PI / 2, false);
-  shape.lineTo(x + r, y + h);
-  shape.absarc(x + r, y + h - r, r, Math.PI / 2, Math.PI, false);
-  shape.lineTo(x, y + r);
-  shape.absarc(x + r, y + r, r, Math.PI, 1.5 * Math.PI, false);
-  return shape;
-}
-
-/* The name plate, drawn bottom-left over the video like a broadcast
-   lower-third. Lives on its own plane so it survives the material swap
-   between live video, profile card and empty seat. */
-function drawNamePlate(name: string): { tex: THREE.CanvasTexture; aspect: number } {
-  const W = 512;
-  const H = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
-  ctx.font = "700 58px 'Space Grotesk', sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  /* A soft shadow rather than a plate: the name has to stay legible over
-     a bright camera feed without boxing it in. */
-  ctx.shadowColor = "rgba(0,0,0,0.85)";
-  ctx.shadowBlur = 14;
-  ctx.shadowOffsetY = 2;
-  ctx.fillStyle = "rgba(255,255,255,0.96)";
-  ctx.fillText(name, 12, H / 2);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return { tex, aspect: W / H };
-}
-
-/* Plane aspect used for cover-cropping live video onto the screens.
-   Scaled down 10% from the original 15.2×8.8 to open negative space
-   around the panels (brief §1, §8) — both axes by the same factor, so
-   HOLO_W / HOLO_H is unchanged and the cover-crop maths still holds. */
-const HOLO_W = 13.68;
-const HOLO_H = 7.92;
-
-function buildHoloScreens(scene: THREE.Scene): {
-  group: THREE.Group;
-  glassMats: THREE.MeshPhysicalMaterial[];
-  slots: HoloSlot[];
-} {
-  const group = new THREE.Group();
-  const glassMats: THREE.MeshPhysicalMaterial[] = [];
-  const slots: HoloSlot[] = [];
-  const W = HOLO_W;
-  const H = HOLO_H;
-  for (const sign of [-1, 1]) {
-    const screen = new THREE.Group();
-
-    /* Glass backing, a hair behind the content plane. Transmission is what
-       frosts the stars showing through; stepDown() drops it to plain
-       translucency on GPUs that can't hold frame rate. */
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: GLASS.tint,
-      transparent: true,
-      opacity: GLASS.opacity,
-      transmission: GLASS.transmission,
-      roughness: GLASS.roughness,
-      thickness: GLASS.thickness,
-      ior: GLASS.ior,
-      metalness: 0,
-      side: THREE.DoubleSide,
-    });
-    glassMats.push(glassMat);
-    /* One silhouette, three layers, all sharing the same rounded outline:
-       glass bezel → content → border. The bezel is now a slim margin
-       rather than the old 0.75-per-side frame, which read as a second box
-       around the first. The glass uses real rounded geometry because the
-       transmission pass ignores an alphaMap and left square corners
-       behind the rounded content. */
-    const bezel = GLASS.bezel;
-    const bW = W + bezel * 2;
-    const bHt = H + bezel * 2;
-    const glassRadius = GLASS.cornerRadius + bezel;
-    const glass = new THREE.Mesh(
-      new THREE.ShapeGeometry(roundedShape(bW, bHt, glassRadius), 12),
-      glassMat
-    );
-    glass.position.z = -0.03;
-    screen.add(glass);
-
-    /* Content plane: video texture or profile card, corners cut by a
-       shared alpha mask — PlaneGeometry keeps the UVs the video
-       cover-crop depends on. Fully opaque when a camera is live so the
-       person always dominates the glass. */
-    const cornerMask = roundedMask(W, H, GLASS.cornerRadius);
-    const baseMat = new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      side: THREE.DoubleSide,
-      transparent: true,
-      alphaMap: cornerMask,
-    });
-    const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, H), baseMat);
-    screen.add(panel);
-
-    /* Thin light border tracing the bezel's edge. Stroked, not filled —
-       and drawn in front of both the glass and the content so it reads as
-       one continuous line rather than being half-covered by the panel. */
-    const borderTex = roundedBorder(bW, bHt, glassRadius, GLASS.borderWidth);
-    const border = new THREE.Mesh(
-      new THREE.PlaneGeometry(bW, bHt),
-      new THREE.MeshBasicMaterial({
-        color: GLASS.border,
-        map: borderTex,
-        alphaMap: borderTex,
-        transparent: true,
-        opacity: GLASS.borderOpacity,
-        depthWrite: false,
-      })
-    );
-    border.position.z = 0.02;
-    screen.add(border);
-
-    /* Name plate, anchored to the panel's bottom-left corner. Empty until
-       applyOccupants fills it in; sized from the text bitmap's aspect so
-       the glyphs never stretch. */
-    const nameMat = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-    });
-    const nameMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), nameMat);
-    nameMesh.position.z = 0.04;
-    nameMesh.visible = false;
-    screen.add(nameMesh);
-
-    /* Empty-seat state — same dark card background as an occupant's
-       profile card, with a dashed grey ring and "?" (matching the HTML
-       rail's "Open seat" chip). Drawn once into the base material's
-       texture; occupant cards and live video simply replace the material. */
-    {
-      const canvas = document.createElement("canvas");
-      canvas.width = 760;
-      canvas.height = 440;
-      const ctx = canvas.getContext("2d")!;
-      /* Translucent rather than solid #0a0c12: with no camera on the
-         screen the glass backing and a few stars read through it, which
-         is what ties the panel into the scene (brief §7E). */
-      ctx.fillStyle = "rgba(10,12,18,0.42)";
-      ctx.fillRect(0, 0, 760, 440);
-      const cx = 380;
-      const cy = 205;
-      const r = 104;
-      ctx.strokeStyle = "rgba(255,255,255,0.28)";
-      ctx.lineWidth = 5;
-      ctx.setLineDash([14, 12]);
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.font = "700 92px 'Space Grotesk', sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("?", cx, cy + 4);
-      const emptyTex = new THREE.CanvasTexture(canvas);
-      emptyTex.colorSpace = THREE.SRGBColorSpace;
-      baseMat.color.set(0xffffff);
-      baseMat.map = emptyTex;
-      baseMat.needsUpdate = true;
-    }
-
-    slots.push({
-      side: sign > 0 ? "pro" : "con",
-      panel,
-      baseMat,
-      nameMesh,
-      nameMat,
-      cornerMask,
-    });
-
-    /* Nudged up and forward now that the scaenae is gone: nothing behind
-       them but sky, and the extra height opens visible atmosphere between
-       the panels and the platform below (brief §8). */
-    screen.position.set(sign * SCREEN.spreadX, SCREEN.y, SCREEN.z);
-    // Face the audience (-z), turned a touch inward toward the center seat.
-    screen.rotation.y = Math.PI + sign * 0.06;
-    group.add(screen);
-  }
-  group.visible = false;
-  scene.add(group);
-  return { group, glassMats, slots };
-}
 
 /* ── Speaker queue architecture ─────────────────────────────────────
-   The mic totem on the medallion, slot plates down the center aisle,
-   and the tunnel portal at the orchestra rim. Static geometry — the
-   queue members themselves live in a separate group the queue effect
-   owns. */
-function buildMicTotem(scene: THREE.Scene): { mat: THREE.MeshStandardMaterial } {
-  const stand = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.05, 0.09, 1.35, 8),
-    new THREE.MeshStandardMaterial({ color: 0x3a3a42, flatShading: true })
-  );
-  stand.position.set(MIC_POS.x, MIC_POS.y + 0.68, MIC_POS.z);
-  scene.add(stand);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x24242c,
-    emissive: 0xffc46a,
-    emissiveIntensity: 0.35,
-    flatShading: true,
-  });
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat);
-  head.position.set(MIC_POS.x, MIC_POS.y + 1.42, MIC_POS.z);
-  scene.add(head);
-  return { mat };
-}
-
+   Slot plates down the center aisle and the tunnel portal at the
+   orchestra rim. Static geometry — the queue members themselves live in
+   a separate group the queue effect owns. (The mic totem that stood at
+   the medallion was removed by request: the clean marble center is the
+   stage, and the mic holder standing there is the marker.) */
 function buildQueuePath(scene: THREE.Scene) {
   /* Slot plates: small worn discs marking the visible line — proud enough
      of the path band to read as deliberate markers, not z-fighting slivers. */
@@ -996,15 +952,11 @@ function buildOrchestraGlow(scene: THREE.Scene): {
   light: THREE.PointLight;
   embers: THREE.Group;
 } {
+  /* The ember ring is retired — Classic Stone's standing lanterns carry
+     the rim light now, as real objects that hold up from every vantage.
+     The empty group keeps the render loop's audience-view toggle inert
+     without a special case. */
   const embers = new THREE.Group();
-  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffc46a });
-  const flameGeo = new THREE.SphereGeometry(0.14, 6, 5);
-  for (let a = 14; a <= 166; a += 12) {
-    const r = INNER_R - 0.7;
-    const flame = new THREE.Mesh(flameGeo, flameMat);
-    flame.position.set(r * Math.cos(a * DEG), 0.4, -r * Math.sin(a * DEG));
-    embers.add(flame);
-  }
   scene.add(embers);
   const glow = new THREE.PointLight(0xffa94d, 38, 26, 1.8);
   glow.position.set(0, 3, -3.5);
@@ -1044,8 +996,10 @@ function buildSky(scene: THREE.Scene): THREE.PointsMaterial[] {
         varying float vH;
         void main() {
           // Ease toward the horizon colour only near the skyline, so most
-          // of the dome stays genuinely dark.
-          float t = pow(clamp(1.0 - abs(vH), 0.0, 1.0), 3.0);
+          // of the dome stays genuinely dark. The exponent is the band's
+          // height: 3.0 let the blue arc climb behind the stage boxes,
+          // 5.0 still read as a dome; 8.0 is a whisper at the skyline.
+          float t = pow(clamp(1.0 - abs(vH), 0.0, 1.0), 8.0);
           gl_FragColor = vec4(mix(zenith, horizon, t), 1.0);
         }`,
     })
@@ -1086,22 +1040,11 @@ function buildSky(scene: THREE.Scene): THREE.PointsMaterial[] {
   return mats;
 }
 
-/* Bookkeeping for one live feed applied to a holo panel. */
-interface ActiveFeed {
-  key: string;
-  track: Track;
-  el: HTMLVideoElement;
-  tex: THREE.VideoTexture;
-  mat: THREE.MeshBasicMaterial;
-}
-
 export default function AgoraScene3D({
   roomId,
   audience,
   viewerCount,
   view,
-  feeds,
-  occupants,
   queue,
   micHolder,
   micLive,
@@ -1114,240 +1057,6 @@ export default function AgoraScene3D({
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
-
-  /* Holo-screen video feeds. The slots come from the world build; feeds
-     apply/teardown against them without ever touching the scene. The
-     render loop shows the screens whenever a feed is live (any view) —
-     otherwise only in speaker view, as before. */
-  const holoSlotsRef = useRef<HoloSlot[] | null>(null);
-  const activeFeedsRef = useRef<Map<string, ActiveFeed>>(new Map());
-  const feedsRef = useRef<ScreenFeeds | undefined>(feeds);
-  feedsRef.current = feeds;
-  const hasLiveFeedRef = useRef(false);
-
-  /* Profile cards for screen holders with no live camera. Drawn onto a
-     CanvasTexture: initial glyph immediately, photo swapped in when it
-     loads. Keyed on id+avatar so identical props are a no-op. */
-  const occupantsRef = useRef<ScreenOccupants | undefined>(occupants);
-  occupantsRef.current = occupants;
-  const activeCardsRef = useRef<
-    Map<string, { key: string; tex: THREE.CanvasTexture; mat: THREE.MeshBasicMaterial }>
-  >(new Map());
-  /** Last username rendered onto each side's plate, so redraws are keyed. */
-  const namePlateKeysRef = useRef<Map<string, string>>(new Map());
-
-  const clearCard = (slot: HoloSlot) => {
-    const card = activeCardsRef.current.get(slot.side);
-    if (!card) return;
-    card.tex.dispose();
-    card.mat.dispose();
-    if (slot.panel.material === card.mat) slot.panel.material = slot.baseMat;
-    activeCardsRef.current.delete(slot.side);
-  };
-
-  const drawCard = (
-    ctx: CanvasRenderingContext2D,
-    o: ScreenOccupant,
-    tint: string,
-    img?: HTMLImageElement
-  ) => {
-    const W = 760;
-    const H = 440;
-    ctx.clearRect(0, 0, W, H);
-    /* Camera-off state: translucent, so the glass and a hint of starfield
-       carry through behind the avatar (brief §7E). A live feed replaces
-       this material outright and stays fully opaque. */
-    ctx.fillStyle = "rgba(10,12,18,0.42)";
-    ctx.fillRect(0, 0, W, H);
-    /* Avatar sits on the panel's centre line now that the name has moved
-       to the bottom-left plate — it used to be pushed up to leave room for
-       a centred caption underneath. */
-    const cx = W / 2;
-    const cy = H / 2;
-    const r = 104;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.closePath();
-    if (img) {
-      ctx.clip();
-      const s = Math.max((r * 2) / img.width, (r * 2) / img.height);
-      ctx.drawImage(img, cx - (img.width * s) / 2, cy - (img.height * s) / 2, img.width * s, img.height * s);
-    } else {
-      ctx.fillStyle = tint;
-      ctx.fill();
-      ctx.fillStyle = "rgba(10,12,18,0.85)";
-      ctx.font = "700 96px 'Space Grotesk', sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText((o.name || "?").charAt(0).toUpperCase(), cx, cy + 6);
-    }
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
-    ctx.strokeStyle = tint;
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    /* No caption here — the username is drawn once onto the bottom-left
-       name plate, which stays put across live video, profile card and
-       empty seat rather than being redrawn into each state. */
-  };
-
-  /* Name plate: one bitmap per occupant, positioned bottom-left of the
-     panel and scaled from the text's own aspect so glyphs never stretch. */
-  const applyNamePlate = (slot: HoloSlot, name: string | null) => {
-    const prev = slot.nameMat.map;
-    if (!name) {
-      slot.nameMesh.visible = false;
-      slot.nameMat.opacity = 0;
-      if (prev) {
-        prev.dispose();
-        slot.nameMat.map = null;
-        slot.nameMat.needsUpdate = true;
-      }
-      return;
-    }
-    const { tex, aspect } = drawNamePlate(name);
-    const h = GLASS.nameHeight;
-    const w = h * aspect;
-    slot.nameMesh.geometry.dispose();
-    slot.nameMesh.geometry = new THREE.PlaneGeometry(w, h);
-    /* Anchored to the panel's bottom-left as the viewer sees it. The
-       screen group's 180° rotation turns the plane to face the camera but
-       does not mirror what's drawn on it, so local -x is the viewer's
-       left — verified on screen, not reasoned about. */
-    slot.nameMesh.position.x = -HOLO_W / 2 + GLASS.nameInset + w / 2;
-    slot.nameMesh.position.y = -HOLO_H / 2 + GLASS.nameInset + h / 2;
-    slot.nameMat.map = tex;
-    slot.nameMat.opacity = 1;
-    slot.nameMat.needsUpdate = true;
-    slot.nameMesh.visible = true;
-    if (prev) prev.dispose();
-  };
-
-  const applyOccupants = () => {
-    const slots = holoSlotsRef.current;
-    if (!slots) return;
-    for (const slot of slots) {
-      const wanted = occupantsRef.current?.[slot.side] ?? null;
-      const hasVideo = activeFeedsRef.current.has(slot.side);
-      const key = wanted ? `${wanted.id}:${wanted.avatarUrl ?? ""}` : "";
-      const card = activeCardsRef.current.get(slot.side);
-      /* The plate is keyed to the occupant, not to the panel's current
-         material, so it must be applied before any of the early exits
-         below — a live camera skips the card path entirely. */
-      if (namePlateKeysRef.current.get(slot.side) !== (wanted?.name ?? "")) {
-        applyNamePlate(slot, wanted?.name ?? null);
-        namePlateKeysRef.current.set(slot.side, wanted?.name ?? "");
-      }
-      if (card && (hasVideo || !wanted || card.key !== key)) clearCard(slot);
-      if (!wanted || hasVideo || activeCardsRef.current.has(slot.side)) continue;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = 760;
-      canvas.height = 440;
-      const ctx = canvas.getContext("2d")!;
-      const tint = slot.side === "pro" ? "#a78bfa" : "#7ab8ff";
-      drawCard(ctx, wanted, tint);
-
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.center.set(0.5, 0.5);
-      /* Same rounded-corner mask the base material uses, so swapping to a
-         profile card doesn't square the panel back off. */
-      const mat = new THREE.MeshBasicMaterial({
-        map: tex,
-        side: THREE.DoubleSide,
-        toneMapped: false,
-        transparent: true,
-        alphaMap: slot.cornerMask,
-      });
-      slot.panel.material = mat;
-      activeCardsRef.current.set(slot.side, { key, tex, mat });
-
-      if (wanted.avatarUrl) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          if (activeCardsRef.current.get(slot.side)?.key !== key) return;
-          drawCard(ctx, wanted, tint, img);
-          tex.needsUpdate = true;
-        };
-        img.src = wanted.avatarUrl;
-      }
-    }
-  };
-
-  const clearFeed = (slot: HoloSlot) => {
-    const active = activeFeedsRef.current.get(slot.side);
-    if (!active) return;
-    active.track?.detach?.(active.el);
-    active.el.remove();
-    active.tex.dispose();
-    active.mat.dispose();
-    slot.panel.material = slot.baseMat;
-    activeFeedsRef.current.delete(slot.side);
-  };
-
-  const applyFeeds = () => {
-    const slots = holoSlotsRef.current;
-    if (!slots) return;
-    for (const slot of slots) {
-      const wanted = feedsRef.current?.[slot.side] ?? null;
-      const active = activeFeedsRef.current.get(slot.side);
-      if (active && (!wanted || wanted.key !== active.key)) clearFeed(slot);
-      if (!wanted || activeFeedsRef.current.has(slot.side)) continue;
-
-      const el = wanted.track.attach() as HTMLVideoElement;
-      el.muted = true; // audio plays through the call layer
-      el.playsInline = true;
-      el.style.display = "none";
-      document.body.appendChild(el);
-
-      const tex = new THREE.VideoTexture(el);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.center.set(0.5, 0.5);
-      /* No X flip: canvas nameplate text proved the speaker-view camera
-         sees these panels unmirrored (a -1 flip rendered text backwards),
-         so video needs no correction either. */
-      /* Cover-crop once the video reports its size. */
-      const fit = () => {
-        const vw = el.videoWidth;
-        const vh = el.videoHeight;
-        if (!vw || !vh) return;
-        const videoAspect = vw / vh;
-        const planeAspect = HOLO_W / HOLO_H;
-        const sx = Math.sign(tex.repeat.x) || 1;
-        if (videoAspect > planeAspect) {
-          tex.repeat.set(sx * (planeAspect / videoAspect), 1);
-        } else {
-          tex.repeat.set(sx * 1, videoAspect / planeAspect);
-        }
-      };
-      el.addEventListener("loadedmetadata", fit);
-      fit();
-
-      /* transparent + alphaMap only rounds the corners — the video itself
-         stays fully opaque, so a live camera still dominates the glass. */
-      const mat = new THREE.MeshBasicMaterial({
-        map: tex,
-        side: THREE.DoubleSide,
-        toneMapped: false,
-        transparent: true,
-        alphaMap: slot.cornerMask,
-      });
-      slot.panel.material = mat;
-      activeFeedsRef.current.set(slot.side, { key: wanted.key, track: wanted.track, el, tex, mat });
-    }
-    hasLiveFeedRef.current = activeFeedsRef.current.size > 0;
-    applyOccupants(); // cards fill whichever screens video left alone
-  };
-  const applyFeedsRef = useRef(applyFeeds);
-  applyFeedsRef.current = applyFeeds;
-  const clearFeedRef = useRef(clearFeed);
-  clearFeedRef.current = clearFeed;
-  const clearCardRef = useRef(clearCard);
-  clearCardRef.current = clearCard;
 
   /* ── Speaker queue members ────────────────────────────────────────
      One Group per person, diffed by id: joining teleports you in (short
@@ -1369,10 +1078,15 @@ export default function AgoraScene3D({
     if (!group) return;
     const members = queueMembersRef.current;
 
-    // Desired members: mic holder + capped queue, each with a target spot.
+    // Desired members: the capped queue line, each with a target spot.
+    // The mic holder is deliberately NOT rendered at the medallion any
+    // more — from the low speaker camera the lone figure read as a stick
+    // with a ball planted mid-stage (user: "remove this stick thing").
+    // The DOM stage boxes already show who holds the floor; the marble
+    // stays clean. Their queue-line figure still leaves the line when
+    // promoted, so the aisle thins as it should.
     const wanted = new Map<string, { person: SeatedPerson; x: number; y: number; z: number }>();
     const holder = micHolderRef.current;
-    if (holder) wanted.set(holder.id, { person: holder, ...MIC_POS });
     const line = queueRef.current;
     for (let i = 0; i < renderedCount(line.length); i++) {
       const p = line[i];
@@ -1445,22 +1159,6 @@ export default function AgoraScene3D({
     applyQueueRef.current();
   }, [queueKey]);
 
-  /* Apply feed changes without touching the world. Keyed by content so a
-     re-render with identical feeds is a no-op. */
-  const feedKey = `${feeds?.pro?.key ?? ""}|${feeds?.con?.key ?? ""}`;
-  useEffect(() => {
-    applyFeedsRef.current();
-  }, [feedKey]);
-
-  /* Occupant cards re-apply on holder/avatar change (applyFeeds runs the
-     card pass too, so feed changes are already covered). */
-  const occKey = [occupants?.pro, occupants?.con]
-    .map((o) => (o ? `${o.id}:${o.avatarUrl ?? ""}:${o.name}` : ""))
-    .join("|");
-  useEffect(() => {
-    applyFeedsRef.current();
-  }, [occKey]);
-
   /* The long-lived world (renderer, scene, camera, render loop) is built once
      per room. The crowd is the only data-driven part, so it lives in its own
      group that a second effect rebuilds in place — data refetches (30s
@@ -1486,7 +1184,16 @@ export default function AgoraScene3D({
       powerPreference: "high-performance",
     });
     renderer.setPixelRatio(dpr);
-    renderer.shadowMap.enabled = !performanceMode;
+    /* ACES filmic tone mapping is most of the difference between "render"
+       and "photograph": without it every point light clips linearly to a
+       flat orange plateau, which is exactly the cheap look. With it,
+       highlights roll off, warm light stays warm as it brightens, and
+       the marble's baked bloom reads like exposure instead of paint.
+       Custom ShaderMaterials (sky dome, queue portal) skip tone mapping
+       by construction, so the night sky keeps its exact tuned values. */
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.55;
+    renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
 
@@ -1494,10 +1201,6 @@ export default function AgoraScene3D({
        breathe, the star twinkle and the stage flicker, leaving the scene
        composed but static. */
     const stillMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    /* Captured up front so the teardown doesn't read a ref during cleanup.
-       The Map instance is never reassigned, so this is the same object. */
-    const namePlateKeys = namePlateKeysRef.current;
 
     const scene = new THREE.Scene();
     /* The gradient dome paints the sky now; the background and fog just
@@ -1513,10 +1216,18 @@ export default function AgoraScene3D({
        glide, not a cut. */
     const CAMS: Record<AgoraView, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
       audience: { pos: new THREE.Vector3(0, 40, 18.5), look: new THREE.Vector3(0, 1, -7) },
-      /* Raised and aimed a touch higher than before so the panels sit in
-         the upper-middle of the frame with open space around them, and the
-         shallow platform reads as a hint along the bottom edge. */
-      speaker: { pos: new THREE.Vector3(0, 6.4, -17), look: new THREE.Vector3(0, 5.6, 10) },
+      /* Near floor level, gazing up. Two numbers tune this framing and
+         they pull against each other:
+         - pos.y is the eye height. Lower = more floor-level, and it
+           raises how much marble survives at the frame's foot.
+         - look.y is the pitch. Higher = the horizon (and its faint blue
+           earth-curve band) drops toward the control row, and the
+           starfield takes the frame — but past ~13 the marble leaves
+           the bottom of the frame entirely (measured: at pos.y 4.2,
+           look.y 16.5 put the band at the buttons and lost the floor).
+         Current values put the band roughly midway between the video
+         boxes and the view toggle with a marble sliver at the foot. */
+      speaker: { pos: new THREE.Vector3(0, 3.9, -20.5), look: new THREE.Vector3(0, 9.3, 10) },
     };
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
     const camPos = CAMS[viewRef.current].pos.clone();
@@ -1526,7 +1237,9 @@ export default function AgoraScene3D({
 
     /* ── Lights ── */
     scene.add(new THREE.HemisphereLight(0x24344a, 0x0c130c, 0.85));
-    const moon = new THREE.DirectionalLight(0x8ab4ff, 0.7);
+    /* Down from 0.7 — the moon was most of what made the empty bowl glow
+       blue. The seats keep a cool edge; the night keeps the frame. */
+    const moon = new THREE.DirectionalLight(0x8ab4ff, 0.55);
     moon.position.set(-24, 38, -20);
     moon.castShadow = true;
     moon.shadow.mapSize.set(1024, 1024);
@@ -1544,18 +1257,15 @@ export default function AgoraScene3D({
     buildTerraces(scene);
     buildSideStairs(scene);
     buildOrchestra(scene);
-    buildPlaza(scene);
-    buildStage(scene);
+    const lanternLights = buildClassicStone(scene);
     buildTrees(scene);
     const orchestraGlow = buildOrchestraGlow(scene);
-    const warmLights = [...buildStageGlow(scene), orchestraGlow.light];
-    const holo = buildHoloScreens(scene);
-    holoSlotsRef.current = holo.slots;
-    applyFeedsRef.current(); // re-apply live feeds across a world rebuild
-
-    /* Speaker queue: mic totem + slot path + the members group. */
-    const mic = buildMicTotem(scene);
-    micMatRef.current = mic.mat;
+    const warmLights = [...buildStageGlow(scene), orchestraGlow.light, ...lanternLights];
+    /* Speaker queue: slot path + the members group. The mic totem that
+       used to stand at the medallion is gone by request — the clean
+       marble center is the stage now, and the mic holder standing there
+       IS the marker. micMatRef stays wired (null) in case a floor-level
+       mic cue returns. */
     buildQueuePath(scene);
     const queueGroup = new THREE.Group();
     scene.add(queueGroup);
@@ -1569,36 +1279,77 @@ export default function AgoraScene3D({
     crowdRef.current = crowd;
 
     /* ── Resize ── */
-    /* A fixed 42° lens crops the outer screens as soon as the frame
+    /* A fixed 42° lens crops the stage focus as soon as the frame
        narrows, so the lens is solved rather than guessed: work out the
-       horizontal angle the two panels actually subtend, convert it to the
+       horizontal angle the focus region subtends, convert it to the
        vertical FOV that guarantees it at this aspect, and never go below
        the 42° the wide layout is composed for. The environment yields as
-       the frame narrows; the participants never leave it (brief §13). */
-    const panelHalfWidth = SCREEN.spreadX + (HOLO_W + 1.5) / 2;
+       the frame narrows (brief §13).
+
+       15.18 is the width the old holo panels occupied (13.68 + margin).
+       The panels are gone — video lives in the DOM stage now — but the
+       speaker vantage was composed around that region and the DOM boxes
+       overlay exactly it, so the framing target survives the panels. */
+    const STAGE_FOCUS_W = 15.18;
+    const panelHalfWidth = SCREEN.spreadX + STAGE_FOCUS_W / 2;
     const fitDistance = SCREEN.z - CAMS.speaker.pos.z;
+    /* The canvas now spans the whole viewport, including behind the chat
+       rail, so the amphitheatre shows through the rail's glass instead of
+       the rail being a dark box cut out of the scene.
+
+       Filling the width naively would re-centre the composition on the
+       viewport and push the participants behind the chat panel. Instead
+       the camera renders an off-axis frustum: the projection is built for
+       a virtual image wider than the canvas, and `setViewOffset` selects
+       the window of it that lands on screen. The optical axis stays over
+       the middle of the *main column*, so the framing is exactly what it
+       was — the extra width is pure bleed behind the rail. */
     const resize = () => {
       const w = host.clientWidth || 1;
       const h = host.clientHeight || 1;
+      /* The host is fixed to the viewport; its parent (.ag-theater) still
+         measures the main column, which is what the shot is composed for. */
+      const mainW = host.parentElement?.clientWidth || w;
+      const railW = Math.max(0, w - mainW);
+      /* Widening by the rail on the far side keeps world x=0 at the main
+         column's centre once the offset window is applied. */
+      const virtualW = w + railW;
+
       renderer.setSize(w, h, false);
-      const aspect = w / h;
-      camera.aspect = aspect;
+      camera.aspect = virtualW / h;
+
+      /* Framing is solved against the main column, not the canvas — the
+         panels have to fit the part of the screen the viewer is actually
+         watching, not the part hidden behind chat. */
+      const mainAspect = mainW / h;
       /* Side breathing room is a luxury of wide frames. On a tall phone,
          asking for 16% margin drove the required lens past 90° and the
          panels cropped anyway — so the margin tightens as the frame
          narrows, spending the angle on the participants instead. */
-      const margin = aspect < 1.1 ? 1.04 : 1.16;
+      const margin = mainAspect < 1.1 ? 1.04 : 1.16;
       const neededHFov = 2 * Math.atan((panelHalfWidth * margin) / fitDistance);
-      const neededVFov = 2 * Math.atan(Math.tan(neededHFov / 2) / aspect);
+      const neededVFov = 2 * Math.atan(Math.tan(neededHFov / 2) / mainAspect);
       /* The ceiling exists to stop the perspective going fish-eye; it has
          to clear the ~86° a portrait phone genuinely needs, or the fit it
          is protecting silently fails. */
       camera.fov = Math.min(96, Math.max(42, THREE.MathUtils.radToDeg(neededVFov)));
+
+      /* railW is 0 when the layout stacks (the rail moves below the
+         stage), which makes this the identity transform. */
+      camera.setViewOffset(virtualW, h, railW, 0, w, h);
       camera.updateProjectionMatrix();
     };
     resize();
+    /* Watch BOTH boxes. The canvas host is fixed to the viewport, so its
+       size only changes when the window does — collapsing the chat rail
+       never touches it. What does change is the main column (the host's
+       parent), and that is what the shot is framed against: when the rail
+       folds away the column widens, the camera re-fits, and the panels
+       travel out into the reclaimed space. Observing only the host meant
+       that recompute never fired and the composition sat still. */
     const observer = new ResizeObserver(resize);
     observer.observe(host);
+    if (host.parentElement) observer.observe(host.parentElement);
 
     /* ── Animate: torch flicker, camera glide + vertical breathing ──
        The camera glide uses exponential damping scaled by real frame time,
@@ -1616,31 +1367,17 @@ export default function AgoraScene3D({
        struggled once will struggle again, and oscillating quality is
        worse than stable-but-plainer.
 
-       Transmission goes first because it costs a whole extra render pass:
-       dropping it leaves the panels plainly translucent, which still
-       reads as glass, where losing shadows changes the whole scene.
-
        performanceMode (the egress compositor's software WebGL) starts at
-       the floor: no frosting, 1× buffer, no shadows. */
+       the floor: 1× buffer, no shadows — set at renderer init. */
     let quality = performanceMode ? 0 : 3;
-    if (performanceMode) {
-      holo.glassMats.forEach((m) => {
-        m.transmission = 0;
-        m.opacity = 0.82;
-        m.needsUpdate = true;
-      });
-    }
     let frameAcc = 0;
     let frameN = 0;
     const stepDown = () => {
       quality -= 1;
+      /* The first rung used to kill the holo panels' transmission; the
+         panels are gone (video is DOM now — see AgoraStage), so the
+         ladder starts at the pixel-ratio drop. */
       if (quality === 2) {
-        holo.glassMats.forEach((m) => {
-          m.transmission = 0;
-          m.opacity = 0.82; // compensate: no refraction to carry the tint
-          m.needsUpdate = true;
-        });
-      } else if (quality === 1) {
         renderer.setPixelRatio(1);
       } else {
         renderer.shadowMap.enabled = false;
@@ -1718,12 +1455,7 @@ export default function AgoraScene3D({
             : 0.35;
       }
 
-      /* Participant screens: always up when a live camera is on them;
-         otherwise only for the speaker vantage. The panels carry no
-         speaking state of their own now — the halo, the coloured edge
-         bars and the DOM waveform have all been removed. */
       orchestraGlow.embers.visible = viewRef.current === "audience";
-      holo.group.visible = viewRef.current === "speaker" || hasLiveFeedRef.current;
       renderer.render(scene, camera);
     };
     animate();
@@ -1732,17 +1464,6 @@ export default function AgoraScene3D({
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
-      holo.slots.forEach((slot) => {
-        clearFeedRef.current(slot);
-        clearCardRef.current(slot);
-      });
-      holoSlotsRef.current = null;
-      hasLiveFeedRef.current = false;
-      /* The plate cache is keyed by username, but the meshes it tracks
-         belong to the world being torn down. Leaving it populated made a
-         rebuild (StrictMode's double-mount, or any remount) skip the
-         redraw and leave the new panels nameless. */
-      namePlateKeys.clear();
       queueGroupRef.current = null;
       queueMembersRef.current.clear();
       micMatRef.current = null;

@@ -49,26 +49,36 @@ export const GROUND = {
   textureSize: 512,
 } as const;
 
-/* A hint of architecture, not a monument: two shallow steps whose total
-   rise is a fraction of the old 1.1-unit stage block. Heights are chosen
-   so the medallion top stays at MIC_POS.y — the speaker queue anchors to
-   it, and that geometry is not ours to move. */
-export const PLATFORM = {
-  /** Outer step: the wide, barely-raised apron. */
-  outerRadius: 7.4,
-  outerRise: 0.16,
-  /** Inner step. */
-  innerRadius: 5.0,
-  innerRise: 0.15,
-  /** Ellipse flattening along z, so it reads as a shallow disc in perspective. */
-  squash: 0.62,
-  /** Front edge of the platform, matching the old stage's footprint centre. */
-  z: 1.1,
-  stoneEdge: 0x5a5346,
-  stoneFace: 0x4a4438,
-  /** Faint radial joints scribed into the top step. */
-  jointColor: 0x6b6355,
-  jointCount: 24,
+/* Marble Agora — the discussion floor as one flat circular tablet of
+   pale marble slabs, photoreal-leaning: the slab pattern, the veining,
+   the joints and the warm center light are all BAKED into a procedural
+   texture at build time (see buildClassicStone), because that soft
+   lit-from-within look is a global-illumination effect no real-time
+   point light can produce. Real lights still add the pools and flicker
+   on top. */
+export const STONE = {
+  /** Main tablet: radius and the (flat, low) top height. MIC_POS.y in
+      queueLayout must equal topY — the mic stands on this surface. */
+  radius: 7.0,
+  topY: 0.17,
+  /** Outer step ring beneath the tablet's edge. */
+  stepRadius: 7.55,
+  stepRise: 0.085,
+  /** Marble palette, HSL-ish anchors used by the texture bake. */
+  sideColor: 0x6a6355,
+  stepColor: 0x847c6c,
+  /** How much the baked-light albedo self-illuminates. This is the "GI"
+      dial: 0 = floor only visible where real lights reach; 0.5 = glows
+      like a screenshot regardless of scene light. */
+  emissive: 0.42,
+  /** Perimeter lanterns. */
+  lanternPost: 0x241f18,
+  lanternFlame: 0xffc985,
+  lanternLight: 0xffb570,
+  /** Grass-and-rock fringe around the rim. */
+  grass: 0x16281a,
+  rockDark: 0x3a362e,
+  rockPale: 0x5e584c,
 } as const;
 
 /* Cool night + one small warm pool at the centre. No torches, no lamps —
@@ -84,37 +94,6 @@ export const STAGE_LIGHT = {
   flicker: 1.4,
 } as const;
 
-/* Participant screens. Translucent dark navy with a frosted transmission
-   pass, a thin light border, and a restrained state colour per side —
-   identity, not neon. */
-export const GLASS = {
-  /** Body tint — the WebGL equivalent of rgba(10,14,28,0.68). */
-  tint: 0x0a0e1c,
-  opacity: 0.68,
-  /** Frosted refraction of the starfield. Dropped on weak GPUs. */
-  transmission: 0.82,
-  roughness: 0.34,
-  thickness: 0.9,
-  ior: 1.22,
-  /** Thin border, matching --glass-border in globals.css. Stroked, not
-      filled — `borderWidth` is the stroke's thickness in world units. */
-  border: 0xffffff,
-  borderOpacity: 0.34,
-  borderWidth: 0.035,
-  /** Glass margin around the content plane, per side. A slim bezel: at
-      the old 0.75 it read as a second box drawn around the first. */
-  bezel: 0.22,
-  /** Corner radius on the content plane, in world units. The glass adds
-      the bezel to this so both outlines stay concentric. */
-  cornerRadius: 0.55,
-  /** Per-side state colours, mirroring agora.css. Retained for the DOM
-      side and for any future state cue on the panels. */
-  pro: 0xa78bfa,
-  con: 0x7ab8ff,
-  /** Name plate height in world units, and its inset from the corner. */
-  nameHeight: 0.62,
-  nameInset: 0.42,
-} as const;
 
 /* Vertical breathing room so the screens float clear of the platform
    rather than sitting on it (brief §8). */
