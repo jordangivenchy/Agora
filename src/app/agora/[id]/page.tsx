@@ -19,6 +19,7 @@ import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
 import AgoraAssistant from "@/components/AgoraAssistant";
 import AgoraVideoDock from "@/components/agora/AgoraVideoDock";
+import AgoraStage from "@/components/agora/AgoraStage";
 import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall } from "@/components/agora/useAgoraCall";
 import HostControls from "@/components/agora/HostControls";
@@ -100,6 +101,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [handBusy, setHandBusy] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreWrapRef = useRef<HTMLDivElement | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -229,6 +233,21 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     [participants, currentUser]
   );
   useEscapeClose(leavePrompt, () => setLeavePrompt(false));
+
+  /* The tool panel is large enough that leaving it open until the trigger
+     is pressed again feels like a stuck overlay, so it takes the two
+     dismissals people try by reflex. `pointerdown` rather than `click`:
+     it fires before focus moves, so the panel is already gone by the time
+     whatever was clicked underneath reacts. */
+  useEscapeClose(moreOpen, () => setMoreOpen(false));
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!moreWrapRef.current?.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [moreOpen]);
 
   const myRole = useMemo(() => {
     if (!room) return "audience" as const;
@@ -364,38 +383,40 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     }
   }
 
-  /* ── Stage screen routing ──────────────────────────────────────────
-     Live cameras land on the holo screens over the stage: PRO's camera
-     on the frame-left screen, CON's on the right. Non-debater cameras
-     (host, co-host, promoted speakers) fill whichever screen is free. */
-  const screenFeeds = useMemo(() => {
-    const tiles = call.videoTiles;
-    if (tiles.length === 0) return undefined;
-    const keyOf = (t: (typeof tiles)[number]) => `${t.identity}:${t.local ? "l" : "r"}`;
-    const proIds = new Set(proSpeakers.map((s) => s.id));
-    const conIds = new Set(conSpeakers.map((s) => s.id));
-    const pro = tiles.find((t) => proIds.has(t.identity)) ?? null;
-    const con = tiles.find((t) => t !== pro && conIds.has(t.identity)) ?? null;
-    const rest = tiles.filter((t) => t !== pro && t !== con);
-    const proFeed = pro ?? rest.shift() ?? null;
-    const conFeed = con ?? rest.shift() ?? null;
-    return {
-      pro: proFeed ? { key: keyOf(proFeed), track: proFeed.track } : null,
-      con: conFeed ? { key: keyOf(conFeed), track: conFeed.track } : null,
-    };
-  }, [call.videoTiles, proSpeakers, conSpeakers]);
+  /* ── Stage panes ───────────────────────────────────────────────────
+     The lead PRO/CON speakers own the two stage boxes — DOM now, drawn by
+     AgoraStage over the scene where the WebGL panels used to stand. Each
+     pane carries its holder's identity plus their live camera when it's
+     on; camera off shows the profile card, no holder shows the open
+     seat. */
+  const stagePanes = useMemo(() => {
+    const cams = call.videoTiles.filter((t) => t.source === "camera");
+    const mk = (sp: (typeof proSpeakers)[number] | undefined) =>
+      sp
+        ? {
+            id: sp.id,
+            username: sp.username,
+            avatarUrl: sp.avatarUrl,
+            local: currentUser?.id === sp.id,
+            tile: cams.find((t) => t.identity === sp.id) ?? null,
+          }
+        : null;
+    return { pro: mk(proSpeakers[0]), con: mk(conSpeakers[0]) };
+  }, [call.videoTiles, proSpeakers, conSpeakers, currentUser]);
 
-  /* Self-preview only while the camera is warming up: once your own feed
-     lands on a stage screen the whole amphitheater is watching it, and the
-     little dock tile is a redundant duplicate. Others' tiles stay. */
+  /* The dock keeps only what the stage doesn't already show at size:
+     cameras from people who hold no pane (host, co-host, promoted
+     speakers beyond the pair). During a share it empties entirely — the
+     cast row is showing the room. */
   const dockTiles = useMemo(() => {
-    const onScreen = new Set(
-      [screenFeeds?.pro?.key, screenFeeds?.con?.key].filter(Boolean)
+    if (call.videoTiles.some((t) => t.source === "screen")) return [];
+    const paneIds = new Set(
+      [stagePanes.pro?.id, stagePanes.con?.id].filter(Boolean)
     );
     return call.videoTiles.filter(
-      (t) => !(t.local && onScreen.has(`${t.identity}:l`))
+      (t) => t.source === "camera" && !paneIds.has(t.identity)
     );
-  }, [call.videoTiles, screenFeeds]);
+  }, [call.videoTiles, stagePanes]);
 
   /* Walking in seats you: signed-in visitors get a spectator row right
      away, so you're visible in the crowd the moment you arrive — raising
@@ -607,7 +628,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           viewerCount={room.viewer_count ?? 0}
           view={view}
           onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
-          screenFeeds={screenFeeds}
           speakerQueue={speakerQueue}
           micHolder={micHolder}
           micLive={!!(room.mic_user_id && call.speakingIds.has(room.mic_user_id))}
@@ -677,6 +697,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           />
         )}
 
+        {/* ── The stage: debater boxes, and the share when one is live ── */}
+        <AgoraStage tiles={call.videoTiles} panes={stagePanes} view={view} speaking={call.speakingIds} />
+
         {/* ── Live camera tiles + floating reactions ── */}
         <AgoraVideoDock tiles={dockTiles} />
         <ReactionOverlay reactions={call.reactions} />
@@ -711,20 +734,57 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
         {/* ── Bottom control bar ── */}
         <footer className="ag-controls">
-          {amMicHolder ? (
-            <button className="ag-ctl ag-ctl--live" title="Give up the mic" onClick={stepDownFromMic}>
-              🎤 <span>Step Down</span>
-            </button>
-          ) : (
-            <button
-              className={`ag-ctl ${handRaised ? "ag-ctl--active" : ""}`}
-              title={raiseTitle}
-              disabled={!canRaise || requestsLocked || handBusy}
-              onClick={toggleHand}
-            >
-              ✋ <span>{handRaised ? "Lower Hand" : "Raise Hand"}</span>
-            </button>
-          )}
+          {/* Order is deliberate, and groups by how often a hand reaches
+              for it: mic and camera leftmost, then the two you use while
+              someone else holds the floor (react, raise hand), then screen
+              share — rare enough to sit out by More, which keeps the frequent
+              controls at the positions muscle memory already knows. Leave
+              stays far right, where a destructive control belongs.
+
+              Fill colour carries state: solid green = you are transmitting
+              (mic, camera), solid white = your screen is on the wall, solid
+              yellow = the reaction tray is open. Everything idle is black
+              glass. Leave is the only control that is coloured at rest. */}
+
+          {/* ── Mic ── */}
+          <button
+            className={`ag-ctl ${call.micOn ? "ag-ctl--live" : ""}`}
+            title={
+              !onStage(myRole)
+                ? "Mic — speakers only"
+                : !call.connected
+                  ? "Connecting…"
+                  : call.micOn
+                    ? "Mute your mic"
+                    : "Unmute your mic"
+            }
+            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+            onClick={call.toggleMic}
+          >
+            <span className="ag-ctl-ico">{call.micOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/></svg>)}</span>
+            <span className="ag-ctl-label">{call.micOn ? "Mute" : "Mic"}</span>
+          </button>
+
+          {/* ── Video ── */}
+          <button
+            className={`ag-ctl ${call.camOn ? "ag-ctl--live" : ""}`}
+            title={
+              !onStage(myRole)
+                ? "Camera — speakers only"
+                : !call.connected
+                  ? "Connecting…"
+                  : call.camOn
+                    ? "Turn camera off"
+                    : "Turn camera on"
+            }
+            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+            onClick={call.toggleCam}
+          >
+            <span className="ag-ctl-ico">{call.camOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M16 16v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3l5-3v9"/></svg>)}</span>
+            <span className="ag-ctl-label">{call.mediaBusy ? "…" : call.camOn ? "Stop video" : "Video"}</span>
+          </button>
+
+          {/* ── React ── */}
           <div className="ag-react-wrap">
             {reactOpen && (
               <div className="ag-react-picker">
@@ -743,48 +803,145 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               </div>
             )}
             <button
-              className={`ag-ctl ${reactOpen ? "ag-ctl--active" : ""}`}
+              className={`ag-ctl ${reactOpen ? "ag-ctl--reacting" : ""}`}
               title={call.connected ? "Send a reaction" : "Connecting…"}
               disabled={!call.connected}
               onClick={() => setReactOpen((v) => !v)}
             >
-              😊 <span>React</span>
+              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
+              <span className="ag-ctl-label">React</span>
             </button>
           </div>
+
+          {/* ── Raise hand (or step down, when you hold the mic) ── */}
+          {amMicHolder ? (
+            <button className="ag-ctl ag-ctl--live" title="Give up the mic" onClick={stepDownFromMic}>
+              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>
+              <span className="ag-ctl-label">Step down</span>
+            </button>
+          ) : (
+            <button
+              className={`ag-ctl ${handRaised ? "ag-ctl--active" : ""}`}
+              title={raiseTitle}
+              disabled={!canRaise || requestsLocked || handBusy}
+              onClick={toggleHand}
+            >
+              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></span>
+              <span className="ag-ctl-label">{handRaised ? "Lower hand" : "Raise hand"}</span>
+            </button>
+          )}
+
+          {/* ── Share screen ── */}
           <button
-            className={`ag-ctl ${call.micOn ? "ag-ctl--live" : ""}`}
+            className={`ag-ctl ${call.screenOn ? "ag-ctl--sharing" : ""}`}
             title={
               !onStage(myRole)
-                ? "Mic — speakers only"
+                ? "Screen share — speakers only"
                 : !call.connected
                   ? "Connecting…"
-                  : call.micOn
-                    ? "Mute your mic"
-                    : "Unmute your mic"
+                  : call.screenOn
+                    ? "Stop sharing your screen"
+                    : "Share your screen"
             }
             disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
-            onClick={call.toggleMic}
+            onClick={call.toggleScreenShare}
           >
-            🎙️ <span>{call.micOn ? "Mute" : "Mic"}</span>
+            <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m9 10 3-3 3 3M12 7v6"/></svg></span>
+            <span className="ag-ctl-label">{call.screenOn ? "Stop share" : "Share"}</span>
           </button>
-          <button
-            className={`ag-ctl ${call.camOn ? "ag-ctl--live" : ""}`}
-            title={
-              !onStage(myRole)
-                ? "Camera — speakers only"
-                : !call.connected
-                  ? "Connecting…"
-                  : call.camOn
-                    ? "Turn camera off"
-                    : "Turn camera on"
-            }
-            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
-            onClick={call.toggleCam}
-          >
-            📹 <span>{call.mediaBusy ? "…" : "Camera"}</span>
-          </button>
+
+          {/* ── More: the room's tool drawer ──
+              Four quadrants rather than a list. The tools are peers, not a
+              ranked menu, and a square of equal tiles says that where a
+              stack of rows would imply an order that doesn't exist.
+
+              Whiteboard, Notepad and Documents have no backend yet, so they
+              are marked and disabled rather than rendered as live buttons —
+              the same reasoning as the media-error toast above: a control
+              that looks ready and does nothing is worse than one that says
+              it isn't ready. Settings is real and goes to /settings. */}
+          <div className="ag-react-wrap" ref={moreWrapRef}>
+            {moreOpen && (
+              <div className="ag-more-menu" role="menu" aria-label="Room tools">
+                <div className="ag-tool-grid">
+                  <button className="ag-tool" role="menuitem" disabled title="Whiteboard — not built yet">
+                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2.5" y="3.5" width="19" height="13" rx="2"/><path d="M12 16.5v4M8.5 20.5h7"/><path d="M6.5 12.5c2-3.5 4-3.5 5.5-1s3.5 2 5.5-2"/></svg></span>
+                    <span className="ag-tool-label">Whiteboard</span>
+                    <span className="ag-tool-soon">Soon</span>
+                  </button>
+
+                  <button className="ag-tool" role="menuitem" disabled title="Notepad — not built yet">
+                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5.5 3.5h13a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
+                    <span className="ag-tool-label">Notepad</span>
+                    <span className="ag-tool-soon">Soon</span>
+                  </button>
+
+                  <button className="ag-tool" role="menuitem" disabled title="Documents — not built yet">
+                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 2.5h6l4.5 4.5v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M14 2.5V7h4.5"/><path d="M4.5 6v14a1.5 1.5 0 0 0 1.5 1.5h9"/></svg></span>
+                    <span className="ag-tool-label">Documents</span>
+                    <span className="ag-tool-soon">Soon</span>
+                  </button>
+
+                  {/* An anchor, not a button calling window.open: a real
+                      link with target=_blank is a native user navigation
+                      that popup blockers never intercept, where window.open
+                      can be silently swallowed and leave a dead tile. New
+                      tab either way — navigating this one would tear down
+                      the LiveKit connection and drop you out of a live room
+                      to change a preference. */}
+                  <a
+                    className="ag-tool"
+                    role="menuitem"
+                    href="/settings"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Settings — opens in a new tab so the room keeps running"
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                    <span className="ag-tool-label">Settings</span>
+                  </a>
+                </div>
+
+                {/* Kept from the old list: it is the only secondary action in
+                    this room that already works, and it isn't a tool, so it
+                    rides under the quadrants rather than taking one. */}
+                <button
+                  className="ag-more-item"
+                  role="menuitem"
+                  onClick={() => {
+                    /* The panel deliberately stays open: the label itself is
+                       the confirmation, and closing it would hide the only
+                       feedback that the copy worked. */
+                    navigator.clipboard
+                      ?.writeText(window.location.href)
+                      .then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1600);
+                      })
+                      .catch(() => setCopied(false));
+                  }}
+                >
+                  {copied ? "Copied" : "Copy room link"}
+                </button>
+              </div>
+            )}
+            <button
+              className={`ag-ctl ${moreOpen ? "ag-ctl--active" : ""}`}
+              title="More options"
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></span>
+              <span className="ag-ctl-label">More</span>
+            </button>
+          </div>
+
+          {/* ── Leave ── */}
           <button
             className="ag-ctl ag-ctl--leave"
+            title="Leave the room"
             onClick={() => {
               if (isHostRole(myRole)) {
                 setLeavePrompt(true);
@@ -794,7 +951,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               }
             }}
           >
-            📞 <span>Leave</span>
+            <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+            <span className="ag-ctl-label">Leave</span>
           </button>
         </footer>
       </div>
