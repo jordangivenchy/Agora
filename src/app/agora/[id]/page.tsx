@@ -113,6 +113,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
+  /* The DOM stage holds back until the camera glide lands on the current
+     vantage — fading panes in mid-flight read as riding the camera. */
+  const [viewSettled, setViewSettled] = useState(false);
   /* Chat rail collapsed → the stage runs the full width of the page, for
      watching without the chat in frame. Lives here rather than in the
      rail because the collapsed class drives layout on .ag-root. */
@@ -120,6 +123,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   /* Audience overflow: watch the composited HLS stream instead of WebRTC. */
   const [hlsOpen, setHlsOpen] = useState(false);
   const [invite, setInvite] = useState<PendingInvite | null>(null);
+  useEffect(() => {
+    setViewSettled(false);
+  }, [view]);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [handBusy, setHandBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -800,6 +806,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           viewerCount={room.viewer_count ?? 0}
           view={view}
           onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
+          onViewSettled={() => setViewSettled(true)}
           speakerQueue={speakerQueue}
           micHolder={micHolder}
           micLive={!!(room.mic_user_id && call.speakingIds.has(room.mic_user_id))}
@@ -878,8 +885,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           />
         )}
 
-        {/* ── The stage: debater boxes, and the share when one is live ── */}
-        <AgoraStage tiles={call.videoTiles} panes={stagePanes} view={view} speaking={call.speakingIds} />
+        {/* ── The stage: debater boxes, and the share when one is live.
+              In speaker view it waits for the camera to land among the
+              stars before fading in; audience view shows it as soon as a
+              picture is live (no glide to wait out). ── */}
+        {(view === "audience" || viewSettled) && (
+          <AgoraStage tiles={call.videoTiles} panes={stagePanes} view={view} speaking={call.speakingIds} />
+        )}
 
         {/* ── Live camera tiles + floating reactions ── */}
         <AgoraVideoDock tiles={dockTiles} />

@@ -40,6 +40,9 @@ interface Props {
       floor — 1x buffer, no shadows, no MSAA — instead of discovering it
       through the adaptive step-down. */
   performanceMode?: boolean;
+  /** Fires once the camera glide lands on a view's vantage — the page
+      holds the DOM stage back until the speaker vantage has arrived. */
+  onViewSettled?: (view: AgoraView) => void;
   /** Speaker queue, front first (mic holder excluded). Members leave their
       seats and stand in the center aisle, closest-to-mic = next. */
   queue?: SeatedPerson[];
@@ -1049,11 +1052,14 @@ export default function AgoraScene3D({
   micHolder,
   micLive,
   performanceMode = false,
+  onViewSettled,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   /* The view lives in a ref so switching cameras never rebuilds the
      scene — the render loop just glides toward the new target. */
   const viewRef = useRef<AgoraView>(view);
+  const onViewSettledRef = useRef(onViewSettled);
+  onViewSettledRef.current = onViewSettled;
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
@@ -1357,6 +1363,7 @@ export default function AgoraScene3D({
        through a dropped-frame stutter — the fixed 0.045/frame lerp it
        replaces ran twice as fast at 120Hz and jerked when frames dropped. */
     let raf = 0;
+    let settledNotified: AgoraView | null = null;
     const t0 = performance.now();
     let lastFrame = t0;
     const DAMP = 2.8; // ≈ the old 0.045/frame feel at 60fps
@@ -1424,6 +1431,12 @@ export default function AgoraScene3D({
       const k = 1 - Math.exp(-DAMP * dt);
       camPos.lerp(target.pos, k);
       camLook.lerp(target.look, k);
+      /* Announce arrival once per vantage: the exponential glide never
+         mathematically lands, so "close enough to be still" is arrival. */
+      if (camPos.distanceTo(target.pos) < 0.5 && settledNotified !== viewRef.current) {
+        settledNotified = viewRef.current;
+        onViewSettledRef.current?.(viewRef.current);
+      }
       camera.position.copy(camPos);
       if (!stillMotion) camera.position.y += Math.sin(t * 0.07) * 0.35;
       camera.lookAt(camLook);

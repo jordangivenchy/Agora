@@ -40,6 +40,8 @@ interface Props {
   view: AgoraView;
   onSwitchView: () => void;
   performanceMode?: boolean;
+  /** Camera glide landed on a vantage — passed through to the scene. */
+  onViewSettled?: (view: AgoraView) => void;
   /** Speaker queue (front first, mic holder excluded) for the center aisle. */
   speakerQueue?: SeatedPerson[];
   /** Current mic holder — stands at the medallion mic. */
@@ -123,6 +125,7 @@ export default function Amphitheater({
   micHolder,
   micLive,
   performanceMode = false,
+  onViewSettled,
 }: Props) {
   const inSpeaker = view === "speaker";
   /* The debaters' video moved out of the scene entirely: AgoraStage (DOM)
@@ -136,6 +139,7 @@ export default function Amphitheater({
         viewerCount={viewerCount}
         view={view}
         performanceMode={performanceMode}
+        onViewSettled={onViewSettled}
         queue={speakerQueue}
         micHolder={micHolder}
         micLive={micLive}
