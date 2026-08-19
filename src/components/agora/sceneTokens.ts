@@ -70,7 +70,7 @@ export const STONE = {
   /** How much the baked-light albedo self-illuminates. This is the "GI"
       dial: 0 = floor only visible where real lights reach; 0.5 = glows
       like a screenshot regardless of scene light. */
-  emissive: 0.3,
+  emissive: 0.42,
   /** Perimeter lanterns. */
   lanternPost: 0x241f18,
   lanternFlame: 0xffc985,

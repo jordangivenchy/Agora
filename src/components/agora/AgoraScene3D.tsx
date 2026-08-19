@@ -274,15 +274,28 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
   for (let ring = 0; ring < ringCounts.length; ring++) {
     const n = ringCounts[ring];
     const stagger = ring * 0.35 + rng() * 0.4;
+    /* Irregular widths: walk the circle handing each slab 0.72–1.28 of
+       the even share, then scale the walk to close exactly. Hand-cut
+       stone is never metronomic, and the reference's rings visibly
+       aren't — even division is one of the tells of a cheap render. */
+    const shares: number[] = [];
+    let total = 0;
     for (let k = 0; k < n; k++) {
-      const a0 = ((k + stagger) / n) * Math.PI * 2;
+      const w = 0.72 + rng() * 0.56;
+      shares.push(w);
+      total += w;
+    }
+    let acc = stagger * ((Math.PI * 2) / n);
+    for (let k = 0; k < n; k++) {
+      const w = (shares[k] / total) * Math.PI * 2;
       slabs.push({
-        a0,
-        a1: a0 + (Math.PI * 2) / n,
+        a0: acc,
+        a1: acc + w,
         r0: ringEdges[ring],
         r1: ringEdges[ring + 1],
-        tone: (rng() - 0.5) * 11, // per-slab lightness jitter, ±5.5
+        tone: (rng() - 0.5) * 16, // per-slab lightness jitter, ±8
       });
+      acc += w;
     }
   }
 
@@ -305,7 +318,7 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
 
     for (const s of slabs) {
       // Marble body: pale warm gray, per-slab tone, faint internal drift.
-      const l = 57 + s.tone;
+      const l = 63 + s.tone;
       slabPath(ctx, s, R, c);
       const mid = (s.a0 + s.a1) / 2;
       const mr = ((s.r0 + s.r1) / 2) * R;
@@ -341,6 +354,26 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
           : `rgba(88, 80, 66, ${0.05 + rng() * 0.06})`;
         ctx.stroke();
       }
+      // Weathering: one or two soft tonal blotches per slab — the
+      // per-slab staining that makes the reference read as real stone
+      // rather than a fill colour.
+      ctx.save();
+      slabPath(ctx, s, R, c);
+      ctx.clip();
+      const blotches = 1 + Math.floor(rng() * 2);
+      for (let b = 0; b < blotches; b++) {
+        const bx = gx + (rng() - 0.5) * 160;
+        const by = gy + (rng() - 0.5) * 160;
+        const br = 30 + rng() * 90;
+        const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        const dark = rng() > 0.35;
+        const alpha = 0.04 + rng() * 0.08;
+        bg.addColorStop(0, dark ? `rgba(74, 66, 52, ${alpha})` : `rgba(246, 240, 228, ${alpha})`);
+        bg.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(bx - br, by - br, br * 2, br * 2);
+      }
+      ctx.restore();
       ctx.restore();
     }
 
@@ -348,10 +381,15 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
     for (const s of slabs) {
       slabPath(ctx, s, R, c);
       ctx.lineWidth = 9;
-      ctx.strokeStyle = "rgba(30, 27, 21, 0.16)"; // soft shoulder
+      ctx.strokeStyle = "rgba(30, 27, 21, 0.18)"; // soft shoulder
       ctx.stroke();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = "rgba(36, 32, 25, 0.8)"; // the joint itself
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "rgba(32, 28, 22, 0.9)"; // the joint itself
+      ctx.stroke();
+      // Chamfer catch-light along each slab's edge — stone edges are
+      // never razor-cut, and the bright line is what sells the bevel.
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = "rgba(255, 249, 238, 0.09)";
       ctx.stroke();
     }
 
@@ -369,16 +407,21 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
     //    center bloom (screen), then a whisper of edge light at the rim.
     ctx.globalCompositeOperation = "multiply";
     const vig = ctx.createRadialGradient(c, c, R * 0.1, c, c, R);
+    /* Gentler than the first cut: the reference's rim is still clearly
+       pale marble — crushing the edge to near-black is what made the
+       whole tablet read as brown mush from the low camera. */
     vig.addColorStop(0, "rgb(255, 255, 255)");
-    vig.addColorStop(0.62, "rgb(196, 190, 178)");
-    vig.addColorStop(1, "rgb(108, 102, 90)");
+    vig.addColorStop(0.62, "rgb(212, 206, 194)");
+    vig.addColorStop(1, "rgb(148, 141, 127)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, S, S);
 
     ctx.globalCompositeOperation = "screen";
-    const warm = ctx.createRadialGradient(c, c, 0, c, c, R * 0.62);
-    warm.addColorStop(0, "rgba(255, 196, 128, 0.5)");
-    warm.addColorStop(0.4, "rgba(255, 178, 106, 0.16)");
+    /* The bloom is the hero. Tight, hot, decisively warm — in the
+       reference it approaches white at dead center. */
+    const warm = ctx.createRadialGradient(c, c, 0, c, c, R * 0.55);
+    warm.addColorStop(0, "rgba(255, 226, 178, 0.85)");
+    warm.addColorStop(0.28, "rgba(255, 196, 128, 0.34)");
     warm.addColorStop(1, "rgba(255, 178, 106, 0)");
     ctx.fillStyle = warm;
     ctx.fillRect(0, 0, S, S);
@@ -415,11 +458,35 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
     }
   }
 
+  /* Roughness: slabs polished-ish (mid-dark), joints rough (bright), a
+     little per-slab drift. This is what lets the lanterns lay sheen
+     streaks across the marble at grazing angles — the reference's floor
+     is clearly reflective, and a flat roughness never was. */
+  const rough = document.createElement("canvas");
+  rough.width = rough.height = 1024;
+  {
+    const ctx = rough.getContext("2d")!;
+    const c = 512;
+    const R = c * 0.985;
+    ctx.fillStyle = "#e6e6e6";
+    ctx.fillRect(0, 0, 1024, 1024);
+    for (const s of slabs) {
+      slabPath(ctx, s, R, c);
+      ctx.fillStyle = `hsl(0, 0%, ${44 + s.tone * 0.9 + rng() * 6}%)`;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#dadada"; // joints scatter light
+      ctx.stroke();
+    }
+  }
+
   const albedoTex = new THREE.CanvasTexture(albedo);
   albedoTex.colorSpace = THREE.SRGBColorSpace;
-  albedoTex.anisotropy = 8; // grazing angles are this floor's whole life
+  albedoTex.anisotropy = 16; // grazing angles are this floor's whole life
   const bumpTex = new THREE.CanvasTexture(bump);
-  bumpTex.anisotropy = 4;
+  bumpTex.anisotropy = 8;
+  const roughTex = new THREE.CanvasTexture(rough);
+  roughTex.anisotropy = 8;
 
   /* ── Geometry: step ring, tablet body, textured cap ────────────── */
   const step = new THREE.Mesh(
@@ -443,7 +510,8 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
       map: albedoTex,
       bumpMap: bumpTex,
       bumpScale: 0.014,
-      roughness: 0.58, // marble takes light; stone at 0.95 never did
+      roughness: 1, // the map carries the real values
+      roughnessMap: roughTex,
       emissive: 0xffffff,
       emissiveMap: albedoTex,
       emissiveIntensity: STONE.emissive,
@@ -454,31 +522,62 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
   cap.receiveShadow = true;
   scene.add(cap);
 
-  /* ── Lanterns: six around the rim, parted at the queue corridor ── */
+  /* ── Lanterns: the full ring, as the reference draws it — small
+     fixtures every ~36° with the arc over the queue corridor left
+     dark so the processional path stays legible. ── */
   const lights: THREE.PointLight[] = [];
-  const lanternAngles = [12, 68, 124, 168, 212, 328];
-  const postGeo = new THREE.BoxGeometry(0.1, 0.62, 0.1);
-  const capGeo = new THREE.BoxGeometry(0.22, 0.07, 0.22);
-  const flameGeo = new THREE.BoxGeometry(0.13, 0.17, 0.13);
+  const lanternAngles = [8, 44, 80, 116, 152, 188, 224, 332];
+  const postGeo = new THREE.BoxGeometry(0.09, 0.52, 0.09);
+  const capGeo = new THREE.BoxGeometry(0.2, 0.06, 0.2);
+  const flameGeo = new THREE.BoxGeometry(0.12, 0.15, 0.12);
   const postMat = new THREE.MeshStandardMaterial({ color: STONE.lanternPost, roughness: 1 });
   const flameMat = new THREE.MeshBasicMaterial({ color: STONE.lanternFlame });
+  /* The halo around a lantern at night is atmosphere scattering — the
+     reference has it on every flame, and its absence is one more tell.
+     One shared additive sprite texture, one sprite per lantern. */
+  const haloTex = (() => {
+    const cnv = document.createElement("canvas");
+    cnv.width = cnv.height = 128;
+    const hc = cnv.getContext("2d")!;
+    const g = hc.createRadialGradient(64, 64, 2, 64, 64, 64);
+    g.addColorStop(0, "rgba(255, 205, 140, 0.85)");
+    g.addColorStop(0.25, "rgba(255, 180, 110, 0.28)");
+    g.addColorStop(1, "rgba(255, 170, 100, 0)");
+    hc.fillStyle = g;
+    hc.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(cnv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const haloMat = new THREE.SpriteMaterial({
+    map: haloTex,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+  });
   for (const deg of lanternAngles) {
     const a = deg * DEG;
     const r = STONE.stepRadius + 0.75;
     const x = cx + r * Math.cos(a);
     const z = cz + r * Math.sin(a);
     const post = new THREE.Mesh(postGeo, postMat);
-    post.position.set(x, 0.31, z);
+    post.position.set(x, 0.26, z);
     scene.add(post);
     const flame = new THREE.Mesh(flameGeo, flameMat);
-    flame.position.set(x, 0.62, z);
+    flame.position.set(x, 0.53, z);
     scene.add(flame);
     const capMesh = new THREE.Mesh(capGeo, postMat);
-    capMesh.position.set(x, 0.74, z);
+    capMesh.position.set(x, 0.63, z);
     scene.add(capMesh);
-    const light = new THREE.PointLight(STONE.lanternLight, 5.5, 7, 2);
-    light.position.set(x, 0.85, z);
-    light.userData = { base: 5.5, flick: 0.5 };
+    const halo = new THREE.Sprite(haloMat);
+    halo.scale.setScalar(1.5);
+    halo.position.set(x, 0.53, z);
+    scene.add(halo);
+    /* Eight smaller lights instead of six: each dimmer and shorter-reach
+       so the ring reads as beads of warmth, not a floodlit perimeter. */
+    const light = new THREE.PointLight(STONE.lanternLight, 4.2, 6, 2);
+    light.position.set(x, 0.75, z);
+    light.userData = { base: 4.2, flick: 0.4 };
     scene.add(light);
     lights.push(light);
   }
@@ -592,8 +691,13 @@ function buildChairsAndCrowd(
 
     const occupied = occupancy.has(i);
     const proSide = seat.side === "pro";
+    /* Empty seats sit far darker than they used to (0x2f2456 / 0x1d2f56):
+       with nobody in them the bowl read as a bright blue band across the
+       speaker vantage, fighting the starfield the camera now tilts up
+       into. Occupied seats keep their vivid side colours — people light
+       a theater, furniture doesn't. */
     color.setHex(
-      occupied ? (proSide ? 0x6d4ab8 : 0x3a6cc2) : proSide ? 0x2f2456 : 0x1d2f56
+      occupied ? (proSide ? 0x6d4ab8 : 0x3a6cc2) : proSide ? 0x1c1733 : 0x121b30
     );
     cushions.setColorAt(i, color);
     backs.setColorAt(i, color.clone().multiplyScalar(0.8));
@@ -730,30 +834,13 @@ function buildStageGlow(scene: THREE.Scene): THREE.PointLight[] {
   return [light];
 }
 
-/* ── Speaker queue architecture ─────────────────────────────────────
-   The mic totem on the medallion, slot plates down the center aisle,
-   and the tunnel portal at the orchestra rim. Static geometry — the
-   queue members themselves live in a separate group the queue effect
-   owns. */
-function buildMicTotem(scene: THREE.Scene): { mat: THREE.MeshStandardMaterial } {
-  const stand = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.05, 0.09, 1.35, 8),
-    new THREE.MeshStandardMaterial({ color: 0x3a3a42, flatShading: true })
-  );
-  stand.position.set(MIC_POS.x, MIC_POS.y + 0.68, MIC_POS.z);
-  scene.add(stand);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x24242c,
-    emissive: 0xffc46a,
-    emissiveIntensity: 0.35,
-    flatShading: true,
-  });
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat);
-  head.position.set(MIC_POS.x, MIC_POS.y + 1.42, MIC_POS.z);
-  scene.add(head);
-  return { mat };
-}
 
+/* ── Speaker queue architecture ─────────────────────────────────────
+   Slot plates down the center aisle and the tunnel portal at the
+   orchestra rim. Static geometry — the queue members themselves live in
+   a separate group the queue effect owns. (The mic totem that stood at
+   the medallion was removed by request: the clean marble center is the
+   stage, and the mic holder standing there is the marker.) */
 function buildQueuePath(scene: THREE.Scene) {
   /* Slot plates: small worn discs marking the visible line — proud enough
      of the path band to read as deliberate markers, not z-fighting slivers. */
@@ -986,10 +1073,15 @@ export default function AgoraScene3D({
     if (!group) return;
     const members = queueMembersRef.current;
 
-    // Desired members: mic holder + capped queue, each with a target spot.
+    // Desired members: the capped queue line, each with a target spot.
+    // The mic holder is deliberately NOT rendered at the medallion any
+    // more — from the low speaker camera the lone figure read as a stick
+    // with a ball planted mid-stage (user: "remove this stick thing").
+    // The DOM stage boxes already show who holds the floor; the marble
+    // stays clean. Their queue-line figure still leaves the line when
+    // promoted, so the aisle thins as it should.
     const wanted = new Map<string, { person: SeatedPerson; x: number; y: number; z: number }>();
     const holder = micHolderRef.current;
-    if (holder) wanted.set(holder.id, { person: holder, ...MIC_POS });
     const line = queueRef.current;
     for (let i = 0; i < renderedCount(line.length); i++) {
       const p = line[i];
@@ -1087,6 +1179,15 @@ export default function AgoraScene3D({
       powerPreference: "high-performance",
     });
     renderer.setPixelRatio(dpr);
+    /* ACES filmic tone mapping is most of the difference between "render"
+       and "photograph": without it every point light clips linearly to a
+       flat orange plateau, which is exactly the cheap look. With it,
+       highlights roll off, warm light stays warm as it brightens, and
+       the marble's baked bloom reads like exposure instead of paint.
+       Custom ShaderMaterials (sky dome, queue portal) skip tone mapping
+       by construction, so the night sky keeps its exact tuned values. */
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.55;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
@@ -1110,10 +1211,18 @@ export default function AgoraScene3D({
        glide, not a cut. */
     const CAMS: Record<AgoraView, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
       audience: { pos: new THREE.Vector3(0, 40, 18.5), look: new THREE.Vector3(0, 1, -7) },
-      /* Raised and aimed a touch higher than before so the panels sit in
-         the upper-middle of the frame with open space around them, and the
-         shallow platform reads as a hint along the bottom edge. */
-      speaker: { pos: new THREE.Vector3(0, 6.4, -17), look: new THREE.Vector3(0, 5.6, 10) },
+      /* Near floor level, gazing up. Two numbers tune this framing and
+         they pull against each other:
+         - pos.y is the eye height. Lower = more floor-level, and it
+           raises how much marble survives at the frame's foot.
+         - look.y is the pitch. Higher = the horizon (and its faint blue
+           earth-curve band) drops toward the control row, and the
+           starfield takes the frame — but past ~13 the marble leaves
+           the bottom of the frame entirely (measured: at pos.y 4.2,
+           look.y 16.5 put the band at the buttons and lost the floor).
+         Current values put the band roughly midway between the video
+         boxes and the view toggle with a marble sliver at the foot. */
+      speaker: { pos: new THREE.Vector3(0, 3.9, -20.5), look: new THREE.Vector3(0, 9.3, 10) },
     };
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
     const camPos = CAMS[viewRef.current].pos.clone();
@@ -1123,7 +1232,9 @@ export default function AgoraScene3D({
 
     /* ── Lights ── */
     scene.add(new THREE.HemisphereLight(0x24344a, 0x0c130c, 0.85));
-    const moon = new THREE.DirectionalLight(0x8ab4ff, 0.7);
+    /* Down from 0.7 — the moon was most of what made the empty bowl glow
+       blue. The seats keep a cool edge; the night keeps the frame. */
+    const moon = new THREE.DirectionalLight(0x8ab4ff, 0.55);
     moon.position.set(-24, 38, -20);
     moon.castShadow = true;
     moon.shadow.mapSize.set(1024, 1024);
@@ -1145,9 +1256,11 @@ export default function AgoraScene3D({
     buildTrees(scene);
     const orchestraGlow = buildOrchestraGlow(scene);
     const warmLights = [...buildStageGlow(scene), orchestraGlow.light, ...lanternLights];
-    /* Speaker queue: mic totem + slot path + the members group. */
-    const mic = buildMicTotem(scene);
-    micMatRef.current = mic.mat;
+    /* Speaker queue: slot path + the members group. The mic totem that
+       used to stand at the medallion is gone by request — the clean
+       marble center is the stage now, and the mic holder standing there
+       IS the marker. micMatRef stays wired (null) in case a floor-level
+       mic cue returns. */
     buildQueuePath(scene);
     const queueGroup = new THREE.Group();
     scene.add(queueGroup);
