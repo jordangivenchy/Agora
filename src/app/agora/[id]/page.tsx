@@ -491,20 +491,17 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      cast row is showing the room. Labels prefer the seated row's display
      name; the raw handle rides along for the user context menu. */
   const dockTiles = useMemo(() => {
-    const stageUp = room?.status === "live";
-    if (stageUp && call.videoTiles.some((t) => t.source === "screen")) return [];
-    /* Pre-live the stage is down, so nobody holds a pane — every camera
-       (a debater warming up in the lobby) docks as a small tile instead. */
-    const paneIds = stageUp
-      ? new Set([stagePanes.pro?.id, stagePanes.con?.id].filter(Boolean))
-      : new Set<string | undefined>();
+    if (call.videoTiles.some((t) => t.source === "screen")) return [];
+    const paneIds = new Set(
+      [stagePanes.pro?.id, stagePanes.con?.id].filter(Boolean)
+    );
     return call.videoTiles
       .filter((t) => t.source === "camera" && !paneIds.has(t.identity))
       .map((t) => {
         const u = participants.find((p) => p.user_id === t.identity)?.user;
         return u ? { ...t, username: displayName(u) || t.username, handle: u.username } : t;
       });
-  }, [call.videoTiles, stagePanes, participants, room?.status]);
+  }, [call.videoTiles, stagePanes, participants]);
 
   /* Walking in seats you: signed-in visitors get a spectator row right
      away, so you're visible in the crowd the moment you arrive — raising
@@ -881,12 +878,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           />
         )}
 
-        {/* ── The stage: debater boxes, and the share when one is live.
-              Only once the debate IS live — lobby camera warm-ups stay in
-              the dock instead of taking the stage early. ── */}
-        {room.status === "live" && (
-          <AgoraStage tiles={call.videoTiles} panes={stagePanes} view={view} speaking={call.speakingIds} />
-        )}
+        {/* ── The stage: debater boxes, and the share when one is live ── */}
+        <AgoraStage tiles={call.videoTiles} panes={stagePanes} view={view} speaking={call.speakingIds} />
 
         {/* ── Live camera tiles + floating reactions ── */}
         <AgoraVideoDock tiles={dockTiles} />
