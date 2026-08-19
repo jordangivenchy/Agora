@@ -859,12 +859,15 @@
   /* Above the ground veil (1) and the stage rail (2), below the control
      row (5) and the topbar (5). */
   z-index: 3;
-  animation: agCastIn 0.22s ease;
+  /* Unhurried entrance: the stage is furniture arriving, not a popup.
+     Long settle on a strong ease-out — most of the motion spends itself
+     in the first third, then glides the rest of the way. */
+  animation: agCastIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes agCastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateX(-50%) translateY(22px) scale(0.985); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 /* The shared screen and the video boxes are one construction: the liquid
