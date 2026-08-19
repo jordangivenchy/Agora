@@ -102,6 +102,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
 
+
   // Derive my participation directly from the participants array — single source of truth
   const myParticipation = useMemo(() => {
     if (!currentUser) return null;
@@ -1274,7 +1275,17 @@ function ClassicRoom({ roomId }: { roomId: string }) {
         userId={currentUser?.id}
       />
 
-      <AgoraAssistant motion={room?.motion} roomId={roomId} topicKey={room?.topic_key} />
+      <AgoraAssistant
+        motion={room?.motion}
+        roomId={roomId}
+        topicKey={room?.topic_key}
+        liveListening={
+          myParticipation?.role === "debater" &&
+          !myParticipation.left_at &&
+          room?.status === "live" &&
+          isInRoom
+        }
+      />
     </div>
   );
 }
