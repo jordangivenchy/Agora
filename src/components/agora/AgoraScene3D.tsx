@@ -1060,8 +1060,14 @@ export default function AgoraScene3D({
   const viewRef = useRef<AgoraView>(view);
   const onViewSettledRef = useRef(onViewSettled);
   onViewSettledRef.current = onViewSettled;
+  /* Which vantage we've announced. Cleared on every view CHANGE (not on
+     arrival at another vantage): a quick speaker→audience→speaker round
+     trip never finishes arriving at audience, and a latch keyed only on
+     arrivals would stay stuck on "speaker" and never re-fire. */
+  const settledNotifiedRef = useRef<AgoraView | null>(null);
   useEffect(() => {
     viewRef.current = view;
+    settledNotifiedRef.current = null;
   }, [view]);
 
   /* ── Speaker queue members ────────────────────────────────────────
@@ -1363,7 +1369,6 @@ export default function AgoraScene3D({
        through a dropped-frame stutter — the fixed 0.045/frame lerp it
        replaces ran twice as fast at 120Hz and jerked when frames dropped. */
     let raf = 0;
-    let settledNotified: AgoraView | null = null;
     const t0 = performance.now();
     let lastFrame = t0;
     const DAMP = 2.8; // ≈ the old 0.045/frame feel at 60fps
@@ -1433,8 +1438,8 @@ export default function AgoraScene3D({
       camLook.lerp(target.look, k);
       /* Announce arrival once per vantage: the exponential glide never
          mathematically lands, so "close enough to be still" is arrival. */
-      if (camPos.distanceTo(target.pos) < 0.5 && settledNotified !== viewRef.current) {
-        settledNotified = viewRef.current;
+      if (camPos.distanceTo(target.pos) < 0.5 && settledNotifiedRef.current !== viewRef.current) {
+        settledNotifiedRef.current = viewRef.current;
         onViewSettledRef.current?.(viewRef.current);
       }
       camera.position.copy(camPos);
