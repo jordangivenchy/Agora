@@ -17,6 +17,10 @@ interface Props {
   initialTopic?: string;
   /* Open with "Schedule for later" already on (the scheduled empty-state). */
   initialSchedule?: boolean;
+  /* Community context ("Start a discussion" inside a Communities board) —
+     the room is linked to the community and its members get notified. */
+  communityId?: string;
+  communityName?: string;
 }
 
 /* Agora Stoa format variants — each maps onto the base room shape the
@@ -64,7 +68,7 @@ function defaultScheduleValue() {
   return toLocalInputValue(d);
 }
 
-export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule }: Props) {
+export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule, communityId, communityName }: Props) {
   const router = useRouter();
   const supabase = createClient();
   useEscapeClose(open, onClose);
@@ -246,6 +250,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         p_con_size:           conSize,
         p_time_limit_seconds: timeLimitSeconds,
         p_scheduled_start:    scheduledIso,
+        p_community:          communityId ?? null,
       });
 
       if (rpcError) {
@@ -801,6 +806,19 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 padding: "12px 14px",
               }}
             >
+              {communityId && (
+                <p
+                  className="m-0 mb-2 px-3 py-2 rounded-lg text-[11.5px]"
+                  style={{
+                    background: "rgba(201,176,106,0.08)",
+                    border: "1px solid rgba(201,176,106,0.25)",
+                    color: "#c9b06a",
+                  }}
+                >
+                  🏛 This discussion belongs to <strong>{communityName ?? "your community"}</strong> — members
+                  will be notified.
+                </p>
+              )}
               <Toggle label="Schedule for later" checked={scheduleEnabled} onChange={setScheduleEnabled} />
               {scheduleEnabled && (
                 <>
@@ -1014,7 +1032,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 {loading
                   ? "Creating…"
                   : scheduleEnabled
-                  ? "Schedule debate"
+                  ? "Schedule discussion"
                   : "Create room"}
               </button>
             </div>

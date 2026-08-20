@@ -2,23 +2,38 @@
 
 /* Communities — a forum, not just a membership list. Each community is
    a board of posts with up/down votes and threaded comments
-   (Reddit/Quora-style), backed by 20260815_community_posts.sql:
+   (Reddit/Quora-style), backed by 20260815_community_posts.sql and
+   20260835_communities_v2.sql:
    - feed + scores via get_community_posts (votes are private rows;
-     only aggregates and your own vote leave the database)
+     only aggregates and your own vote leave the database), sorted
+     Best (Wilson lower bound) / New / Top
    - voting via vote_post (±1, 0 clears)
    - posts/comments written directly under RLS (as yourself, not
-     suspended, rate-limited by trigger)
-   Guests can read everything; any interaction routes to /login. */
+     suspended, rate-limited by trigger, invisible boards excluded)
+   - private communities: listed in the rail, content member-only,
+     joining goes through request_to_join + mod approval
+   - moderation: owner/mods edit description/rules/privacy, manage
+     tags, approve requests, delete posts; owner promotes mods
+   - images (post-images bucket), reposts (repost_post RPC), share
+     links (/?post=<id>)
+   Guests can read public boards; any interaction routes to /login. */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "./userMenuContext";
 import UserAvatar from "./UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
+import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
+import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
+import GifPicker, { giphyEnabled } from "./community/GifPicker";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  /* Open the room-create modal linked to a community — starts live by
+     default; scheduling stays available inside the modal. */
+  onStartDiscussion?: (communityId: string, communityName: string) => void;
 }
 
 type Community = {
@@ -26,9 +41,18 @@ type Community = {
   name: string;
   kind: string;
   color: string;
+  description: string | null;
+  rules: string | null;
+  is_private: boolean;
+  banner_url: string | null;
+  avatar_url: string | null;
   members: number;
   joined: boolean;
+  my_role: string | null;   // 'owner' | 'moderator' | 'member' | null
+  requested: boolean;       // pending join request (private boards)
 };
+
+type Tag = { id: string; community_id: string; name: string; color: string };
 
 type Post = {
   id: string;
@@ -43,7 +67,23 @@ type Post = {
   score: number;
   my_vote: number | null;
   comment_count: number;
+  image_url: string | null;
+  tag_id: string | null;
+  tag_name: string | null;
+  tag_color: string | null;
+  author_role: string | null;
+  is_repost: boolean;
+  repost_of: string | null;
+  orig_title: string | null;
+  orig_body: string | null;
+  orig_image_url: string | null;
+  orig_community_name: string | null;
+  orig_author_username: string | null;
+  orig_author_display_name: string | null;
+  pinned_at: string | null;
 };
+
+type MentionUser = { id: string; username: string; display_name: string | null; avatar_url: string | null };
 
 type Comment = {
   id: string;
@@ -56,6 +96,34 @@ type Comment = {
   created_at: string;
   score: number;
   my_vote: number | null;
+  author_role: string | null;
+  image_url: string | null;
+  pinned_at: string | null;
+};
+
+type JoinRequest = {
+  user_id: string;
+  created_at: string;
+  user: { username: string; display_name: string | null; avatar_url: string | null } | null;
+};
+
+type Member = {
+  user_id: string;
+  role: string;
+  user: { username: string; display_name: string | null; avatar_url: string | null } | null;
+};
+
+type CommunityDebate = {
+  id: string;
+  motion: string;
+  status: string;
+  scheduled_start: string | null;
+};
+
+type RailDebate = CommunityDebate & {
+  community_id: string;
+  community_name: string;
+  community_color: string;
 };
 
 const KINDS = [
@@ -66,23 +134,83 @@ const KINDS = [
   { key: "pre-law", label: "Pre-law" },
 ];
 
+const TAG_COLORS = ["#e2b96b", "#64B5F6", "#00b894", "#d98fb9", "#9d8fd9", "#e0956a"];
+
+/* Homepage v5 glass: translucent card, blur, hairline border. */
 const card: React.CSSProperties = {
-  background: "rgba(18,18,24,0.92)",
-  border: "0.5px solid #2e2e38",
-  borderRadius: 12,
+  background: "rgba(14,14,17,0.72)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: 14,
 };
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(10,10,14,0.8)",
-  border: "0.5px solid #34343c",
+  background: "rgba(10,10,12,0.7)",
+  border: "0.5px solid rgba(255,255,255,0.1)",
   borderRadius: 9,
-  color: "#f5f5f0",
+  color: "#eeeef5",
   fontSize: 13,
   padding: "9px 12px",
   outline: "none",
   fontFamily: "inherit",
   width: "100%",
   boxSizing: "border-box",
+};
+
+const btnBlue: React.CSSProperties = {
+  background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
+  color: "#4a9eff", borderRadius: 9, fontFamily: "inherit", cursor: "pointer",
+};
+
+const btnGhost: React.CSSProperties = {
+  background: "transparent", border: "0.5px solid rgba(255,255,255,0.14)",
+  color: "rgba(238,238,245,0.65)", borderRadius: 9, fontFamily: "inherit", cursor: "pointer",
+};
+
+/* Premium header pills — shared base + tinted variants, with a hover
+   lift applied via the mouse handlers below. */
+const pillBase: React.CSSProperties = {
+  fontFamily: "inherit", cursor: "pointer", borderRadius: 999,
+  padding: "5px 13px", fontSize: 11, fontWeight: 600, letterSpacing: "0.01em",
+  transition: "transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease",
+  whiteSpace: "nowrap",
+};
+const pillGold: React.CSSProperties = {
+  ...pillBase,
+  background: "linear-gradient(135deg,#f7e3a0,#d9a238)",
+  border: "none", color: "#412402",
+  boxShadow: "0 3px 10px rgba(217,162,56,0.2)",
+};
+const pillBlue: React.CSSProperties = {
+  ...pillBase,
+  background: "rgba(74,158,255,0.14)",
+  border: "1px solid rgba(74,158,255,0.4)", color: "#9ccafd",
+  boxShadow: "0 3px 10px rgba(74,158,255,0.1)",
+};
+const pillGreen: React.CSSProperties = {
+  ...pillBase,
+  background: "rgba(0,184,148,0.1)",
+  border: "1px solid rgba(0,184,148,0.4)", color: "#35d3ab",
+};
+const pillAmber: React.CSSProperties = {
+  ...pillBase,
+  background: "rgba(226,185,107,0.08)",
+  border: "1px solid rgba(226,185,107,0.35)", color: "#e2b96b",
+};
+const pillGlass: React.CSSProperties = {
+  ...pillBase,
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.12)", color: "rgba(238,238,245,0.8)",
+  backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+};
+const liftIn = (e: React.MouseEvent<HTMLButtonElement>) => {
+  e.currentTarget.style.transform = "translateY(-1px)";
+  e.currentTarget.style.filter = "brightness(1.12)";
+};
+const liftOut = (e: React.MouseEvent<HTMLButtonElement>) => {
+  e.currentTarget.style.transform = "";
+  e.currentTarget.style.filter = "";
 };
 
 function timeAgo(iso: string): string {
@@ -94,6 +222,107 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
+function fmtWhen(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+/* MOD / OWNER badge next to author names. */
+function RoleBadge({ role }: { role: string | null }) {
+  if (role !== "owner" && role !== "moderator") return null;
+  const owner = role === "owner";
+  return (
+    <span
+      className="text-[9px] font-bold px-1.5 rounded"
+      style={{
+        background: owner ? "rgba(226,185,107,0.14)" : "rgba(0,184,148,0.14)",
+        border: `0.5px solid ${owner ? "rgba(226,185,107,0.4)" : "rgba(0,184,148,0.4)"}`,
+        color: owner ? "#e2b96b" : "#00b894",
+        letterSpacing: "0.04em",
+        padding: "1px 5px",
+      }}
+    >
+      {owner ? "OWNER" : "MOD"}
+    </span>
+  );
+}
+
+function TagChip({ name, color, small }: { name: string; color: string | null; small?: boolean }) {
+  const c = color || "rgba(238,238,245,0.5)";
+  return (
+    <span
+      className="rounded-full"
+      style={{
+        fontSize: small ? 9.5 : 10.5,
+        padding: small ? "1px 7px" : "2px 8px",
+        background: `${c}22`,
+        border: `0.5px solid ${c}66`,
+        color: c,
+        fontWeight: 600,
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+
+/* @-autocomplete for composers: when the text ends in "@frag", offers
+   matching users; picking one completes the handle. Rendered inside a
+   position:relative wrapper, dropping below the input. */
+function MentionSuggest({
+  text, onComplete, supabase,
+}: {
+  text: string;
+  onComplete: (nextText: string) => void;
+  supabase: ReturnType<typeof createClient>;
+}) {
+  const [hits, setHits] = useState<MentionUser[]>([]);
+  const frag = useMemo(() => text.match(/@([a-zA-Z0-9_]{1,20})$/)?.[1] ?? null, [text]);
+  useEffect(() => {
+    if (!frag) { setHits([]); return; }
+    let dead = false;
+    const t = setTimeout(async () => {
+      const { data } = await supabase.rpc("search_mention_users", { p_query: frag, p_limit: 5 });
+      if (!dead) setHits(((data ?? []) as MentionUser[]));
+    }, 180);
+    return () => { dead = true; clearTimeout(t); };
+  }, [frag, supabase]);
+  if (!frag || hits.length === 0) return null;
+  return (
+    <div
+      className="absolute left-0 z-20 overflow-hidden"
+      style={{
+        top: "100%", marginTop: 4, minWidth: 220,
+        background: "rgba(14,14,17,0.97)",
+        backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+        border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10,
+        boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+      }}
+    >
+      {hits.map((u) => (
+        <div
+          key={u.id}
+          /* mousedown so the input doesn't blur before we complete */
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onComplete(text.replace(/@([a-zA-Z0-9_]{1,20})$/, `@${u.username} `));
+          }}
+          className="flex items-center gap-2 px-3 py-2 cursor-pointer"
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+        >
+          <UserAvatar size={20} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
+          <span className="text-[12px]" style={{ color: "#eeeef5" }}>@{u.username}</span>
+          {u.display_name?.trim() && (
+            <span className="text-[10.5px] truncate" style={{ color: "rgba(238,238,245,0.4)" }}>{u.display_name}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* Vote column shared by feed cards and the detail view. */
 function VoteBox({
   post, onVote, size = 13,
@@ -103,18 +332,18 @@ function VoteBox({
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === 1 ? 0 : 1); }}
         className="cursor-pointer bg-transparent border-none px-1"
-        style={{ color: post.my_vote === 1 ? "#f4d47c" : "#6b6b74", fontSize: size + 1 }}
+        style={{ color: post.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", fontSize: size + 1 }}
         aria-label="Upvote"
       >
         ▲
       </button>
-      <span className="text-center" style={{ color: "#f5f5f0", fontSize: size, fontWeight: 600 }}>
+      <span className="text-center" style={{ color: "#eeeef5", fontSize: size, fontWeight: 600 }}>
         {post.score}
       </span>
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === -1 ? 0 : -1); }}
         className="cursor-pointer bg-transparent border-none px-1"
-        style={{ color: post.my_vote === -1 ? "#85b7eb" : "#6b6b74", fontSize: size + 1 }}
+        style={{ color: post.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", fontSize: size + 1 }}
         aria-label="Downvote"
       >
         ▼
@@ -123,7 +352,7 @@ function VoteBox({
   );
 }
 
-export default function CommunitiesPage({ open, onClose }: Props) {
+export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Props) {
   const { openUserMenu } = useUserMenu();
 
   /* Author label → unified user context menu (needs an id; system posts skip
@@ -151,12 +380,87 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   const [supabase] = useState(() => createClient());
   const [userId, setUserId] = useState<string | null>(null);
 
+  /* Live presence (45s heartbeat / 90s staleness) — the store is kept
+     running by FriendsSection on the homepage shell; we only read it. */
+  const presence = useSyncExternalStore(subscribePresence, getPresenceSnapshot, () => getPresenceSnapshot());
+
+  /* Rich text-lite for post/comment bodies, one regex pass:
+       @handle          → profile link
+       **bold**         → strong
+       *italic*         → em
+       ~~strike~~       → s
+       `code`           → styled code span
+       https://…        → external link
+     No nesting — plain markers, plainly rendered. */
+  const renderWithMentions = useCallback((text: string): React.ReactNode => {
+    const RX = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*)|(~~[^~\n]+~~)|(@[a-zA-Z0-9_]{3,20})|(https?:\/\/[^\s<>"')]+)/g;
+    const out: React.ReactNode[] = [];
+    let last = 0;
+    let k = 0;
+    let m: RegExpExecArray | null;
+    while ((m = RX.exec(text)) !== null) {
+      if (m.index > last) out.push(text.slice(last, m.index));
+      const tok = m[0];
+      if (m[1]) {
+        out.push(
+          <code key={k++} style={{
+            background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.1)",
+            borderRadius: 4, padding: "0 5px", fontSize: "0.9em",
+          }}>
+            {tok.slice(1, -1)}
+          </code>
+        );
+      } else if (m[2]) {
+        out.push(<strong key={k++} style={{ fontWeight: 700, color: "#eeeef5" }}>{tok.slice(2, -2)}</strong>);
+      } else if (m[3]) {
+        out.push(<em key={k++}>{tok.slice(1, -1)}</em>);
+      } else if (m[4]) {
+        out.push(<s key={k++} style={{ opacity: 0.65 }}>{tok.slice(2, -2)}</s>);
+      } else if (m[5]) {
+        out.push(
+          <a
+            key={k++}
+            href={`/users/${encodeURIComponent(tok.slice(1))}`}
+            className="cursor-pointer no-underline"
+            style={{ color: "#4a9eff", fontWeight: 600 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {tok}
+          </a>
+        );
+      } else {
+        out.push(
+          <a
+            key={k++}
+            href={tok}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#4a9eff", textDecoration: "underline", textUnderlineOffset: 2 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {tok}
+          </a>
+        );
+      }
+      last = m.index + tok.length;
+    }
+    if (last === 0) return text;
+    if (last < text.length) out.push(text.slice(last));
+    return out;
+  }, []);
+
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [tagsByCommunity, setTagsByCommunity] = useState<Record<string, Tag[]>>({});
   const [selected, setSelected] = useState<string>("all"); // 'all' | community id
   const [posts, setPosts] = useState<Post[]>([]);
-  const [sort, setSort] = useState<"new" | "top">("new");
+  const [sort, setSort] = useState<"best" | "new" | "top">("best");
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Rail filter + per-community notification mutes (mine). */
+  const [railQuery, setRailQuery] = useState("");
+  const [myMutes, setMyMutes] = useState<Set<string>>(new Set());
 
   // Post detail
   const [openPost, setOpenPost] = useState<Post | null>(null);
@@ -171,11 +475,46 @@ export default function CommunitiesPage({ open, onClose }: Props) {
   const [composing, setComposing] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
+  const [newTagId, setNewTagId] = useState<string>("");
+  const [newImage, setNewImage] = useState<File | null>(null);
+  const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
+  /* GIPHY picks (mutually exclusive with a file attachment). */
+  const [newGifUrl, setNewGifUrl] = useState<string | null>(null);
+  const [gifPickerFor, setGifPickerFor] = useState<null | "post" | "comment">(null);
+  const [commentGifUrl, setCommentGifUrl] = useState<string | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
   const [creatingCommunity, setCreatingCommunity] = useState(false);
   const [newCommunityName, setNewCommunityName] = useState("");
   const [newCommunityKind, setNewCommunityKind] = useState("topic-circle");
+  const [newCommunityPrivate, setNewCommunityPrivate] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Sharing / reposting
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [repostFor, setRepostFor] = useState<Post | null>(null);
+  const [repostCommunity, setRepostCommunity] = useState<string>("");
+  const [repostComment, setRepostComment] = useState("");
+
+  // Comment images (one active composer at a time: root box or open reply)
+  const [commentImage, setCommentImage] = useState<File | null>(null);
+  const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
+  const [replyImage, setReplyImage] = useState<File | null>(null);
+  const [replyImagePreview, setReplyImagePreview] = useState<string | null>(null);
+
+  // Community header extras
+  const [modOpen, setModOpen] = useState(false);
+  const [railDebates, setRailDebates] = useState<RailDebate[]>([]);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  /* The open community's mod team — shown to everyone in the About card. */
+  const [railMods, setRailMods] = useState<Member[]>([]);
+  const [membersList, setMembersList] = useState<Member[]>([]);
+  // Mod panel drafts
+  const [draftDescription, setDraftDescription] = useState("");
+  const [draftRules, setDraftRules] = useState("");
+  const [draftPrivate, setDraftPrivate] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
 
   const requireAuth = useCallback((): boolean => {
     if (!userId) { window.location.href = "/login"; return false; }
@@ -186,22 +525,81 @@ export default function CommunitiesPage({ open, onClose }: Props) {
 
   const loadCommunities = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
-    setUserId(auth?.user?.id ?? null);
-    const { data } = await supabase
-      .from("communities")
-      .select("id, name, kind, color, community_members(user_id)");
-    setCommunities(
-      (data ?? []).map((c) => ({
-        id: c.id,
-        name: c.name,
-        kind: c.kind,
-        color: c.color ?? "#4a9eff",
-        members: (c.community_members ?? []).length,
-        joined: (c.community_members ?? []).some(
-          (m: { user_id: string }) => m.user_id === auth?.user?.id
-        ),
-      }))
+    const uid = auth?.user?.id ?? null;
+    setUserId(uid);
+    const [commRes, tagRes, reqRes, muteRes] = await Promise.all([
+      supabase
+        .from("communities")
+        .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, community_members(user_id, role)"),
+      supabase.from("community_tags").select("id, community_id, name, color"),
+      uid
+        ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid)
+        : Promise.resolve({ data: [] as { community_id: string }[] }),
+      uid
+        ? supabase.from("community_mutes").select("community_id").eq("user_id", uid)
+        : Promise.resolve({ data: [] as { community_id: string }[] }),
+    ]);
+    setMyMutes(new Set(((muteRes.data ?? []) as { community_id: string }[]).map((m) => m.community_id)));
+    const myRequests = new Set(
+      ((reqRes.data ?? []) as { community_id: string }[]).map((r) => r.community_id)
     );
+    setCommunities(
+      (commRes.data ?? []).map((c) => {
+        const members = (c.community_members ?? []) as { user_id: string; role: string }[];
+        const mine = members.find((m) => m.user_id === uid);
+        return {
+          id: c.id,
+          name: c.name,
+          kind: c.kind,
+          color: c.color ?? "#4a9eff",
+          description: c.description ?? null,
+          rules: c.rules ?? null,
+          is_private: !!c.is_private,
+          banner_url: c.banner_url ?? null,
+          avatar_url: c.avatar_url ?? null,
+          members: members.length,
+          joined: !!mine,
+          my_role: mine?.role ?? null,
+          requested: myRequests.has(c.id),
+        };
+      })
+    );
+    const byCommunity: Record<string, Tag[]> = {};
+    for (const t of (tagRes.data ?? []) as Tag[]) {
+      (byCommunity[t.community_id] ??= []).push(t);
+    }
+    setTagsByCommunity(byCommunity);
+
+    /* Rail: scheduled/live debates across the communities you joined —
+       hosted by the community, so they're labeled with its name. */
+    const joinedMeta = new Map(
+      (commRes.data ?? [])
+        .filter((c) => ((c.community_members ?? []) as { user_id: string }[]).some((m) => m.user_id === uid))
+        .map((c) => [c.id as string, { name: c.name as string, color: (c.color as string) ?? "#4a9eff" }])
+    );
+    if (joinedMeta.size === 0) {
+      setRailDebates([]);
+    } else {
+      const { data: rooms } = await supabase
+        .from("debate_rooms")
+        .select("id, motion, status, scheduled_start, community_id")
+        .in("community_id", [...joinedMeta.keys()])
+        .in("status", ["created", "scheduled", "live"])
+        .order("scheduled_start", { ascending: true })
+        .limit(8);
+      setRailDebates(
+        ((rooms ?? []) as (CommunityDebate & { community_id: string })[])
+          .map((r) => ({
+            ...r,
+            community_name: joinedMeta.get(r.community_id)?.name ?? "Community",
+            community_color: joinedMeta.get(r.community_id)?.color ?? "#4a9eff",
+          }))
+          // Live rooms first, then soonest scheduled.
+          .sort((a, b) =>
+            (b.status === "live" ? 1 : 0) - (a.status === "live" ? 1 : 0)
+            || (a.scheduled_start ?? "9999").localeCompare(b.scheduled_start ?? "9999"))
+      );
+    }
   }, [supabase]);
 
   /* The posts/comments RPCs don't return avatars; fetch them per author id
@@ -223,34 +621,163 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     }
   }, [supabase]);
 
+  /* Guards against out-of-order responses: only the latest feed request
+     and the currently-open post may write their results into state. */
+  const feedKeyRef = useRef("");
+  const openPostIdRef = useRef<string | null>(null);
+
+  const FEED_PAGE = 50;
+
   const loadPosts = useCallback(async () => {
+    const key = `${selected}|${sort}`;
+    feedKeyRef.current = key;
     setLoadingPosts(true);
     const { data, error: err } = await supabase.rpc("get_community_posts", {
       p_community: selected === "all" ? null : selected,
       p_sort: sort,
-      p_limit: 50,
+      p_limit: FEED_PAGE,
     });
+    if (feedKeyRef.current !== key) return; // a newer request superseded this one
     setLoadingPosts(false);
     if (err) { setError(err.message); return; }
     setError(null);
     const rows = (data ?? []) as Post[];
     setPosts(rows);
+    setHasMore(rows.length === FEED_PAGE);
     fetchAvatars(rows.map((p) => p.author_id));
   }, [supabase, selected, sort, fetchAvatars]);
 
+  /* Next page, appended. Offset-based — fine at this scale; duplicate
+     guard covers posts that shifted between fetches. */
+  const loadMorePosts = useCallback(async () => {
+    const key = `${selected}|${sort}`;
+    setLoadingMore(true);
+    const { data, error: err } = await supabase.rpc("get_community_posts", {
+      p_community: selected === "all" ? null : selected,
+      p_sort: sort,
+      p_limit: FEED_PAGE,
+      p_offset: posts.length,
+    });
+    setLoadingMore(false);
+    if (feedKeyRef.current !== key) return;
+    if (err) { setError(err.message); return; }
+    const rows = (data ?? []) as Post[];
+    setPosts((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+    });
+    setHasMore(rows.length === FEED_PAGE);
+    fetchAvatars(rows.map((p) => p.author_id));
+  }, [supabase, selected, sort, posts.length, fetchAvatars]);
+
   const loadComments = useCallback(async (postId: string) => {
     const { data } = await supabase.rpc("get_post_comments", { p_post: postId });
+    if (openPostIdRef.current !== postId) return; // user moved on
     const rows = (data ?? []) as Comment[];
     setComments(rows);
     fetchAvatars(rows.map((c) => c.author_id));
   }, [supabase, fetchAvatars]);
 
+  /* Opening/closing a post resets every per-post composer state —
+     comments from the previous post, drafts, and pending image
+     attachments must never bleed into the next context. */
+  const clearCommentImages = useCallback(() => {
+    setCommentImage(null);
+    setCommentImagePreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setReplyImage(null);
+    setReplyImagePreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+  }, []);
+
+  const openPostDetail = useCallback((p: Post) => {
+    openPostIdRef.current = p.id;
+    setOpenPost(p);
+    setComments([]);
+    setCommentText("");
+    setReplyTo(null);
+    setReplyText("");
+    clearCommentImages();
+    loadComments(p.id);
+  }, [loadComments, clearCommentImages]);
+
+  const closePostDetail = useCallback(() => {
+    openPostIdRef.current = null;
+    setOpenPost(null);
+    setComments([]);
+    setReplyTo(null);
+    clearCommentImages();
+  }, [clearCommentImages]);
+
+  /* Community header extras: the mod team (public, for the About card),
+     plus join requests and the member list for mods/owners. */
+  const loadCommunityExtras = useCallback(async (communityId: string, isMod: boolean, isOwner: boolean) => {
+    const { data: modRows } = await supabase
+      .from("community_members")
+      .select("user_id, role, user:users!user_id(username, display_name, avatar_url)")
+      .eq("community_id", communityId)
+      .in("role", ["owner", "moderator"]);
+    setRailMods(
+      ((modRows ?? []) as unknown as Member[])
+        .sort((a, b) => (a.role === "owner" ? -1 : 0) - (b.role === "owner" ? -1 : 0))
+    );
+    if (isMod) {
+      const { data: reqs } = await supabase
+        .from("community_join_requests")
+        .select("user_id, created_at, user:users!user_id(username, display_name, avatar_url)")
+        .eq("community_id", communityId);
+      setJoinRequests((reqs ?? []) as unknown as JoinRequest[]);
+    } else {
+      setJoinRequests([]);
+    }
+    // Every mod sees the member list; promoting/demoting stays owner-only
+    // (set_community_role enforces that server-side regardless).
+    if (isMod) {
+      const { data: mems } = await supabase
+        .from("community_members")
+        .select("user_id, role, user:users!user_id(username, display_name, avatar_url)")
+        .eq("community_id", communityId);
+      setMembersList((mems ?? []) as unknown as Member[]);
+    } else {
+      setMembersList([]);
+    }
+  }, [supabase]);
+
   useEffect(() => { if (open) loadCommunities(); }, [open, loadCommunities]);
   useEffect(() => { if (open) loadPosts(); }, [open, loadPosts]);
 
-  /* Deep link from the discovery search: open a specific post. The event
-     arrives right after the Communities nav click, so `open` may still be
-     flipping — stash the id and resolve once posts are in. */
+  const selectedCommunity = useMemo(
+    () => communities.find((c) => c.id === selected) ?? null,
+    [communities, selected]
+  );
+
+  /* Switching boards closes the composer and drops the picked tag —
+     a tag from community A must never ride along into community B
+     (the validate_post_tag trigger would reject the insert). The
+     About card's description also re-collapses. */
+  const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
+  useEffect(() => {
+    setComposing(false);
+    setNewTagId("");
+    setAboutExpanded(false);
+    setRulesExpanded(false);
+  }, [selected]);
+
+  useEffect(() => {
+    setModOpen(false);
+    if (open && selectedCommunity) {
+      const isMod = selectedCommunity.my_role === "owner" || selectedCommunity.my_role === "moderator";
+      loadCommunityExtras(selectedCommunity.id, isMod, selectedCommunity.my_role === "owner");
+      setDraftDescription(selectedCommunity.description ?? "");
+      setDraftRules(selectedCommunity.rules ?? "");
+      setDraftPrivate(selectedCommunity.is_private);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, selectedCommunity?.id, selectedCommunity?.my_role]);
+
+  /* Deep link from the discovery search / share links / the bell: open a
+     specific post. The event arrives right after the Communities nav click,
+     so `open` may still be flipping — stash the id and resolve once posts
+     are in. */
   const [pendingPostId, setPendingPostId] = useState<string | null>(null);
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -261,15 +788,28 @@ export default function CommunitiesPage({ open, onClose }: Props) {
         setPendingPostId(id);
       }
     };
+    /* Community names elsewhere in the app (room cards, feed rows) route
+       here: open that community's home page. */
+    const onOpenCommunity = (e: Event) => {
+      const id = (e as CustomEvent).detail?.communityId;
+      if (typeof id === "string" && id) {
+        setOpenPost(null);
+        setPendingPostId(null);
+        setSelected(id);
+      }
+    };
     document.addEventListener("agora:open-post", onOpen);
-    return () => document.removeEventListener("agora:open-post", onOpen);
+    document.addEventListener("agora:open-community", onOpenCommunity);
+    return () => {
+      document.removeEventListener("agora:open-post", onOpen);
+      document.removeEventListener("agora:open-community", onOpenCommunity);
+    };
   }, []);
   useEffect(() => {
     if (!open || !pendingPostId || loadingPosts) return;
     const hit = posts.find((p) => p.id === pendingPostId);
     if (hit) {
-      setOpenPost(hit);
-      loadComments(hit.id);
+      openPostDetail(hit);
       setPendingPostId(null);
       return;
     }
@@ -281,13 +821,12 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       const { data } = await supabase.rpc("get_community_post", { p_post: id });
       const row = (data as Post[] | null)?.[0];
       if (!row) return;
-      setOpenPost(row);
       fetchAvatars([row.author_id]);
-      loadComments(row.id);
+      openPostDetail(row);
     })();
-  }, [open, pendingPostId, loadingPosts, posts, loadComments, fetchAvatars, supabase]);
+  }, [open, pendingPostId, loadingPosts, posts, openPostDetail, fetchAvatars, supabase]);
 
-  useEscapeClose(open, () => (openPost ? setOpenPost(null) : onClose()));
+  useEscapeClose(open, () => (repostFor ? setRepostFor(null) : openPost ? closePostDetail() : onClose()));
 
   /* ── actions ── */
 
@@ -323,17 +862,68 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     }
   }, [supabase, requireAuth]);
 
+  const pickImage = useCallback((file: File | null) => {
+    setNewImage(file);
+    if (file) setNewGifUrl(null); // one attachment at a time
+    setNewImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }, []);
+
+  /* Wrap the textarea selection in a formatting marker (B/I/S/code). */
+  const wrapSelection = useCallback((marker: string) => {
+    const ta = bodyRef.current;
+    if (!ta) return;
+    const s = ta.selectionStart ?? 0;
+    const e = ta.selectionEnd ?? 0;
+    const sel = newBody.slice(s, e) || "text";
+    setNewBody(newBody.slice(0, s) + marker + sel + marker + newBody.slice(e));
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(s + marker.length, s + marker.length + sel.length);
+    });
+  }, [newBody]);
+
+  const pickCommentImage = useCallback((file: File | null) => {
+    setCommentImage(file);
+    setCommentImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }, []);
+
+  const pickReplyImage = useCallback((file: File | null) => {
+    setReplyImage(file);
+    setReplyImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }, []);
+
   const submitPost = useCallback(async () => {
     if (!requireAuth()) return;
     const communityId = selected !== "all" ? selected : composeCommunity;
     const title = newTitle.trim();
     if (!communityId || !title) return;
     setBusy(true);
+    let imageUrl: string | null = null;
+    if (newImage && userId) {
+      try {
+        imageUrl = await uploadPostImage(supabase, userId, newImage);
+      } catch (e) {
+        setBusy(false);
+        setError(e instanceof Error ? e.message : "Image upload failed.");
+        return;
+      }
+    }
     const { error: err } = await supabase.from("community_posts").insert({
       community_id: communityId,
       author_id: userId,
       title,
       body: newBody.trim() || null,
+      tag_id: newTagId || null,
+      image_url: imageUrl ?? newGifUrl,
     });
     setBusy(false);
     if (err) {
@@ -343,20 +933,33 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       return;
     }
     setComposing(false);
-    setNewTitle(""); setNewBody("");
+    setNewTitle(""); setNewBody(""); setNewTagId("");
+    setNewGifUrl(null);
+    pickImage(null);
     loadPosts();
-  }, [supabase, requireAuth, selected, composeCommunity, newTitle, newBody, userId, loadPosts]);
+  }, [supabase, requireAuth, selected, composeCommunity, newTitle, newBody, newTagId, newImage, newGifUrl, userId, loadPosts, pickImage]);
 
-  const submitComment = useCallback(async (parentId: string | null, body: string) => {
-    if (!openPost || !requireAuth()) return;
+  const submitComment = useCallback(async (parentId: string | null, body: string, image: File | null, gif: string | null = null) => {
+    if (busy || !openPost || !requireAuth()) return; // busy: Enter can auto-repeat
     const text = body.trim();
     if (!text) return;
     setBusy(true);
+    let imageUrl: string | null = null;
+    if (image && userId) {
+      try {
+        imageUrl = await uploadPostImage(supabase, userId, image);
+      } catch (e) {
+        setBusy(false);
+        setError(e instanceof Error ? e.message : "Image upload failed.");
+        return;
+      }
+    }
     const { error: err } = await supabase.from("community_comments").insert({
       post_id: openPost.id,
       parent_id: parentId,
       author_id: userId,
       body: text,
+      image_url: imageUrl ?? gif,
     });
     setBusy(false);
     if (err) {
@@ -366,21 +969,29 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       return;
     }
     setCommentText(""); setReplyTo(null); setReplyText("");
+    setCommentGifUrl(null);
+    pickCommentImage(null); pickReplyImage(null);
     loadComments(openPost.id);
     const bump = (p: Post): Post =>
       p.id === openPost.id ? { ...p, comment_count: p.comment_count + 1 } : p;
     setPosts((ps) => ps.map(bump));
     setOpenPost((p) => (p ? bump(p) : p));
-  }, [supabase, requireAuth, openPost, userId, loadComments]);
+  }, [busy, supabase, requireAuth, openPost, userId, loadComments, pickCommentImage, pickReplyImage]);
+
+  /* Mods can delete anything in their board (RLS-backed). */
+  const canModerate = useCallback((communityId: string): boolean => {
+    const c = communities.find((x) => x.id === communityId);
+    return c?.my_role === "owner" || c?.my_role === "moderator";
+  }, [communities]);
 
   const deletePost = useCallback(async (post: Post) => {
     if (!confirm("Delete this post? Its comments go with it.")) return;
     const { error: err } = await supabase.from("community_posts").delete().eq("id", post.id);
     if (!err) {
-      setOpenPost(null);
+      closePostDetail();
       setPosts((ps) => ps.filter((p) => p.id !== post.id));
     }
-  }, [supabase]);
+  }, [supabase, closePostDetail]);
 
   const deleteComment = useCallback(async (comment: Comment) => {
     if (!openPost) return;
@@ -389,11 +1000,24 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     if (!err) loadComments(openPost.id);
   }, [supabase, openPost, loadComments]);
 
+  /* Join / request / leave. Private boards go through join requests. */
   const toggleJoin = useCallback(async (c: Community) => {
     if (!requireAuth()) return;
     if (c.joined) {
+      if (c.my_role === "owner") {
+        setError("Owners can't leave their own community.");
+        return;
+      }
       await supabase.from("community_members").delete()
         .eq("community_id", c.id).eq("user_id", userId!);
+    } else if (c.is_private) {
+      if (c.requested) {
+        await supabase.from("community_join_requests").delete()
+          .eq("community_id", c.id).eq("user_id", userId!);
+      } else {
+        const { error: err } = await supabase.rpc("request_to_join", { p_community: c.id });
+        if (err) { setError(err.message); return; }
+      }
     } else {
       await supabase.from("community_members").insert({ community_id: c.id, user_id: userId });
     }
@@ -406,24 +1030,210 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     if (!name) return;
     const { data, error: err } = await supabase
       .from("communities")
-      .insert({ name, kind: newCommunityKind, created_by: userId })
+      .insert({ name, kind: newCommunityKind, created_by: userId, is_private: newCommunityPrivate })
       .select("id")
       .single();
     if (!err && data) {
       await supabase.from("community_members").insert({ community_id: data.id, user_id: userId, role: "owner" });
       setCreatingCommunity(false);
       setNewCommunityName("");
+      setNewCommunityPrivate(false);
       setSelected(data.id);
       loadCommunities();
     }
-  }, [supabase, requireAuth, newCommunityName, newCommunityKind, userId, loadCommunities]);
+  }, [supabase, requireAuth, newCommunityName, newCommunityKind, newCommunityPrivate, userId, loadCommunities]);
+
+  /* Share: copy a deep link that reopens this post (handled in page.tsx). */
+  const sharePost = useCallback(async (post: Post) => {
+    const url = `${window.location.origin}/?post=${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(post.id);
+      setTimeout(() => setCopiedId((id) => (id === post.id ? null : id)), 1600);
+    } catch {
+      setError("Couldn't copy the link — copy it from the address bar instead.");
+    }
+  }, []);
+
+  const submitRepost = useCallback(async () => {
+    if (!repostFor || !requireAuth() || !repostCommunity) return;
+    setBusy(true);
+    const { error: err } = await supabase.rpc("repost_post", {
+      p_post: repostFor.id,
+      p_community: repostCommunity,
+      p_body: repostComment.trim() || null,
+    });
+    setBusy(false);
+    if (err) {
+      setError(
+        err.message.includes("private_source") ? "Posts in private communities can't be shared out."
+        : err.message.includes("same_community") ? "That post already lives in that community."
+        : err.message.includes("rate_limited") ? "You're posting too quickly — try again in a few minutes."
+        : err.message);
+      return;
+    }
+    setRepostFor(null);
+    setRepostComment("");
+    loadPosts();
+  }, [supabase, requireAuth, repostFor, repostCommunity, repostComment, loadPosts]);
+
+  /* ── mod actions ── */
+
+  const saveSettings = useCallback(async () => {
+    if (!selectedCommunity) return;
+    setBusy(true);
+    const { error: err } = await supabase.rpc("update_community_settings", {
+      p_community: selectedCommunity.id,
+      p_description: draftDescription.trim() || "",
+      p_rules: draftRules.trim() || "",
+      p_is_private: selectedCommunity.my_role === "owner" ? draftPrivate : null,
+    });
+    setBusy(false);
+    if (err) { setError(err.message); return; }
+    loadCommunities();
+  }, [supabase, selectedCommunity, draftDescription, draftRules, draftPrivate, loadCommunities]);
+
+  /* Branding: banner (wide) and avatar (square-cropped) upload to the
+     post-images bucket, then the guarded settings RPC stores the URL.
+     Passing '' clears a slot back to the color/letter fallback. */
+  const [brandingBusy, setBrandingBusy] = useState<"banner" | "avatar" | null>(null);
+  const setBranding = useCallback(async (kind: "banner" | "avatar", file: File | null) => {
+    if (!selectedCommunity || !userId) return;
+    setBrandingBusy(kind);
+    try {
+      let url = "";
+      if (file) {
+        url = kind === "banner"
+          ? await uploadPostImage(supabase, userId, file)
+          : await uploadSquareImage(supabase, userId, file);
+      }
+      const { error: err } = await supabase.rpc("update_community_settings", {
+        p_community: selectedCommunity.id,
+        ...(kind === "banner" ? { p_banner_url: url } : { p_avatar_url: url }),
+      });
+      if (err) throw new Error(err.message);
+      loadCommunities();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Image upload failed.");
+    } finally {
+      setBrandingBusy(null);
+    }
+  }, [supabase, selectedCommunity, userId, loadCommunities]);
+
+  /* Bumps whenever a mod action lands so the bans/log panels refetch. */
+  const [modRefresh, setModRefresh] = useState(0);
+
+  /* Ban a plain member (mods; owners/mods are refused server-side). */
+  const banMember = useCallback(async (m: Member) => {
+    if (!selectedCommunity) return;
+    const name = m.user?.display_name?.trim() || `@${m.user?.username ?? "user"}`;
+    const reason = prompt(`Ban ${name} from ${selectedCommunity.name}? Optional reason:`);
+    if (reason === null) return; // cancelled
+    const { error: err } = await supabase.rpc("ban_community_member", {
+      p_community: selectedCommunity.id,
+      p_user: m.user_id,
+      p_reason: reason.trim() || null,
+    });
+    if (err) { setError(err.message); return; }
+    setMembersList((ms) => ms.filter((x) => x.user_id !== m.user_id));
+    setModRefresh((k) => k + 1);
+    loadCommunities();
+  }, [supabase, selectedCommunity, loadCommunities]);
+
+  /* Per-community notification mute — own-row toggle on community_mutes. */
+  const toggleMute = useCallback(async (communityId: string) => {
+    if (!requireAuth() || !userId) return;
+    const muted = myMutes.has(communityId);
+    setMyMutes((s) => {
+      const next = new Set(s);
+      if (muted) next.delete(communityId); else next.add(communityId);
+      return next;
+    });
+    const { error: err } = muted
+      ? await supabase.from("community_mutes").delete()
+          .eq("community_id", communityId).eq("user_id", userId)
+      : await supabase.from("community_mutes")
+          .insert({ community_id: communityId, user_id: userId });
+    if (err) {
+      setMyMutes((s) => {
+        const next = new Set(s);
+        if (muted) next.add(communityId); else next.delete(communityId);
+        return next;
+      });
+      setError("Couldn't update notifications — try again.");
+    }
+  }, [supabase, requireAuth, userId, myMutes]);
+
+  /* Mods pin/unpin posts; pinned posts lead their board's feed. */
+  const togglePostPin = useCallback(async (post: Post) => {
+    const pinned = !post.pinned_at;
+    const { error: err } = await supabase.rpc("set_post_pinned", {
+      p_post: post.id, p_pinned: pinned,
+    });
+    if (err) { setError(err.message); return; }
+    const stamp = pinned ? new Date().toISOString() : null;
+    setOpenPost((p) => (p && p.id === post.id ? { ...p, pinned_at: stamp } : p));
+    loadPosts();
+  }, [supabase, loadPosts]);
+
+  /* Mods pin/unpin root comments; pinned threads float to the top. */
+  const togglePin = useCallback(async (comment: Comment) => {
+    const pinned = !comment.pinned_at;
+    const { error: err } = await supabase.rpc("set_comment_pinned", {
+      p_comment: comment.id, p_pinned: pinned,
+    });
+    if (err) { setError(err.message); return; }
+    setComments((cs) => cs.map((c) =>
+      c.id === comment.id ? { ...c, pinned_at: pinned ? new Date().toISOString() : null } : c));
+  }, [supabase]);
+
+  const createTag = useCallback(async () => {
+    if (!selectedCommunity || !userId) return;
+    const name = newTagName.trim();
+    if (!name) return;
+    const { error: err } = await supabase.from("community_tags").insert({
+      community_id: selectedCommunity.id, name, color: newTagColor, created_by: userId,
+    });
+    if (err) {
+      setError(err.message.includes("duplicate") ? "That tag already exists." : err.message);
+      return;
+    }
+    setNewTagName("");
+    loadCommunities();
+  }, [supabase, selectedCommunity, userId, newTagName, newTagColor, loadCommunities]);
+
+  const deleteTag = useCallback(async (tag: Tag) => {
+    await supabase.from("community_tags").delete().eq("id", tag.id);
+    loadCommunities();
+  }, [supabase, loadCommunities]);
+
+  const handleRequest = useCallback(async (targetUserId: string, approve: boolean) => {
+    if (!selectedCommunity) return;
+    const { error: err } = await supabase.rpc(
+      approve ? "approve_join_request" : "deny_join_request",
+      { p_community: selectedCommunity.id, p_user: targetUserId }
+    );
+    if (err) { setError(err.message); return; }
+    setJoinRequests((rs) => rs.filter((r) => r.user_id !== targetUserId));
+    if (approve) {
+      loadCommunities();
+      // The new member should appear in the owner's roles list right away.
+      const mod = selectedCommunity.my_role === "owner" || selectedCommunity.my_role === "moderator";
+      loadCommunityExtras(selectedCommunity.id, mod, selectedCommunity.my_role === "owner");
+    }
+  }, [supabase, selectedCommunity, loadCommunities, loadCommunityExtras]);
+
+  const setRole = useCallback(async (targetUserId: string, role: "moderator" | "member") => {
+    if (!selectedCommunity) return;
+    const { error: err } = await supabase.rpc("set_community_role", {
+      p_community: selectedCommunity.id, p_user: targetUserId, p_role: role,
+    });
+    if (err) { setError(err.message); return; }
+    setMembersList((ms) => ms.map((m) => (m.user_id === targetUserId ? { ...m, role } : m)));
+    loadCommunities();
+  }, [supabase, selectedCommunity, loadCommunities]);
 
   /* ── derived ── */
-
-  const selectedCommunity = useMemo(
-    () => communities.find((c) => c.id === selected) ?? null,
-    [communities, selected]
-  );
 
   // True threading: parent_id -> children, siblings sorted by the active
   // comment sort (top = score desc, then oldest; new = newest first).
@@ -442,7 +1252,12 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       commentSort === "top"
         ? b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at)
         : +new Date(b.created_at) - +new Date(a.created_at);
-    roots.sort(bySort);
+    // Pinned roots float above everything, oldest pin first.
+    roots.sort((a, b) => {
+      if (!!a.pinned_at !== !!b.pinned_at) return a.pinned_at ? -1 : 1;
+      if (a.pinned_at && b.pinned_at) return +new Date(a.pinned_at) - +new Date(b.pinned_at);
+      return bySort(a, b);
+    });
     for (const list of children.values()) list.sort(bySort);
     const subtreeSize = (id: string): number => {
       const direct = children.get(id) ?? [];
@@ -450,6 +1265,14 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     };
     return { roots, children, subtreeSize };
   }, [comments, commentSort]);
+
+  const composerTags = useMemo(() => {
+    const target = selected !== "all" ? selected : composeCommunity;
+    return tagsByCommunity[target] ?? [];
+  }, [selected, composeCommunity, tagsByCommunity]);
+
+  /* Locked out of a private board: rail shows it, feed shows the lock. */
+  const lockedOut = !!selectedCommunity?.is_private && !selectedCommunity?.joined;
 
   if (!open) return null;
 
@@ -464,6 +1287,106 @@ export default function CommunitiesPage({ open, onClose }: Props) {
       else next.add(id);
       return next;
     });
+
+  /* The embedded original inside a repost card. */
+  const repostEmbed = (p: Post) => {
+    if (!p.is_repost) return null;
+    if (!p.repost_of) {
+      return (
+        <p className="m-0 px-3 py-2 text-[11.5px] rounded-lg"
+          style={{ background: "rgba(255,255,255,0.03)", border: "0.5px dashed rgba(255,255,255,0.14)", color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
+          The original post was unavailable or deleted.
+        </p>
+      );
+    }
+    return (
+      <div
+        className="rounded-lg cursor-pointer"
+        style={{
+          background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.1)",
+          marginTop: 10, padding: "10px 12px 11px",
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (p.repost_of) {
+            setOpenPost(null);
+            setPendingPostId(p.repost_of);
+          }
+        }}
+      >
+        <p className="m-0 text-[10px]" style={{ color: "rgba(238,238,245,0.5)" }}>
+          ↻ from <span style={{ color: "#e2b96b" }}>{p.orig_community_name ?? "a community"}</span>
+          {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}</>}
+        </p>
+        <p className="m-0 text-[12.5px] font-medium" style={{ color: "rgba(238,238,245,0.88)", marginTop: 5 }}>
+          {p.orig_title}
+        </p>
+        {p.orig_body && (
+          <p className="m-0 text-[11.5px]" style={{
+            color: "rgba(238,238,245,0.55)", marginTop: 4, lineHeight: 1.5,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+          }}>
+            {p.orig_body}
+          </p>
+        )}
+        {p.orig_image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.orig_image_url} alt="" className="mt-1.5 rounded-lg"
+            style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover" }} />
+        )}
+      </div>
+    );
+  };
+
+  /* Share / repost / delete row under a post. */
+  const postActions = (p: Post, inDetail: boolean) => (
+    <span className="inline-flex items-center gap-3">
+      <button
+        onClick={(e) => { e.stopPropagation(); sharePost(p); }}
+        className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+        style={{ color: copiedId === p.id ? "#00b894" : "rgba(238,238,245,0.32)", fontFamily: "inherit" }}
+      >
+        {copiedId === p.id ? "✓ Link copied" : "Share"}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!requireAuth()) return;
+          setRepostFor(p);
+          setRepostComment("");
+          const options = communities.filter((c) => c.joined && c.id !== p.community_id);
+          setRepostCommunity(options[0]?.id ?? "");
+        }}
+        className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+        style={{ color: "rgba(238,238,245,0.32)", fontFamily: "inherit" }}
+      >
+        Repost
+      </button>
+      {canModerate(p.community_id) && (
+        <button
+          onClick={(e) => { e.stopPropagation(); togglePostPin(p); }}
+          className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+          style={{ color: "#4a9eff", fontFamily: "inherit" }}
+        >
+          {p.pinned_at ? "Unpin" : "📌 Pin"}
+        </button>
+      )}
+      {(p.author_id === userId || canModerate(p.community_id)) && (
+        <button
+          onClick={(e) => { e.stopPropagation(); deletePost(p); }}
+          className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+          style={{ color: p.author_id === userId ? "rgba(238,238,245,0.32)" : "#e2b96b", fontFamily: "inherit" }}
+        >
+          {p.author_id === userId ? "Delete" : "Remove (mod)"}
+        </button>
+      )}
+      {!inDetail && (
+        <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+          💬 {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
+        </span>
+      )}
+    </span>
+  );
 
   /* One thread node: collapse toggle, vote pips, body, actions, reply
      box, then children — visual indent caps at MAX_INDENT so deep
@@ -480,83 +1403,127 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 <button
                   onClick={() => toggleCollapse(c.id)}
                   className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-                  style={{ color: "#6b6b74", fontFamily: "inherit", width: 16 }}
+                  style={{ color: "rgba(238,238,245,0.32)", fontFamily: "inherit", width: 16 }}
                   aria-label={isCollapsed ? "Expand thread" : "Collapse thread"}
                 >
-                  {isCollapsed ? "[+]" : "[\u2013]"}
+                  {isCollapsed ? "[+]" : "[–]"}
                 </button>
               )}
-              <span className="text-[11px]" style={{ color: "#8b8b94" }}>
+              <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                 {authorSpan(c.author_id, c.author_username, c.author_display_name)} · {timeAgo(c.created_at)}
               </span>
+              <RoleBadge role={c.author_role} />
+              {c.pinned_at && (
+                <span className="text-[9.5px] font-bold px-1.5 rounded" style={{
+                  background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
+                  color: "#4a9eff", padding: "1px 6px", letterSpacing: "0.04em",
+                }}>
+                  📌 PINNED
+                </span>
+              )}
               {isCollapsed && hidden > 0 && (
-                <span className="text-[10px]" style={{ color: "#c9b06a" }}>
+                <span className="text-[10px]" style={{ color: "#e2b96b" }}>
                   {hidden} repl{hidden === 1 ? "y" : "ies"} hidden
                 </span>
               )}
             </div>
             {!isCollapsed && (
               <>
-                <p className="m-0 mt-1 text-[12.5px] leading-relaxed whitespace-pre-wrap" style={{ color: "#e5e5ec" }}>
-                  {c.body}
+                <p className="m-0 mt-1 text-[12.5px] leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(238,238,245,0.88)" }}>
+                  {renderWithMentions(c.body)}
                 </p>
+                {c.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.image_url} alt="" className="mt-1.5 rounded-lg"
+                    style={{ maxHeight: 260, maxWidth: "100%" }} />
+                )}
                 <div className="flex items-center gap-3 mt-1.5">
                   <span className="flex items-center gap-1">
                     <button
                       onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
                       className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-                      style={{ color: c.my_vote === 1 ? "#f4d47c" : "#6b6b74" }}
+                      style={{ color: c.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)" }}
                       aria-label="Upvote comment"
                     >
                       ▲
                     </button>
-                    <span className="text-[11px]" style={{ color: "#c0c0c8", fontWeight: 600, minWidth: 12, textAlign: "center" }}>
+                    <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.65)", fontWeight: 600, minWidth: 12, textAlign: "center" }}>
                       {c.score}
                     </span>
                     <button
                       onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
                       className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-                      style={{ color: c.my_vote === -1 ? "#85b7eb" : "#6b6b74" }}
+                      style={{ color: c.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)" }}
                       aria-label="Downvote comment"
                     >
                       ▼
                     </button>
                   </span>
                   <button
-                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); } }}
+                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); } }}
                     className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-                    style={{ color: "#9cc4f0", fontFamily: "inherit" }}
+                    style={{ color: "#4a9eff", fontFamily: "inherit" }}
                   >
                     Reply
                   </button>
-                  {c.author_id === userId && (
+                  {/* Mods pin root comments (children live under parents). */}
+                  {!c.parent_id && openPost && canModerate(openPost.community_id) && (
+                    <button
+                      onClick={() => togglePin(c)}
+                      className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
+                      style={{ color: "#4a9eff", fontFamily: "inherit" }}
+                    >
+                      {c.pinned_at ? "Unpin" : "📌 Pin"}
+                    </button>
+                  )}
+                  {(c.author_id === userId || (openPost && canModerate(openPost.community_id))) && (
                     <button
                       onClick={() => deleteComment(c)}
                       className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-                      style={{ color: "#6b6b74", fontFamily: "inherit" }}
+                      style={{ color: c.author_id === userId ? "rgba(238,238,245,0.32)" : "#e2b96b", fontFamily: "inherit" }}
                     >
-                      Delete
+                      {c.author_id === userId ? "Delete" : "Remove (mod)"}
                     </button>
                   )}
                 </div>
                 {replyTo === c.id && (
-                  <div className="flex gap-2 mt-2">
-                    <input
-                      style={inputStyle}
-                      placeholder={`Reply to @${c.author_username}\u2026`}
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") submitComment(c.id, replyText); }}
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => submitComment(c.id, replyText)}
-                      disabled={busy || !replyText.trim()}
-                      className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
-                      style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
-                    >
-                      Reply
-                    </button>
+                  <div className="mt-2">
+                    <div className="flex gap-2">
+                      <span className="relative flex-1 min-w-0">
+                        <input
+                          style={inputStyle}
+                          placeholder={`Reply to @${c.author_username}…`}
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") submitComment(c.id, replyText, replyImage); }}
+                          autoFocus
+                        />
+                        <MentionSuggest text={replyText} onComplete={setReplyText} supabase={supabase} />
+                      </span>
+                      <label className="cursor-pointer text-[11px] px-2.5 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
+                        🖼
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={(e) => pickReplyImage(e.target.files?.[0] ?? null)} />
+                      </label>
+                      <button
+                        onClick={() => submitComment(c.id, replyText, replyImage)}
+                        disabled={busy || !replyText.trim()}
+                        className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
+                        style={{ ...btnBlue, borderRadius: 9 }}
+                      >
+                        Reply
+                      </button>
+                    </div>
+                    {replyImagePreview && (
+                      <span className="inline-flex items-center gap-2 mt-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={replyImagePreview} alt="" className="rounded" style={{ height: 36 }} />
+                        <button onClick={() => pickReplyImage(null)}
+                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                          remove
+                        </button>
+                      </span>
+                    )}
                   </div>
                 )}
               </>
@@ -575,6 +1542,9 @@ export default function CommunitiesPage({ open, onClose }: Props) {
     );
   };
 
+  const isMod = selectedCommunity?.my_role === "owner" || selectedCommunity?.my_role === "moderator";
+  const isOwner = selectedCommunity?.my_role === "owner";
+
   return (
     <div
       className="fixed overflow-y-auto"
@@ -588,17 +1558,26 @@ export default function CommunitiesPage({ open, onClose }: Props) {
         /* Translucent veil instead of solid: the homepage star canvas
            lives behind this overlay (the MVP main content is hidden
            while a tab is open), so the sky shows through. */
-        background: "rgba(8,8,12,0.35)",
+        background: "rgba(6,6,8,0.45)",
       }}
     >
       <div className="max-w-[1100px] mx-auto px-6 py-5">
 
-        {/* header */}
-        <div className="flex items-center gap-3.5 mb-4 flex-wrap">
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
-            Communities
+        {/* header — matches the homepage section-title treatment; clicking
+            it returns to the All-posts feed */}
+        <div className="flex items-end gap-3.5 mb-5 flex-wrap">
+          <span
+            className="flex flex-col cursor-pointer"
+            style={{ gap: 6 }}
+            title="Back to all posts"
+            onClick={() => { closePostDetail(); setSelected("all"); }}
+          >
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#eeeef5", lineHeight: 1 }}>
+              Communities
+            </span>
+            <span style={{ display: "block", width: 28, height: 2, background: "#e2b96b", borderRadius: 2 }} />
           </span>
-          <span className="text-[12px]" style={{ color: "#8b8b94" }}>
+          <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.45)", paddingBottom: 2 }}>
             Boards for your school, team, or topic
           </span>
           <button
@@ -614,7 +1593,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
           <p className="mb-3 px-4 py-2.5 rounded-lg text-[12px]"
             style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
             {error}
-            <button onClick={() => setError(null)} className="ml-3 cursor-pointer bg-transparent border-none text-[11px]" style={{ color: "#8b8b94" }}>
+            <button onClick={() => setError(null)} className="ml-3 cursor-pointer bg-transparent border-none text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
               dismiss
             </button>
           </p>
@@ -632,75 +1611,368 @@ export default function CommunitiesPage({ open, onClose }: Props) {
               value={newCommunityKind}
               onChange={(e) => setNewCommunityKind(e.target.value)}
               className="text-[13px] px-3 py-2 rounded-lg"
-              style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#e5e5ec" }}
+              style={{ background: "rgba(16,16,19,0.7)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(238,238,245,0.88)" }}
             >
               {KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
             </select>
+            <label className="flex items-center gap-1.5 text-[12px] cursor-pointer" style={{ color: "rgba(238,238,245,0.65)" }}>
+              <input
+                type="checkbox"
+                checked={newCommunityPrivate}
+                onChange={(e) => setNewCommunityPrivate(e.target.checked)}
+              />
+              🔒 Private
+            </label>
             <button
               onClick={createCommunity}
               disabled={!newCommunityName.trim()}
               className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
-              style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+              style={btnBlue}
             >
               Create
             </button>
           </div>
         )}
 
-        <div className="flex gap-5 items-start flex-col md:flex-row">
+        {/* Reddit-style split: feed left, rail right (rail first on mobile). */}
+        <div className="flex gap-5 items-start flex-col md:flex-row-reverse">
 
-          {/* community rail */}
-          <nav className="w-full md:w-[230px] shrink-0">
-            <button
-              onClick={() => { setSelected("all"); setOpenPost(null); }}
-              className="block w-full text-left cursor-pointer mb-1 px-3.5 py-2.5 border-none"
-              style={{
-                borderRadius: 10, fontFamily: "inherit",
-                background: selected === "all" ? "rgba(255,255,255,0.07)" : "transparent",
-              }}
-            >
-              <span className="text-[13px]" style={{ color: "#f5f5f0" }}>All posts</span>
-            </button>
-            {communities.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-center gap-2 mb-1 px-3.5 py-2 cursor-pointer"
-                style={{
-                  borderRadius: 10,
-                  background: selected === c.id ? "rgba(255,255,255,0.07)" : "transparent",
-                }}
-                onClick={() => { setSelected(c.id); setOpenPost(null); }}
-              >
-                <span
-                  className="flex items-center justify-center shrink-0"
-                  style={{ width: 26, height: 26, borderRadius: 8, background: c.color, color: "#fff", fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
-                >
-                  {c.name.charAt(0).toUpperCase()}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[12.5px] truncate" style={{ color: "#f5f5f0" }}>{c.name}</span>
-                  <span className="block text-[10px]" style={{ color: "#6b6b74" }}>
-                    {c.members} member{c.members === 1 ? "" : "s"}
-                  </span>
-                </span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleJoin(c); }}
-                  className="cursor-pointer text-[10px] px-2 py-1 rounded-md shrink-0"
-                  style={
-                    c.joined
-                      ? { background: "transparent", border: "0.5px solid #3a5a3a", color: "#97c459", fontFamily: "inherit" }
-                      : { background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }
-                  }
-                >
-                  {c.joined ? "✓" : "Join"}
-                </button>
+          {/* community rail — right side */}
+          <nav className="w-full md:w-[250px] shrink-0">
+            {/* About card — the open board's name and description, up top */}
+            {selectedCommunity && (
+              <div className="mb-3 overflow-hidden" style={{
+                background: "rgba(14,14,17,0.72)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 12,
+              }}>
+                <div className="px-3.5" style={{ paddingTop: 14, paddingBottom: 18 }}>
+                  <p className="m-0 text-[9.5px] font-bold flex items-center" style={{ color: "rgba(238,238,245,0.35)", letterSpacing: "0.09em", marginBottom: 10 }}>
+                    ABOUT COMMUNITY
+                    {selectedCommunity.joined && (
+                      <button
+                        onClick={() => toggleMute(selectedCommunity.id)}
+                        title={myMutes.has(selectedCommunity.id)
+                          ? "Notifications muted — click to unmute"
+                          : "Notifying you about new posts — click to mute"}
+                        className="cursor-pointer bg-transparent border-none p-0 ml-auto"
+                        style={{ fontSize: 12, opacity: myMutes.has(selectedCommunity.id) ? 0.5 : 0.9, lineHeight: 1 }}
+                      >
+                        {myMutes.has(selectedCommunity.id) ? "🔕" : "🔔"}
+                      </button>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="flex items-center justify-center shrink-0 overflow-hidden"
+                      style={{ width: 32, height: 32, borderRadius: 10, background: selectedCommunity.color, color: "#fff", fontSize: 14, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
+                    >
+                      {selectedCommunity.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={selectedCommunity.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        selectedCommunity.name.charAt(0).toUpperCase()
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[13.5px] truncate" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                        {selectedCommunity.is_private && <span style={{ marginRight: 4, fontSize: 11 }}>🔒</span>}
+                        {selectedCommunity.name}
+                      </span>
+                      <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.4)", marginTop: 1 }}>
+                        {selectedCommunity.members} member{selectedCommunity.members === 1 ? "" : "s"}
+                        {selectedCommunity.is_private ? " · private" : " · public"}
+                      </span>
+                    </span>
+                  </div>
+                  {selectedCommunity.description && (() => {
+                    /* Clamp long descriptions to three lines; a Read-more
+                       toggle reveals the rest in place. */
+                    const long = selectedCommunity.description.length > 130;
+                    return (
+                      <>
+                        <p className="m-0 text-[11.5px]" style={{
+                          marginTop: 10, color: "rgba(238,238,245,0.62)", lineHeight: 1.6,
+                          ...(long && !aboutExpanded
+                            ? {
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical" as const,
+                                overflow: "hidden",
+                              }
+                            : {}),
+                        }}>
+                          {selectedCommunity.description}
+                        </p>
+                        {long && (
+                          <button
+                            onClick={() => setAboutExpanded((v) => !v)}
+                            className="cursor-pointer bg-transparent border-none p-0 text-[10.5px] font-semibold"
+                            style={{
+                              marginTop: 7, color: "#e2b96b", fontFamily: "inherit",
+                              letterSpacing: "0.02em",
+                              transition: "filter 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.2)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+                          >
+                            {aboutExpanded ? "Show less ▴" : "Read more ▾"}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  {/* the board's mod team — online first, with a live count */}
+                  {railMods.length > 0 && (() => {
+                    const onlineCount = railMods.filter((m) => presence.has(m.user_id)).length;
+                    const sorted = [...railMods].sort((a, b) =>
+                      (presence.has(b.user_id) ? 1 : 0) - (presence.has(a.user_id) ? 1 : 0));
+                    return (
+                    <>
+                      <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0 10px" }} />
+                      <p className="m-0 text-[9.5px] font-bold flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.35)", letterSpacing: "0.09em", marginBottom: 8 }}>
+                        MODERATORS
+                        {onlineCount > 0 && (
+                          <span className="inline-flex items-center gap-1" style={{ color: "#00b894" }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#00b894", boxShadow: "0 0 5px rgba(0,184,148,0.7)" }} />
+                            {onlineCount} ONLINE
+                          </span>
+                        )}
+                      </p>
+                      {sorted.map((m) => {
+                        const online = presence.has(m.user_id);
+                        return (
+                          <div
+                            key={m.user_id}
+                            className="flex items-center gap-2 cursor-pointer"
+                            style={{ padding: "3px 0" }}
+                            onClick={(e) => {
+                              if (m.user?.username) {
+                                openUserMenu({ x: e.clientX, y: e.clientY }, { userId: m.user_id, username: m.user.username });
+                              }
+                            }}
+                          >
+                            <UserAvatar size={20} username={m.user?.username ?? "?"} avatarUrl={m.user?.avatar_url ?? null} seed={m.user_id} />
+                            <span className="flex-1 min-w-0 truncate text-[11.5px]" style={{ color: "rgba(238,238,245,0.8)" }}>
+                              {m.user?.display_name?.trim() || `@${m.user?.username ?? "unknown"}`}
+                              {m.role === "owner" && (
+                                <span className="text-[8.5px] font-bold ml-1.5" style={{ color: "#e2b96b", letterSpacing: "0.04em" }}>OWNER</span>
+                              )}
+                            </span>
+                            <span
+                              title={online ? "Active now" : "Offline"}
+                              style={{
+                                width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+                                background: online ? "#00b894" : "rgba(238,238,245,0.18)",
+                                boxShadow: online ? "0 0 6px rgba(0,184,148,0.6)" : "none",
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </>
+                    );
+                  })()}
+                </div>
               </div>
-            ))}
-            {communities.length === 0 && (
-              <p className="px-3.5 text-[11px]" style={{ color: "#6b6b74" }}>
-                No communities yet — create the first one.
-              </p>
             )}
+            {/* quick filter over the community lists */}
+            {communities.length > 3 && (
+              <input
+                value={railQuery}
+                onChange={(e) => setRailQuery(e.target.value)}
+                placeholder="Find a community…"
+                className="w-full mb-1"
+                style={{ ...inputStyle, padding: "7px 12px", fontSize: 12, borderRadius: 10 }}
+              />
+            )}
+            {(() => {
+              const q = railQuery.trim().toLowerCase();
+              const match = (c: Community) => !q || c.name.toLowerCase().includes(q);
+              const joined = communities.filter((c) => c.joined && match(c));
+              const discover = communities.filter((c) => !c.joined && match(c));
+              const row = (c: Community) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-2 mb-1 px-3.5 py-2 cursor-pointer"
+                  style={{
+                    borderRadius: 10,
+                    background: selected === c.id ? "rgba(255,255,255,0.07)" : "transparent",
+                  }}
+                  onClick={() => { setSelected(c.id); setOpenPost(null); }}
+                >
+                  <span
+                    className="flex items-center justify-center shrink-0 overflow-hidden"
+                    style={{ width: 26, height: 26, borderRadius: 8, background: c.color, color: "#fff", fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
+                  >
+                    {c.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      c.name.charAt(0).toUpperCase()
+                    )}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[12.5px] truncate" style={{ color: "#eeeef5" }}>
+                      {c.is_private && <span title="Private community" style={{ marginRight: 3 }}>🔒</span>}
+                      {c.name}
+                    </span>
+                    <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                      {c.members} member{c.members === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleJoin(c); }}
+                    className="cursor-pointer text-[10px] px-2 py-1 rounded-md shrink-0"
+                    style={
+                      c.joined
+                        ? { background: "transparent", border: "0.5px solid rgba(0,184,148,0.4)", color: "#00b894", fontFamily: "inherit" }
+                        : c.requested
+                          ? { background: "transparent", border: "0.5px solid rgba(226,185,107,0.35)", color: "#e2b96b", fontFamily: "inherit" }
+                          : { ...btnBlue, borderRadius: 6 }
+                    }
+                  >
+                    {c.joined ? "✓" : c.requested ? "Pending" : c.is_private ? "Request" : "Join"}
+                  </button>
+                </div>
+              );
+              const sectionTitle = (label: string) => (
+                <p className="m-0 mt-3 mb-1 px-3.5 text-[10px] font-bold" style={{ color: "rgba(238,238,245,0.32)", letterSpacing: "0.08em" }}>
+                  {label}
+                </p>
+              );
+              return (
+                <>
+                  {joined.length > 0 && (
+                    <>
+                      {sectionTitle("YOUR COMMUNITIES")}
+                      {joined.map(row)}
+                    </>
+                  )}
+                  {discover.length > 0 && (
+                    <>
+                      {sectionTitle(joined.length > 0 ? "DISCOVER" : "COMMUNITIES")}
+                      {discover.map(row)}
+                    </>
+                  )}
+                  {communities.length === 0 && (
+                    <p className="px-3.5 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                      No communities yet — create the first one.
+                    </p>
+                  )}
+                  {/* Two rail sections — LIVE (joinable) above SCHEDULED
+                      (informational); each hidden entirely when empty. */}
+                  {(() => {
+                    const railInner = (d: RailDebate, live: boolean) => (
+                      <>
+                        <span className="flex items-center gap-1.5 text-[10px]" style={{ color: live ? "#e84040" : "#e2b96b" }}>
+                          <span
+                            className="inline-block shrink-0"
+                            style={{ width: 8, height: 8, borderRadius: 3, background: d.community_color }}
+                          />
+                          <span className="truncate" style={{ color: "rgba(238,238,245,0.5)" }}>{d.community_name}</span>
+                          <span className="ml-auto shrink-0">
+                            {live ? "● LIVE — join" : fmtWhen(d.scheduled_start)}
+                          </span>
+                        </span>
+                        <span className="block mt-0.5 text-[11.5px] leading-snug" style={{
+                          color: "rgba(238,238,245,0.88)",
+                          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+                        }}>
+                          {d.motion}
+                        </span>
+                      </>
+                    );
+                    const liveRail = railDebates.filter((d) => d.status === "live");
+                    const schedRail = railDebates.filter((d) => d.status !== "live");
+                    return (
+                      <>
+                        {liveRail.length > 0 && (
+                          <>
+                            {sectionTitle("LIVE DISCUSSIONS")}
+                            {liveRail.map((d) => (
+                              <a
+                                key={d.id}
+                                href={`/agora/${d.id}`}
+                                className="block mb-1 px-3.5 py-2 no-underline"
+                                style={{ borderRadius: 10, background: "rgba(232,64,64,0.06)", border: "0.5px solid rgba(232,64,64,0.3)" }}
+                              >
+                                {railInner(d, true)}
+                              </a>
+                            ))}
+                          </>
+                        )}
+                        {schedRail.length > 0 && (
+                          <>
+                            {sectionTitle("SCHEDULED DISCUSSIONS")}
+                            {schedRail.map((d) => (
+                              <div
+                                key={d.id}
+                                className="block mb-1 px-3.5 py-2"
+                                title="Joining opens when the discussion starts"
+                                style={{ borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.07)", cursor: "default" }}
+                              >
+                                {railInner(d, false)}
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  {/* community rules — anchored at the very bottom of the
+                      rail for the board currently open */}
+                  {selectedCommunity?.rules && (
+                    <>
+                      {sectionTitle(`${selectedCommunity.name.toUpperCase()} RULES`)}
+                      {(() => {
+                        /* Compact preview — the first three rules; a toggle
+                           reveals the full list, mirroring the About card. */
+                        const allRules = selectedCommunity.rules.split("\n").filter((r) => r.trim());
+                        const shown = rulesExpanded ? allRules : allRules.slice(0, 3);
+                        return (
+                          <div className="px-3 mb-1" style={{
+                            borderRadius: 10,
+                            background: "rgba(255,255,255,0.03)",
+                            border: "0.5px solid rgba(255,255,255,0.07)",
+                            paddingTop: 9, paddingBottom: 10,
+                          }}>
+                            {shown.map((r, i) => (
+                              <p key={i} className="m-0 text-[10.5px]" style={{
+                                color: "rgba(238,238,245,0.65)", lineHeight: 1.5,
+                                marginTop: i === 0 ? 0 : 5,
+                              }}>
+                                <span style={{ color: "#e2b96b", marginRight: 6, fontWeight: 700, fontSize: 9.5 }}>{i + 1}</span>
+                                {r.trim()}
+                              </p>
+                            ))}
+                            {allRules.length > 3 && (
+                              <button
+                                onClick={() => setRulesExpanded((v) => !v)}
+                                className="cursor-pointer bg-transparent border-none p-0 text-[10px] font-semibold"
+                                style={{
+                                  marginTop: 7, color: "#e2b96b", fontFamily: "inherit",
+                                  letterSpacing: "0.02em",
+                                  transition: "filter 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.2)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+                              >
+                                {rulesExpanded ? "Show less ▴" : `Show all ${allRules.length} rules ▾`}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </nav>
 
           {/* main column */}
@@ -710,9 +1982,9 @@ export default function CommunitiesPage({ open, onClose }: Props) {
               /* ── post detail ── */
               <div>
                 <button
-                  onClick={() => setOpenPost(null)}
+                  onClick={closePostDetail}
                   className="cursor-pointer text-[12px] px-3 py-1.5 rounded-lg mb-3"
-                  style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+                  style={btnGhost}
                 >
                   ← Back to {selectedCommunity?.name ?? "all posts"}
                 </button>
@@ -720,53 +1992,120 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 <div className="p-4 mb-4 flex gap-3" style={card}>
                   <VoteBox post={openPost} onVote={vote} size={14} />
                   <div className="flex-1 min-w-0">
-                    <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-                      {openPost.community_name} · {authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)} · {timeAgo(openPost.created_at)}
+                    <p className="m-0 text-[11px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.5)" }}>
+                      <span>
+                        <span
+                          onClick={() => { const cid = openPost.community_id; closePostDetail(); setSelected(cid); }}
+                          className="cursor-pointer"
+                          title={`Go to ${openPost.community_name}`}
+                          style={{ color: "#e2b96b", textDecoration: "underline dotted rgba(226,185,107,0.4)", textUnderlineOffset: 2 }}
+                        >
+                          {openPost.community_name}
+                        </span>
+                        {" · "}{authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)} · {timeAgo(openPost.created_at)}
+                      </span>
+                      <RoleBadge role={openPost.author_role} />
+                      {openPost.is_repost && <span style={{ color: "#e2b96b" }}>↻ repost</span>}
+                      {openPost.pinned_at && (
+                        <span className="text-[9.5px] font-bold rounded" style={{
+                          background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
+                          color: "#4a9eff", padding: "1px 6px", letterSpacing: "0.04em",
+                        }}>
+                          📌 PINNED
+                        </span>
+                      )}
+                      {openPost.tag_name && <TagChip name={openPost.tag_name} color={openPost.tag_color} />}
                     </p>
-                    <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                      {openPost.title}
+                    <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                      {renderWithMentions(openPost.title)}
                     </h2>
                     {openPost.body && (
-                      <p className="m-0 mt-2 text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: "#d5d5dc" }}>
-                        {openPost.body}
+                      <p className="m-0 mt-2 text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(238,238,245,0.85)" }}>
+                        {renderWithMentions(openPost.body)}
                       </p>
                     )}
-                    {openPost.author_id === userId && (
-                      <button
-                        onClick={() => deletePost(openPost)}
-                        className="cursor-pointer bg-transparent border-none p-0 mt-2 text-[11px]"
-                        style={{ color: "#6b6b74", fontFamily: "inherit" }}
-                      >
-                        Delete post
-                      </button>
+                    {openPost.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={openPost.image_url} alt="" className="mt-2 rounded-xl"
+                        style={{ maxWidth: "100%", maxHeight: 480 }} />
                     )}
+                    {repostEmbed(openPost)}
+                    <div className="mt-2.5">{postActions(openPost, true)}</div>
                   </div>
                 </div>
 
                 {/* comment composer */}
-                <div className="flex gap-2 mb-4">
-                  <input
-                    style={inputStyle}
-                    placeholder={userId ? "Add a comment…" : "Sign in to comment"}
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") submitComment(null, commentText); }}
-                    onFocus={() => { if (!userId) window.location.href = "/login"; }}
-                  />
-                  <button
-                    onClick={() => submitComment(null, commentText)}
-                    disabled={busy || !commentText.trim()}
-                    className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0"
-                    style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
-                  >
-                    Comment
-                  </button>
+                <div className="mb-4">
+                  <div className="flex gap-2">
+                    <span className="relative flex-1 min-w-0">
+                      <input
+                        style={inputStyle}
+                        placeholder={userId ? "Add a comment… (@ to mention)" : "Sign in to comment"}
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") submitComment(null, commentText, commentImage, commentGifUrl); }}
+                        onFocus={() => { if (!userId) window.location.href = "/login"; }}
+                      />
+                      <MentionSuggest text={commentText} onComplete={setCommentText} supabase={supabase} />
+                    </span>
+                    <label className="cursor-pointer text-[12px] px-3 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
+                      🖼
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => { pickCommentImage(e.target.files?.[0] ?? null); setCommentGifUrl(null); }} />
+                    </label>
+                    {giphyEnabled && (
+                      <span className="relative inline-block shrink-0">
+                        <button
+                          onClick={() => setGifPickerFor(gifPickerFor === "comment" ? null : "comment")}
+                          className="cursor-pointer text-[11px] px-2.5 rounded-lg flex items-center h-full"
+                          style={btnGhost}
+                          title="Add a GIF"
+                        >
+                          GIF
+                        </button>
+                        {gifPickerFor === "comment" && (
+                          <GifPicker
+                            onPick={(u) => { setCommentGifUrl(u); pickCommentImage(null); }}
+                            onClose={() => setGifPickerFor(null)}
+                          />
+                        )}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => submitComment(null, commentText, commentImage, commentGifUrl)}
+                      disabled={busy || !commentText.trim()}
+                      className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0"
+                      style={btnBlue}
+                    >
+                      Comment
+                    </button>
+                  </div>
+                  {commentImagePreview && (
+                    <span className="inline-flex items-center gap-2 mt-1.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={commentImagePreview} alt="" className="rounded" style={{ height: 40 }} />
+                      <button onClick={() => pickCommentImage(null)}
+                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                        remove
+                      </button>
+                    </span>
+                  )}
+                  {commentGifUrl && (
+                    <span className="inline-flex items-center gap-2 mt-1.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={commentGifUrl} alt="" className="rounded" style={{ height: 40 }} />
+                      <button onClick={() => setCommentGifUrl(null)}
+                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                        remove
+                      </button>
+                    </span>
+                  )}
                 </div>
 
                 {/* comments */}
                 {commentTree.roots.length > 0 && (
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px]" style={{ color: "#6b6b74" }}>Sort:</span>
+                    <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>Sort:</span>
                     {(["top", "new"] as const).map((cs) => (
                       <button
                         key={cs}
@@ -774,8 +2113,8 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                         className="cursor-pointer text-[11px] px-2.5 py-1 rounded-full"
                         style={{
                           background: commentSort === cs ? "rgba(255,255,255,0.1)" : "transparent",
-                          border: "0.5px solid " + (commentSort === cs ? "#4a4a54" : "#34343c"),
-                          color: commentSort === cs ? "#f5f5f0" : "#8b8b94",
+                          border: "0.5px solid " + (commentSort === cs ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.1)"),
+                          color: commentSort === cs ? "#eeeef5" : "rgba(238,238,245,0.5)",
                           fontFamily: "inherit",
                         }}
                       >
@@ -785,7 +2124,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                   </div>
                 )}
                 {commentTree.roots.length === 0 ? (
-                  <p className="text-[12px] text-center py-6" style={{ color: "#6b6b74" }}>
+                  <p className="text-[12px] text-center py-6" style={{ color: "rgba(238,238,245,0.32)" }}>
                     No comments yet — start the discussion.
                   </p>
                 ) : (
@@ -797,20 +2136,415 @@ export default function CommunitiesPage({ open, onClose }: Props) {
             ) : (
               /* ── feed ── */
               <div>
+                {/* community header — Reddit-style banner card */}
+                {selectedCommunity && (
+                  <div className="mb-3 overflow-hidden" style={card}>
+                    {/* banner: custom image when set, else the community color.
+                        Mods get a pencil (and ✕ when a custom image is set)
+                        that fades in on hover anywhere over the banner. */}
+                    <div className="group relative">
+                      {selectedCommunity.banner_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={selectedCommunity.banner_url}
+                          alt=""
+                          style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: 140,
+                            background: `linear-gradient(120deg, ${selectedCommunity.color} 0%, ${selectedCommunity.color}55 45%, rgba(18,18,24,0) 100%)`,
+                          }}
+                        />
+                      )}
+                      {isMod && (
+                        <span className="absolute flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                          style={{ right: 10, bottom: 10 }}>
+                          {selectedCommunity.banner_url && (
+                            <button
+                              onClick={() => setBranding("banner", null)}
+                              disabled={brandingBusy !== null}
+                              title="Remove banner"
+                              className="cursor-pointer flex items-center justify-center"
+                              style={{
+                                width: 28, height: 28, borderRadius: "50%", fontSize: 12,
+                                background: "rgba(10,10,12,0.7)", border: "0.5px solid rgba(255,255,255,0.25)",
+                                color: "rgba(238,238,245,0.88)",
+                              }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                          <label
+                            title={selectedCommunity.banner_url ? "Change banner" : "Upload a banner"}
+                            className="cursor-pointer flex items-center justify-center"
+                            style={{
+                              width: 28, height: 28, borderRadius: "50%", fontSize: 13,
+                              background: "rgba(10,10,12,0.7)", border: "0.5px solid rgba(255,255,255,0.25)",
+                            }}
+                          >
+                            {brandingBusy === "banner" ? "…" : "✏️"}
+                            <input type="file" accept="image/*" className="hidden" disabled={brandingBusy !== null}
+                              onChange={(e) => { const f = e.target.files?.[0]; if (f) setBranding("banner", f); e.target.value = ""; }} />
+                          </label>
+                        </span>
+                      )}
+                    </div>
+                    <div className="px-5 pb-5">
+                    {/* Identity row: avatar flush left straddling the banner
+                        edge, name beside it; actions float on the right in
+                        the strip just under the banner, clear of the card
+                        border. */}
+                    <div className="flex items-start gap-4 flex-wrap">
+                      <span
+                        className="group relative flex items-center justify-center shrink-0"
+                        style={{
+                          width: 76, height: 76, borderRadius: 20, background: selectedCommunity.color,
+                          color: "#fff", fontSize: 30, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700,
+                          border: "3px solid rgba(14,14,17,0.97)",
+                          marginTop: -41,
+                        }}
+                      >
+                        <span className="flex items-center justify-center overflow-hidden"
+                          style={{ width: "100%", height: "100%", borderRadius: 17 }}>
+                          {selectedCommunity.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={selectedCommunity.avatar_url} alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            selectedCommunity.name.charAt(0).toUpperCase()
+                          )}
+                        </span>
+                        {isMod && (
+                          <span className="absolute flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                            style={{ right: -4, bottom: -4 }}>
+                            {selectedCommunity.avatar_url && (
+                              <button
+                                onClick={() => setBranding("avatar", null)}
+                                disabled={brandingBusy !== null}
+                                title="Remove picture"
+                                className="cursor-pointer flex items-center justify-center"
+                                style={{
+                                  width: 22, height: 22, borderRadius: "50%", fontSize: 10,
+                                  background: "rgba(10,10,12,0.9)", border: "0.5px solid rgba(255,255,255,0.25)",
+                                  color: "rgba(238,238,245,0.88)",
+                                }}
+                              >
+                                ✕
+                              </button>
+                            )}
+                            <label
+                              title={selectedCommunity.avatar_url ? "Change picture" : "Upload a picture"}
+                              className="cursor-pointer flex items-center justify-center"
+                              style={{
+                                width: 22, height: 22, borderRadius: "50%", fontSize: 10,
+                                background: "rgba(10,10,12,0.9)", border: "0.5px solid rgba(255,255,255,0.25)",
+                              }}
+                            >
+                              {brandingBusy === "avatar" ? "…" : "✏️"}
+                              <input type="file" accept="image/*" className="hidden" disabled={brandingBusy !== null}
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) setBranding("avatar", f); e.target.value = ""; }} />
+                            </label>
+                          </span>
+                        )}
+                      </span>
+                      {/* identity cluster: name and stats beside the avatar,
+                          lifted off the row's bottom edge */}
+                      <span className="flex-1 min-w-0" style={{ paddingTop: 6, paddingBottom: 12, minWidth: 200 }}>
+                        <span className="block text-[21px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
+                          {selectedCommunity.is_private && <span title="Private community" style={{ marginRight: 5, fontSize: 16 }}>🔒</span>}
+                          {selectedCommunity.name}
+                        </span>
+                        <span className="block text-[11px]" style={{ color: "rgba(238,238,245,0.4)", marginTop: 3, letterSpacing: "0.01em" }}>
+                          {selectedCommunity.members} member{selectedCommunity.members === 1 ? "" : "s"}
+                          {selectedCommunity.is_private ? " · private" : " · public"}
+                          {selectedCommunity.my_role && ` · you're ${selectedCommunity.my_role === "owner" ? "the owner" : selectedCommunity.my_role === "moderator" ? "a moderator" : "a member"}`}
+                        </span>
+                      </span>
+
+                      {/* right column — action pills hovering between the
+                          banner edge and the content, description beneath
+                          them, all clear of the card border */}
+                      <span className="flex flex-col items-end gap-2 ml-auto" style={{ paddingTop: 10, maxWidth: "46ch" }}>
+                      <span className="flex items-center gap-2 flex-wrap justify-end">
+                        {/* community discussions are a mod privilege — the
+                            RPC enforces this server-side too */}
+                        {isMod && onStartDiscussion && (
+                          <button
+                            onClick={() => onStartDiscussion(selectedCommunity.id, selectedCommunity.name)}
+                            onMouseEnter={liftIn} onMouseLeave={liftOut}
+                            style={pillGold}
+                          >
+                            🎙 Start a discussion
+                          </button>
+                        )}
+                        <button
+                          onClick={() => toggleJoin(selectedCommunity)}
+                          onMouseEnter={liftIn} onMouseLeave={liftOut}
+                          style={
+                            selectedCommunity.joined
+                              ? pillGreen
+                              : selectedCommunity.requested
+                                ? pillAmber
+                                : pillBlue
+                          }
+                        >
+                          {selectedCommunity.joined ? "✓ Joined" : selectedCommunity.requested ? "Pending" : selectedCommunity.is_private ? "Request to join" : "Join"}
+                        </button>
+                        {isMod && (
+                          <button
+                            onClick={() => setModOpen((v) => !v)}
+                            onMouseEnter={liftIn} onMouseLeave={liftOut}
+                            style={pillAmber}
+                          >
+                            {modOpen ? "Close mod tools" : `🛡 Mod tools${joinRequests.length ? ` (${joinRequests.length})` : ""}`}
+                          </button>
+                        )}
+                      </span>
+                      </span>
+                    </div>
+
+                    {/* mod panel — tidy sub-panels; banner & picture edit
+                        via the hover pencils on the header itself */}
+                    {modOpen && isMod && (() => {
+                      const panel: React.CSSProperties = {
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        borderRadius: 12,
+                        padding: "12px 14px",
+                      };
+                      const panelLabel = (label: string) => (
+                        <p className="m-0 mb-2 text-[10.5px] font-bold" style={{ color: "rgba(238,238,245,0.5)", letterSpacing: "0.06em" }}>
+                          {label}
+                        </p>
+                      );
+                      const activePill = (uid: string) => {
+                        const online = presence.has(uid);
+                        return (
+                          <span className="inline-flex items-center gap-1.5 text-[10px] shrink-0"
+                            style={{ color: online ? "#00b894" : "rgba(238,238,245,0.32)" }}>
+                            <span style={{
+                              width: 7, height: 7, borderRadius: "50%",
+                              background: online ? "#00b894" : "rgba(238,238,245,0.22)",
+                              boxShadow: online ? "0 0 6px rgba(0,184,148,0.6)" : "none",
+                            }} />
+                            {online ? "Active" : "Offline"}
+                          </span>
+                        );
+                      };
+                      const personRow = (uid: string, u: Member["user"], right: React.ReactNode) => (
+                        <div key={uid} className="flex items-center gap-2.5 py-1.5">
+                          <UserAvatar size={24} username={u?.username ?? "?"} avatarUrl={u?.avatar_url ?? null} seed={uid} />
+                          <span className="flex-1 min-w-0 truncate text-[12px]" style={{ color: "rgba(238,238,245,0.88)" }}>
+                            {u?.display_name?.trim() || `@${u?.username ?? "unknown"}`}
+                          </span>
+                          {right}
+                        </div>
+                      );
+                      const modsList = membersList.filter((m) => m.role === "owner" || m.role === "moderator");
+                      const plainMembers = membersList.filter((m) => m.role === "member");
+                      return (
+                      <div className="mt-4 pt-4 grid gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+                        {/* moderators + activity */}
+                        <div style={panel}>
+                          {panelLabel("MODERATORS")}
+                          {modsList.length === 0 ? (
+                            <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>Loading…</p>
+                          ) : modsList.map((m) => personRow(m.user_id, m.user, (
+                            <>
+                              {activePill(m.user_id)}
+                              <RoleBadge role={m.role} />
+                              {isOwner && m.role === "moderator" && m.user_id !== userId && (
+                                <button onClick={() => setRole(m.user_id, "member")}
+                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md" style={{ ...btnGhost, borderRadius: 6 }}>
+                                  Remove
+                                </button>
+                              )}
+                            </>
+                          )))}
+                        </div>
+
+                        {/* members (mods see; owner promotes) */}
+                        <div style={panel}>
+                          {panelLabel(`MEMBERS${plainMembers.length ? ` · ${plainMembers.length}` : ""}`)}
+                          {plainMembers.length === 0 ? (
+                            <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No members beyond the mod team yet.</p>
+                          ) : plainMembers.map((m) => personRow(m.user_id, m.user, (
+                            <>
+                              {activePill(m.user_id)}
+                              {isOwner && m.user_id !== userId && (
+                                <button onClick={() => setRole(m.user_id, "moderator")}
+                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md" style={{ ...btnGhost, borderRadius: 6 }}>
+                                  Make mod
+                                </button>
+                              )}
+                              {m.user_id !== userId && (
+                                <button onClick={() => banMember(m)}
+                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
+                                  style={{ background: "transparent", border: "0.5px solid rgba(232,64,64,0.35)", color: "#e88", fontFamily: "inherit", borderRadius: 6 }}>
+                                  Ban
+                                </button>
+                              )}
+                            </>
+                          )))}
+                        </div>
+
+                        {/* agent-built panels: bans + mod log */}
+                        <BansPanel supabase={supabase} communityId={selectedCommunity.id} refreshKey={modRefresh} />
+                        <ModLogPanel supabase={supabase} communityId={selectedCommunity.id} refreshKey={modRefresh} />
+
+                        {/* join requests */}
+                        {selectedCommunity.is_private && (
+                          <div style={panel}>
+                            {panelLabel(`JOIN REQUESTS${joinRequests.length ? ` · ${joinRequests.length}` : ""}`)}
+                            {joinRequests.length === 0 ? (
+                              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No pending requests.</p>
+                            ) : joinRequests.map((r) => personRow(r.user_id, r.user, (
+                              <>
+                                <span className="text-[10px] shrink-0" style={{ color: "rgba(238,238,245,0.32)" }}>{timeAgo(r.created_at)}</span>
+                                <button onClick={() => handleRequest(r.user_id, true)}
+                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
+                                  style={{ background: "transparent", border: "0.5px solid rgba(0,184,148,0.4)", color: "#00b894", fontFamily: "inherit" }}>
+                                  Approve
+                                </button>
+                                <button onClick={() => handleRequest(r.user_id, false)}
+                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
+                                  style={{ background: "transparent", border: "0.5px solid rgba(232,64,64,0.35)", color: "#e88", fontFamily: "inherit" }}>
+                                  Deny
+                                </button>
+                              </>
+                            )))}
+                          </div>
+                        )}
+
+                        {/* about & rules editor */}
+                        <div style={panel}>
+                          {panelLabel("ABOUT & RULES")}
+                          <input
+                            style={{ ...inputStyle, marginBottom: 8 }}
+                            placeholder="Description (what is this board for?)"
+                            maxLength={500}
+                            value={draftDescription}
+                            onChange={(e) => setDraftDescription(e.target.value)}
+                          />
+                          <textarea
+                            style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
+                            placeholder={"Rules — one per line\nBe civil.\nStay on topic."}
+                            maxLength={4000}
+                            value={draftRules}
+                            onChange={(e) => setDraftRules(e.target.value)}
+                          />
+                          <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+                            {isOwner && (
+                              <label className="flex items-center gap-1.5 text-[12px] cursor-pointer" style={{ color: "rgba(238,238,245,0.65)" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={draftPrivate}
+                                  onChange={(e) => setDraftPrivate(e.target.checked)}
+                                />
+                                🔒 Private (join by approval)
+                              </label>
+                            )}
+                            <button onClick={saveSettings} disabled={busy}
+                              className="cursor-pointer text-[11.5px] px-3.5 py-1.5 rounded-lg ml-auto" style={btnBlue}>
+                              Save changes
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* tags */}
+                        <div style={panel}>
+                          {panelLabel("POST TAGS")}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {(tagsByCommunity[selectedCommunity.id] ?? []).map((t) => (
+                              <span key={t.id} className="inline-flex items-center gap-1">
+                                <TagChip name={t.name} color={t.color} />
+                                <button
+                                  onClick={() => deleteTag(t)}
+                                  className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
+                                  style={{ color: "rgba(238,238,245,0.32)" }}
+                                  aria-label={`Delete tag ${t.name}`}
+                                >
+                                  ✕
+                                </button>
+                              </span>
+                            ))}
+                            {(tagsByCommunity[selectedCommunity.id] ?? []).length === 0 && (
+                              <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No tags yet.</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                            <input
+                              style={{ ...inputStyle, width: 150 }}
+                              placeholder="New tag"
+                              maxLength={24}
+                              value={newTagName}
+                              onChange={(e) => setNewTagName(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") createTag(); }}
+                            />
+                            <span className="flex items-center gap-1">
+                              {TAG_COLORS.map((col) => (
+                                <button
+                                  key={col}
+                                  onClick={() => setNewTagColor(col)}
+                                  className="cursor-pointer border-none p-0"
+                                  style={{
+                                    width: 16, height: 16, borderRadius: "50%", background: col,
+                                    outline: newTagColor === col ? "2px solid #eeeef5" : "none",
+                                    outlineOffset: 1,
+                                  }}
+                                  aria-label={`Tag color ${col}`}
+                                />
+                              ))}
+                            </span>
+                            <button onClick={createTag} disabled={!newTagName.trim()}
+                              className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnBlue}>
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      );
+                    })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* locked-out notice for private boards */}
+                {lockedOut ? (
+                  <div className="p-8 text-center" style={card}>
+                    <p className="m-0 mb-1 text-[15px]" style={{ color: "#eeeef5" }}>🔒 This community is private</p>
+                    <p className="m-0 mb-3 text-[12px]" style={{ color: "rgba(238,238,245,0.5)" }}>
+                      Posts are visible to members only. Request to join and a moderator will review it.
+                    </p>
+                    <button
+                      onClick={() => selectedCommunity && toggleJoin(selectedCommunity)}
+                      className="cursor-pointer text-[12px] px-4 py-2 rounded-full"
+                      style={selectedCommunity?.requested
+                        ? { background: "transparent", border: "0.5px solid rgba(226,185,107,0.35)", color: "#e2b96b", fontFamily: "inherit", cursor: "pointer", borderRadius: 999 }
+                        : { ...btnBlue, borderRadius: 999 }}
+                    >
+                      {selectedCommunity?.requested ? "Cancel request" : "Request to join"}
+                    </button>
+                  </div>
+                ) : (
+                <>
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {(["new", "top"] as const).map((s) => (
+                  {(["best", "new", "top"] as const).map((s) => (
                     <button
                       key={s}
                       onClick={() => setSort(s)}
                       className="cursor-pointer text-[12px] px-3.5 py-1.5 rounded-full"
                       style={{
-                        background: sort === s ? "rgba(255,255,255,0.1)" : "rgba(20,20,26,0.85)",
-                        border: "0.5px solid " + (sort === s ? "#4a4a54" : "#34343c"),
-                        color: sort === s ? "#f5f5f0" : "#c0c0c8",
+                        background: sort === s ? "rgba(255,255,255,0.1)" : "rgba(16,16,19,0.7)",
+                        border: "0.5px solid " + (sort === s ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.1)"),
+                        color: sort === s ? "#eeeef5" : "rgba(238,238,245,0.65)",
                         fontFamily: "inherit",
                       }}
+                      title={s === "best" ? "Wilson-score confidence: high ratios win, small samples don't" : undefined}
                     >
-                      {s === "new" ? "New" : "Top"}
+                      {s === "best" ? "Best" : s === "new" ? "New" : "Top"}
                     </button>
                   ))}
                   <button
@@ -820,7 +2554,7 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                       setComposeCommunity(selected !== "all" ? selected : (communities.find((c) => c.joined)?.id ?? communities[0]?.id ?? ""));
                     }}
                     className="cursor-pointer text-[12px] px-4 py-1.5 rounded-full ml-auto"
-                    style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+                    style={{ ...btnBlue, borderRadius: 999 }}
                   >
                     + New post
                   </button>
@@ -831,12 +2565,14 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                     {selected === "all" && (
                       <select
                         value={composeCommunity}
-                        onChange={(e) => setComposeCommunity(e.target.value)}
+                        onChange={(e) => { setComposeCommunity(e.target.value); setNewTagId(""); }}
                         className="text-[13px] px-3 py-2 rounded-lg self-start"
-                        style={{ background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#e5e5ec" }}
+                        style={{ background: "rgba(16,16,19,0.7)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(238,238,245,0.88)" }}
                       >
                         {communities.length === 0 && <option value="">No communities yet</option>}
-                        {communities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {communities
+                          .filter((c) => !c.is_private || c.joined)
+                          .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     )}
                     <input
@@ -846,26 +2582,122 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                     />
-                    <textarea
-                      style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                      placeholder="Text (optional)"
-                      maxLength={10000}
-                      value={newBody}
-                      onChange={(e) => setNewBody(e.target.value)}
-                    />
+                    {/* formatting toolbar — wraps the selection */}
+                    <div className="flex items-center gap-1.5">
+                      {([["**", "B", "Bold", 700], ["*", "I", "Italic", 400], ["~~", "S", "Strikethrough", 400], ["`", "<>", "Code", 400]] as const).map(([marker, label, tip, weight]) => (
+                        <button
+                          key={marker}
+                          onClick={() => wrapSelection(marker)}
+                          title={tip}
+                          className="cursor-pointer text-[11px]"
+                          style={{
+                            ...btnGhost, borderRadius: 6, padding: "3px 9px",
+                            fontWeight: weight,
+                            fontStyle: label === "I" ? "italic" : undefined,
+                            textDecoration: label === "S" ? "line-through" : undefined,
+                            fontFamily: label === "<>" ? "monospace" : "inherit",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <span className="text-[10px]" style={{ color: "rgba(238,238,245,0.25)" }}>
+                        **bold** · *italic* · ~~strike~~ · `code` · @mention · links auto-embed
+                      </span>
+                    </div>
+                    <span className="relative block">
+                      <textarea
+                        ref={bodyRef}
+                        style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+                        placeholder="Text (optional — @ to mention someone)"
+                        maxLength={10000}
+                        value={newBody}
+                        onChange={(e) => setNewBody(e.target.value)}
+                      />
+                      <MentionSuggest text={newBody} onComplete={setNewBody} supabase={supabase} />
+                    </span>
+                    {composerTags.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>Tag:</span>
+                        {composerTags.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setNewTagId(newTagId === t.id ? "" : t.id)}
+                            className="cursor-pointer bg-transparent border-none p-0"
+                            style={{ opacity: newTagId && newTagId !== t.id ? 0.45 : 1 }}
+                          >
+                            <TagChip name={t.name} color={t.color} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <label className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnGhost}>
+                        🖼 {newImage ? "Change image" : "Add image"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                      {giphyEnabled && (
+                        <span className="relative inline-block">
+                          <button
+                            onClick={() => setGifPickerFor(gifPickerFor === "post" ? null : "post")}
+                            className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg"
+                            style={btnGhost}
+                          >
+                            GIF
+                          </button>
+                          {gifPickerFor === "post" && (
+                            <GifPicker
+                              onPick={(u) => { setNewGifUrl(u); pickImage(null); }}
+                              onClose={() => setGifPickerFor(null)}
+                            />
+                          )}
+                        </span>
+                      )}
+                      {newImagePreview && (
+                        <span className="inline-flex items-center gap-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={newImagePreview} alt="" className="rounded-lg" style={{ height: 44 }} />
+                          <button
+                            onClick={() => pickImage(null)}
+                            className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+                            style={{ color: "rgba(238,238,245,0.32)" }}
+                          >
+                            remove
+                          </button>
+                        </span>
+                      )}
+                      {newGifUrl && (
+                        <span className="inline-flex items-center gap-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={newGifUrl} alt="" className="rounded-lg" style={{ height: 44 }} />
+                          <button
+                            onClick={() => setNewGifUrl(null)}
+                            className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+                            style={{ color: "rgba(238,238,245,0.32)" }}
+                          >
+                            remove
+                          </button>
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={submitPost}
                         disabled={busy || !newTitle.trim() || (selected === "all" && !composeCommunity)}
                         className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
-                        style={{ background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}
+                        style={btnBlue}
                       >
                         {busy ? "Posting…" : "Post"}
                       </button>
                       <button
-                        onClick={() => setComposing(false)}
+                        onClick={() => { setComposing(false); setNewTagId(""); pickImage(null); }}
                         className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
-                        style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+                        style={btnGhost}
                       >
                         Cancel
                       </button>
@@ -874,15 +2706,15 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 )}
 
                 {loadingPosts && posts.length === 0 && (
-                  <p className="text-[12px] text-center py-8" style={{ color: "#6b6b74" }}>Loading…</p>
+                  <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.32)" }}>Loading…</p>
                 )}
 
                 {!loadingPosts && posts.length === 0 && (
                   <div className="p-8 text-center" style={card}>
-                    <p className="m-0 mb-1 text-[13px]" style={{ color: "#f5f5f0" }}>
+                    <p className="m-0 mb-1 text-[13px]" style={{ color: "#eeeef5" }}>
                       {selectedCommunity ? `No posts in ${selectedCommunity.name} yet` : "No posts yet"}
                     </p>
-                    <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
+                    <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                       Start the first thread — a question, a take, a topic worth arguing about.
                     </p>
                   </div>
@@ -891,38 +2723,147 @@ export default function CommunitiesPage({ open, onClose }: Props) {
                 {posts.map((p) => (
                   <div
                     key={p.id}
-                    className="p-3.5 mb-2.5 flex gap-3 cursor-pointer"
+                    className="cm-card p-4 mb-3 flex gap-3 cursor-pointer"
                     style={card}
-                    onClick={() => { setOpenPost(p); loadComments(p.id); setCommentText(""); setReplyTo(null); }}
+                    onClick={() => openPostDetail(p)}
                   >
                     <VoteBox post={p} onVote={vote} />
                     <div className="flex-1 min-w-0">
-                      <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
-                        {selected === "all" && <><span style={{ color: "#c9b06a" }}>{p.community_name}</span> · </>}
-                        {authorSpan(p.author_id, p.author_username, p.author_display_name)} · {timeAgo(p.created_at)}
+                      <p className="m-0 text-[10.5px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.5)" }}>
+                        <span>
+                          {selected === "all" && (
+                            <>
+                              <span
+                                onClick={(e) => { e.stopPropagation(); closePostDetail(); setSelected(p.community_id); }}
+                                className="cursor-pointer"
+                                title={`Go to ${p.community_name}`}
+                                style={{ color: "#e2b96b", textDecoration: "underline dotted rgba(226,185,107,0.4)", textUnderlineOffset: 2 }}
+                              >
+                                {p.community_name}
+                              </span>
+                              {" · "}
+                            </>
+                          )}
+                          {authorSpan(p.author_id, p.author_username, p.author_display_name)} · {timeAgo(p.created_at)}
+                        </span>
+                        <RoleBadge role={p.author_role} />
+                        {p.is_repost && <span style={{ color: "#e2b96b" }}>↻</span>}
+                        {p.pinned_at && (
+                          <span className="text-[9px] font-bold rounded" style={{
+                            background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
+                            color: "#4a9eff", padding: "1px 5px", letterSpacing: "0.04em",
+                          }}>
+                            📌 PINNED
+                          </span>
+                        )}
+                        {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} small />}
                       </p>
-                      <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#f5f5f0" }}>
-                        {p.title}
+                      <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#eeeef5" }}>
+                        {renderWithMentions(p.title)}
                       </p>
                       {p.body && (
                         <p className="m-0 mt-1 text-[12px] leading-relaxed" style={{
-                          color: "#9a9aa2",
+                          color: "rgba(238,238,245,0.55)",
                           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
                         }}>
-                          {p.body}
+                          {renderWithMentions(p.body)}
                         </p>
                       )}
-                      <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#6b6b74" }}>
-                        💬 {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
+                      {p.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image_url} alt="" className="mt-1.5 rounded-lg"
+                          style={{ maxHeight: 220, maxWidth: "100%", objectFit: "cover" }} />
+                      )}
+                      {repostEmbed(p)}
+                      <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
+                        {postActions(p, false)}
                       </p>
                     </div>
                   </div>
                 ))}
+
+                {/* pagination — appears whenever a full page came back */}
+                {hasMore && posts.length > 0 && (
+                  <button
+                    onClick={loadMorePosts}
+                    disabled={loadingMore}
+                    className="block w-full cursor-pointer text-[12px] py-2.5 rounded-xl"
+                    style={{ ...btnGhost, opacity: loadingMore ? 0.6 : 1 }}
+                  >
+                    {loadingMore ? "Loading…" : "Load more posts"}
+                  </button>
+                )}
+                </>
+                )}
               </div>
             )}
           </main>
         </div>
       </div>
+
+      {/* repost picker */}
+      {repostFor && (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)", zIndex: 80 }}
+          onClick={() => setRepostFor(null)}
+        >
+          <div
+            className="p-5 w-full mx-4"
+            style={{ ...card, maxWidth: 420, background: "rgba(14,14,17,0.97)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="m-0 mb-1 text-[15px] font-semibold" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif" }}>
+              ↻ Repost
+            </p>
+            <p className="m-0 mb-3 text-[11.5px] truncate" style={{ color: "rgba(238,238,245,0.5)" }}>
+              “{repostFor.title}”
+            </p>
+            {communities.filter((c) => c.joined && c.id !== repostFor.community_id).length === 0 ? (
+              <p className="m-0 text-[12px]" style={{ color: "rgba(238,238,245,0.55)" }}>
+                Join another community first — reposts land in a community you're a member of.
+              </p>
+            ) : (
+              <>
+                <select
+                  value={repostCommunity}
+                  onChange={(e) => setRepostCommunity(e.target.value)}
+                  className="text-[13px] px-3 py-2 rounded-lg w-full"
+                  style={{ background: "rgba(16,16,19,0.7)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(238,238,245,0.88)", marginBottom: 10 }}
+                >
+                  {communities
+                    .filter((c) => c.joined && c.id !== repostFor.community_id)
+                    .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 60, resize: "vertical", marginBottom: 12 }}
+                  placeholder="Add your take (optional)"
+                  maxLength={10000}
+                  value={repostComment}
+                  onChange={(e) => setRepostComment(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={submitRepost}
+                    disabled={busy || !repostCommunity}
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                    style={btnBlue}
+                  >
+                    {busy ? "Reposting…" : "Repost"}
+                  </button>
+                  <button
+                    onClick={() => setRepostFor(null)}
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                    style={btnGhost}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

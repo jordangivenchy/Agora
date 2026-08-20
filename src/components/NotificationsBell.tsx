@@ -41,6 +41,9 @@ type NotifRow = {
   room_motion: string | null;
   read_at: string | null;
   created_at: string;
+  post_id: string | null;
+  post_title: string | null;
+  community_name: string | null;
 };
 
 function actorName(n: NotifRow): string {
@@ -59,13 +62,20 @@ function notifText(n: NotifRow): string {
       return `Starting soon: “${n.room_motion ?? "a discussion"}”`;
     case "room_invite":
       return `${actorName(n) || "A friend"} invited you to “${n.room_motion ?? "their room"}”`;
+    case "community_post":
+      return `${actorName(n) || "Someone"} posted in ${n.community_name ?? "a community you joined"}: “${n.post_title ?? "a new thread"}”`;
+    case "community_debate":
+      return `New discussion in ${n.community_name ?? "your community"}: “${n.room_motion ?? "a discussion"}”`;
+    case "mention":
+      return `${actorName(n) || "Someone"} mentioned you in “${n.post_title ?? "a thread"}”`;
     default:
       return "New activity";
   }
 }
 
 function notifHref(n: NotifRow): string | null {
-  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon" || n.type === "room_invite")) return `/agora/${n.room_id}`;
+  if (n.post_id && (n.type === "community_post" || n.type === "mention")) return `/?post=${n.post_id}`;
+  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon" || n.type === "room_invite" || n.type === "community_debate")) return `/agora/${n.room_id}`;
   if (n.actor_id && (n.type === "new_follower" || n.type === "friend_accepted")) return `/?profile=${n.actor_id}`;
   return null;
 }
@@ -186,7 +196,7 @@ export default function NotificationsBell({ container }: Props) {
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         (payload) => {
           load();
-          const row = payload.new as { type?: string; room_id?: string };
+          const row = payload.new as { type?: string; room_id?: string; post_id?: string };
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             const body =
               row.type === "room_starting_soon" ? "A discussion you set a reminder for starts soon."
@@ -195,11 +205,18 @@ export default function NotificationsBell({ container }: Props) {
                 ? "Friend request accepted — you're now friends."
                 : row.type === "room_invite"
                   ? "A friend invited you to a room."
-                  : "Someone wants to be your friend.";
+                  : row.type === "community_post"
+                    ? "New post in a community you joined."
+                    : row.type === "community_debate"
+                      ? "A discussion was started in your community."
+                      : row.type === "mention"
+                        ? "Someone mentioned you in a thread."
+                        : "Someone wants to be your friend.";
             const n = new Notification("AgoraSphere", { body });
             n.onclick = () => {
               window.focus();
-              if (row.room_id) window.location.href = `/agora/${row.room_id}`;
+              if (row.type === "community_post" && row.post_id) window.location.href = `/?post=${row.post_id}`;
+              else if (row.room_id) window.location.href = `/agora/${row.room_id}`;
             };
           }
         }
@@ -319,7 +336,7 @@ export default function NotificationsBell({ container }: Props) {
                 }}
               >
                 <span className="text-[13px]" style={{ marginTop: 1 }}>
-                  {n.type === "new_follower" ? "👤" : n.type === "friend_accepted" ? "🤝" : n.type === "room_invite" ? "📨" : n.type === "room_starting_soon" ? "🔔" : "🔴"}
+                  {n.type === "new_follower" ? "👤" : n.type === "friend_accepted" ? "🤝" : n.type === "room_invite" ? "📨" : n.type === "room_starting_soon" ? "🔔" : n.type === "community_post" ? "📝" : n.type === "community_debate" ? "🏛" : n.type === "mention" ? "＠" : "🔴"}
                 </span>
                 <span className="flex-1 text-[12.5px]" style={{ color: "#d5d5dc", lineHeight: 1.45 }}>
                   {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)

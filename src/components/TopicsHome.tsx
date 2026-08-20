@@ -49,6 +49,7 @@ type RoomRow = {
   viewer_count: number | null;
   thumbnail_url?: string | null;
   host: { id: string; username: string; display_name?: string | null; avatar_url: string | null } | null;
+  community: { id: string; name: string; color: string | null } | null;
   participants: { role: string; stance: string | null; left_at: string | null; user: { id: string; username: string; display_name?: string | null; avatar_url: string | null } | null }[] | null;
 };
 
@@ -111,6 +112,34 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {displayName(u)}
       </span>
     ) : null;
+  /* Community-hosted rooms present the community as the host; clicking
+     routes to that community's home page in the Communities view. */
+  const communitySpan = (c: { id: string; name: string; color: string | null }) => (
+    <span
+      onClick={(e) => {
+        e.stopPropagation();
+        (document.querySelector('[data-nav-id="communities"]') as HTMLElement | null)?.click();
+        setTimeout(() => {
+          document.dispatchEvent(new CustomEvent("agora:open-community", { detail: { communityId: c.id } }));
+        }, 60);
+      }}
+      className="inline-flex items-center gap-1"
+      style={{ cursor: "pointer", verticalAlign: "middle", lineHeight: 1 }}
+      title={`Go to ${c.name}`}
+    >
+      <span
+        className="inline-flex items-center justify-center shrink-0"
+        style={{
+          width: 13, height: 13, borderRadius: 4, background: c.color ?? "#4a9eff",
+          color: "#fff", fontSize: 8, fontWeight: 700,
+        }}
+      >
+        {c.name.charAt(0).toUpperCase()}
+      </span>
+      {c.name}
+    </span>
+  );
+
   const [userId, setUserId] = useState<string | null>(null);
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
@@ -128,7 +157,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       supabase.rpc("get_debate_topics"),
       supabase
         .from("debate_rooms")
-        .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url), participants:debate_participants(role, stance, left_at, user:users(id, username, display_name, avatar_url))")
+        .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url), community:communities!community_id(id, name, color), participants:debate_participants(role, stance, left_at, user:users(id, username, display_name, avatar_url))")
         .in("status", ["live", "created", "scheduled"])
         .order("created_at", { ascending: false })
         .limit(80),
@@ -260,6 +289,13 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           {nameSpan(p.user)}
         </span>
       ));
+    }
+    if (r.community) {
+      return (
+        <span className="inline-flex items-center gap-1">
+          <span>hosted by</span> {communitySpan(r.community)}
+        </span>
+      );
     }
     return r.host?.username ? (
       <span className="inline-flex items-center gap-1">
@@ -520,9 +556,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                   >
                     {r.motion}
                   </p>
-                  {r.host?.username && (
+                  {(r.community || r.host?.username) && (
                     <p className="m-0 mt-0.5 text-[10.5px] flex items-center gap-1" style={{ color: "rgba(255,255,255,0.8)" }}>
-                      <span>by</span> {nameSpan(r.host)}
+                      <span>by</span> {r.community ? communitySpan(r.community) : nameSpan(r.host)}
                     </p>
                   )}
                   <p className="m-0 mt-0.5 text-[9.5px]" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -631,9 +667,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                     >
                       {r.motion}
                     </p>
-                    {r.host?.username && (
+                    {(r.community || r.host?.username) && (
                       <p className="m-0 mt-0.5 text-[10.5px] flex items-center gap-1" style={{ color: "rgba(255,255,255,0.8)" }}>
-                        <span>by</span> {nameSpan(r.host)}
+                        <span>by</span> {r.community ? communitySpan(r.community) : nameSpan(r.host)}
                       </p>
                     )}
                     <p className="m-0 mt-0.5 text-[9.5px]" style={{ color: "rgba(255,255,255,0.55)" }}>

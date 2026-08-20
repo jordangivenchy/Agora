@@ -46,12 +46,26 @@ type DebateRow = {
   role: string;
 };
 
+/* Rows from get_community_posts(p_author): scores, tags, images, and
+   the embedded original for reposts — private-board posts already
+   filtered server-side by the community_visible predicate. */
 type PostRow = {
   id: string;
+  community_name: string;
   title: string;
   body: string | null;
   created_at: string;
-  community: { name: string } | null;
+  score: number;
+  comment_count: number;
+  image_url: string | null;
+  tag_name: string | null;
+  tag_color: string | null;
+  is_repost: boolean;
+  repost_of: string | null;
+  orig_title: string | null;
+  orig_community_name: string | null;
+  orig_author_username: string | null;
+  orig_author_display_name: string | null;
 };
 
 type ClipRow = {
@@ -63,7 +77,7 @@ type ClipRow = {
   duration_seconds: number | null;
 };
 
-type Tab = "debates" | "scheduled" | "posts" | "shorts";
+type Tab = "debates" | "scheduled" | "posts" | "reposts" | "shorts";
 
 const card: React.CSSProperties = {
   background: "rgba(16,16,22,0.88)",
@@ -167,12 +181,14 @@ export default function ProfileView({
         )
       );
 
-      const { data: postRows } = await supabase
-        .from("community_posts")
-        .select("id, title, body, created_at, community:communities(name)")
-        .eq("author_id", uid)
-        .order("created_at", { ascending: false })
-        .limit(30);
+      /* Community posts via the feed RPC: scores + repost embeds come
+         along, and private-board posts are filtered server-side. */
+      const { data: postRows } = await supabase.rpc("get_community_posts", {
+        p_community: null,
+        p_sort: "new",
+        p_limit: 60,
+        p_author: uid,
+      });
       setPosts((postRows ?? []) as unknown as PostRow[]);
 
       const { data: clipRows } = await supabase
@@ -220,14 +236,19 @@ export default function ProfileView({
     [debates]
   );
 
+  /* TikTok-style split: originals under Posts, reposts under Reposts. */
+  const ownPosts = useMemo(() => posts?.filter((p) => !p.is_repost) ?? null, [posts]);
+  const reposts = useMemo(() => posts?.filter((p) => p.is_repost) ?? null, [posts]);
+
   const counts = useMemo(
     () => ({
       debates: pastAndLive?.length ?? null,
       scheduled: upcoming?.length ?? null,
-      posts: posts?.length ?? null,
+      posts: ownPosts?.length ?? null,
+      reposts: reposts?.length ?? null,
       shorts: clips?.length ?? null,
     }),
-    [pastAndLive, upcoming, posts, clips]
+    [pastAndLive, upcoming, ownPosts, reposts, clips]
   );
 
   if (notFound) {
@@ -444,6 +465,7 @@ export default function ProfileView({
           {tabBtn("debates", "Debates", counts.debates)}
           {tabBtn("scheduled", "Scheduled", counts.scheduled)}
           {tabBtn("posts", "Posts", counts.posts)}
+          {tabBtn("reposts", "Reposts", counts.reposts)}
           {tabBtn("shorts", "Shorts", counts.shorts)}
         </div>
 
@@ -534,46 +556,89 @@ export default function ProfileView({
           </div>
         )}
 
-        {/* ── Posts ── */}
-        {tab === "posts" && (
-          <div className="flex flex-col gap-2.5">
-            {posts === null ? (
-              <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
-            ) : posts.length === 0 ? (
-              <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                No community posts yet.
+        {/* ── Posts / Reposts (shared card; row click deep-links into the
+               Communities view on that post) ── */}
+        {(tab === "posts" || tab === "reposts") && (() => {
+          const rows = tab === "posts" ? ownPosts : reposts;
+          const postCard = (p: PostRow) => (
+            <div
+              key={p.id}
+              className="px-4 py-3 cursor-pointer"
+              style={card}
+              onClick={() => { window.location.href = `/?post=${p.id}`; }}
+            >
+              <p className="m-0 flex items-center gap-1.5 flex-wrap" style={{ color: "#8b8b94", fontSize: 11 }}>
+                {p.is_repost && <span style={{ color: "#c9b06a" }}>↻ reposted to</span>}
+                <span>{p.community_name} · {timeAgo(p.created_at)} ago</span>
+                {p.tag_name && (
+                  <span
+                    className="rounded-full"
+                    style={{
+                      fontSize: 9.5, padding: "1px 7px", fontWeight: 600,
+                      background: `${p.tag_color || "#8b8b94"}22`,
+                      border: `0.5px solid ${p.tag_color || "#8b8b94"}66`,
+                      color: p.tag_color || "#8b8b94",
+                    }}
+                  >
+                    {p.tag_name}
+                  </span>
+                )}
               </p>
-            ) : (
-              posts.map((p) => (
-                <div key={p.id} className="px-4 py-3" style={card}>
-                  <p className="m-0" style={{ color: "#8b8b94", fontSize: 11 }}>
-                    {p.community?.name ? `${p.community.name} · ` : ""}
-                    {timeAgo(p.created_at)} ago
-                  </p>
-                  <p className="m-0 mt-1" style={{ color: "#f5f5f0", fontSize: 14.5, fontWeight: 600 }}>
-                    {p.title}
-                  </p>
-                  {p.body && (
-                    <p
-                      className="m-0 mt-1"
-                      style={{
-                        color: "#a9a9b4",
-                        fontSize: 13,
-                        lineHeight: 1.5,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {p.body}
-                    </p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
+              <p className="m-0 mt-1" style={{ color: "#f5f5f0", fontSize: 14.5, fontWeight: 600 }}>
+                {p.title}
+              </p>
+              {p.body && (
+                <p
+                  className="m-0 mt-1"
+                  style={{
+                    color: "#a9a9b4",
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {p.body}
+                </p>
+              )}
+              {p.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.image_url} alt="" className="mt-1.5 rounded-lg"
+                  style={{ maxHeight: 180, maxWidth: "100%", objectFit: "cover" }} />
+              )}
+              {p.is_repost && (
+                <p className="m-0 mt-1.5 px-3 py-2 rounded-lg" style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "0.5px solid rgba(255,255,255,0.08)",
+                  color: "#8b8b94", fontSize: 11.5,
+                }}>
+                  {p.repost_of
+                    ? <>from <span style={{ color: "#c9b06a" }}>{p.orig_community_name ?? "a community"}</span>
+                        {p.orig_author_username && <> · {p.orig_author_display_name?.trim() || `@${p.orig_author_username}`}</>}</>
+                    : "The original post was deleted."}
+                </p>
+              )}
+              <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
+                ▲ {p.score} · 💬 {p.comment_count}
+              </p>
+            </div>
+          );
+          return (
+            <div className="flex flex-col gap-2.5">
+              {rows === null ? (
+                <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
+              ) : rows.length === 0 ? (
+                <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
+                  {tab === "posts" ? "No community posts yet." : "No reposts yet."}
+                </p>
+              ) : (
+                rows.map(postCard)
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Shorts ── */}
         {tab === "shorts" && (

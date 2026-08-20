@@ -131,6 +131,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreWrapRef = useRef<HTMLDivElement | null>(null);
   const [copied, setCopied] = useState(false);
+  /* Community-hosted rooms carry the community's name in the topbar. */
+  const [communityName, setCommunityName] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -148,6 +150,16 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       }
       setRoom(roomData);
       if (partData) setParticipants(partData as StageParticipant[]);
+      if (roomData.community_id) {
+        const { data: comm } = await supabase
+          .from("communities")
+          .select("name")
+          .eq("id", roomData.community_id)
+          .maybeSingle();
+        setCommunityName(comm?.name ?? null);
+      } else {
+        setCommunityName(null);
+      }
     } catch (e) {
       console.error("agora load failed", e);
     } finally {
@@ -774,6 +786,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               {topic && (
                 <span title="Topic">
                   {topic.emoji} {topic.label}
+                </span>
+              )}
+              {communityName && (
+                <span title="Hosted by this community" style={{ color: "#c9b06a" }}>
+                  🏛 {communityName}
                 </span>
               )}
             </div>

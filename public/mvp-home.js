@@ -812,6 +812,12 @@ function buildDebateCard(d, realIndex) {
 
       <div class="hc-motion">"${d.motion}"</div>
 
+      ${d.community ? `
+      <div class="hc-community" style="display:flex;align-items:center;gap:6px;margin:2px 0 4px;font-size:11px;color:${d.communityColor || '#c9b06a'};">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;background:${d.communityColor || '#c9b06a'};color:#fff;font-size:9px;font-weight:700;">${escHTML(d.community[0].toUpperCase())}</span>
+        Hosted by ${escHTML(d.community)}
+      </div>` : ''}
+
       <div class="hc-debaters">
         <div class="hc-avatar" style="background:${d.color1};">${d.debater1[0]}</div>
         <span class="hc-dname">${d.debater1}</span>

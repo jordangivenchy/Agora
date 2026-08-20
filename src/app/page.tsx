@@ -78,7 +78,10 @@ export default function Home() {
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
-  const [createPrefill, setCreatePrefill] = useState<{ motion: string; topic: string; schedule?: boolean } | null>(null);
+  const [createPrefill, setCreatePrefill] = useState<{
+    motion: string; topic: string; schedule?: boolean;
+    communityId?: string; communityName?: string;
+  } | null>(null);
   const [booted, setBooted] = useState(false);
   const [dbOffline, setDbOffline] = useState(false);
   const dataLandedRef = useRef(false);
@@ -132,6 +135,21 @@ export default function Home() {
           }
         }
 
+        /* Community-hosted rooms are presented under the community's name.
+           The color lands inside mvp-home.js innerHTML templates, so only a
+           strict hex value may pass (the DB also constrains the format). */
+        const safeColor = (c: string | null) =>
+          c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : null;
+        const communityById = new Map<string, { name: string; color: string | null }>();
+        const communityIds = [...new Set(rooms.map((r) => r.community_id).filter(Boolean))] as string[];
+        if (communityIds.length) {
+          const { data: comms } = await supabase
+            .from("communities")
+            .select("id, name, color")
+            .in("id", communityIds);
+          for (const c of comms ?? []) communityById.set(c.id, { name: c.name, color: safeColor(c.color) });
+        }
+
         const debates = rooms.map((room, i) => {
           const debaters = (room.participants ?? []).filter(
             (p: { role: string; left_at: string | null }) => p.role === "debater" && !p.left_at
@@ -166,6 +184,8 @@ export default function Home() {
             votesPro: v.pro,
             votesCon: v.con,
             roomId: room.id,
+            community: room.community_id ? (communityById.get(room.community_id)?.name ?? null) : null,
+            communityColor: room.community_id ? (communityById.get(room.community_id)?.color ?? null) : null,
           };
         });
 
@@ -313,6 +333,21 @@ export default function Home() {
     })();
   }, [booted, supabase]);
 
+  /* Deep link from share links and the bell: /?post=<id> opens the
+     Communities tab on that post. activeTab is React state and the
+     sync effect above moves the sidebar highlight, so no nav click is
+     needed (clicking would race the MVP adapter's script load).
+     CommunitiesPage's agora:open-post listener registers at mount, so
+     the dispatch lands even while its panel is still closed. */
+  useEffect(() => {
+    if (!booted) return;
+    const postId = new URLSearchParams(window.location.search).get("post");
+    if (!postId) return;
+    window.history.replaceState(null, "", "/");
+    setActiveTab("communities");
+    document.dispatchEvent(new CustomEvent("agora:open-post", { detail: { postId } }));
+  }, [booted]);
+
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
     const onProfile = (e: Event) => {
@@ -405,7 +440,16 @@ export default function Home() {
           setShowCreate(true);
         }}
       />
-      <CommunitiesPage open={activeTab === "communities"} onClose={() => setActiveTab(null)} />
+      <CommunitiesPage
+        open={activeTab === "communities"}
+        onClose={() => setActiveTab(null)}
+        onStartDiscussion={(communityId, communityName) => {
+          // Starts live by default — "Schedule for later" stays available
+          // inside the modal for members who want a future slot.
+          setCreatePrefill({ motion: "", topic: "", communityId, communityName });
+          setShowCreate(true);
+        }}
+      />
       <NewsPage
         open={activeTab === "news"}
         onClose={() => setActiveTab(null)}
@@ -420,6 +464,8 @@ export default function Home() {
         initialMotion={createPrefill?.motion}
         initialTopic={createPrefill?.topic}
         initialSchedule={createPrefill?.schedule}
+        communityId={createPrefill?.communityId}
+        communityName={createPrefill?.communityName}
       />
       <UserProfileModal
         userId={profileUserId}
