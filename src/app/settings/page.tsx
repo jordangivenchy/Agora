@@ -342,6 +342,61 @@ export default function SettingsPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
 
+  /* ── 2FA (email-based) ── */
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorMsg, setTwoFactorMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  // Load 2FA status when authUser is available
+  useEffect(() => {
+    if (authUser) {
+      (async () => {
+        const { data, error } = await supabase
+          .from("user_2fa")
+          .select("enabled")
+          .eq("user_id", authUser.id)
+          .maybeSingle();
+
+        if (data) {
+          setTwoFactorEnabled(data.enabled);
+        }
+      })();
+    }
+  }, [authUser, supabase]);
+
+  async function toggleTwoFactor() {
+    if (!authUser) return;
+    setTwoFactorLoading(true);
+    setTwoFactorMsg(null);
+
+    try {
+      const newState = !twoFactorEnabled;
+
+      const { error } = await supabase.from("user_2fa").upsert(
+        {
+          user_id: authUser.id,
+          enabled: newState,
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (error) throw error;
+
+      setTwoFactorEnabled(newState);
+      setTwoFactorMsg({
+        kind: "ok",
+        text: newState
+          ? "Two-factor authentication enabled. You'll receive a code via email when signing in."
+          : "Two-factor authentication has been disabled.",
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to update 2FA";
+      setTwoFactorMsg({ kind: "err", text: message });
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  }
+
   async function deleteAccount() {
     if (!profile || deleteConfirm !== profile.username) return;
     setDeleteBusy(true);
@@ -452,6 +507,32 @@ export default function SettingsPage() {
               </div>
             </SectionCard>
 
+            <SectionCard title="Two-factor authentication" sub="Receive a code via email when you sign in.">
+              <div className="px-4 pb-3.5 flex flex-col gap-2.5">
+                <button
+                  onClick={toggleTwoFactor}
+                  disabled={twoFactorLoading}
+                  style={twoFactorEnabled ? btnGhost : btnPrimary}
+                  className="self-start"
+                >
+                  {twoFactorLoading
+                    ? "Updating…"
+                    : twoFactorEnabled
+                      ? "Disable 2FA"
+                      : "Enable 2FA"}
+                </button>
+                {twoFactorMsg && (
+                  <p className="m-0 text-[11px]" style={{ color: twoFactorMsg.kind === "ok" ? "#97c459" : "#fca5a5" }}>
+                    {twoFactorMsg.text}
+                  </p>
+                )}
+                {twoFactorEnabled && (
+                  <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
+                    ✓ Two-factor authentication is active. Check your email for a code when signing in.
+                  </p>
+                )}
+              </div>
+            </SectionCard>
           </>
         );
 
