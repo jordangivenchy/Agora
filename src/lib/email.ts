@@ -82,6 +82,21 @@ export function debateReminderEmail(motion: string, startsAt: Date, roomUrl: str
   };
 }
 
+export function twoFactorCodeEmail(code: string): { subject: string; html: string } {
+  return {
+    subject: `${code} is your AgoraSphere code`,
+    html: brandedEmail(
+      "Your verification code",
+      `<p>Enter this code to continue signing in:</p>
+       <p style="font-size:30px;font-weight:700;letter-spacing:0.28em;color:#17171a;
+          margin:18px 0;font-family:'Courier New',monospace;">${code}</p>
+       <p>The code expires in 10 minutes.</p>
+       <p><strong>If you didn't try to sign in</strong>, someone may know your
+       password — change it from Settings right away.</p>`
+    ),
+  };
+}
+
 export function passwordChangedEmail(): { subject: string; html: string } {
   return {
     subject: "Your AgoraSphere password was changed",

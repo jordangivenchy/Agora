@@ -342,59 +342,98 @@ export default function SettingsPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
 
-  /* ── 2FA (email-based) ── */
+  /* ── 2FA (email codes, server-verified) ──
+     Enabling: /enroll/start emails a code, /enroll/verify flips the flag —
+     proving the inbox works before the account depends on it. Disabling
+     re-checks the password server-side. Status is the one client-readable
+     surface (RLS: select own row). */
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
   const [twoFactorMsg, setTwoFactorMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [enrollPending, setEnrollPending] = useState<string | null>(null);
+  const [enrollCode, setEnrollCode] = useState("");
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [disablePw, setDisablePw] = useState("");
+  const hasPasswordIdentity = (authUser?.identities ?? []).some((i) => i.provider === "email");
 
-  // Load 2FA status when authUser is available
   useEffect(() => {
-    if (authUser) {
-      (async () => {
-        const { data, error } = await supabase
-          .from("user_2fa")
-          .select("enabled")
-          .eq("user_id", authUser.id)
-          .maybeSingle();
-
-        if (data) {
-          setTwoFactorEnabled(data.enabled);
-        }
-      })();
-    }
+    if (!authUser) return;
+    (async () => {
+      const { data } = await supabase
+        .from("user_2fa")
+        .select("enabled")
+        .eq("user_id", authUser.id)
+        .maybeSingle();
+      if (data) setTwoFactorEnabled(data.enabled);
+    })();
   }, [authUser, supabase]);
 
-  async function toggleTwoFactor() {
-    if (!authUser) return;
-    setTwoFactorLoading(true);
+  async function twoFactorPost(path: string, body: Record<string, unknown>) {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    return { ok: res.ok, error: (json as { error?: string }).error };
+  }
+
+  async function startEnrollFlow() {
+    setTwoFactorBusy(true);
     setTwoFactorMsg(null);
-
     try {
-      const newState = !twoFactorEnabled;
-
-      const { error } = await supabase.from("user_2fa").upsert(
-        {
-          user_id: authUser.id,
-          enabled: newState,
-        },
-        { onConflict: "user_id" }
-      );
-
-      if (error) throw error;
-
-      setTwoFactorEnabled(newState);
-      setTwoFactorMsg({
-        kind: "ok",
-        text: newState
-          ? "Two-factor authentication enabled. You'll receive a code via email when signing in."
-          : "Two-factor authentication has been disabled.",
-      });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to update 2FA";
-      setTwoFactorMsg({ kind: "err", text: message });
+      const res = await fetch("/api/auth/2fa/enroll/start", { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.pending) {
+        setTwoFactorMsg({ kind: "err", text: json.error ?? "Couldn't start enrollment." });
+        return;
+      }
+      setEnrollPending(json.pending);
+      setEnrollCode("");
+      setTwoFactorMsg({ kind: "ok", text: "We emailed you a 6-digit code — enter it below." });
+    } catch {
+      setTwoFactorMsg({ kind: "err", text: "Couldn't start enrollment. Check your connection." });
     } finally {
-      setTwoFactorLoading(false);
+      setTwoFactorBusy(false);
     }
+  }
+
+  async function verifyEnroll(e: React.FormEvent) {
+    e.preventDefault();
+    if (!enrollPending || enrollCode.length !== 6) return;
+    setTwoFactorBusy(true);
+    setTwoFactorMsg(null);
+    const { ok, error } = await twoFactorPost("/api/auth/2fa/enroll/verify", {
+      pending: enrollPending,
+      code: enrollCode,
+    });
+    setTwoFactorBusy(false);
+    if (!ok) {
+      setEnrollCode("");
+      setTwoFactorMsg({ kind: "err", text: error ?? "Invalid or expired code." });
+      return;
+    }
+    setTwoFactorEnabled(true);
+    setEnrollPending(null);
+    setEnrollCode("");
+    setTwoFactorMsg({ kind: "ok", text: "Two-factor authentication is on. You'll enter an emailed code when signing in." });
+  }
+
+  async function disable2fa(e: React.FormEvent) {
+    e.preventDefault();
+    if (hasPasswordIdentity && !disablePw) return;
+    setTwoFactorBusy(true);
+    setTwoFactorMsg(null);
+    const { ok, error } = await twoFactorPost("/api/auth/2fa/disable", { password: disablePw });
+    setTwoFactorBusy(false);
+    setDisablePw("");
+    if (!ok) {
+      setTwoFactorMsg({ kind: "err", text: error ?? "Couldn't disable two-factor authentication." });
+      return;
+    }
+    setTwoFactorEnabled(false);
+    setDisableOpen(false);
+    setTwoFactorMsg({ kind: "ok", text: "Two-factor authentication has been disabled." });
   }
 
   async function deleteAccount() {
@@ -507,28 +546,94 @@ export default function SettingsPage() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Two-factor authentication" sub="Receive a code via email when you sign in.">
+            <SectionCard title="Two-factor authentication" sub="Enter an emailed code each time you sign in with your password.">
               <div className="px-4 pb-3.5 flex flex-col gap-2.5">
-                <button
-                  onClick={toggleTwoFactor}
-                  disabled={twoFactorLoading}
-                  style={twoFactorEnabled ? btnGhost : btnPrimary}
-                  className="self-start"
-                >
-                  {twoFactorLoading
-                    ? "Updating…"
-                    : twoFactorEnabled
-                      ? "Disable 2FA"
-                      : "Enable 2FA"}
-                </button>
+                {!twoFactorEnabled && !enrollPending && (
+                  <button
+                    onClick={startEnrollFlow}
+                    disabled={twoFactorBusy}
+                    style={btnPrimary}
+                    className="self-start"
+                  >
+                    {twoFactorBusy ? "Sending code…" : "Enable 2FA"}
+                  </button>
+                )}
+
+                {!twoFactorEnabled && enrollPending && (
+                  <form onSubmit={verifyEnroll} className="flex items-center gap-2.5">
+                    <input
+                      style={{ ...inputStyle, width: 130, textAlign: "center", letterSpacing: "0.2em" }}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000000"
+                      autoComplete="off"
+                      value={enrollCode}
+                      onChange={(e) => setEnrollCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                    <button style={btnPrimary} disabled={twoFactorBusy || enrollCode.length !== 6} type="submit">
+                      {twoFactorBusy ? "Verifying…" : "Verify"}
+                    </button>
+                    <button
+                      style={btnGhost}
+                      type="button"
+                      onClick={() => {
+                        setEnrollPending(null);
+                        setEnrollCode("");
+                        setTwoFactorMsg(null);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                )}
+
+                {twoFactorEnabled && !disableOpen && (
+                  <div className="flex items-center gap-3">
+                    <button style={btnGhost} className="self-start" onClick={() => setDisableOpen(true)}>
+                      Disable 2FA
+                    </button>
+                    <p className="m-0 text-[11px]" style={{ color: "#97c459" }}>
+                      ✓ Active — you&apos;ll be asked for an emailed code at sign-in.
+                    </p>
+                  </div>
+                )}
+
+                {twoFactorEnabled && disableOpen && (
+                  <form onSubmit={disable2fa} className="flex items-center gap-2.5">
+                    {hasPasswordIdentity && (
+                      <input
+                        style={{ ...inputStyle, width: 200 }}
+                        type="password"
+                        placeholder="Current password"
+                        autoComplete="current-password"
+                        value={disablePw}
+                        onChange={(e) => setDisablePw(e.target.value)}
+                      />
+                    )}
+                    <button
+                      style={btnPrimary}
+                      disabled={twoFactorBusy || (hasPasswordIdentity && !disablePw)}
+                      type="submit"
+                    >
+                      {twoFactorBusy ? "Disabling…" : "Confirm disable"}
+                    </button>
+                    <button
+                      style={btnGhost}
+                      type="button"
+                      onClick={() => {
+                        setDisableOpen(false);
+                        setDisablePw("");
+                        setTwoFactorMsg(null);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                )}
+
                 {twoFactorMsg && (
                   <p className="m-0 text-[11px]" style={{ color: twoFactorMsg.kind === "ok" ? "#97c459" : "#fca5a5" }}>
                     {twoFactorMsg.text}
-                  </p>
-                )}
-                {twoFactorEnabled && (
-                  <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-                    ✓ Two-factor authentication is active. Check your email for a code when signing in.
                   </p>
                 )}
               </div>

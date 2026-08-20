@@ -10,6 +10,7 @@ import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
         avatars during bursts
      3. stop any egress still running against an ended room (belt-and-braces
         behind the close-stage stop_all — a leaked egress bills minutes)
+     4. prune expired 2FA challenges/gates and day-old attempt audit rows
 
    Auth: same CRON_SECRET bearer scheme as refresh-traits. */
 
@@ -102,6 +103,18 @@ export async function GET(req: Request) {
       .not("hls_url", "is", null);
   } catch (e) {
     report.egressStopped = `error: ${e instanceof Error ? e.message : "unknown"}`;
+  }
+
+  // 4. Expired 2FA challenges + old login-attempt audit rows
+  try {
+    const now = new Date().toISOString();
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    await admin.from("two_factor_pending").delete().lt("expires_at", now);
+    await admin.from("two_factor_gate").delete().lt("expires_at", now);
+    await admin.from("two_factor_attempts").delete().lt("created_at", dayAgo);
+    report.twoFactorPruned = true;
+  } catch (e) {
+    report.twoFactorPruned = `error: ${e instanceof Error ? e.message : "unknown"}`;
   }
 
   return NextResponse.json({ ok: true, ...report });

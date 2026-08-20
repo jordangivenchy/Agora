@@ -19,10 +19,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // 2FA state
+  // 2FA state — the challenge lives server-side; we only hold its id.
   const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [factorId, setFactorId] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const [twoFactorEmail, setTwoFactorEmail] = useState("");
+  const [resendWait, setResendWait] = useState(0);
+
+  useEffect(() => {
+    if (resendWait <= 0) return;
+    const t = setTimeout(() => setResendWait((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendWait]);
 
   // Already signed in? Straight to the app — unless the account is
   // suspended, in which case end the session here with an explanation.
@@ -96,69 +103,109 @@ export default function LoginPage() {
       // Redirect happens in the auth listener above, after the
       // suspension check. A direct replace here would race past it.
     } else {
+      // Sign-in goes through our API so 2FA accounts never receive a
+      // session from the password alone — the server checks the password,
+      // emails a code, and only /verify sets auth cookies.
       setBusy(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error) {
+      let json: { error?: string; twoFactor?: boolean; pending?: string } = {};
+      try {
+        const res = await fetch("/api/auth/2fa/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+        json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setBusy(false);
+          setError(json.error ?? "Sign-in failed. Try again.");
+          return;
+        }
+      } catch {
         setBusy(false);
-        setError(friendlyError(error.message));
+        setError("Sign-in failed. Check your connection and try again.");
         return;
       }
 
-      // Check if 2FA is enabled for this user
-      if (data?.user?.id) {
-        const { data: twoFAData } = await supabase
-          .from("user_2fa")
-          .select("enabled")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-
-        if (twoFAData?.enabled) {
-          // 2FA is enabled; send verification code
-          const { data: codeData, error: codeError } = await supabase.rpc("send_2fa_code", {
-            p_user_id: data.user.id,
-          });
-
-          if (codeError) {
-            setBusy(false);
-            setError(friendlyError(codeError.message));
-            return;
-          }
-
-          // Switch to 2FA mode
-          setFactorId(data.user.id);
-          setTwoFactorEmail(email.trim());
-          setMode("2fa");
-          setBusy(false);
-          return;
-        }
+      if (json.twoFactor && json.pending) {
+        setPendingId(json.pending);
+        setTwoFactorEmail(email.trim());
+        setTwoFactorCode("");
+        setResendWait(60);
+        setMode("2fa");
+        setBusy(false);
+        return;
       }
-      // Redirect (or suspension notice) comes from the auth listener.
+
+      await finishLogin();
     }
+  }
+
+  // Cookies were just set by the server; run the same suspension check the
+  // auth listener does for client-side sign-ins, then enter the app with a
+  // full navigation so every client picks up the new session.
+  async function finishLogin() {
+    const { data: suspended } = await supabase.rpc("is_suspended");
+    if (suspended === true) {
+      await supabase.auth.signOut().catch(() => {});
+      setBusy(false);
+      setMode("signin");
+      setPendingId(null);
+      setError("This account is suspended. Contact support if you believe this is a mistake.");
+      return;
+    }
+    window.location.replace("/");
   }
 
   async function handleTwoFactorSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!factorId) return;
+    if (!pendingId || busy) return;
 
     setBusy(true);
     setError(null);
 
-    const { data: verifyData, error: verifyError } = await supabase.rpc("verify_2fa_code", {
-      p_user_id: factorId,
-      p_code: twoFactorCode,
-    });
-
-    if (verifyError || verifyData?.error) {
+    try {
+      const res = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pending: pendingId, code: twoFactorCode }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBusy(false);
+        setTwoFactorCode("");
+        setError(json.error ?? "Invalid or expired code.");
+        return;
+      }
+    } catch {
       setBusy(false);
-      setError("Invalid or expired code. Try again.");
+      setError("Verification failed. Check your connection and try again.");
       return;
     }
 
-    // 2FA verified, session already established from earlier signin
-    // Redirect happens in the auth listener
+    await finishLogin();
+  }
+
+  async function handleResend() {
+    if (!pendingId || resendWait > 0 || busy) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/auth/2fa/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pending: pendingId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? "Couldn't resend the code.");
+        return;
+      }
+      setTwoFactorCode("");
+      setResendWait(60);
+      setNotice("A new code is on its way.");
+    } catch {
+      setError("Couldn't resend the code. Check your connection.");
+    }
   }
 
   async function signInWithGoogle() {
@@ -403,11 +450,30 @@ export default function LoginPage() {
 
               <button
                 type="button"
+                onClick={handleResend}
+                disabled={resendWait > 0 || busy}
+                className="w-full cursor-pointer transition-colors"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: resendWait > 0 ? "var(--text-dim)" : "var(--text-muted)",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: "12.5px",
+                  fontWeight: 500,
+                  padding: "2px 0 0",
+                }}
+              >
+                {resendWait > 0 ? `Resend code in ${resendWait}s` : "Didn't get it? Resend code"}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   setMode("signin");
                   setTwoFactorCode("");
-                  setFactorId(null);
+                  setPendingId(null);
                   setError(null);
+                  setNotice(null);
                 }}
                 className="w-full cursor-pointer transition-all"
                 style={{
