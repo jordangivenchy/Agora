@@ -5,7 +5,7 @@ import Wordmark from "@/components/Wordmark";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
-type Mode = "signin" | "signup" | "2fa";
+type Mode = "signin" | "signup";
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -18,11 +18,6 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  // 2FA state
-  const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [factorId, setFactorId] = useState<string | null>(null);
-  const [twoFactorEmail, setTwoFactorEmail] = useState("");
 
   // Already signed in? Straight to the app — unless the account is
   // suspended, in which case end the session here with an explanation.
@@ -97,7 +92,7 @@ export default function LoginPage() {
       // suspension check. A direct replace here would race past it.
     } else {
       setBusy(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -106,59 +101,8 @@ export default function LoginPage() {
         setError(friendlyError(error.message));
         return;
       }
-
-      // Check if 2FA is enabled for this user
-      if (data?.user?.id) {
-        const { data: twoFAData } = await supabase
-          .from("user_2fa")
-          .select("enabled")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-
-        if (twoFAData?.enabled) {
-          // 2FA is enabled; send verification code
-          const { data: codeData, error: codeError } = await supabase.rpc("send_2fa_code", {
-            p_user_id: data.user.id,
-          });
-
-          if (codeError) {
-            setBusy(false);
-            setError(friendlyError(codeError.message));
-            return;
-          }
-
-          // Switch to 2FA mode
-          setFactorId(data.user.id);
-          setTwoFactorEmail(email.trim());
-          setMode("2fa");
-          setBusy(false);
-          return;
-        }
-      }
       // Redirect (or suspension notice) comes from the auth listener.
     }
-  }
-
-  async function handleTwoFactorSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!factorId) return;
-
-    setBusy(true);
-    setError(null);
-
-    const { data: verifyData, error: verifyError } = await supabase.rpc("verify_2fa_code", {
-      p_user_id: factorId,
-      p_code: twoFactorCode,
-    });
-
-    if (verifyError || verifyData?.error) {
-      setBusy(false);
-      setError("Invalid or expired code. Try again.");
-      return;
-    }
-
-    // 2FA verified, session already established from earlier signin
-    // Redirect happens in the auth listener
   }
 
   async function signInWithGoogle() {
@@ -253,42 +197,40 @@ export default function LoginPage() {
             WebkitBackdropFilter: "blur(16px)",
           }}
         >
-          {/* Mode tabs (hidden in 2FA mode) */}
-          {mode !== "2fa" && (
-            <div
-              className="flex w-full mb-6"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid var(--border)",
-                borderRadius: "100px",
-                padding: "3px",
-              }}
-            >
-              {(["signin", "signup"] as Mode[]).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    setMode(m);
-                    setError(null);
-                    setNotice(null);
-                  }}
-                  className="flex-1 cursor-pointer transition-all"
-                  style={{
-                    border: "none",
-                    borderRadius: "100px",
-                    padding: "8px 0",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    background: mode === m ? "var(--accent-blue)" : "transparent",
-                    color: mode === m ? "#fff" : "var(--text-muted)",
-                  }}
-                >
-                  {m === "signin" ? "Sign in" : "Create account"}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Mode tabs */}
+          <div
+            className="flex w-full mb-6"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid var(--border)",
+              borderRadius: "100px",
+              padding: "3px",
+            }}
+          >
+            {(["signin", "signup"] as Mode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => {
+                  setMode(m);
+                  setError(null);
+                  setNotice(null);
+                }}
+                className="flex-1 cursor-pointer transition-all"
+                style={{
+                  border: "none",
+                  borderRadius: "100px",
+                  padding: "8px 0",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  background: mode === m ? "var(--accent-blue)" : "transparent",
+                  color: mode === m ? "#fff" : "var(--text-muted)",
+                }}
+              >
+                {m === "signin" ? "Sign in" : "Create account"}
+              </button>
+            ))}
+          </div>
 
           <h1
             className="text-center"
@@ -301,7 +243,7 @@ export default function LoginPage() {
               marginBottom: "6px",
             }}
           >
-            {mode === "2fa" ? "Verify your identity" : mode === "signin" ? "Welcome back" : "Create your account"}
+            {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p
             className="text-center"
@@ -312,11 +254,9 @@ export default function LoginPage() {
               marginBottom: "22px",
             }}
           >
-            {mode === "2fa"
-              ? `A code was sent to ${twoFactorEmail}. Check your inbox.`
-              : mode === "signin"
-                ? "Sign in to speak, vote, and follow people."
-                : "Join live discussions, share your perspective, and be heard."}
+            {mode === "signin"
+              ? "Sign in to speak, vote, and follow people."
+              : "Join live discussions, share your perspective, and be heard."}
           </p>
 
           {/* Error / notice banners */}
@@ -353,79 +293,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Email / password form or 2FA form */}
-          {mode === "2fa" ? (
-            <form onSubmit={handleTwoFactorSubmit} className="flex flex-col gap-4">
-              <div>
-                <label style={labelStyle} htmlFor="2fa-code">
-                  Verification code
-                </label>
-                <input
-                  id="2fa-code"
-                  type="text"
-                  inputMode="numeric"
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  onFocus={focusRing}
-                  onBlur={blurRing}
-                  placeholder="000000"
-                  autoComplete="off"
-                  required
-                  style={{ ...inputStyle, letterSpacing: "0.2em", textAlign: "center", fontSize: "18px" }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={busy || twoFactorCode.length !== 6}
-                className="w-full cursor-pointer transition-all"
-                style={{
-                  background: "var(--accent-blue)",
-                  border: "none",
-                  borderRadius: "100px",
-                  color: "#fff",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  padding: "12px 20px",
-                  marginTop: "4px",
-                  opacity: busy || twoFactorCode.length !== 6 ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!busy && twoFactorCode.length === 6) e.currentTarget.style.background = "var(--accent-purple-light)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--accent-blue)";
-                }}
-              >
-                {busy ? "Verifying…" : "Verify"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("signin");
-                  setTwoFactorCode("");
-                  setFactorId(null);
-                  setError(null);
-                }}
-                className="w-full cursor-pointer transition-all"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--border)",
-                  borderRadius: "100px",
-                  color: "var(--text-muted)",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  padding: "12px 20px",
-                }}
-              >
-                Back to sign in
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Email / password form */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === "signup" && (
               <div>
                 <label style={labelStyle} htmlFor="username">
@@ -526,19 +395,15 @@ export default function LoginPage() {
                   : "Create account"}
             </button>
           </form>
-          )}
 
-          {/* Divider (hidden in 2FA mode) */}
-          {mode !== "2fa" && (
+          {/* Divider */}
           <div className="flex items-center gap-3" style={{ margin: "20px 0" }}>
             <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: 500 }}>OR</span>
             <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
           </div>
-          )}
 
-          {/* Google sign-in (hidden in 2FA mode) */}
-          {mode !== "2fa" && (
+          {/* Google sign-in */}
           <button
             onClick={signInWithGoogle}
             className="w-full flex items-center justify-center gap-3 cursor-pointer transition-all"
@@ -579,7 +444,6 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
-          )}
         </div>
 
         {/* Terms */}
