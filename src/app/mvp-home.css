@@ -5998,33 +5998,58 @@ body { background: transparent; }
   text-shadow: 0 2px 14px rgba(0,0,0,0.55);
 }
 .carousel-item.news .carousel-panel.carousel-news-card {
-  top: 16px; right: 60px; bottom: 16px; /* clear the next-arrow */
-  width: 268px;
+  /* hug the content, anchored bottom-right, clear of the next-arrow */
+  top: auto; right: 60px; bottom: 18px;
+  width: 300px;
+  max-height: calc(100% - 36px);
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(10,12,22,0.52) !important;
+  background: rgba(10,12,22,0.55) !important;
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   box-shadow: 0 18px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;
+  justify-content: flex-start;
   text-align: left;
-  padding: 18px 18px 16px;
+  padding: 14px 16px 14px;
   gap: 8px;
 }
-.carousel-item.news .carousel-news-card .panel-name { margin-top: 0; align-self: flex-start; }
-.carousel-item.news .carousel-news-card .panel-outlets { margin-top: 2px; }
+/* "Reported by" + outlets on one line */
+.carousel-item.news .carousel-news-card .panel-name {
+  margin: 0;
+  align-self: auto;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(238,238,245,0.55);
+}
+.carousel-item.news .carousel-news-card .panel-outlets {
+  margin: 0;
+  width: auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.carousel-item.news .carousel-news-card .panel-outlet-row { margin: 0; }
+.carousel-news-byline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
 .carousel-news-summary {
-  margin: 4px 0 2px;
-  font-size: 12.5px;
+  margin: 2px 0 0;
+  font-size: 13px;
   line-height: 1.5;
-  color: rgba(238,238,245,0.86);
+  color: rgba(238,238,245,0.88);
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.carousel-item.news .carousel-news-btn { margin-top: 4px; align-self: flex-start; }
+.carousel-item.news .carousel-news-btn { margin-top: 6px; align-self: flex-start; }
 @media (max-width: 900px) {
   .carousel-item.news .carousel-panel.carousel-news-card { display: none; }
   .carousel-item.news .carousel-lower-third { right: 0; }
