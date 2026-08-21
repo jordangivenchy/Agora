@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { useDebateTranscription } from "@/lib/useDebateTranscription";
 import { extractWake } from "@/lib/wakeWord";
-import { speak as speakVoice, stopSpeaking, warmVoice } from "@/lib/voice/tts";
+import { speak as speakVoice, stopSpeaking, subscribeSpeaking, warmVoice } from "@/lib/voice/tts";
 
 interface Props {
   motion?: string;
@@ -105,6 +105,11 @@ export default function AgoraAssistant({
   useEffect(() => {
     if (liveListening || openPanel) warmVoice();
   }, [liveListening, openPanel]);
+
+  /* Audible-playback state from the voice engine — drives the orb's
+     strongest animation while Agora is actually talking. */
+  const [speaking, setSpeaking] = useState(false);
+  useEffect(() => subscribeSpeaking(setSpeaking), []);
 
   const speak = useCallback((text: string) => {
     void speakVoice(text);
@@ -263,8 +268,16 @@ export default function AgoraAssistant({
      interfere?" — but off stage it also has to run its own ears. */
   const interferenceActive = liveListening ? interfere : hotword;
   const onInterferenceToggle = liveListening ? toggleInterfere : toggleHotword;
-  /* Shazam moment: pulse while actually hearing AND allowed to butt in. */
+  /* Shazam moment: the orb's animation tracks what Agora is doing right
+     now, strongest first — talking > thinking > hearing the stage. */
   const orbLive = stageListen.listening && interfere;
+  const orbClass = speaking
+    ? "agora-orb-speaking"
+    : thinking
+      ? "agora-orb-thinking"
+      : orbLive
+        ? "agora-orb-live"
+        : "";
 
   return (
     <>
@@ -277,7 +290,7 @@ export default function AgoraAssistant({
               ? "Agora is listening in the background (interference off)"
               : 'Ask Agora — or say "Hey, Agora"'
         }
-        className={`fixed cursor-pointer flex items-center justify-center border-none ${orbLive ? "agora-orb-live" : ""}`}
+        className={`fixed cursor-pointer flex items-center justify-center border-none ${orbClass}`}
         style={{
           left: 18,
           bottom: 84,
