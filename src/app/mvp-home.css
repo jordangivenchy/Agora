@@ -5812,10 +5812,27 @@ body { background: transparent; }
   flex-direction: column;
   gap: 14px;
 }
-/* Depth cap: keep true nesting but stop indenting/drawing lines */
+/* Depth cap: past MAX_INDENT there is NO further indent — each reply
+   sits at the same x as its parent, and the two cards are joined by a
+   double-elbow "(" bracket in the gap between them: out of the parent's
+   bottom-left, jog left, back into the child's top-left. The chain
+   reads as one thread running straight down. */
 .cm-children--flat { margin-left: 0; padding-left: 0; }
-.cm-children--flat > .cm-child::before,
-.cm-children--flat > .cm-child::after { display: none; }
+/* One large half-rectangle "[" with rounded corners: hooks 14px into
+   the parent's left side, spans the gap, and lands 14px into the
+   child's — a single bold connector instead of two small elbows. */
+.cm-children--flat > .cm-child::after {
+  left: -14px;
+  top: -28px;
+  width: 14px;
+  height: 42px;
+  border-top: 2px solid #30303a;
+  border-left: 2px solid #30303a;
+  border-bottom: 2px solid #30303a;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+.cm-children--flat > .cm-child::before { display: none; }
 
 .cm-child { position: relative; }
 /* Curved elbow from the parent's rail into this reply's author row */
