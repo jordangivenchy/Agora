@@ -302,21 +302,25 @@ function newsSlideHTML(c, i, total) {
       ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="14" height="14" />` : ''}
       <span>${escHTML(s.name)}</span>
     </div>`).join('');
+  const hasUrl = !!(c.url && /^https:\/\//.test(c.url));
+  const img = c.imageUrl
+    ? `<img class="carousel-news-img" src="${escHTML(c.imageUrl)}" alt="" loading="eager" decoding="async"
+         onerror="this.remove()" />`
+    : '';
   return `
-    <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${total}">
-      <div class="carousel-bg" style="background:${c.imageUrl
-        ? `linear-gradient(90deg, rgba(8,8,12,0.92) 0%, rgba(8,8,12,0.55) 55%, rgba(8,8,12,0.35) 100%), url('${escHTML(encodeURI(c.imageUrl).replace(/['()]/g, (ch) => ({ "'": '%27', '(': '%28', ')': '%29' })[ch]))}') center/cover no-repeat`
-        : c.gradient};"></div>
-      <div class="carousel-bg-grid"></div>
+    <div class="carousel-item news" role="group" aria-label="Slide ${i+1} of ${total}">
+      <div class="carousel-bg" style="background:${c.gradient};">${img}</div>
+      <div class="carousel-news-shade"></div>
       <div class="carousel-live-badge news">📰 News</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">${escHTML(c.headline)}</div>
         <div class="carousel-news-chips">${chips}</div>
-        <button class="carousel-watch-btn carousel-news-btn"${c.url && /^https:\/\//.test(c.url) ? ` data-url="${escHTML(c.url)}"` : ''}>Read article ↗</button>
       </div>
-      <div class="carousel-panel">
-        <div class="panel-name" style="margin-top:8px;">Reported by</div>
+      <div class="carousel-panel carousel-news-card">
+        <div class="panel-name">Reported by</div>
         <div class="panel-outlets">${rows}</div>
+        ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
+        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read more ↗</button>` : ''}
       </div>
     </div>`;
 }

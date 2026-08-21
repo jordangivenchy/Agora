@@ -110,11 +110,32 @@ function normalizeNewsData(json: unknown): Story[] {
       url,
       publishedAt: (r.pubDate as string | undefined) ?? null,
       sources: name ? [{ name, domain }] : [],
-      imageUrl: img && /^https:\/\//.test(img) ? img : null,
+      imageUrl: upgradeImage(img && /^https:\/\//.test(img) ? img : null),
       summary: clip(r.description as string | undefined),
       category: Array.isArray(r.category) ? (r.category[0] as string | undefined) ?? null : null,
     }];
   });
+}
+
+/** Outlet image CDNs encode the size in the URL; ask for a hero-grade
+    variant where the scheme is known (BBC "standard/240" is a thumbnail). */
+function upgradeImage(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname === "ichef.bbci.co.uk") {
+      u.pathname = u.pathname.replace(/\/standard\/\d+\//, "/standard/1024/");
+      return u.toString();
+    }
+    if (u.hostname === "i.guim.co.uk") {
+      if (u.searchParams.has("width")) u.searchParams.set("width", "1200");
+      if (u.searchParams.has("quality")) u.searchParams.set("quality", "85");
+      return u.toString();
+    }
+    return url;
+  } catch {
+    return url;
+  }
 }
 
 /** Teaser text: one clean sentence-ish, ≤220 chars. */

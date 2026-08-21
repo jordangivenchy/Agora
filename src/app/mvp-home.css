@@ -5968,3 +5968,64 @@ body { background: transparent; }
   transform: translateY(-2px);
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 }
+
+
+/* ═══ News slides: the photo is the hero ═══
+   Full-bleed image, a light bottom-weighted shade for the headline, and
+   the right panel floated in as a frosted card (outlets · summary · Read
+   more) so the picture shows around it instead of dying behind an
+   opaque column. */
+.carousel-item.news .carousel-bg { overflow: hidden; }
+.carousel-news-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center 30%;
+  display: block;
+}
+.carousel-news-shade {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(6,7,12,0.78) 0%, rgba(6,7,12,0.30) 38%, rgba(6,7,12,0) 62%),
+    linear-gradient(to right, rgba(6,7,12,0.35) 0%, rgba(6,7,12,0) 40%);
+}
+.carousel-item.news .carousel-lower-third {
+  right: 350px;
+  background: none;
+  padding-bottom: 22px;
+}
+.carousel-item.news .carousel-motion {
+  font-size: 22px;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.55);
+}
+.carousel-item.news .carousel-panel.carousel-news-card {
+  top: 16px; right: 60px; bottom: 16px; /* clear the next-arrow */
+  width: 268px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(10,12,22,0.52) !important;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  align-items: flex-start;
+  justify-content: flex-end;
+  text-align: left;
+  padding: 18px 18px 16px;
+  gap: 8px;
+}
+.carousel-item.news .carousel-news-card .panel-name { margin-top: 0; align-self: flex-start; }
+.carousel-item.news .carousel-news-card .panel-outlets { margin-top: 2px; }
+.carousel-news-summary {
+  margin: 4px 0 2px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(238,238,245,0.86);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.carousel-item.news .carousel-news-btn { margin-top: 4px; align-self: flex-start; }
+@media (max-width: 900px) {
+  .carousel-item.news .carousel-panel.carousel-news-card { display: none; }
+  .carousel-item.news .carousel-lower-third { right: 0; }
+}
