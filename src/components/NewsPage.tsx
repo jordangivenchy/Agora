@@ -1,9 +1,12 @@
 "use client";
 
-/* News tab — today's headlines turned into debate motions. The gold-framed
-   Today's Motion sits on top; each headline carries a suggested motion and
-   a one-click Start-debate that prefills the create modal. Real rows from
-   `news_topics` take priority over the seeded examples. */
+/* News tab — the day's world headlines, each one a discussion waiting to
+   happen. The gold-framed Today's Motion (a real news_topics row) sits on
+   top; below it the live ranked feed from /api/news: major stories as
+   image cards, the rest as a list. Every story has a real "Read article"
+   link to the outlet and a one-click "Start a discussion" that prefills
+   the create modal with the headline as the motion. Curated news_topics
+   rows (suggested motions) render as their own section when present. */
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -22,6 +25,78 @@ const card: React.CSSProperties = {
   borderRadius: 12,
 };
 
+type Source = { name: string; domain: string };
+type Story = {
+  id: string;
+  headline: string;
+  url: string | null;
+  publishedAt: string | null;
+  sources: Source[];
+  imageUrl?: string | null;
+  summary?: string | null;
+  category?: string | null;
+  major?: boolean;
+};
+
+/* NewsData categories → our topic keys (world desk → Foreign Policy). */
+function topicFor(category: string | null | undefined): string {
+  switch (category) {
+    case "politics": return "politics-law";
+    case "business": return "economics";
+    case "science":
+    case "technology": return "science-tech";
+    case "sports": return "sports";
+    case "entertainment": return "culture";
+    default: return "foreign-policy";
+  }
+}
+
+/* NewsData timestamps arrive as "YYYY-MM-DD HH:MM:SS" in UTC. */
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const t = Date.parse(iso.includes("T") ? iso : iso.replace(" ", "T") + "Z");
+  if (!Number.isFinite(t)) return "";
+  const m = Math.max(1, Math.round((Date.now() - t) / 60000));
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+function Outlets({ sources, max = 3 }: { sources: Source[]; max?: number }) {
+  return (
+    <span className="inline-flex items-center gap-2 flex-wrap">
+      {sources.slice(0, max).map((src) => (
+        <span key={src.name} className="inline-flex items-center gap-1">
+          {src.domain && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(src.domain)}&sz=32`}
+              alt=""
+              width={12}
+              height={12}
+              style={{ borderRadius: 3, opacity: 0.85 }}
+            />
+          )}
+          <span className="text-[10.5px]" style={{ color: "#8b8b94" }}>{src.name}</span>
+        </span>
+      ))}
+      {sources.length > max && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>+{sources.length - max}</span>}
+    </span>
+  );
+}
+
+const readBtn: React.CSSProperties = {
+  border: "0.5px solid #3a3a42", background: "transparent", color: "#e5e5ec",
+  borderRadius: 9, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  textDecoration: "none", whiteSpace: "nowrap",
+};
+const discussBtn: React.CSSProperties = {
+  border: "0.5px solid #2c5382", background: "rgba(24,48,82,0.9)", color: "#9cc4f0",
+  borderRadius: 9, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  whiteSpace: "nowrap",
+};
+
 function resetCountdown(): string {
   const now = new Date();
   const midnight = new Date(now);
@@ -38,6 +113,20 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   const [dailyId, setDailyId] = useState<string | null>(null);
   const [voted, setVoted] = useState<"pro" | "con" | null>(null);
   const [liveNow, setLiveNow] = useState(0);
+  const [stories, setStories] = useState<Story[] | null>(null); // null = loading
+
+  /* Live ranked feed — never renders sample data. */
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    fetch("/api/news")
+      .then((r) => r.json())
+      .then((j) => { if (alive) setStories(j.sample ? [] : (j.stories ?? [])); })
+      .catch(() => { if (alive) setStories([]); });
+    return () => { alive = false; };
+  }, [open]);
+  const majors = useMemo(() => (stories ?? []).filter((s) => s.major), [stories]);
+  const rest = useMemo(() => (stories ?? []).filter((s) => !s.major), [stories]);
 
   /* Vote is local immediately; persisted via RPC when the daily motion is a
      real news_topics row (i.e. after the migration seeds one). */
@@ -203,39 +292,117 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
         </div>
         )}
 
-        {/* Headlines */}
-        <div className="flex flex-col gap-2.5">
-          {items.map((n) => (
-            <div key={n.id} className="flex items-center gap-3.5 px-4 py-3" style={card}>
-              <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: n.dotColor }} />
-              <div className="flex-1 min-w-0">
-                <p className="m-0 text-[13px]" style={{ color: "#f5f5f0" }}>{n.headline}</p>
-                <p className="m-0 text-[10px]" style={{ color: "#8b8b94" }}>
-                  {n.topicLabel} · {n.when} · suggested motion:{" "}
-                  <span style={{ color: "#c9b06a" }}>"{n.suggestedMotion}"</span>
-                </p>
-              </div>
-              <span className="text-[11px] whitespace-nowrap" style={{ color: n.liveCount ? "#f09595" : "#8b8b94" }}>
-                {n.liveCount ? `● ${n.liveCount} live` : "no live"}
-              </span>
-              <button
-                onClick={() => onStartDebate(n.suggestedMotion, n.topicKey)}
-                className="cursor-pointer text-[11px] px-3.5 py-1.5 rounded-lg whitespace-nowrap"
-                style={{ border: "0.5px solid #2c5382", background: "rgba(24,48,82,0.9)", color: "#9cc4f0" }}
-              >
-                Start a discussion
-              </button>
+        {/* ── Major stories: image cards ── */}
+        {stories === null ? (
+          <p className="text-[12px] px-1" style={{ color: "#6b6b74" }}>Loading headlines…</p>
+        ) : stories.length === 0 ? (
+          <div className="px-4 py-8 text-center" style={card}>
+            <p className="m-0 mb-1 text-[13px]" style={{ color: "#f5f5f0" }}>No headlines right now</p>
+            <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
+              The news feed is off until a provider is configured.
+            </p>
+          </div>
+        ) : (
+          <>
+            {majors.length > 0 && (
+              <>
+                <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MAJOR STORIES</p>
+                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+                  {majors.map((st) => (
+                    <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
+                      <div
+                        style={{
+                          aspectRatio: "16 / 9",
+                          background: st.imageUrl
+                            ? `url(${JSON.stringify(st.imageUrl)}) center/cover no-repeat`
+                            : "linear-gradient(135deg,#0d1b3e,#1e0533)",
+                        }}
+                      />
+                      <div className="flex flex-col gap-2 px-4 py-3 flex-1">
+                        <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, lineHeight: 1.3 }}>
+                          {st.headline}
+                        </p>
+                        {st.summary && (
+                          <p className="m-0 text-[11.5px]" style={{ color: "#a9a9b4", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {st.summary}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap mt-auto">
+                          <Outlets sources={st.sources} />
+                          {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {st.url && (
+                            <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read article ↗</a>
+                          )}
+                          <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
+                            Start a discussion
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ── More headlines: compact rows ── */}
+            {rest.length > 0 && (
+              <>
+                <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MORE HEADLINES</p>
+                <div className="flex flex-col gap-2 mb-5">
+                  {rest.map((st) => (
+                    <div key={st.id} className="flex items-center gap-3.5 px-4 py-3" style={card}>
+                      {st.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={st.imageUrl} alt="" className="shrink-0" style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }} />
+                      ) : (
+                        <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: "#4a9eff" }} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="m-0 text-[13px]" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{st.headline}</p>
+                        <p className="m-0 mt-0.5 flex items-center gap-2 flex-wrap">
+                          <Outlets sources={st.sources} max={2} />
+                          {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
+                        </p>
+                      </div>
+                      {st.url && (
+                        <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read ↗</a>
+                      )}
+                      <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
+                        Start a discussion
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Curated topics (news_topics rows with suggested motions) ── */}
+        {items.length > 0 && (
+          <>
+            <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>DISCUSSION TOPICS</p>
+            <div className="flex flex-col gap-2.5">
+              {items.map((n) => (
+                <div key={n.id} className="flex items-center gap-3.5 px-4 py-3" style={card}>
+                  <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: n.dotColor }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="m-0 text-[13px]" style={{ color: "#f5f5f0" }}>{n.headline}</p>
+                    <p className="m-0 text-[10px]" style={{ color: "#8b8b94" }}>
+                      {n.topicLabel} · {n.when} · suggested motion:{" "}
+                      <span style={{ color: "#c9b06a" }}>"{n.suggestedMotion}"</span>
+                    </p>
+                  </div>
+                  <button onClick={() => onStartDebate(n.suggestedMotion, n.topicKey)} style={discussBtn}>
+                    Start a discussion
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-          {items.length === 0 && (
-            <div className="px-4 py-8 text-center" style={card}>
-              <p className="m-0 mb-1 text-[13px]" style={{ color: "#f5f5f0" }}>No topics yet</p>
-              <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>
-                Daily discussion topics will appear here once the news pipeline is live.
-              </p>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

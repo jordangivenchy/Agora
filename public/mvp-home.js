@@ -304,13 +304,15 @@ function newsSlideHTML(c, i, total) {
     </div>`).join('');
   return `
     <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${total}">
-      <div class="carousel-bg" style="background:${c.gradient};"></div>
+      <div class="carousel-bg" style="background:${c.imageUrl
+        ? `linear-gradient(90deg, rgba(8,8,12,0.92) 0%, rgba(8,8,12,0.55) 55%, rgba(8,8,12,0.35) 100%), url('${escHTML(encodeURI(c.imageUrl).replace(/['()]/g, (ch) => ({ "'": '%27', '(': '%28', ')': '%29' })[ch]))}') center/cover no-repeat`
+        : c.gradient};"></div>
       <div class="carousel-bg-grid"></div>
       <div class="carousel-live-badge news">📰 News</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">${escHTML(c.headline)}</div>
         <div class="carousel-news-chips">${chips}</div>
-        <button class="carousel-watch-btn carousel-news-btn">Read article →</button>
+        <button class="carousel-watch-btn carousel-news-btn"${c.url && /^https:\/\//.test(c.url) ? ` data-url="${escHTML(c.url)}"` : ''}>Read article ↗</button>
       </div>
       <div class="carousel-panel">
         <div class="panel-name" style="margin-top:8px;">Reported by</div>
@@ -387,11 +389,14 @@ function renderCarousel() {
     });
   });
 
-  // News slides open the in-app News panel (React listens on agora:tab).
+  // "Read article" opens the outlet's story in a new tab; slides without
+  // a link fall back to the in-app News panel (React listens on agora:tab).
   track.querySelectorAll('.carousel-news-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
+      const url = btn.dataset.url;
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      else window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
     });
   });
 }

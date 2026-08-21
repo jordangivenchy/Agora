@@ -18,6 +18,9 @@ export interface RankArticle {
   url: string | null;
   publishedAt: string | null;
   sources: RankSource[];
+  imageUrl?: string | null;
+  summary?: string | null;
+  category?: string | null;
 }
 export interface RankedStory extends RankArticle {
   score: number;
@@ -76,6 +79,9 @@ export function clusterStories(articles: RankArticle[], threshold = 0.5): RankAr
       if (art.publishedAt && hit.story.publishedAt && art.publishedAt < hit.story.publishedAt) {
         hit.story.publishedAt = art.publishedAt;
       }
+      if (!hit.story.imageUrl && art.imageUrl) hit.story.imageUrl = art.imageUrl;
+      if (!hit.story.summary && art.summary) hit.story.summary = art.summary;
+      if (!hit.story.category && art.category) hit.story.category = art.category;
       for (const w of tokens) hit.tokens.add(w);
     } else {
       clusters.push({ story: { ...art, sources: [...art.sources] }, tokens });

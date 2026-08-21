@@ -42,6 +42,7 @@
           headline: s.headline,
           url: s.url,
           sources: s.sources || [],
+          imageUrl: s.imageUrl || null,
           gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length],
         };
       });

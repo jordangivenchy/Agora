@@ -25,7 +25,7 @@
  * ours — swap-proof against upstream field churn:
  *
  *   { sample: boolean, stories: [{ id, headline, url, publishedAt,
- *       sources: [{ name, domain }], major }] }
+ *       sources: [{ name, domain }], imageUrl, summary, category, major }] }
  *
  * Stories come back RANKED (see lib/newsRank): near-duplicate headlines
  * from different outlets are clustered into one story carrying every
@@ -44,7 +44,7 @@ const UPSTREAM_REVALIDATE_S = 20 * 60;
 let cache: { at: number; body: NewsPayload } | null = null;
 
 type Source = { name: string; domain: string };
-type Story = { id: string; headline: string; url: string | null; publishedAt: string | null; sources: Source[]; major?: boolean };
+type Story = { id: string; headline: string; url: string | null; publishedAt: string | null; sources: Source[]; imageUrl?: string | null; summary?: string | null; category?: string | null; major?: boolean };
 type NewsPayload = { sample: boolean; stories: Story[] };
 
 /* Defensive mapper over Particle's story-cluster shape. Field names are
@@ -93,14 +93,26 @@ function normalizeNewsData(json: unknown): Story[] {
     const name = (r.source_name as string | undefined) ?? (r.source_id as string | undefined) ?? "";
     let domain = "";
     try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch { /* bad url */ }
+    const img = r.image_url as string | undefined;
     return [{
       id: String(r.article_id ?? url),
       headline,
       url,
       publishedAt: (r.pubDate as string | undefined) ?? null,
       sources: name ? [{ name, domain }] : [],
+      imageUrl: img && /^https:\/\//.test(img) ? img : null,
+      summary: clip(r.description as string | undefined),
+      category: Array.isArray(r.category) ? (r.category[0] as string | undefined) ?? null : null,
     }];
   });
+}
+
+/** Teaser text: one clean sentence-ish, ≤220 chars. */
+function clip(text: string | undefined): string | null {
+  if (!text) return null;
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  return t.length > 220 ? t.slice(0, 217).replace(/\s+\S*$/, "") + "…" : t;
 }
 
 /* gnews.io v4 top-headlines → our Story shape. One outlet per story. */
@@ -115,12 +127,16 @@ function normalizeGNews(json: unknown): Story[] {
     const src = r.source as { name?: string; url?: string } | undefined;
     let domain = "";
     try { domain = src?.url ? new URL(src.url).hostname.replace(/^www\./, "") : new URL(url).hostname.replace(/^www\./, ""); } catch { /* bad url */ }
+    const img = r.image as string | undefined;
     return [{
       id: url,
       headline,
       url,
       publishedAt: (r.publishedAt as string | undefined) ?? null,
       sources: src?.name ? [{ name: src.name, domain }] : [],
+      imageUrl: img && /^https:\/\//.test(img) ? img : null,
+      summary: clip(r.description as string | undefined),
+      category: null,
     }];
   });
 }
