@@ -107,7 +107,10 @@ export function rankStories(
   const scored = clusterStories(articles).map((s) => {
     const ageH = s.publishedAt ? Math.max(0, (now - Date.parse(s.publishedAt)) / 3_600_000) : 24;
     const recency = Number.isFinite(ageH) ? Math.max(0, 1 - ageH / 48) : 0; // 1 → fresh, 0 → 2 days old
-    const score = s.sources.length * 3 + Math.min(4, hardNewsScore(s.headline)) + recency;
+    // Rolling live blogs ("… – US politics live", "live updates") are feeds,
+    // not stories — keep them out of the hero.
+    const liveBlog = /(\blive\s*(updates?|blog)?\s*$)|(\blive updates\b)/i.test(s.headline) ? 2.5 : 0;
+    const score = s.sources.length * 3 + Math.min(4, hardNewsScore(s.headline)) + recency - liveBlog;
     return { ...s, score, major: false };
   });
   scored.sort((a, b) => b.score - a.score);

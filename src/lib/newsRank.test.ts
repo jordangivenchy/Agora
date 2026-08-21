@@ -70,6 +70,16 @@ describe("rankStories", () => {
     // equal coverage and keyword weight → the fresher story wins
     expect(ranked[0].id).toBe("fresh");
   });
+  it("penalizes rolling live blogs out of the majors", () => {
+    const ranked = rankStories(
+      [
+        art("blog", "Democrats rally behind candidate in special election – US politics live", "guardian", 1),
+        art("story", "Parliament passes sanctions bill", "bbc", 2),
+      ],
+      { majorCount: 1, now: NOW }
+    );
+    expect(ranked[0].id).toBe("story");
+  });
   it("hard-news vocabulary counts", () => {
     expect(hardNewsScore("Earthquake kills dozens; troops evacuate region")).toBeGreaterThanOrEqual(3);
     expect(hardNewsScore("Gandhi notes sold at auction")).toBe(0);

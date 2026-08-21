@@ -335,7 +335,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           <Outlets sources={st.sources} />
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {st.url && (
                             <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
                           )}
@@ -356,7 +356,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MORE HEADLINES</p>
                 <div className="flex flex-col gap-2 mb-5">
                   {rest.map((st) => (
-                    <div key={st.id} className="flex items-center gap-3.5 px-4 py-3" style={card}>
+                    <div key={st.id} className="flex items-center gap-3.5 px-4 py-3 flex-wrap" style={card}>
                       {st.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -370,19 +370,21 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                       ) : (
                         <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: "#4a9eff" }} />
                       )}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1" style={{ minWidth: 220 }}>
                         <p className="m-0 text-[13px]" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{st.headline}</p>
                         <p className="m-0 mt-0.5 flex items-center gap-2 flex-wrap">
                           <Outlets sources={st.sources} max={2} />
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
                         </p>
                       </div>
-                      {st.url && (
-                        <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
-                      )}
-                      <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
-                        Start a discussion
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
+                        {st.url && (
+                          <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
+                        )}
+                        <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
+                          Start a discussion
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
