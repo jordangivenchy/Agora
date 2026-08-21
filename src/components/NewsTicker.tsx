@@ -140,7 +140,7 @@ export default function NewsTicker({ container }: Props) {
               )}
             </span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: "#f4d47c", whiteSpace: "nowrap" }}>
-              Read article ↗
+              Read at {s.sources[0]?.name ?? "source"} ↗
             </span>
           </button>
         ))}

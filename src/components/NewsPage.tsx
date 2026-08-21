@@ -337,7 +337,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           {st.url && (
-                            <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read article ↗</a>
+                            <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
                           )}
                           <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
                             Start a discussion
@@ -378,7 +378,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                         </p>
                       </div>
                       {st.url && (
-                        <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read ↗</a>
+                        <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
                       )}
                       <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
                         Start a discussion

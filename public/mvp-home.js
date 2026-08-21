@@ -321,7 +321,7 @@ function newsSlideHTML(c, i, total) {
           <div class="panel-outlets">${rows}</div>
         </div>
         ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
-        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read more ↗</button>` : ''}
+        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read article at ${escHTML((c.sources && c.sources[0] && c.sources[0].name) || 'source')} ↗</button>` : ''}
       </div>
     </div>`;
 }
