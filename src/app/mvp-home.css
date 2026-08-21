@@ -5970,12 +5970,12 @@ body { background: transparent; }
 }
 
 
-/* ═══ News slides: the photo is the hero ═══
-   Full-bleed image, a light bottom-weighted shade for the headline, and
-   the right panel floated in as a frosted card (outlets · summary · Read
-   more) so the picture shows around it instead of dying behind an
-   opaque column. */
-.carousel-item.news .carousel-bg { overflow: hidden; }
+/* ═══ News slides: photo left, solid column right ═══
+   The image fills everything left of the panel (it stops at the panel's
+   edge, so no part of the picture is wasted behind it) under a light
+   bottom-weighted shade for the headline. The right column is opaque and
+   full-height: Reported by · outlets · summary · Read more. */
+.carousel-item.news .carousel-bg { overflow: hidden; right: 300px; }
 .carousel-news-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -5983,13 +5983,12 @@ body { background: transparent; }
   display: block;
 }
 .carousel-news-shade {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background:
-    linear-gradient(to top, rgba(6,7,12,0.78) 0%, rgba(6,7,12,0.30) 38%, rgba(6,7,12,0) 62%),
-    linear-gradient(to right, rgba(6,7,12,0.35) 0%, rgba(6,7,12,0) 40%);
+  position: absolute; top: 0; bottom: 0; left: 0; right: 300px;
+  z-index: 1; pointer-events: none;
+  background: linear-gradient(to top, rgba(6,7,12,0.78) 0%, rgba(6,7,12,0.28) 40%, rgba(6,7,12,0) 65%);
 }
 .carousel-item.news .carousel-lower-third {
-  right: 350px;
+  right: 300px;
   background: none;
   padding-bottom: 22px;
 }
@@ -5998,23 +5997,22 @@ body { background: transparent; }
   text-shadow: 0 2px 14px rgba(0,0,0,0.55);
 }
 .carousel-item.news .carousel-panel.carousel-news-card {
-  /* hug the content, anchored bottom-right, clear of the next-arrow */
-  top: auto; right: 60px; bottom: 18px;
+  top: 0; right: 0; bottom: 0;
   width: 300px;
-  max-height: calc(100% - 36px);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(10,12,22,0.55) !important;
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  box-shadow: 0 18px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  border-radius: 0;
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  background: #0e1018 !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-start;
+  justify-content: center;
   text-align: left;
-  padding: 14px 16px 14px;
-  gap: 8px;
+  padding: 22px 22px 22px 24px;
+  gap: 10px;
 }
 /* "Reported by" + outlets on one line */
 .carousel-item.news .carousel-news-card .panel-name {
@@ -6041,16 +6039,18 @@ body { background: transparent; }
 }
 .carousel-news-summary {
   margin: 2px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 13.5px;
+  line-height: 1.55;
   color: rgba(238,238,245,0.88);
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.carousel-item.news .carousel-news-btn { margin-top: 6px; align-self: flex-start; }
+.carousel-item.news .carousel-news-btn { margin-top: 8px; align-self: flex-start; }
 @media (max-width: 900px) {
   .carousel-item.news .carousel-panel.carousel-news-card { display: none; }
+  .carousel-item.news .carousel-bg,
+  .carousel-news-shade,
   .carousel-item.news .carousel-lower-third { right: 0; }
 }
