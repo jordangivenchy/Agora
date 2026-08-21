@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { validateNewPassword } from "@/lib/passwordPolicy";
 import EditProfileModal from "@/components/EditProfileModal";
+import DataAndCoachPanel from "@/components/DataAndCoachPanel";
 import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
 
@@ -62,6 +63,7 @@ type SectionKey =
   | "notifications"
   | "appearance"
   | "privacy"
+  | "data"
   | "blocked"
   | "danger";
 
@@ -72,6 +74,7 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "notifications", label: "Notifications",       sub: "What you get notified about" },
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
+  { key: "data",       label: "Data & Coach",           sub: "What Agora collects, your profile, export & delete" },
   { key: "blocked",    label: "Blocked users",          sub: "Manage your block list" },
   { key: "danger",     label: "Danger zone",            sub: "Delete your account" },
 ];
@@ -698,6 +701,15 @@ export default function SettingsPage() {
               label="Reduce motion"
               sub="Disables the starfield, sparkles, and interface animations"
             />
+          </SectionCard>
+        );
+
+      case "data":
+        return (
+          <SectionCard title="Data & Coach" sub="Agora only collects what you turn on. Everything it derives is yours to see, export, or delete.">
+            <div className="px-4 py-4">
+              <DataAndCoachPanel />
+            </div>
           </SectionCard>
         );
 

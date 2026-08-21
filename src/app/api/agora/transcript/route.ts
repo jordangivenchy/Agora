@@ -4,6 +4,9 @@ import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { findClaimCandidates } from "@/lib/claims/detect";
 import { buildTranscriptWindow, parseModeratorAction, type WindowUtterance } from "@/lib/moderator/parse";
 import { mergePersona, parseDelta } from "@/lib/personas/merge";
+import { extractPositions } from "@/lib/positions/extract";
+import { refreshUserProfile } from "@/lib/profile/refresh";
+import { hasConsent } from "@/lib/dataPlatform/contract";
 import { findRelevantEvidence } from "@/lib/retrieval/scrapedData";
 import { generateAnswer } from "@/lib/ai/provider";
 import { captureEvent } from "@/lib/posthog/server";
@@ -324,7 +327,7 @@ async function maybePersonaUpdate(userId: string, roomId: string) {
 
   const { data: room } = await admin
     .from("debate_rooms")
-    .select("topic_key")
+    .select("topic_key, motion")
     .eq("id", roomId)
     .maybeSingle();
 
@@ -374,4 +377,49 @@ async function maybePersonaUpdate(userId: string, roomId: string) {
     .from("debate_utterances")
     .update({ analyzed: true })
     .in("id", batch.map((u) => u.id));
+
+  // ── Data-platform derivations (additive, consent-gated, best-effort) ──
+  // The pre-existing argument-style persona above is unchanged. The richer
+  // derivations below only run for users who explicitly opted in.
+  const topicKey = (room?.topic_key as string) ?? null;
+  const motion = (room?.motion as string) ?? null;
+
+  // Expressed positions: what this debater actually argued, traceable to
+  // their own utterances. Gated on 'debate_analysis'.
+  try {
+    if (topicKey && (await hasConsent(admin, userId, "debate_analysis"))) {
+      const positions = await extractPositions({
+        utterances: batch.map((u) => ({ id: u.id as string, content: u.content as string })),
+        motion,
+        topicKey,
+        roomId,
+        generate: generateAnswer,
+      });
+      for (const p of positions) {
+        await admin.from("debate_positions").upsert(
+          {
+            user_id: userId,
+            topic_key: p.topicKey,
+            motion: p.motion,
+            stance: p.stance,
+            summary: p.summary,
+            evidence_utterance_ids: p.evidenceUtteranceIds,
+            confidence: p.confidence,
+            room_id: p.roomId ?? roomId,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,topic_key,motion" }
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[transcript] position extraction failed:", err);
+  }
+
+  // Refresh the synthesized profile (self-gates on 'coaching' consent).
+  try {
+    await refreshUserProfile(admin, userId);
+  } catch (err) {
+    console.error("[transcript] profile refresh failed:", err);
+  }
 }

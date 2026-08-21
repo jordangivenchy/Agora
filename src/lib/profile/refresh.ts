@@ -12,19 +12,11 @@ import { hasConsent } from "@/lib/dataPlatform/contract";
 import type { DebatePosition, UserSignal } from "@/lib/dataPlatform/contract";
 import { synthesizeProfile } from "./synthesize";
 
-interface Admin {
-  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
-  from: (table: string) => {
-    select: (cols: string) => {
-      eq: (col: string, val: unknown) => {
-        order?: (col: string, opts: { ascending: boolean }) => { limit: (n: number) => PromiseLike<{ data: unknown }> };
-        maybeSingle?: () => PromiseLike<{ data: unknown }>;
-        limit?: (n: number) => PromiseLike<{ data: unknown }>;
-      };
-    };
-    upsert: (row: Record<string, unknown>) => PromiseLike<{ error: unknown }>;
-  };
-}
+// Loose structural type for a service-role Supabase client. Kept deliberately
+// permissive (query-builder chains are deeply generic and unifying them with
+// the concrete client type triggers "excessively deep" instantiation).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Admin = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>; from: (table: string) => any };
 
 const SIGNAL_WINDOW = 2000;
 
@@ -37,7 +29,7 @@ export async function refreshUserProfile(admin: Admin, userId: string): Promise<
     .from("user_signals")
     .select("kind, subject_type, subject_id, topic_key, value")
     .eq("user_id", userId)
-    .order!("created_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(SIGNAL_WINDOW);
   const rawSignals = (sig.data as Record<string, unknown>[] | null) ?? [];
   const signals: UserSignal[] = rawSignals.map((r) => ({
@@ -53,7 +45,7 @@ export async function refreshUserProfile(admin: Admin, userId: string): Promise<
     .from("debate_personas")
     .select("profile")
     .eq("user_id", userId)
-    .maybeSingle!();
+    .maybeSingle();
   const argumentStyle = ((persona.data as { profile?: unknown } | null)?.profile ?? null) as
     | { styles?: Record<string, number>; counts?: Record<string, number> }
     | null;
@@ -63,7 +55,7 @@ export async function refreshUserProfile(admin: Admin, userId: string): Promise<
     .from("debate_positions")
     .select("topic_key, motion, stance, summary, confidence")
     .eq("user_id", userId)
-    .limit!(200);
+    .limit(200);
   const positions: DebatePosition[] = ((pos.data as Record<string, unknown>[] | null) ?? []).map((r) => ({
     topicKey: String(r.topic_key),
     motion: (r.motion as string) ?? null,
