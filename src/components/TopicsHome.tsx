@@ -349,7 +349,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           const scheduled = rooms.filter((r) => r.topic_key === cat.key && isScheduled(r)).length;
           const open = rooms.filter((r) => r.topic_key === cat.key && r.status !== "live" && !isScheduled(r)).length;
           /* Status line: active states get a glowing dot + small-caps count;
-             quiet stays a bare dim word so busy tabs pop against it. */
+             a topic with nothing going on shows no status at all — a row of
+             "quiet quiet quiet" just advertises emptiness. */
           const status = live > 0
             ? { label: `${live} LIVE`, color: "#ff5c5c", dot: true, pulse: true }
             : waiting > 0
@@ -358,7 +359,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 ? { label: `${open} OPEN`, color: "#6fd3a0", dot: true, pulse: false }
                 : scheduled > 0
                   ? { label: `${scheduled} SCHEDULED`, color: "#a99df2", dot: true, pulse: false }
-                  : { label: "quiet", color: "#565660", dot: false, pulse: false };
+                  : null;
           return (
             <button
               key={cat.key}
@@ -382,19 +383,17 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                     {cat.label}
                     {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: "#f4d47c" }}>●</span>}
                   </span>
-                  <span
-                    className="flex items-center gap-1 mt-0.5"
-                    style={{
-                      color: status.color,
-                      whiteSpace: "nowrap",
-                      fontSize: status.dot ? 9 : 10,
-                      fontWeight: status.dot ? 700 : 400,
-                      letterSpacing: status.dot ? "0.07em" : 0,
-                      fontStyle: status.dot ? "normal" : "italic",
-                      opacity: status.dot ? 1 : 0.8,
-                    }}
-                  >
-                    {status.dot && (
+                  {status && (
+                    <span
+                      className="flex items-center gap-1 mt-0.5"
+                      style={{
+                        color: status.color,
+                        whiteSpace: "nowrap",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.07em",
+                      }}
+                    >
                       <span
                         className={status.pulse ? "animate-pulse" : undefined}
                         style={{
@@ -406,9 +405,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                           flexShrink: 0,
                         }}
                       />
-                    )}
-                    {status.label}
-                  </span>
+                      {status.label}
+                    </span>
+                  )}
                 </span>
               </span>
             </button>

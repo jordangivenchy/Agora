@@ -1,23 +1,38 @@
-/* GET /api/news — headline feed for the homepage news ticker.
+/* GET /api/news — headline feed for the homepage hero + ticker.
  *
- * Backed by Particle (particle.news), whose model fits us exactly: stories
- * are clusters of articles from many publishers, so each headline carries
- * the list of outlets covering it. Their API is partner-gated, so the
- * integration is env-driven:
+ * Providers, first configured wins (all env-gated, same pattern as
+ * Resend/HLS — see /api/health `news`):
  *
- *   PARTICLE_API_KEY   — bearer token (from your Particle partnership)
+ *   NEWSDATA_API_KEY   — newsdata.io. Free tier: 200 credits/day, top-tier
+ *                        outlets via prioritydomain=top, debate-relevant
+ *                        categories, ~12h publication delay (free-plan
+ *                        limitation; paid plans are real-time).
+ *   GNEWS_API_KEY      — gnews.io (commercial plan; cheapest licensed
+ *                        source with real outlet coverage). Top headlines,
+ *                        one outlet per story.
+ *   PARTICLE_API_KEY   — particle.news (partner-gated). Stories are
+ *                        multi-publisher clusters, the ideal shape.
  *   PARTICLE_API_URL   — stories endpoint (defaults to their v1 feed)
  *
- * Until credentials exist (or when the upstream call fails) we serve a
- * static sample feed, flagged `sample: true`, so the ticker renders and
- * the UI contract is exercised end to end. The response shape is ours —
- * swap-proof against upstream field churn:
+ * Evaluated and rejected: Google News RSS (license forbids non-personal
+ * use) and GDELT (429s after a handful of requests — unusable from shared
+ * cloud egress).
+ *
+ * With no provider configured (or on upstream failure) the route returns
+ * the static SAMPLE feed flagged `sample: true`. CONSUMERS MUST NOT RENDER
+ * SAMPLE STORIES — they're invented headlines wearing real outlets' names,
+ * kept only so the payload shape stays exercised. The response shape is
+ * ours — swap-proof against upstream field churn:
  *
  *   { sample: boolean, stories: [{ id, headline, url, publishedAt,
  *       sources: [{ name, domain }] }] }
  */
 
-const TTL_MS = 5 * 60_000;
+/* 20 min: free tiers allow 100–200 requests/day and the upstream fetches
+   below use Next's shared data cache (revalidate), so every serverless
+   instance reuses one fetch — ~72 upstream calls/day max. */
+const TTL_MS = 20 * 60_000;
+const UPSTREAM_REVALIDATE_S = 20 * 60;
 let cache: { at: number; body: NewsPayload } | null = null;
 
 type Source = { name: string; domain: string };
@@ -56,8 +71,54 @@ function normalizeParticle(json: unknown): Story[] {
   });
 }
 
-/* Placeholder feed served until PARTICLE_API_KEY is configured. Clearly
- * generic wording — the ticker labels the feed as sample data. */
+/* newsdata.io /api/1/latest → our Story shape. One outlet per story. */
+function normalizeNewsData(json: unknown): Story[] {
+  const rows = (json as { results?: unknown })?.results;
+  if (!Array.isArray(rows)) return [];
+  const seen = new Set<string>();
+  return rows.slice(0, 20).flatMap((raw): Story[] => {
+    const r = raw as Record<string, unknown>;
+    const headline = r.title as string | undefined;
+    const url = (r.link as string | undefined) ?? null;
+    if (!headline || !url || seen.has(headline)) return [];
+    seen.add(headline);
+    const name = (r.source_name as string | undefined) ?? (r.source_id as string | undefined) ?? "";
+    let domain = "";
+    try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch { /* bad url */ }
+    return [{
+      id: String(r.article_id ?? url),
+      headline,
+      url,
+      publishedAt: (r.pubDate as string | undefined) ?? null,
+      sources: name ? [{ name, domain }] : [],
+    }];
+  });
+}
+
+/* gnews.io v4 top-headlines → our Story shape. One outlet per story. */
+function normalizeGNews(json: unknown): Story[] {
+  const rows = (json as { articles?: unknown[] })?.articles ?? [];
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(0, 20).flatMap((raw): Story[] => {
+    const r = raw as Record<string, unknown>;
+    const headline = r.title as string | undefined;
+    const url = (r.url as string | undefined) ?? null;
+    if (!headline || !url) return [];
+    const src = r.source as { name?: string; url?: string } | undefined;
+    let domain = "";
+    try { domain = src?.url ? new URL(src.url).hostname.replace(/^www\./, "") : new URL(url).hostname.replace(/^www\./, ""); } catch { /* bad url */ }
+    return [{
+      id: url,
+      headline,
+      url,
+      publishedAt: (r.publishedAt as string | undefined) ?? null,
+      sources: src?.name ? [{ name: src.name, domain }] : [],
+    }];
+  });
+}
+
+/* Placeholder feed when no provider is configured. Never rendered by
+ * consumers (they check `sample`); exists to keep the contract exercised. */
 const SAMPLE: Story[] = [
   { id: "s1", headline: "Global leaders meet for climate summit as emissions targets slip", url: null, publishedAt: null,
     sources: [{ name: "Reuters", domain: "reuters.com" }, { name: "BBC", domain: "bbc.com" }, { name: "AP", domain: "apnews.com" }] },
@@ -82,7 +143,47 @@ export async function GET() {
   const url = process.env.PARTICLE_API_URL ?? "https://api.particle.news/v1/stories/top";
   let body: NewsPayload = { sample: true, stories: SAMPLE };
 
-  if (key) {
+  const newsdataKey = process.env.NEWSDATA_API_KEY;
+  if (newsdataKey) {
+    try {
+      const params = new URLSearchParams({
+        apikey: newsdataKey,
+        language: "en",
+        country: "us",
+        category: "politics,world,business,science,technology",
+        prioritydomain: "top",
+        removeduplicate: "1",
+      });
+      const res = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
+        signal: AbortSignal.timeout(8000),
+        next: { revalidate: UPSTREAM_REVALIDATE_S },
+      });
+      if (res.ok) {
+        const stories = normalizeNewsData(await res.json());
+        if (stories.length > 0) body = { sample: false, stories };
+      }
+    } catch {
+      /* upstream down → fall through (GNews, Particle, then sample) */
+    }
+  }
+
+  const gnewsKey = process.env.GNEWS_API_KEY;
+  if (gnewsKey && body.sample) {
+    try {
+      const res = await fetch(
+        `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${encodeURIComponent(gnewsKey)}`,
+        { signal: AbortSignal.timeout(8000), next: { revalidate: UPSTREAM_REVALIDATE_S } }
+      );
+      if (res.ok) {
+        const stories = normalizeGNews(await res.json());
+        if (stories.length > 0) body = { sample: false, stories };
+      }
+    } catch {
+      /* upstream down → fall through (Particle, then sample) */
+    }
+  }
+
+  if (key && body.sample) {
     try {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },

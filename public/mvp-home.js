@@ -1295,10 +1295,7 @@ if (_categoryRowEl) _categoryRowEl.addEventListener('wheel', e => {
   }
 }, { passive: false });
 
-// Hamburger
-document.getElementById('hamburger').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('open');
-});
+// Hamburger + sidebar nav are owned by React now (HomeSidebar.tsx).
 
 // Messages button
 document.getElementById('nav-messages-btn')?.addEventListener('click', function() {
@@ -1342,27 +1339,7 @@ document.getElementById('nav-messages-btn')?.addEventListener('click', function(
   });
 })();
 
-// Sidebar nav links — page switching
-document.querySelectorAll('.sidebar-link').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const page  = link.dataset.page;
-    const navId = link.dataset.navId;
-    // Dashboard is handled by its own modal IIFE — skip routing
-    if (navId === 'dashboard') return;
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-    link.classList.add('active');
-    // Subscriptions: expand live channel sub-list; collapse on any other nav item
-    const sublist = document.getElementById('subsChannelSublist');
-    if (sublist) sublist.classList.toggle('visible', navId === 'subscriptions');
-    // Page routing
-    if (page === 'explore') {
-      loadExplorePage();
-    } else {
-      loadHomePage();
-    }
-  });
-});
+// (sidebar nav routing moved to HomeSidebar.tsx)
 
 document.getElementById('searchBtn').addEventListener('click', () => {
   openCreateModal();
@@ -2179,17 +2156,7 @@ init();
 
 })();
 
-// Spotlight border on sidebar
-const sidebar = document.querySelector('.sidebar');
-document.addEventListener('pointermove', (e) => {
-  sidebar.style.setProperty('--x', e.clientX.toFixed(2));
-  sidebar.style.setProperty('--y', e.clientY.toFixed(2));
-  sidebar.style.setProperty('--xp', (e.clientX / window.innerWidth).toFixed(2));
-  sidebar.style.setProperty('--yp', (e.clientY / window.innerHeight).toFixed(2));
-  // Map cursor x 0→1 to hue 210→30 (cool blue → warm amber)
-  const hue = Math.round(210 - (e.clientX / window.innerWidth) * 180);
-  sidebar.style.setProperty('--hue', hue);
-});
+// (sidebar spotlight moved to HomeSidebar.tsx)
 
 // ═══════════════════════════════════════════════
 //  STARFIELD — canvas-based (enhanced)

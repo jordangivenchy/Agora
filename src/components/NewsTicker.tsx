@@ -1,7 +1,7 @@
 "use client";
 
 /* News ticker — scrolling headline strip under the hero carousel, fed by
-   /api/news (Particle-backed; sample feed until PARTICLE_API_KEY is set).
+   /api/news (GNews/Particle-backed; hidden entirely until a provider key is set).
    Each headline shows the outlets reporting the story (Particle clusters
    articles per story, so the outlet list comes free).
 
@@ -32,7 +32,8 @@ export default function NewsTicker({ container }: Props) {
       .then((r) => r.json())
       .then((j) => {
         if (!alive) return;
-        setStories(j.stories ?? []);
+        // Sample feeds are invented headlines — render nothing instead.
+        setStories(j.sample ? [] : (j.stories ?? []));
       })
       .catch(() => { /* no feed → render nothing */ });
     return () => { alive = false; };

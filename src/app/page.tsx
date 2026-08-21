@@ -12,7 +12,7 @@ import UserProfileModal from "@/components/UserProfileModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
 import DiscoverySearch from "@/components/DiscoverySearch";
-import FriendsSection from "@/components/friends/FriendsSection";
+import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
 import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
@@ -73,8 +73,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
   const [searchHost, setSearchHost] = useState<HTMLElement | null>(null);
-  const [friendsHost, setFriendsHost] = useState<HTMLElement | null>(null);
-  const [sidebarHost, setSidebarHost] = useState<HTMLElement | null>(null);
+  /* Which MVP-rendered page is showing when no React tab is open; the
+     sidebar highlights activeTab ?? mvpPage. */
+  const [mvpPage, setMvpPage] = useState<"home" | "explore">("home");
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
@@ -98,10 +99,6 @@ export default function Home() {
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
     setSearchHost(document.getElementById("discoverySocial"));
-    const fs = document.getElementById("friendsSection");
-    if (fs) fs.innerHTML = ""; // clear any MVP demo markup before React owns it
-    setFriendsHost(fs);
-    setSidebarHost(document.getElementById("sidebar"));
     setBellHost(document.getElementById("notifBellHost"));
     setNewsHost(document.getElementById("newsTickerHost"));
   }, []);
@@ -299,16 +296,26 @@ export default function Home() {
   }, [booted]);
 
   /* Keep the MVP shell in sync with the active React tab: hide the MVP's
-     main content while a tab panel is open, and move the sidebar's active
-     highlight onto the open tab. Nav and sidebar stay interactive. */
+     main content while a tab panel is open. (The sidebar highlight is
+     React state now — see HomeSidebar below.) */
   useEffect(() => {
     const main = document.querySelector(".main") as HTMLElement | null;
     if (main) main.style.display = activeTab ? "none" : "";
-    document.querySelectorAll(".sidebar-link[data-nav-id]").forEach((el) => {
-      const id = el.getAttribute("data-nav-id");
-      el.classList.toggle("active", activeTab ? id === activeTab : id === "home");
-    });
   }, [activeTab, booted]);
+
+  /* Sidebar navigation: React panels for trending/communities/news; the
+     MVP engine's own page switch for home/explore (it exposes both). */
+  const onSidebarNavigate = useCallback((id: HomeNavId) => {
+    const w = window as unknown as { loadHomePage?: () => void; loadExplorePage?: () => void };
+    if (id === "trending" || id === "communities" || id === "news") {
+      setActiveTab(id);
+      return;
+    }
+    setActiveTab(null);
+    setMvpPage(id);
+    if (id === "explore") w.loadExplorePage?.();
+    else w.loadHomePage?.();
+  }, []);
 
   /* Deep link from profile pages: /?dm=<userId> opens that DM thread once
      the dock is mounted. */
@@ -393,6 +400,7 @@ export default function Home() {
       const tab = (e as CustomEvent).detail;
       if (tab === "trending" || tab === "communities" || tab === "news") setActiveTab(tab);
       else if (tab === "close") setActiveTab(null);
+      else if (tab === "home") onSidebarNavigate("home");
       else if (tab === "battle") {
         // Legacy Topics-tab key: the dropdowns now live on the home feed.
         setActiveTab(null);
@@ -416,7 +424,7 @@ export default function Home() {
       window.removeEventListener("agora:tab", onTab);
       window.removeEventListener("agora:logout", onLogout);
     };
-  }, [supabase]);
+  }, [supabase, onSidebarNavigate]);
 
   return (
     <>
@@ -448,7 +456,7 @@ export default function Home() {
       <DiscoverySearch container={searchHost} />
       <NewsTicker container={newsHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
-      <FriendsSection container={friendsHost} sidebar={sidebarHost} />
+      <HomeSidebar activeId={activeTab ?? mvpPage} onNavigate={onSidebarNavigate} />
       <TopicsHome
         container={fieldsHost}
         onCreateLobby={async (topic, schedule) => {

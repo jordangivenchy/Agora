@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hasAdminCredentials } from "@/lib/supabase-admin";
 import { getAppConfig } from "@/lib/appConfig";
 import { emailConfigured } from "@/lib/email";
+import { newsConfigured } from "@/lib/news";
 
 /* Integration health: which optional backends are live. Safe to expose —
    booleans only, never values. Hit this after pasting a key into Vercel
@@ -21,6 +22,7 @@ export async function GET() {
     supabaseAdmin: hasAdminCredentials(),
     livekit: Boolean(process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
     email: emailConfigured(),
+    news: newsConfigured(),
     posthog: Boolean(process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_PROJECT_ID),
     hlsStorage: Boolean(
       // Must mirror the names /api/egress actually reads.

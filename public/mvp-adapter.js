@@ -31,6 +31,8 @@
   fetch('/api/news')
     .then(function (r) { return r.json(); })
     .then(function (j) {
+      // Sample feeds are invented headlines — never put them in the hero.
+      if (j.sample) return;
       newsSlides = (j.stories || []).slice(0, 3).map(function (s, i) {
         return {
           kind: 'news',
@@ -55,10 +57,14 @@
       });
       userVotes = new Array(DEBATES.length).fill(null);
 
-      var live = DEBATES.map(function (d, i) { d._i = i; return d; })
-        .filter(function (d) { return d.status === 'live'; });
+      var indexed = DEBATES.map(function (d, i) { d._i = i; return d; });
+      var live = indexed.filter(function (d) { return d.status === 'live'; });
       live.sort(function (a, b) { return (b.viewersNum || 0) - (a.viewersNum || 0); });
-      var top = (live.length ? live : DEBATES.slice()).slice(0, 4);
+      // Hero features LIVE rooms only, ranked by viewers — the slide
+      // template says "Watch Live", so anything else up there lies.
+      // Scheduled rooms have their own rail below; with nothing live the
+      // strip goes news-only (renderCarousel hides it if news is empty too).
+      var top = live.slice(0, 4);
       roomSlides = top.map(function (d) {
         return {
           debater: d.debater1,
@@ -146,9 +152,6 @@
     });
   }
 
-  /* Subscriptions has no backend yet — remove rather than leave dead. */
-  var subsLink = document.querySelector('[data-nav-id="subscriptions"]');
-  if (subsLink) subsLink.style.setProperty('display', 'none', 'important');
 
   /* Friends section is rendered by React (FriendsSection) — the demo
      renderer stays idle. */
@@ -171,18 +174,11 @@
         e.stopPropagation();
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('agora:create'));
-      } else {
-        // Sidebar tabs that open real React pages.
-        var tab = e.target.closest('[data-nav-id="trending"], [data-nav-id="communities"], [data-nav-id="news"]');
-        if (tab) {
-          e.stopPropagation();
-          e.preventDefault();
-          window.dispatchEvent(new CustomEvent('agora:tab', { detail: tab.getAttribute('data-nav-id') }));
-        } else if (e.target.closest('[data-nav-id="home"], [data-nav-id="explore"], .nav-logo')) {
-          // Navigating to an MVP-rendered page closes any open React tab.
-          // No preventDefault — the MVP engine handles the page switch.
-          window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'close' }));
-        }
+      } else if (e.target.closest('.nav-logo')) {
+        // Logo → home (closes any open React tab and shows the home feed;
+        // the sidebar nav itself is React-owned now, see HomeSidebar.tsx).
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'home' }));
       }
     }, true);
   }

@@ -213,9 +213,10 @@ const card: React.CSSProperties = {
   borderRadius: 14,
 };
 
-/* Loaded only on the standalone route (never the in-room drawer), so
-   mvp-home.css — imported inside it — stays off the room page. */
-const ProfileSidebar = dynamic(() => import("@/components/ProfileSidebar"), { ssr: false });
+/* The homepage's sidebar, loaded only on the standalone route (never the
+   in-room drawer) so mvp-home.css — imported inside it — stays off the
+   room page. */
+const HomeSidebar = dynamic(() => import("@/components/HomeSidebar"), { ssr: false });
 
 function timeAgo(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -636,7 +637,10 @@ export default function ProfileView({
           phones keep the single column. */}
       {!embedded && (
         <div className="hidden lg:block">
-          <ProfileSidebar />
+          <HomeSidebar
+            activeId={null}
+            onNavigate={(id) => router.push(id === "home" ? "/" : `/?nav=${id}`)}
+          />
         </div>
       )}
 

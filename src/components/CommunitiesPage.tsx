@@ -465,6 +465,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   // Post detail
   const [openPost, setOpenPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -626,7 +628,24 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const feedKeyRef = useRef("");
   const openPostIdRef = useRef<string | null>(null);
 
+  /* Root comments the viewer appended locally (their own new top-level
+     comments) that the server hasn't paged past yet — excluded from the
+     p_offset count so posting between pages doesn't skip a thread. */
+  const localRootIdsRef = useRef<Set<string>>(new Set());
+
+  /* The viewer's own username/display name, fetched once — used to
+     append their freshly posted comment without a full refetch. */
+  const myIdentityRef = useRef<{ username: string; display_name: string | null } | null>(null);
+  const getMyIdentity = useCallback(async () => {
+    if (myIdentityRef.current || !userId) return myIdentityRef.current;
+    const { data } = await supabase
+      .from("users").select("username, display_name").eq("id", userId).single();
+    if (data) myIdentityRef.current = data as { username: string; display_name: string | null };
+    return myIdentityRef.current;
+  }, [supabase, userId]);
+
   const FEED_PAGE = 50;
+  const COMMENT_PAGE = 60;
 
   const loadPosts = useCallback(async () => {
     const key = `${selected}|${sort}`;
@@ -670,13 +689,45 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     fetchAvatars(rows.map((p) => p.author_id));
   }, [supabase, selected, sort, posts.length, fetchAvatars]);
 
+  /* First page: 60 top-level threads, every descendant riding along.
+     Has-more = a full page of roots came back (see 20260844). */
   const loadComments = useCallback(async (postId: string) => {
-    const { data } = await supabase.rpc("get_post_comments", { p_post: postId });
+    const { data } = await supabase.rpc("get_post_comments", {
+      p_post: postId, p_limit: COMMENT_PAGE, p_offset: 0,
+    });
     if (openPostIdRef.current !== postId) return; // user moved on
     const rows = (data ?? []) as Comment[];
+    localRootIdsRef.current = new Set();
     setComments(rows);
+    setHasMoreComments(rows.filter((c) => !c.parent_id).length === COMMENT_PAGE);
     fetchAvatars(rows.map((c) => c.author_id));
   }, [supabase, fetchAvatars]);
+
+  /* Next page of threads, appended. p_offset counts server-paged roots
+     only (the viewer's own locally-appended roots are excluded so their
+     insertion doesn't skip a thread); dedupe by id absorbs rows that
+     shifted between fetches. */
+  const loadMoreComments = useCallback(async () => {
+    const postId = openPostIdRef.current;
+    if (!postId || loadingMoreComments) return;
+    const offset = comments
+      .filter((c) => !c.parent_id && !localRootIdsRef.current.has(c.id)).length;
+    setLoadingMoreComments(true);
+    const { data } = await supabase.rpc("get_post_comments", {
+      p_post: postId, p_limit: COMMENT_PAGE, p_offset: offset,
+    });
+    setLoadingMoreComments(false);
+    if (openPostIdRef.current !== postId) return; // user moved on
+    const rows = (data ?? []) as Comment[];
+    // A locally-appended root coming back means the server paged past it.
+    for (const r of rows) localRootIdsRef.current.delete(r.id);
+    setComments((prev) => {
+      const seen = new Set(prev.map((c) => c.id));
+      return [...prev, ...rows.filter((r) => !seen.has(r.id))];
+    });
+    setHasMoreComments(rows.filter((c) => !c.parent_id).length === COMMENT_PAGE);
+    fetchAvatars(rows.map((c) => c.author_id));
+  }, [supabase, comments, loadingMoreComments, fetchAvatars]);
 
   /* Opening/closing a post resets every per-post composer state —
      comments from the previous post, drafts, and pending image
@@ -692,6 +743,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     openPostIdRef.current = p.id;
     setOpenPost(p);
     setComments([]);
+    setHasMoreComments(false);
+    setLoadingMoreComments(false);
+    localRootIdsRef.current = new Set();
     setCommentText("");
     setReplyTo(null);
     setReplyText("");
@@ -703,6 +757,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     openPostIdRef.current = null;
     setOpenPost(null);
     setComments([]);
+    setHasMoreComments(false);
+    setLoadingMoreComments(false);
+    localRootIdsRef.current = new Set();
     setReplyTo(null);
     clearCommentImages();
   }, [clearCommentImages]);
@@ -954,13 +1011,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         return;
       }
     }
-    const { error: err } = await supabase.from("community_comments").insert({
+    const { data: inserted, error: err } = await supabase.from("community_comments").insert({
       post_id: openPost.id,
       parent_id: parentId,
       author_id: userId,
       body: text,
       image_url: imageUrl ?? gif,
-    });
+    }).select("id, created_at, image_url").single();
     setBusy(false);
     if (err) {
       setError(err.message.includes("rate_limited")
@@ -971,12 +1028,40 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     setCommentText(""); setReplyTo(null); setReplyText("");
     setCommentGifUrl(null);
     pickCommentImage(null); pickReplyImage(null);
-    loadComments(openPost.id);
+    /* Append the new comment locally instead of refetching — a refetch
+       would reset the section to page 1, and a new top-level comment
+       sorts last server-side so page 1 might not even contain it. */
+    const me = await getMyIdentity();
+    if (inserted && me) {
+      const mine: Comment = {
+        id: inserted.id,
+        post_id: openPost.id,
+        parent_id: parentId,
+        author_id: userId,
+        author_username: me.username,
+        author_display_name: me.display_name,
+        body: text,
+        created_at: inserted.created_at,
+        score: 0,
+        my_vote: null,
+        author_role: communities.find((x) => x.id === openPost.community_id)?.my_role ?? null,
+        image_url: inserted.image_url,
+        pinned_at: null,
+      };
+      if (openPostIdRef.current === openPost.id) {
+        if (!parentId) localRootIdsRef.current.add(mine.id);
+        setComments((cs) => (cs.some((c) => c.id === mine.id) ? cs : [...cs, mine]));
+        if (userId) fetchAvatars([userId]);
+      }
+    } else {
+      // Couldn't read the row back — fall back to the full refetch.
+      loadComments(openPost.id);
+    }
     const bump = (p: Post): Post =>
       p.id === openPost.id ? { ...p, comment_count: p.comment_count + 1 } : p;
     setPosts((ps) => ps.map(bump));
     setOpenPost((p) => (p ? bump(p) : p));
-  }, [busy, supabase, requireAuth, openPost, userId, loadComments, pickCommentImage, pickReplyImage]);
+  }, [busy, supabase, requireAuth, openPost, userId, communities, getMyIdentity, fetchAvatars, loadComments, pickCommentImage, pickReplyImage]);
 
   /* Mods can delete anything in their board (RLS-backed). */
   const canModerate = useCallback((communityId: string): boolean => {
@@ -2131,6 +2216,18 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <div className="flex flex-col" style={{ gap: 16 }}>
                     {commentTree.roots.map((root) => renderThread(root, 0))}
                   </div>
+                )}
+
+                {/* pagination — appears whenever a full page of threads came back */}
+                {hasMoreComments && commentTree.roots.length > 0 && (
+                  <button
+                    onClick={loadMoreComments}
+                    disabled={loadingMoreComments}
+                    className="block w-full cursor-pointer text-[12px] py-2.5 rounded-xl"
+                    style={{ ...btnGhost, opacity: loadingMoreComments ? 0.6 : 1, marginTop: 14 }}
+                  >
+                    {loadingMoreComments ? "Loading…" : "Load more comments"}
+                  </button>
                 )}
               </div>
             ) : (

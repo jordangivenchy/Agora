@@ -7,14 +7,22 @@
    identity from auth.uid() — spoof-proof by construction.
 
    Mechanics: signed-in tabs heartbeat touch_presence(room) every 45s (and
-   on route changes); everyone reads the table once, then follows realtime
-   change events. A row older than 90s counts as offline, enforced by a
-   local prune tick, so vanished tabs go dark without any server sweep.
+   on route changes); everyone POLLS the table every ~45s (±5s jitter, so
+   clients don't thundering-herd) for rows fresh within the 90s staleness
+   window and rebuilds the snapshot from scratch. We used to follow
+   table-wide realtime change events instead, but that fans every
+   heartbeat out to every client — N writes × N listeners per interval,
+   ~N² messages — where polling is one linear query per client. Presence
+   latency of up to ~a minute is the accepted trade. Hidden tabs skip the
+   poll (and catch up immediately on becoming visible); the heartbeat
+   keeps running so the user stays online. The local user's own state is
+   reflected optimistically right after each heartbeat, so self-presence
+   never waits for a poll. Rebuilding from a full fresh SELECT also prunes
+   stale rows, so no separate prune tick is needed.
 
    Consumers read a snapshot map keyed by user id via
    useSyncExternalStore-compatible subscribe/get functions. */
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase-browser";
 
 export interface PresenceInfo {
@@ -23,14 +31,16 @@ export interface PresenceInfo {
 
 const STALE_MS = 90_000;
 const HEARTBEAT_MS = 45_000;
+const POLL_MS = 45_000;
+const POLL_JITTER_MS = 5_000;
 
 type Row = { user_id: string; room_id: string | null; last_seen_at: string };
 
-let channel: RealtimeChannel | null = null;
+let polling = false;
+let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let selfId: string | null = null;
 let selfRoom: string | null = null;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
-let pruner: ReturnType<typeof setInterval> | null = null;
 
 /* Live rows by user id; the exported snapshot only includes fresh ones. */
 const rows = new Map<string, { room_id: string | null; lastSeen: number }>();
@@ -59,49 +69,67 @@ function ingest(row: Row) {
 
 function beat() {
   if (!selfId) return;
+  const id = selfId;
+  const room = selfRoom;
   const supabase = createClient();
-  supabase.rpc("touch_presence", { p_room: selfRoom }).then(undefined, () => {});
+  supabase.rpc("touch_presence", { p_room: room }).then(() => {
+    // Reflect our own write immediately — don't wait for the next poll.
+    ingest({ user_id: id, room_id: room, last_seen_at: new Date().toISOString() });
+    rebuildSnapshot();
+  }, () => {});
+}
+
+/* One poll: fetch everyone fresh within the staleness window and rebuild
+   the whole snapshot from the result. Stale rows simply aren't selected,
+   so this subsumes the old prune tick. */
+function poll() {
+  const supabase = createClient();
+  supabase
+    .from("user_presence")
+    .select("user_id, room_id, last_seen_at")
+    .gt("last_seen_at", new Date(Date.now() - STALE_MS).toISOString())
+    .then(({ data }) => {
+      if (data) {
+        rows.clear();
+        data.forEach((r) => ingest(r as Row));
+      }
+      rebuildSnapshot();
+    });
+}
+
+function schedulePoll() {
+  if (pollTimer) clearTimeout(pollTimer);
+  const jitter = (Math.random() * 2 - 1) * POLL_JITTER_MS;
+  pollTimer = setTimeout(() => {
+    // Background tabs shouldn't query; we catch up on visibilitychange.
+    if (typeof document === "undefined" || document.visibilityState !== "hidden") {
+      poll();
+    }
+    schedulePoll();
+  }, POLL_MS + jitter);
 }
 
 /** Boot (or update) presence. Safe to call repeatedly — PresenceBoot calls
-    this on auth and route changes. Signed-out users still subscribe (to
-    read who's online) but never write. */
+    this on auth and route changes. Signed-out users still poll (to read
+    who's online) but never write. */
 export function ensurePresence(userId: string | null, roomId: string | null) {
   const roomChanged = roomId !== selfRoom || userId !== selfId;
   selfId = userId;
   selfRoom = roomId;
 
-  const supabase = createClient();
+  if (!polling) {
+    polling = true;
+    poll(); // seed with everyone currently fresh
+    schedulePoll();
 
-  if (!channel) {
-    channel = supabase
-      .channel("presence-table")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_presence" },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            const old = payload.old as Partial<Row>;
-            if (old.user_id) rows.delete(old.user_id);
-          } else {
-            ingest(payload.new as Row);
-          }
-          rebuildSnapshot();
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          poll(); // catch up right away, then resume the cadence
+          schedulePoll();
         }
-      )
-      .subscribe();
-
-    // Seed with everyone currently fresh.
-    supabase
-      .from("user_presence")
-      .select("user_id, room_id, last_seen_at")
-      .gt("last_seen_at", new Date(Date.now() - STALE_MS).toISOString())
-      .then(({ data }) => {
-        (data ?? []).forEach((r) => ingest(r as Row));
-        rebuildSnapshot();
       });
-
-    pruner = setInterval(rebuildSnapshot, 30_000);
+    }
   }
 
   if (selfId) {
@@ -111,9 +139,6 @@ export function ensurePresence(userId: string | null, roomId: string | null) {
     clearInterval(heartbeat);
     heartbeat = null;
   }
-
-  // Void the unused pruner reference lint-wise; teardown happens on unload.
-  void pruner;
 }
 
 export function subscribePresence(cb: () => void): () => void {
