@@ -348,6 +348,24 @@ export default function Home() {
     document.dispatchEvent(new CustomEvent("agora:open-post", { detail: { postId } }));
   }, [booted]);
 
+  /* Deep link from the profile page's sidebar: /?nav=<section> opens
+     that section directly — same replaceState pattern as ?post, no
+     cross-page click replaying. React panels open IMMEDIATELY on mount
+     (they cover the home shell while it boots, so there's no home
+     flash); only Explore is MVP-rendered and must wait for booted. */
+  useEffect(() => {
+    const nav = new URLSearchParams(window.location.search).get("nav");
+    if (!nav) return;
+    if (nav === "trending" || nav === "communities" || nav === "news") {
+      window.history.replaceState(null, "", "/");
+      setActiveTab(nav);
+    } else if (nav === "explore" && booted) {
+      window.history.replaceState(null, "", "/");
+      // Same click the adapter's own handler performs.
+      (document.querySelector('#sidebar [data-nav-id="explore"]') as HTMLElement | null)?.click();
+    }
+  }, [booted]);
+
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
     const onProfile = (e: Event) => {

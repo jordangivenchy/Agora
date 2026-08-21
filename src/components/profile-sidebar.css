@@ -1,0 +1,9 @@
+/* The homepage stylesheet, demoted into a cascade layer for routes that
+   only borrow the glass sidebar (see ProfileSidebar.tsx). Unlayered, its
+   universal reset (star selector, margin and padding zero) beats
+   Tailwind's layered utilities and zeroes every spacing class on the
+   page; inside this layer — declared before tailwind's in globals.css —
+   the sidebar's own classes still apply, but conflicts resolve in the
+   utilities' favor. The homepage itself keeps importing mvp-home.css
+   directly, unlayered, unchanged. */
+@import url("../app/mvp-home.css") layer(mvp-home);

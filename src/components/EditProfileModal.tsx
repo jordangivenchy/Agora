@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import AvatarCropModal from "./AvatarCropModal";
+import { MAX_SOCIAL_LINKS, normalizeSocialLink } from "@/lib/socialLinks";
 
 interface Props {
   open: boolean;
@@ -24,6 +25,7 @@ interface Props {
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 const AVAILABILITY_DEBOUNCE_MS = 450;
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_BANNER_WIDTH = 1600;
 const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const NEW_ACCOUNT_GRACE_MS = 60 * 60 * 1000;
 
@@ -39,6 +41,9 @@ export default function EditProfileModal({
   const [displayName, setDisplayName] = useState(initialDisplayName || "");
   const [bio, setBio] = useState(initialBio || "");
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl || "");
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [links, setLinks] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +52,7 @@ export default function EditProfileModal({
     useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
   const availabilityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
   // Object URL of the freshly picked image awaiting crop.
   const [cropSrc, setCropSrc] = useState<string | null>(null);
 
@@ -72,6 +78,24 @@ export default function EditProfileModal({
     setError(null);
     setAvailability("idle");
   }, [open, initialUsername, initialDisplayName, initialAvatarUrl, initialBio]);
+
+  // Self-load banner + social links (props stay untouched for existing call sites).
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("banner_url, social_links")
+        .eq("id", userId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setBannerUrl(data.banner_url || "");
+      setLinks(Array.isArray(data.social_links) ? data.social_links.filter((l: unknown): l is string => typeof l === "string") : []);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
 
   // Debounced availability check
   useEffect(() => {
@@ -138,6 +162,57 @@ export default function EditProfileModal({
     }
   }
 
+  function handleBannerPick(file: File) {
+    setError(null);
+    if (file.size > MAX_AVATAR_BYTES) {
+      setError("Image is too large — 5 MB max.");
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      URL.revokeObjectURL(objectUrl);
+      setBannerUploading(true);
+      try {
+        const scale = Math.min(1, MAX_BANNER_WIDTH / img.naturalWidth);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          setError("Could not process the image in this browser.");
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/webp", 0.85)
+        );
+        if (!blob) {
+          setError("Could not process the image in this browser.");
+          return;
+        }
+        const path = `${userId}/banner.webp`;
+        const { error: upErr } = await supabase.storage
+          .from("avatars")
+          .upload(path, blob, { upsert: true, cacheControl: "3600", contentType: "image/webp" });
+        if (upErr) {
+          setError("Upload failed: " + upErr.message);
+          return;
+        }
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+        // Fixed path + upsert, so cache-bust the URL when replacing.
+        setBannerUrl(`${urlData.publicUrl}?v=${Date.now()}`);
+      } finally {
+        setBannerUploading(false);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setError("Could not read that image file.");
+    };
+    img.src = objectUrl;
+  }
+
   async function handleSave() {
     setError(null);
     const trimmed = username.trim().toLowerCase();
@@ -156,8 +231,8 @@ export default function EditProfileModal({
       p_bio: bio,              // empty string clears the bio
       p_display_name: displayName,
     });
-    setSaving(false);
     if (rpcErr) {
+      setSaving(false);
       const msg = rpcErr.message || "";
       if (msg.includes("username_cooldown"))
         setError("You can only change your username once every 7 days.");
@@ -169,6 +244,19 @@ export default function EditProfileModal({
       else setError("Could not save — " + msg);
       return;
     }
+    const normalizedLinks = links
+      .map((l) => normalizeSocialLink(l))
+      .filter((l): l is string => l !== null)
+      .slice(0, MAX_SOCIAL_LINKS);
+    const { error: extrasErr } = await supabase.rpc("update_profile_extras", {
+      p_banner_url: bannerUrl, // empty string clears the banner
+      p_social_links: normalizedLinks,
+    });
+    setSaving(false);
+    if (extrasErr) {
+      setError("Could not save — " + extrasErr.message);
+      return;
+    }
     onSaved();
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("profile-updated"));
@@ -178,7 +266,9 @@ export default function EditProfileModal({
 
   if (!open) return null;
 
-  const canSave = !saving && !uploading && availability !== "taken" && availability !== "invalid";
+  const canSave =
+    !saving && !uploading && !bannerUploading &&
+    availability !== "taken" && availability !== "invalid";
 
   const labelStyle: React.CSSProperties = {
     display: "block",
@@ -370,6 +460,86 @@ export default function EditProfileModal({
           />
         </div>
 
+        {/* Banner */}
+        <label style={labelStyle}>
+          Banner{" "}
+          <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>
+            — shown across the top of your profile · 1500 × 500 recommended (3:1)
+          </span>
+        </label>
+        <button
+          onClick={() => bannerInputRef.current?.click()}
+          disabled={bannerUploading}
+          className="w-full cursor-pointer transition-all"
+          title="Change banner"
+          style={{
+            display: "block",
+            width: "100%",
+            aspectRatio: "3 / 1",
+            padding: 0,
+            marginBottom: 6,
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "rgba(255,255,255,0.04)",
+            border: bannerUrl ? "1px solid var(--border)" : "2px dashed var(--border-hover)",
+          }}
+        >
+          {bannerUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={bannerUrl}
+              alt="banner preview"
+              className="object-cover"
+              style={{ width: "100%", height: "100%", display: "block" }}
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span
+              className="flex items-center justify-center gap-2"
+              style={{ width: "100%", height: "100%", color: "var(--text-dim)", fontSize: 12 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="m21 15-5-5L5 21" />
+              </svg>
+              {bannerUploading ? "Uploading…" : "Click to upload a banner"}
+            </span>
+          )}
+        </button>
+        <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+          <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
+            {bannerUploading ? "Uploading…" : "PNG, JPG, or WebP — 5 MB max, resized to 1600px"}
+          </span>
+          {bannerUrl && (
+            <button
+              onClick={() => setBannerUrl("")}
+              className="cursor-pointer"
+              style={{
+                padding: 0,
+                background: "none",
+                border: "none",
+                color: "#fca5a5",
+                fontSize: 11.5,
+                fontWeight: 500,
+              }}
+            >
+              Remove banner
+            </button>
+          )}
+        </div>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleBannerPick(f);
+            e.target.value = "";
+          }}
+        />
+
         {/* Display name */}
         <label style={labelStyle}>
           Display name{" "}
@@ -470,10 +640,96 @@ export default function EditProfileModal({
           placeholder="Tell the community something about you…"
           rows={3}
           className="w-full transition-all"
-          style={{ ...inputStyle, resize: "none", marginBottom: 20 }}
+          style={{ ...inputStyle, resize: "none", marginBottom: 14 }}
           onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
           onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
         />
+
+        {/* Social links */}
+        <label style={labelStyle}>
+          Social links{" "}
+          <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>
+            — up to {MAX_SOCIAL_LINKS}, https only
+          </span>
+        </label>
+        {links.map((link, i) => {
+          const invalid = link.trim() !== "" && normalizeSocialLink(link) === null;
+          return (
+            <div key={i} className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+              <input
+                value={link}
+                onChange={(e) =>
+                  setLinks((prev) => prev.map((l, j) => (j === i ? e.target.value.slice(0, 200) : l)))
+                }
+                placeholder="e.g. instagram.com/your_handle"
+                className="transition-all"
+                style={{
+                  ...inputStyle,
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 12.5,
+                  borderColor: invalid ? "rgba(239,68,68,0.45)" : "var(--border)",
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = invalid ? "rgba(239,68,68,0.45)" : "var(--border)";
+                }}
+              />
+              <button
+                onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
+                className="flex items-center justify-center cursor-pointer shrink-0 transition-all"
+                title="Remove link"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  color: "var(--text-muted)",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid var(--border)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#fca5a5";
+                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.borderColor = "var(--border)";
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          );
+        })}
+        {links.length < MAX_SOCIAL_LINKS && (
+          <button
+            onClick={() => setLinks((prev) => [...prev, ""])}
+            className="cursor-pointer transition-all"
+            style={{
+              padding: "7px 12px",
+              marginBottom: 20,
+              borderRadius: 100,
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid var(--border)",
+              color: "var(--text-muted)",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--text-primary)";
+              e.currentTarget.style.borderColor = "var(--border-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--text-muted)";
+              e.currentTarget.style.borderColor = "var(--border)";
+            }}
+          >
+            + Add link
+          </button>
+        )}
+        {links.length >= MAX_SOCIAL_LINKS && <div style={{ marginBottom: 12 }} />}
 
         <div className="flex gap-2">
           <button

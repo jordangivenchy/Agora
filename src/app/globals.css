@@ -1,3 +1,8 @@
+/* Declare the mvp-home layer BEFORE tailwind's layers: earliest-declared
+   layer loses conflicts, so the homepage stylesheet (when a route pulls
+   it in via profile-sidebar.css) can't out-cascade Tailwind utilities —
+   its universal *{margin:0;padding:0} reset was zeroing them. */
+@layer mvp-home;
 @import "tailwindcss";
 
 :root {
@@ -1564,4 +1569,19 @@ html.reduce-motion .nav-sparkle {
 }
 .agora-orb-live {
   animation: agora-orb-breathe 1.8s ease-in-out infinite;
+}
+
+/* Standalone profile route: content sits beside the homepage glass
+   sidebar (ProfileSidebar). Tracks --sidebar-width so the responsive
+   sidebar breakpoints in mvp-home.css stay authoritative. */
+@media (min-width: 1024px) {
+  .profile-beside-sidebar {
+    /* Fill the space beside the sidebar, but keep rows readable on
+       very wide screens. */
+    max-width: 1100px !important;
+    /* margin-inline (not -left): the element also carries mx-auto for
+       the narrow no-sidebar layout, and only the same logical property
+       reliably out-cascades it. */
+    margin-inline: calc(var(--sidebar-width, 220px) + 24px) 16px !important;
+  }
 }

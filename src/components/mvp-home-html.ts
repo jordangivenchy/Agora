@@ -218,7 +218,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       </a>
 
       <!-- Subscriptions -->
-      <a class="sidebar-link" href="#" data-nav-id="subscriptions">
+      <!-- Hidden statically (not just by mvp-adapter.js) so it never flashes during page loads; Subscriptions has no backend yet. -->
+      <a class="sidebar-link" href="#" style="display:none !important" data-nav-id="subscriptions">
         <span class="nav-hover-shimmer"></span>
         <span class="nav-light-slit"></span>
         <div class="nav-light-beam"><div class="nav-light-beam-cone"></div><div class="nav-light-beam-center"></div><div class="nav-light-beam-glow"></div></div>
@@ -236,7 +237,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       </a>
 
       <!-- Subscriptions sub-list: live channels expand here when active -->
-      <div class="subs-channel-sublist" id="subsChannelSublist">
+      <div class="subs-channel-sublist" style="display:none !important" id="subsChannelSublist">
         <div class="glass-channel-list" id="subsChannelList"></div>
       </div>
 

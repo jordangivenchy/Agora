@@ -23,7 +23,11 @@ export async function GET() {
     email: emailConfigured(),
     posthog: Boolean(process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_PROJECT_ID),
     hlsStorage: Boolean(
-      process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY && process.env.S3_BUCKET
+      // Must mirror the names /api/egress actually reads.
+      process.env.HLS_S3_ENDPOINT &&
+        process.env.HLS_S3_BUCKET &&
+        process.env.HLS_S3_ACCESS_KEY &&
+        process.env.HLS_S3_SECRET
     ),
     webPush: push,
     cron: Boolean(process.env.CRON_SECRET),
