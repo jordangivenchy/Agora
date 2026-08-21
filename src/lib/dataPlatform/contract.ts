@@ -71,8 +71,14 @@ export interface CoachNote {
  * client; both can invoke the has_data_consent RPC. Returns false on any
  * error or missing row — fail closed, never collect without a clear yes.
  */
+// Accepts any Supabase-like client: .rpc() returns an awaitable builder, not
+// a bare Promise, so we type it as PromiseLike and await it.
+interface RpcClient {
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
+}
+
 export async function hasConsent(
-  client: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> },
+  client: RpcClient,
   userId: string,
   category: ConsentCategory
 ): Promise<boolean> {
