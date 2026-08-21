@@ -25,18 +25,26 @@
  * ours — swap-proof against upstream field churn:
  *
  *   { sample: boolean, stories: [{ id, headline, url, publishedAt,
- *       sources: [{ name, domain }] }] }
+ *       sources: [{ name, domain }], major }] }
+ *
+ * Stories come back RANKED (see lib/newsRank): near-duplicate headlines
+ * from different outlets are clustered into one story carrying every
+ * outlet, then scored by coverage + hard-news vocabulary + recency. The
+ * top three are flagged `major` — the hero carousel shows those, the
+ * ticker shows the rest, no overlap.
  */
 
 /* 20 min: free tiers allow 100–200 requests/day and the upstream fetches
    below use Next's shared data cache (revalidate), so every serverless
    instance reuses one fetch — ~72 upstream calls/day max. */
+import { rankStories } from "@/lib/newsRank";
+
 const TTL_MS = 20 * 60_000;
 const UPSTREAM_REVALIDATE_S = 20 * 60;
 let cache: { at: number; body: NewsPayload } | null = null;
 
 type Source = { name: string; domain: string };
-type Story = { id: string; headline: string; url: string | null; publishedAt: string | null; sources: Source[] };
+type Story = { id: string; headline: string; url: string | null; publishedAt: string | null; sources: Source[]; major?: boolean };
 type NewsPayload = { sample: boolean; stories: Story[] };
 
 /* Defensive mapper over Particle's story-cluster shape. Field names are
@@ -156,13 +164,27 @@ export async function GET() {
         domain: "bbc,aljazeera,theguardian,reuters,apnews",
         removeduplicate: "1",
       });
+      // Two pages (20 articles, 2 credits) give the ranker enough overlap
+      // across outlets to cluster the big stories; still ~144 credits/day
+      // at the 20-minute cadence, under the free tier's 200.
       const res = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
         signal: AbortSignal.timeout(8000),
         next: { revalidate: UPSTREAM_REVALIDATE_S },
       });
       if (res.ok) {
-        const stories = normalizeNewsData(await res.json());
-        if (stories.length > 0) body = { sample: false, stories };
+        const first = await res.json();
+        let articles = normalizeNewsData(first);
+        const nextPage = (first as { nextPage?: string })?.nextPage;
+        if (nextPage) {
+          try {
+            const res2 = await fetch(`https://newsdata.io/api/1/latest?${params}&page=${encodeURIComponent(nextPage)}`, {
+              signal: AbortSignal.timeout(8000),
+              next: { revalidate: UPSTREAM_REVALIDATE_S },
+            });
+            if (res2.ok) articles = articles.concat(normalizeNewsData(await res2.json()));
+          } catch { /* one page is fine */ }
+        }
+        if (articles.length > 0) body = { sample: false, stories: rankStories(articles) };
       }
     } catch {
       /* upstream down → fall through (GNews, Particle, then sample) */
@@ -178,7 +200,7 @@ export async function GET() {
       );
       if (res.ok) {
         const stories = normalizeGNews(await res.json());
-        if (stories.length > 0) body = { sample: false, stories };
+        if (stories.length > 0) body = { sample: false, stories: rankStories(stories) };
       }
     } catch {
       /* upstream down → fall through (Particle, then sample) */
@@ -193,7 +215,7 @@ export async function GET() {
       });
       if (res.ok) {
         const stories = normalizeParticle(await res.json());
-        if (stories.length > 0) body = { sample: false, stories };
+        if (stories.length > 0) body = { sample: false, stories: rankStories(stories) };
       }
     } catch {
       /* upstream down → sample feed keeps the ticker alive */

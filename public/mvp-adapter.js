@@ -33,7 +33,10 @@
     .then(function (j) {
       // Sample feeds are invented headlines — never put them in the hero.
       if (j.sample) return;
-      newsSlides = (j.stories || []).slice(0, 3).map(function (s, i) {
+      // Hero = the major stories (ranked server-side); the ticker takes the rest.
+      var stories = j.stories || [];
+      var majors = stories.filter(function (s) { return s.major; });
+      newsSlides = (majors.length ? majors : stories).slice(0, 3).map(function (s, i) {
         return {
           kind: 'news',
           headline: s.headline,

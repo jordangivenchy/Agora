@@ -33,7 +33,10 @@ export default function NewsTicker({ container }: Props) {
       .then((j) => {
         if (!alive) return;
         // Sample feeds are invented headlines — render nothing instead.
-        setStories(j.sample ? [] : (j.stories ?? []));
+        // Ticker = everything the hero carousel didn't take (non-major).
+        const all: (Story & { major?: boolean })[] = j.sample ? [] : (j.stories ?? []);
+        const lesser = all.filter((s) => !s.major);
+        setStories(lesser.length ? lesser : all);
       })
       .catch(() => { /* no feed → render nothing */ });
     return () => { alive = false; };
