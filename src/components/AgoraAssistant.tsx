@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { useDebateTranscription } from "@/lib/useDebateTranscription";
+import { extractWake } from "@/lib/wakeWord";
 import { speak as speakVoice, stopSpeaking, warmVoice } from "@/lib/voice/tts";
 
 interface Props {
@@ -188,10 +189,9 @@ export default function AgoraAssistant({ motion, roomId, topicKey, liveListening
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const transcript = e.results[i][0].transcript;
-        const match = transcript.match(/hey,?\s*agora[,.!?]?\s*(.*)/i);
-        if (match) {
-          const q = match[1]?.trim();
-          if (q) askRef.current(q);
+        const wake = extractWake(transcript);
+        if (wake) {
+          if (wake.kind === "question") askRef.current(wake.question);
           else setOpenPanel(true);
         }
       }
@@ -256,7 +256,7 @@ export default function AgoraAssistant({ motion, roomId, topicKey, liveListening
         onClick={() => setOpenPanel((v) => !v)}
         title={
           orbLive
-            ? "Agora is listening — say “Hey, Agora …” or just debate; it fact-checks live"
+            ? "Agora is listening — say “Agora, …” or “Hey, Agora …”, or just debate; it fact-checks live"
             : stageListen.listening
               ? "Agora is listening in the background (interference off)"
               : 'Ask Agora — or say "Hey, Agora"'
@@ -327,6 +327,7 @@ export default function AgoraAssistant({ motion, roomId, topicKey, liveListening
             {log.length === 0 && (
               <p className="text-[11px] m-0" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
                 Ask for a fact-check, a statistic, or background on the motion — or just say{" "}
+                <span style={{ color: "#9cc4f0" }}>&ldquo;Agora, …&rdquo;</span> or{" "}
                 <span style={{ color: "#9cc4f0" }}>&ldquo;Hey, Agora…&rdquo;</span>
                 {liveListening
                   ? " while you debate. I'm listening and will speak up if a claim needs correcting."
