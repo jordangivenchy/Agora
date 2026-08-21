@@ -15,6 +15,7 @@
    can't spin the tab. */
 
 import { useEffect, useRef, useState } from "react";
+import { extractWake } from "@/lib/wakeWord";
 
 const FLUSH_MS = 8000;
 const BATCH_MAX = 4;
@@ -102,10 +103,9 @@ export function useDebateTranscription(params: {
         const text = result[0]?.transcript?.trim();
         if (!text) continue;
 
-        const hotword = text.match(/hey,?\s*agora[,.!?]?\s*(.*)/i);
-        if (hotword) {
-          const q = hotword[1]?.trim();
-          if (q) onHotwordRef.current(q);
+        const wake = extractWake(text);
+        if (wake) {
+          if (wake.kind === "question") onHotwordRef.current(wake.question);
           continue; // wake-phrase speech never enters the transcript
         }
         buffer.push({ text, at: Date.now() });

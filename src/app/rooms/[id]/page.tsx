@@ -510,6 +510,27 @@ function ClassicRoom({ roomId }: { roomId: string }) {
      debate runs. requestInactiveClose asks the close_inactive_room RPC
      to end the room — the RPC re-validates the DB timestamps itself,
      so a client can only *suggest* closure, never force it. */
+  /* Live Moderator switch: host-only room-level write. RLS ("Hosts can
+     update their rooms") enforces the permission server-side; the room's
+     realtime subscription refetches for everyone, flipping every client's
+     switch together. Optimistic local update so the host's toggle feels
+     instant. */
+  const toggleModerator = useCallback(
+    async (on: boolean) => {
+      if (!currentUser || !room || currentUser.id !== room.host_id) return;
+      setRoom((r) => (r ? { ...r, agora_moderator: on } : r));
+      const { error } = await supabase
+        .from("debate_rooms")
+        .update({ agora_moderator: on })
+        .eq("id", room.id);
+      if (error) {
+        console.error("moderator toggle failed", error);
+        setRoom((r) => (r ? { ...r, agora_moderator: !on } : r));
+      }
+    },
+    [currentUser, room, supabase]
+  );
+
   const selfActivityRef = useRef({ lastBeat: 0, lastSpokeWrite: 0, lastMuted: null as boolean | null });
   const reportSelfActivity = useCallback(
     async (speaking: boolean, micMuted: boolean) => {
@@ -1285,6 +1306,9 @@ function ClassicRoom({ roomId }: { roomId: string }) {
           room?.status === "live" &&
           isInRoom
         }
+        moderatorOn={!!room?.agora_moderator}
+        canModerate={!!currentUser && !!room && currentUser.id === room.host_id}
+        onToggleModerator={toggleModerator}
       />
     </div>
   );

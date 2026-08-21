@@ -1554,19 +1554,74 @@ html.reduce-motion .nav-sparkle {
   .nav-sparkle { display: none !important; }
 }
 
-/* ── Agora orb: Shazam-style breathing while live-listening ──
-   Applied by AgoraAssistant when Agora is hearing the stage AND allowed to
-   jump in. Dies automatically under html.reduce-motion (animation: none). */
+/* ── Agora orb: Shazam-style states ──────────────────────────
+   Applied by AgoraAssistant. Three levels, strongest wins:
+     .agora-orb-live      hearing the stage — slow breathe + sonar rings
+     .agora-orb-thinking  answer in flight — quick shallow shimmer
+     .agora-orb-speaking  talking out loud — big expand/contract, bright,
+                          fast rings, like Shazam locking onto a song
+   All die automatically under html.reduce-motion (animation: none). */
+
 @keyframes agora-orb-breathe {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 0 18px rgba(96, 165, 250, 0.55), 0 0 0 0 rgba(96, 165, 250, 0.35);
+    box-shadow: 0 0 18px rgba(96, 165, 250, 0.55);
   }
   50% {
     transform: scale(1.09);
-    box-shadow: 0 0 34px rgba(96, 165, 250, 0.95), 0 0 0 14px rgba(96, 165, 250, 0);
+    box-shadow: 0 0 34px rgba(96, 165, 250, 0.95);
   }
 }
+
+@keyframes agora-orb-talk {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 26px rgba(96, 165, 250, 0.8), 0 0 60px rgba(37, 99, 235, 0.35);
+  }
+  35% {
+    transform: scale(1.16);
+    box-shadow: 0 0 46px rgba(147, 197, 253, 1), 0 0 90px rgba(96, 165, 250, 0.55);
+  }
+  65% {
+    transform: scale(1.06);
+    box-shadow: 0 0 32px rgba(96, 165, 250, 0.9), 0 0 70px rgba(37, 99, 235, 0.45);
+  }
+}
+
+/* Sonar rings radiating out of the orb (Shazam's signature). Pseudo
+   elements so no extra DOM; the button has no overflow clipping. */
+@keyframes agora-orb-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.agora-orb-live,
+.agora-orb-thinking,
+.agora-orb-speaking {
+  will-change: transform, box-shadow;
+}
+.agora-orb-live::before,
+.agora-orb-live::after,
+.agora-orb-speaking::before,
+.agora-orb-speaking::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(96, 165, 250, 0.6);
+  animation: agora-orb-ring 2.6s ease-out infinite;
+  pointer-events: none;
+}
+.agora-orb-live::after {
+  animation-delay: 1.3s;
+}
+
 .agora-orb-live {
   animation: agora-orb-breathe 1.8s ease-in-out infinite;
 }
@@ -1584,4 +1639,20 @@ html.reduce-motion .nav-sparkle {
        reliably out-cascades it. */
     margin-inline: calc(var(--sidebar-width, 220px) + 24px) 16px !important;
   }
+}
+
+.agora-orb-thinking {
+  animation: agora-orb-breathe 0.85s ease-in-out infinite;
+}
+
+.agora-orb-speaking {
+  animation: agora-orb-talk 0.95s ease-in-out infinite;
+}
+.agora-orb-speaking::before,
+.agora-orb-speaking::after {
+  border-color: rgba(147, 197, 253, 0.8);
+  animation-duration: 1.3s;
+}
+.agora-orb-speaking::after {
+  animation-delay: 0.65s;
 }

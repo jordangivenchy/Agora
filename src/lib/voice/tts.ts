@@ -11,6 +11,8 @@
      warmVoice()            → kick off the model download (call on mount)
      speak(text)            → speaks with the best available voice
      stopSpeaking()         → interrupts current playback (both engines)
+     subscribeSpeaking(cb)  → cb(true|false) as audio actually starts/stops —
+                              drives the orb's Shazam-style speaking pulse
 */
 
 interface RawAudioLike {
@@ -27,6 +29,25 @@ let kokoroPromise: Promise<KokoroLike | null> | null = null;
 let audioCtx: AudioContext | null = null;
 let currentSource: AudioBufferSourceNode | null = null;
 let generation = 0; // bumped by stopSpeaking() to cancel queued sentences
+
+/* ── Speaking state: true only while audio is audibly playing ── */
+const speakingListeners = new Set<(speaking: boolean) => void>();
+let speakingNow = false;
+
+function setSpeaking(on: boolean): void {
+  if (speakingNow === on) return;
+  speakingNow = on;
+  for (const cb of speakingListeners) {
+    try { cb(on); } catch { /* listener errors never break playback */ }
+  }
+}
+
+/** Subscribe to audible-playback state. Returns an unsubscribe. */
+export function subscribeSpeaking(cb: (speaking: boolean) => void): () => void {
+  speakingListeners.add(cb);
+  cb(speakingNow);
+  return () => { speakingListeners.delete(cb); };
+}
 
 function supportsKokoro(): boolean {
   if (typeof window === "undefined") return false;
@@ -102,6 +123,9 @@ function speakWithBrowser(text: string): void {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.05;
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
     window.speechSynthesis.speak(utterance);
   } catch {
     /* no speech at all — stay silent */
@@ -130,19 +154,25 @@ export async function speak(text: string): Promise<void> {
   }
 
   try {
-    // Pipeline: generate sentence N+1 while sentence N plays.
+    // Pipeline: generate sentence N+1 while sentence N plays. Speaking state
+    // spans the whole reply — chunk boundaries shouldn't flicker the orb.
     const chunks = chunkSentences(clean);
     let pending = kokoro.generate(chunks[0], { voice: VOICE });
     for (let i = 0; i < chunks.length; i++) {
       const raw = await pending;
       if (generation !== myGeneration) return; // interrupted
       if (i + 1 < chunks.length) pending = kokoro.generate(chunks[i + 1], { voice: VOICE });
+      setSpeaking(true);
       await playRaw(raw);
       if (generation !== myGeneration) return;
     }
   } catch (err) {
     console.warn("[voice] Kokoro playback failed, falling back:", err);
     if (generation === myGeneration) speakWithBrowser(clean);
+  } finally {
+    // Only the run that still owns the floor may declare silence — an
+    // interrupted run's cleanup must not stomp its replacement's state.
+    if (generation === myGeneration) setSpeaking(false);
   }
 }
 
@@ -153,4 +183,5 @@ export function stopSpeaking(): void {
     try { currentSource.stop(); } catch { /* already stopped */ }
     currentSource = null;
   }
+  setSpeaking(false);
 }
