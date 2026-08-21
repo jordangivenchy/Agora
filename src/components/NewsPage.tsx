@@ -88,13 +88,14 @@ function Outlets({ sources, max = 3 }: { sources: Source[]; max?: number }) {
 
 const readBtn: React.CSSProperties = {
   border: "0.5px solid #3a3a42", background: "transparent", color: "#e5e5ec",
-  borderRadius: 9, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-  textDecoration: "none", whiteSpace: "nowrap",
+  borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+  textAlign: "center", display: "block",
 };
 const discussBtn: React.CSSProperties = {
   border: "0.5px solid #2c5382", background: "rgba(24,48,82,0.9)", color: "#9cc4f0",
-  borderRadius: 9, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-  whiteSpace: "nowrap",
+  borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  whiteSpace: "nowrap", textAlign: "center", display: "block", width: "100%",
 };
 
 function resetCountdown(): string {
@@ -335,7 +336,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           <Outlets sources={st.sources} />
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <div className="flex flex-col items-stretch gap-2 mt-1">
                           {st.url && (
                             <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
                           )}
@@ -377,7 +378,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
+                      <div className="flex flex-col items-stretch gap-2 shrink-0" style={{ width: 190 }}>
                         {st.url && (
                           <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read at {st.sources[0]?.name ?? "source"} ↗</a>
                         )}
