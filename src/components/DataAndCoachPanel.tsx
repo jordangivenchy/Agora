@@ -1,15 +1,12 @@
 "use client";
 
-/* "Your Data & Coach" — the consent + transparency surface for Agora's user
-   data platform. One place where a user:
-     - opts into each collection category (all default off)
-     - sees exactly what Agora has derived about them (profile, positions,
-       coach notes) via export_user_data
-     - exports it (download) or erases it (erase_user_data)
+/* "Your Data & Coach" — the consent + rights surface for Agora's user data
+   platform. Consent is granted with the app's terms and is ON by default
+   (seeded at signup); this panel lets a user turn any category OFF, and
+   download or erase everything Agora has derived about them.
 
    This is the permissions/UI layer (item 8). Consent writes go straight to
-   user_data_consent under the user's own RLS; nothing is collected until a
-   toggle here is on. */
+   user_data_consent under the user's own RLS. */
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -25,12 +22,14 @@ const CATEGORIES: { key: ConsentCategory; title: string; blurb: string }[] = [
   { key: "coaching", title: "Persona notes & coach", blurb: "Turn your profile into specific, constructive coaching on how you argue and learn." },
 ];
 
-const DEFAULT_CONSENT: Consent = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
+// On by default — consent is granted when the user accepts the app's terms
+// (seeded at signup). This panel is where they can turn any of it OFF.
+const DEFAULT_CONSENT: Consent = { analytics: true, debate_analysis: true, personalization: true, coaching: true };
+const ALL_OFF: Consent = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
 
 export default function DataAndCoachPanel() {
   const [consent, setConsent] = useState<Consent>(DEFAULT_CONSENT);
   const [loaded, setLoaded] = useState(false);
-  const [footprint, setFootprint] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
 
   const supabase = createClient();
@@ -66,17 +65,6 @@ export default function DataAndCoachPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consent]);
 
-  const loadFootprint = useCallback(async () => {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/me/data");
-      const body = await res.json();
-      setFootprint(body.data ?? null);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
   const download = useCallback(async () => {
     const res = await fetch("/api/me/data");
     const body = await res.json();
@@ -94,9 +82,8 @@ export default function DataAndCoachPanel() {
     setBusy(true);
     try {
       await fetch("/api/me/data", { method: "DELETE" });
-      setConsent(DEFAULT_CONSENT);
+      setConsent(ALL_OFF);
       setCaptureEnabled(false);
-      setFootprint(null);
     } finally {
       setBusy(false);
     }
@@ -110,9 +97,10 @@ export default function DataAndCoachPanel() {
         Your Data &amp; Coach
       </h2>
       <p style={{ fontSize: 13, color: "#8b8b94", marginBottom: 20 }}>
-        Agora only collects what you turn on here. Everything it derives is
-        yours to see, download, or delete — it&rsquo;s built to coach you, not
-        to profile you for anyone else.
+        Agora builds your profile and coaching from how you use the app and
+        debate. You can turn any of it off here, and download or delete
+        everything it derives — it&rsquo;s built to coach you, not to profile
+        you for anyone else.
       </p>
 
       {/* Consent toggles */}
@@ -139,18 +127,11 @@ export default function DataAndCoachPanel() {
         ))}
       </div>
 
-      {/* Transparency + rights */}
+      {/* Data rights */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-        <button onClick={loadFootprint} disabled={busy} style={btn("#9cc4f0")}>What Agora knows about me</button>
         <button onClick={download} disabled={busy} style={btn("#9cc4f0")}>Download my data</button>
         <button onClick={erase} disabled={busy} style={btn("#f0605e")}>Delete my derived data</button>
       </div>
-
-      {footprint && (
-        <pre style={{ fontSize: 11, color: "#c8c8d0", background: "rgba(10,10,14,0.9)", border: "0.5px solid #34343c", borderRadius: 12, padding: 14, overflow: "auto", maxHeight: 360 }}>
-          {JSON.stringify(footprint, null, 2)}
-        </pre>
-      )}
     </div>
   );
 }
