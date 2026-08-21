@@ -74,7 +74,7 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "notifications", label: "Notifications",       sub: "What you get notified about" },
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
-  { key: "data",       label: "Data & Coach",           sub: "What Agora collects, your profile, export & delete" },
+  { key: "data",       label: "Data & Coach",           sub: "Your profile, coaching, and data controls" },
   { key: "blocked",    label: "Blocked users",          sub: "Manage your block list" },
   { key: "danger",     label: "Danger zone",            sub: "Delete your account" },
 ];
@@ -706,7 +706,7 @@ export default function SettingsPage() {
 
       case "data":
         return (
-          <SectionCard title="Data & Coach" sub="Agora only collects what you turn on. Everything it derives is yours to see, export, or delete.">
+          <SectionCard title="Data & Coach" sub="Your profile and coaching, and the controls to turn any of it off, download it, or delete it.">
             <div className="px-4 py-4">
               <DataAndCoachPanel />
             </div>
