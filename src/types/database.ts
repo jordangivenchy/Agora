@@ -25,6 +25,9 @@ export interface DebateRoom {
   is_private: boolean;
   invite_code: string | null;
   fact_check_intensity: string;
+  // Live Moderator (20260817): Agora proactively adds facts and moderates.
+  // Optional so the type tolerates a DB where the migration hasn't run yet.
+  agora_moderator?: boolean | null;
   time_limit_seconds: number | null;
   allow_audience_questions: boolean;
   recording_consent: boolean;

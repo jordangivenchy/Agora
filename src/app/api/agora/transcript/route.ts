@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { findClaimCandidates } from "@/lib/claims/detect";
+import { buildTranscriptWindow, parseModeratorAction, type WindowUtterance } from "@/lib/moderator/parse";
 import { mergePersona, parseDelta } from "@/lib/personas/merge";
 import { findRelevantEvidence } from "@/lib/retrieval/scrapedData";
 import { generateAnswer } from "@/lib/ai/provider";
@@ -28,6 +29,14 @@ const INTERJECTION_COOLDOWNS: Record<string, number> = {
 };
 const MIN_CONFIDENCE = 0.8;
 
+/* Live Moderator pacing: proactive contributions are rarer than corrections
+   (the cooldown covers ALL interjection kinds, so a recent correction also
+   holds the moderator back — Agora never dogpiles), and the window it reads
+   spans every speaker in the room. */
+const MODERATOR_COOLDOWN_SECONDS = 150;
+const MODERATOR_WINDOW = 24;
+const MODERATOR_MIN_CONFIDENCE = 0.75;
+
 const FACT_CHECK_SYSTEM = `You are Agora, the neutral live fact-checker on a debate platform. You are given a claim a debater just spoke aloud, plus optional reference evidence. Decide if the claim is factually wrong in a way that matters to the debate.
 
 Respond ONLY with JSON, no markdown fences:
@@ -40,6 +49,17 @@ Rules:
 - Spoken transcripts are messy: ignore grammar, fillers, and transcription noise. Judge the substance.
 - confidence reflects how sure you are of the VERDICT. Never exceed 0.6 for claims about events after your knowledge cutoff unless the evidence covers them.
 - The correction must be neutral and courteous — it corrects the claim, never attacks the speaker.`;
+
+const MODERATOR_SYSTEM = `You are Agora, the live AI moderator of a spoken debate. You read the last stretch of the room's transcript and decide whether to contribute RIGHT NOW. Your bar for speaking is high: a good moderator is mostly silent, and separate machinery already handles correcting false claims — never duplicate it.
+
+Respond ONLY with JSON, no markdown fences:
+{"action": "none" | "context" | "insight", "text": "...", "confidence": 0.0-1.0}
+
+Choose "context" when a concrete, sourced fact would genuinely sharpen the exchange both sides are having (a number, a study, a precedent they're circling without naming). Name the source in the text.
+Choose "insight" for moderation itself: an important argument left unanswered, one side repeatedly interrupted or crowded out, the debate drifting off the motion, or a good moment to invite the quieter side to respond. Address the room, never scold a person.
+Choose "none" whenever the debate is flowing well — this should be your most common answer.
+
+The text is spoken aloud in the room: one to three conversational sentences, neutral, courteous, no markdown. confidence is how sure you are that speaking now improves the debate.`;
 
 const PERSONA_SYSTEM = `You analyze HOW a debater argues, from a batch of their spoken utterances. Count observable argumentation moves. Respond ONLY with JSON, no markdown fences:
 {"moves": {"cites_evidence": n, "cites_statistic": n, "cites_study": n, "anecdote": n, "personal_experience": n, "structured_argument": n, "addresses_counterargument": n, "concession": n, "emotional_appeal": n, "moral_framing": n, "interrupts": n, "ad_hominem": n, "dismissal": n, "asks_question": n, "requests_evidence": n}, "note": "one specific, constructive observation about this speaker's argumentation in this batch"}
@@ -103,7 +123,13 @@ export async function POST(req: Request) {
   const work = (async () => {
     try {
       await Promise.all([
-        maybeFactCheck(roomId, user.id, utterances),
+        // Sequential on purpose: both may interject, and running the
+        // moderator after the fact-checker lets the cooldown gate see a
+        // correction posted moments ago instead of racing it.
+        (async () => {
+          await maybeFactCheck(roomId, user.id, utterances);
+          await maybeModerate(roomId);
+        })(),
         maybePersonaUpdate(user.id, roomId),
       ]);
     } catch (err) {
@@ -202,6 +228,79 @@ async function maybeFactCheck(roomId: string, speakerId: string, utterances: Inc
       distinctId: speakerId,
       event: "agora_interjected",
       properties: { room_id: roomId, verdict: verdict.verdict, confidence },
+    });
+  }
+}
+
+/* ── Live Moderator pipeline ── */
+async function maybeModerate(roomId: string) {
+  if (!hasAdminCredentials()) return;
+  const admin = createAdminClient();
+
+  const { data: room } = await admin
+    .from("debate_rooms")
+    .select("motion, status, agora_moderator")
+    .eq("id", roomId)
+    .maybeSingle();
+  if (!room || room.status !== "live" || !room.agora_moderator) return;
+
+  // One pacing gate for every interjection kind: a recent correction also
+  // keeps the moderator quiet, so Agora never speaks twice in a row.
+  const { data: slotFree } = await admin.rpc("claim_interjection_slot", {
+    p_room_id: roomId,
+    p_cooldown_seconds: MODERATOR_COOLDOWN_SECONDS,
+  });
+  if (!slotFree) return;
+
+  // The whole room's recent exchange, speaker-labeled, oldest first.
+  const { data: recent } = await admin
+    .from("debate_utterances")
+    .select("content, user:users(username)")
+    .eq("room_id", roomId)
+    .order("created_at", { ascending: false })
+    .limit(MODERATOR_WINDOW);
+  if (!recent || recent.length < 6) return; // too little context to moderate
+
+  const window: WindowUtterance[] = recent.reverse().map((row) => {
+    // Supabase types embedded relations as object-or-array; handle both.
+    const u = row.user as { username?: string } | { username?: string }[] | null;
+    const username = Array.isArray(u) ? u[0]?.username : u?.username;
+    return { username: username ?? "speaker", content: String(row.content ?? "") };
+  });
+
+  let decisionJson: string;
+  try {
+    const result = await generateAnswer({
+      system: MODERATOR_SYSTEM,
+      history: [],
+      question: `Motion: "${room.motion}"\n\nRecent transcript:\n${buildTranscriptWindow(window)}`,
+      maxOutputTokens: 300,
+    });
+    decisionJson = result.answer;
+  } catch (err) {
+    console.error("[moderator] model call failed:", err);
+    return;
+  }
+
+  const action = parseModeratorAction(decisionJson);
+  if (!action || action.confidence < MODERATOR_MIN_CONFIDENCE) return;
+
+  const { error } = await admin.from("agora_interjections").insert({
+    room_id: roomId,
+    speaker_id: null,
+    kind: action.kind,
+    claim: "(live moderator)",
+    verdict: "context",
+    explanation: action.text,
+    sources: [],
+    confidence: action.confidence,
+  });
+  if (error) console.error("[moderator] interjection insert failed:", error.message);
+  else {
+    captureEvent({
+      distinctId: `room:${roomId}`,
+      event: "agora_moderated",
+      properties: { room_id: roomId, kind: action.kind, confidence: action.confidence },
     });
   }
 }

@@ -32,6 +32,12 @@ interface Props {
      background listening (transcription → fact-checks + persona profile);
      the orb pulses whenever Agora is also allowed to interfere. */
   liveListening?: boolean;
+  /* Live Moderator (room-level): Agora proactively drops facts and moderates
+     without being tapped. State is shared by the whole room; only the host
+     can flip it. */
+  moderatorOn?: boolean;
+  canModerate?: boolean;
+  onToggleModerator?: (on: boolean) => void;
 }
 
 type SRInstance = {
@@ -53,7 +59,15 @@ function getRecognition(): SRCtor | null {
 
 const INTERFERE_KEY = "agora-interfere";
 
-export default function AgoraAssistant({ motion, roomId, topicKey, liveListening }: Props) {
+export default function AgoraAssistant({
+  motion,
+  roomId,
+  topicKey,
+  liveListening,
+  moderatorOn,
+  canModerate,
+  onToggleModerator,
+}: Props) {
   const [openPanel, setOpenPanel] = useState(false);
   const [log, setLog] = useState<{ from: "you" | "agora"; text: string }[]>([]);
   const [draft, setDraft] = useState("");
@@ -150,9 +164,11 @@ export default function AgoraAssistant({ motion, roomId, topicKey, liveListening
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "agora_interjections", filter: `room_id=eq.${roomId}` },
         (payload) => {
-          const row = payload.new as { explanation?: string };
+          const row = payload.new as { explanation?: string; kind?: string };
           if (!row?.explanation) return;
-          setLog((l) => [...l, { from: "agora", text: `⚡ Fact check: ${row.explanation}` }]);
+          const prefix =
+            row.kind === "context" ? "💡 " : row.kind === "insight" ? "🎙️ Moderator: " : "⚡ Fact check: ";
+          setLog((l) => [...l, { from: "agora", text: `${prefix}${row.explanation}` }]);
           if (interfereRef.current) {
             setOpenPanel(true);
             if (voiceOutRef.current) speak(row.explanation);
@@ -322,6 +338,67 @@ export default function AgoraAssistant({ motion, roomId, topicKey, liveListening
               ✕
             </button>
           </div>
+
+          {/* Live Moderator: room-level switch — Agora joins the conversation
+              on its own (facts + moderation) when on. Host flips it; everyone
+              sees it. */}
+          {roomId && (
+            <div
+              className="flex items-center justify-between mb-2 px-3 py-1.5 rounded-xl"
+              style={{ background: "rgba(20,20,26,0.7)", border: "0.5px solid #34343c" }}
+            >
+              <div>
+                <p className="m-0 text-[10.5px]" style={{ color: "#e5e5ec", fontWeight: 600 }}>
+                  Live moderator
+                </p>
+                <p className="m-0 text-[9px]" style={{ color: "#8b8b94" }}>
+                  {moderatorOn
+                    ? "Agora joins in: facts, context, and moderation"
+                    : canModerate
+                      ? "Let Agora join in without being tapped"
+                      : "Only the host can turn this on"}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!moderatorOn}
+                disabled={!canModerate}
+                onClick={() => onToggleModerator?.(!moderatorOn)}
+                title={
+                  canModerate
+                    ? moderatorOn
+                      ? "Turn the live moderator off for this room"
+                      : "Turn the live moderator on for this room"
+                    : "Only the room host can change this"
+                }
+                className="shrink-0 border-none"
+                style={{
+                  width: 34,
+                  height: 19,
+                  borderRadius: 999,
+                  position: "relative",
+                  cursor: canModerate ? "pointer" : "not-allowed",
+                  background: moderatorOn ? "linear-gradient(135deg,#60a5fa,#2563eb)" : "rgba(90,90,102,0.5)",
+                  transition: "background 0.2s",
+                  opacity: canModerate ? 1 : 0.6,
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 2,
+                    left: moderatorOn ? 17 : 2,
+                    width: 15,
+                    height: 15,
+                    borderRadius: "50%",
+                    background: "#eff6ff",
+                    transition: "left 0.2s",
+                  }}
+                />
+              </button>
+            </div>
+          )}
 
           <div ref={logRef} className="flex-1 overflow-y-auto flex flex-col gap-2 mb-2" style={{ minHeight: 60 }}>
             {log.length === 0 && (
