@@ -50,6 +50,33 @@ describe("extractWake — bare agora", () => {
     expect(extractWake("Agora is a great place to debate")).toBeNull();
     expect(extractWake("Agora has thousands of users")).toBeNull();
     expect(extractWake("Agora launched last year")).toBeNull();
+    expect(extractWake("Agora is the best platform out there")).toBeNull();
+    expect(extractWake("Agora was launched last year")).toBeNull();
+  });
+
+  it("activates on is/are/was/were when phrased as a question", () => {
+    // Inverted syntax: copula + pronoun/demonstrative.
+    expect(extractWake("Agora is this claim accurate")).toEqual({
+      kind: "question",
+      question: "is this claim accurate",
+    });
+    expect(extractWake("Agora, is it true that crime fell in 2020")).toEqual({
+      kind: "question",
+      question: "is it true that crime fell in 2020",
+    });
+    expect(extractWake("agora are we sure about that number")).toEqual({
+      kind: "question",
+      question: "are we sure about that number",
+    });
+    expect(extractWake("Agora was there ever a basic income pilot in Kenya")).toEqual({
+      kind: "question",
+      question: "was there ever a basic income pilot in Kenya",
+    });
+    // Recognizer-supplied question mark rescues copula + article.
+    expect(extractWake("Agora, is the minimum wage higher in France?")).toEqual({
+      kind: "question",
+      question: "is the minimum wage higher in France?",
+    });
   });
 
   it("ignores plain speech without the wake word", () => {

@@ -35,6 +35,18 @@ const ASK_STARTERS = new Set([
   "remind", "look", "find", "search", "settle", "confirm",
 ]);
 
+/** Copulas that open BOTH questions ("is this true?") and statements about
+    the platform ("is a great place") — they need a second signal. */
+const COPULAS = new Set(["is", "are", "was", "were"]);
+
+/** Words that follow a copula in inverted questions but (practically) never
+    in declaratives whose subject is Agora. */
+const INVERSION_CUES = new Set([
+  "this", "that", "these", "those", "it", "there",
+  "he", "she", "they", "we", "you", "i",
+  "anyone", "anybody", "everyone", "everybody", "something", "anything",
+]);
+
 export function extractWake(text: string): WakeResult {
   const hey = text.match(HEY_AGORA);
   if (hey) {
@@ -48,9 +60,22 @@ export function extractWake(text: string): WakeResult {
   if (bare) {
     const rest = bare[1].trim();
     // Normalize hard: "What's" → "whats", so contractions hit the allowlist.
-    const firstWord = rest.split(/\s+/)[0]?.toLowerCase().replace(/[^a-z]/g, "");
+    const words = rest.split(/\s+/).map((w) => w.toLowerCase().replace(/[^a-z]/g, ""));
+    const firstWord = words[0];
     if (firstWord && ASK_STARTERS.has(firstWord)) {
       return { kind: "question", question: rest };
+    }
+    // "Agora is/are/was/were …" is usually ABOUT the platform — except when
+    // it's phrased as a question. Two tells we can read from bare text:
+    //   * the recognizer emitted a question mark, or
+    //   * inverted question syntax — the copula is followed by a pronoun or
+    //     demonstrative ("is THIS claim true", "was IT ever repealed"),
+    //     which declaratives about Agora ("is A great place", "is THE best
+    //     platform") don't produce.
+    if (firstWord && COPULAS.has(firstWord)) {
+      const questionish =
+        /\?\s*$/.test(rest) || (words[1] !== undefined && INVERSION_CUES.has(words[1]));
+      if (questionish) return { kind: "question", question: rest };
     }
   }
 
