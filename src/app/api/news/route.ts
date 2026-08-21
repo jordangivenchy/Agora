@@ -79,6 +79,16 @@ function normalizeParticle(json: unknown): Story[] {
   });
 }
 
+/* NewsData title-cases source names ("The Bbc"); restore the real marks. */
+const OUTLET_NAMES: Record<string, string> = {
+  "the bbc": "BBC", "bbc": "BBC", "aljazeera": "Al Jazeera", "al jazeera": "Al Jazeera",
+  "the guardian": "The Guardian", "reuters": "Reuters", "apnews": "AP", "ap news": "AP",
+  "associated press": "AP",
+};
+function outletName(raw: string): string {
+  return OUTLET_NAMES[raw.trim().toLowerCase()] ?? raw;
+}
+
 /* newsdata.io /api/1/latest → our Story shape. One outlet per story. */
 function normalizeNewsData(json: unknown): Story[] {
   const rows = (json as { results?: unknown })?.results;
@@ -90,7 +100,7 @@ function normalizeNewsData(json: unknown): Story[] {
     const url = (r.link as string | undefined) ?? null;
     if (!headline || !url || seen.has(headline)) return [];
     seen.add(headline);
-    const name = (r.source_name as string | undefined) ?? (r.source_id as string | undefined) ?? "";
+    const name = outletName((r.source_name as string | undefined) ?? (r.source_id as string | undefined) ?? "");
     let domain = "";
     try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch { /* bad url */ }
     const img = r.image_url as string | undefined;
