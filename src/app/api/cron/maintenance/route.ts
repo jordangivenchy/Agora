@@ -105,6 +105,14 @@ export async function GET(req: Request) {
     report.egressStopped = `error: ${e instanceof Error ? e.message : "unknown"}`;
   }
 
+  // 4b. Headline-created debate topics nobody is waiting on (>24h)
+  try {
+    const { data, error } = await admin.rpc("retire_stale_headline_topics");
+    report.headlineTopicsRetired = error ? `error: ${error.message}` : (data ?? 0);
+  } catch (e) {
+    report.headlineTopicsRetired = `error: ${e instanceof Error ? e.message : "unknown"}`;
+  }
+
   // 4. Expired 2FA challenges + old login-attempt audit rows
   try {
     const now = new Date().toISOString();

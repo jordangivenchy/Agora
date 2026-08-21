@@ -92,6 +92,17 @@ const readBtn: React.CSSProperties = {
   textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
   textAlign: "center", display: "block",
 };
+const queueBtn: React.CSSProperties = {
+  border: "0.5px solid #5b4a86", background: "rgba(50,36,84,0.55)", color: "#c9b8f2",
+  borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  whiteSpace: "nowrap", textAlign: "center", display: "block", width: "100%",
+};
+const sideBtn = (active: boolean, side: "PRO" | "CON"): React.CSSProperties => ({
+  flex: 1, borderRadius: 9, padding: "7px 0", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+  border: side === "PRO" ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
+  background: active ? (side === "PRO" ? "rgba(217,162,56,0.25)" : "rgba(44,83,130,0.35)") : "transparent",
+  color: side === "PRO" ? "#f4d47c" : "#85b7eb",
+});
 const discussBtn: React.CSSProperties = {
   border: "0.5px solid #2c5382", background: "rgba(24,48,82,0.9)", color: "#9cc4f0",
   borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
@@ -128,6 +139,62 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   }, [open]);
   const majors = useMemo(() => (stories ?? []).filter((s) => s.major), [stories]);
   const rest = useMemo(() => (stories ?? []).filter((s) => !s.major), [stories]);
+
+  /* ── Queue to debate a headline ──
+     queue_for_headline turns the headline into a debate_topics question
+     and joins its matchmaking queue; while anything is queued we poll
+     check_topic_match exactly like the Browse board and jump into the
+     room on a match. */
+  const [userId, setUserId] = useState<string | null>(null);
+  const [pickSide, setPickSide] = useState<string | null>(null); // story id showing PRO/CON
+  const [queued, setQueued] = useState<Record<string, { topicId: string; stance: "PRO" | "CON" }>>({});
+  const [queueBusy, setQueueBusy] = useState<string | null>(null);
+  const [queueError, setQueueError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, [open, supabase]);
+
+  const queueUp = async (st: Story, stance: "PRO" | "CON") => {
+    if (!userId) { window.location.href = "/login"; return; }
+    setQueueBusy(st.id);
+    setQueueError(null);
+    const { data, error } = await supabase.rpc("queue_for_headline", {
+      p_question: st.headline,
+      p_topic_key: topicFor(st.category),
+      p_stance: stance,
+      p_source_url: st.url,
+    });
+    setQueueBusy(null);
+    if (error) {
+      setQueueError(error.message.replace(/^[a-z_]+:\s*/, ""));
+      return;
+    }
+    const res = data as { status: string; room_id?: string; topic_id?: string };
+    if (res?.status === "matched" && res.room_id) { window.location.href = `/agora/${res.room_id}`; return; }
+    if (res?.topic_id) setQueued((q) => ({ ...q, [st.id]: { topicId: res.topic_id!, stance } }));
+    setPickSide(null);
+  };
+
+  const leaveQueue = async (st: Story) => {
+    const entry = queued[st.id];
+    if (!entry) return;
+    setQueueBusy(st.id);
+    await supabase.rpc("leave_topic_queue", { p_topic: entry.topicId });
+    setQueueBusy(null);
+    setQueued((q) => { const n = { ...q }; delete n[st.id]; return n; });
+  };
+
+  const anyQueued = Object.keys(queued).length > 0;
+  useEffect(() => {
+    if (!anyQueued || !userId) return;
+    const t = setInterval(async () => {
+      const { data: roomId } = await supabase.rpc("check_topic_match");
+      if (roomId) { clearInterval(t); window.location.href = `/agora/${roomId}`; }
+    }, 2500);
+    return () => clearInterval(t);
+  }, [anyQueued, userId, supabase]);
 
   /* Vote is local immediately; persisted via RPC when the daily motion is a
      real news_topics row (i.e. after the migration seeds one). */
@@ -343,6 +410,31 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
                             Start a discussion
                           </button>
+                          {queued[st.id] ? (
+                            <div className="flex flex-col gap-1.5">
+                              <p className="m-0 text-[11px] text-center" style={{ color: "#c9b8f2" }}>
+                                <span className="inline-block animate-pulse">●</span> In queue as{" "}
+                                <strong style={{ color: queued[st.id].stance === "PRO" ? "#f4d47c" : "#85b7eb" }}>{queued[st.id].stance}</strong>
+                                {" "}— waiting for an opponent
+                              </p>
+                              <button onClick={() => leaveQueue(st)} disabled={queueBusy === st.id} style={{ ...readBtn, width: "100%" }}>
+                                Leave queue
+                              </button>
+                            </div>
+                          ) : pickSide === st.id ? (
+                            <div className="flex flex-col gap-1.5">
+                              <p className="m-0 text-[10.5px] text-center" style={{ color: "#8b8b94" }}>Take a side to get matched</p>
+                              <div className="flex gap-2">
+                                <button onClick={() => queueUp(st, "PRO")} disabled={queueBusy === st.id} style={sideBtn(false, "PRO")}>PRO</button>
+                                <button onClick={() => queueUp(st, "CON")} disabled={queueBusy === st.id} style={sideBtn(false, "CON")}>CON</button>
+                              </div>
+                              {queueError && <p className="m-0 text-[10.5px] text-center" style={{ color: "#fca5a5" }}>{queueError}</p>}
+                            </div>
+                          ) : (
+                            <button onClick={() => { setPickSide(st.id); setQueueError(null); }} style={queueBtn}>
+                              Queue to debate
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
