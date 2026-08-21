@@ -54,16 +54,19 @@ create policy "users update own consent"
 create or replace function public.has_data_consent(p_user_id uuid, p_category text)
 returns boolean
 language sql stable security definer as $$
-  select coalesce(
-    case p_category
+  -- Outer coalesce guarantees FALSE when the user has no consent row at all
+  -- (a bare scalar subquery would return NULL there). No row = no consent.
+  select coalesce((
+    select case p_category
       when 'analytics'       then c.analytics
       when 'debate_analysis' then c.debate_analysis
       when 'personalization' then c.personalization
       when 'coaching'        then c.coaching
       else false
-    end, false)
-  from public.user_data_consent c
-  where c.user_id = p_user_id;
+    end
+    from public.user_data_consent c
+    where c.user_id = p_user_id
+  ), false);
 $$;
 
 -- ─── 2. user_signals: behavioral event log (Workstream 1) ───
