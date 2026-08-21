@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedNewsItem } from "@/lib/seed-content";
+import { STORY_EVENT } from "@/components/news/StoryModal";
 
 interface Props {
   open: boolean;
@@ -84,6 +85,10 @@ function Outlets({ sources, max = 3 }: { sources: Source[]; max?: number }) {
       {sources.length > max && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>+{sources.length - max}</span>}
     </span>
   );
+}
+
+function openStory(story: Story) {
+  window.dispatchEvent(new CustomEvent(STORY_EVENT, { detail: story }));
 }
 
 const readBtn: React.CSSProperties = {
@@ -310,7 +315,14 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
                   {majors.map((st) => (
                     <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
-                      <div style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openStory(st)}
+                        onKeyDown={(e) => { if (e.key === "Enter") openStory(st); }}
+                        className="cursor-pointer"
+                        style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}
+                      >
                         {st.imageUrl && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -336,9 +348,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          {st.url && (
-                            <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read article ↗</a>
-                          )}
+                          <button onClick={() => openStory(st)} style={readBtn}>Read article</button>
                           <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
                             Start a discussion
                           </button>
@@ -370,16 +380,14 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                       ) : (
                         <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: "#4a9eff" }} />
                       )}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openStory(st)}>
                         <p className="m-0 text-[13px]" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{st.headline}</p>
                         <p className="m-0 mt-0.5 flex items-center gap-2 flex-wrap">
                           <Outlets sources={st.sources} max={2} />
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
                         </p>
                       </div>
-                      {st.url && (
-                        <a href={st.url} target="_blank" rel="noopener noreferrer" style={readBtn}>Read ↗</a>
-                      )}
+                      <button onClick={() => openStory(st)} style={readBtn}>Read</button>
                       <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
                         Start a discussion
                       </button>

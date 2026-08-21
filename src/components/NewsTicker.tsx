@@ -96,12 +96,8 @@ export default function NewsTicker({ container }: Props) {
         {items.map((s, i) => (
           <button
             key={`${s.id}-${i}`}
-            onClick={() =>
-              s.url
-                ? window.open(s.url, "_blank", "noopener,noreferrer")
-                : window.dispatchEvent(new CustomEvent("agora:tab", { detail: "news" }))
-            }
-            title={s.url ? "Read at the source" : "Open the News tab"}
+            onClick={() => window.dispatchEvent(new CustomEvent("agora:story", { detail: s }))}
+            title="Open story"
             style={{
               flexShrink: 0,
               display: "inline-flex",
@@ -140,7 +136,7 @@ export default function NewsTicker({ container }: Props) {
               )}
             </span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: "#f4d47c", whiteSpace: "nowrap" }}>
-              Read article ↗
+              Read article →
             </span>
           </button>
         ))}
