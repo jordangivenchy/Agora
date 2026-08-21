@@ -1243,7 +1243,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  height: 380px;
+  height: 440px;
   border-radius: 12px;
 }
 
@@ -5975,7 +5975,7 @@ body { background: transparent; }
    edge, so no part of the picture is wasted behind it) under a light
    bottom-weighted shade for the headline. The right column is opaque and
    full-height: Reported by · outlets · summary · Read more. */
-.carousel-item.news .carousel-bg { overflow: hidden; right: 300px; }
+.carousel-item.news .carousel-bg { overflow: hidden; right: 240px; }
 .carousel-news-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -5983,22 +5983,23 @@ body { background: transparent; }
   display: block;
 }
 .carousel-news-shade {
-  position: absolute; top: 0; bottom: 0; left: 0; right: 300px;
+  position: absolute; top: 0; bottom: 0; left: 0; right: 240px;
   z-index: 1; pointer-events: none;
   background: linear-gradient(to top, rgba(6,7,12,0.78) 0%, rgba(6,7,12,0.28) 40%, rgba(6,7,12,0) 65%);
 }
 .carousel-item.news .carousel-lower-third {
-  right: 300px;
+  right: 240px;
   background: none;
   padding-bottom: 22px;
 }
 .carousel-item.news .carousel-motion {
-  font-size: 22px;
+  font-size: 26px;
+  line-height: 1.2;
   text-shadow: 0 2px 14px rgba(0,0,0,0.55);
 }
 .carousel-item.news .carousel-panel.carousel-news-card {
   top: 0; right: 0; bottom: 0;
-  width: 300px;
+  width: 240px;
   border-radius: 0;
   border: none;
   border-left: 1px solid rgba(255,255,255,0.08);
@@ -6011,14 +6012,14 @@ body { background: transparent; }
   align-items: flex-start;
   justify-content: center;
   text-align: left;
-  padding: 22px 22px 22px 24px;
-  gap: 10px;
+  padding: 22px 20px 22px 22px;
+  gap: 12px;
 }
 /* "Reported by" + outlets on one line */
 .carousel-item.news .carousel-news-card .panel-name {
   margin: 0;
   align-self: auto;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(238,238,245,0.55);
@@ -6039,15 +6040,15 @@ body { background: transparent; }
 }
 .carousel-news-summary {
   margin: 2px 0 0;
-  font-size: 13.5px;
-  line-height: 1.55;
-  color: rgba(238,238,245,0.88);
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(238,238,245,0.9);
   display: -webkit-box;
-  -webkit-line-clamp: 6;
+  -webkit-line-clamp: 7;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.carousel-item.news .carousel-news-btn { margin-top: 8px; align-self: flex-start; }
+.carousel-item.news .carousel-news-btn { margin-top: 8px; align-self: flex-start; font-size: 13px; padding: 10px 18px; }
 @media (max-width: 900px) {
   .carousel-item.news .carousel-panel.carousel-news-card { display: none; }
   .carousel-item.news .carousel-bg,

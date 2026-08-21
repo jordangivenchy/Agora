@@ -311,7 +311,6 @@ function newsSlideHTML(c, i, total) {
     <div class="carousel-item news" role="group" aria-label="Slide ${i+1} of ${total}">
       <div class="carousel-bg" style="background:${c.gradient};">${img}</div>
       <div class="carousel-news-shade"></div>
-      <div class="carousel-live-badge news">📰 News</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">${escHTML(c.headline)}</div>
         <div class="carousel-news-chips">${chips}</div>

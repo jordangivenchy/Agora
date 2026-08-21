@@ -310,14 +310,18 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
                   {majors.map((st) => (
                     <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
-                      <div
-                        style={{
-                          aspectRatio: "16 / 9",
-                          background: st.imageUrl
-                            ? `url(${JSON.stringify(st.imageUrl)}) center/cover no-repeat`
-                            : "linear-gradient(135deg,#0d1b3e,#1e0533)",
-                        }}
-                      />
+                      <div style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}>
+                        {st.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={st.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+                          />
+                        )}
+                      </div>
                       <div className="flex flex-col gap-2 px-4 py-3 flex-1">
                         <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, lineHeight: 1.3 }}>
                           {st.headline}
@@ -355,7 +359,14 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                     <div key={st.id} className="flex items-center gap-3.5 px-4 py-3" style={card}>
                       {st.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={st.imageUrl} alt="" className="shrink-0" style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }} />
+                        <img
+                          src={st.imageUrl}
+                          alt=""
+                          className="shrink-0"
+                          loading="lazy"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }}
+                        />
                       ) : (
                         <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: "#4a9eff" }} />
                       )}
