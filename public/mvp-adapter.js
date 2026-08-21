@@ -44,7 +44,6 @@
           sources: s.sources || [],
           imageUrl: s.imageUrl || null,
           summary: s.summary || null,
-          story: s,
           gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length],
         };
       });

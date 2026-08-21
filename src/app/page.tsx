@@ -17,7 +17,6 @@ import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
-import StoryModal, { STORY_EVENT, type StoryView } from "@/components/news/StoryModal";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
 import "./mvp-home.css";
@@ -80,13 +79,6 @@ export default function Home() {
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
-  /* In-app story view — opened by any headline via the agora:story event. */
-  const [story, setStory] = useState<StoryView | null>(null);
-  useEffect(() => {
-    const onStory = (e: Event) => setStory((e as CustomEvent<StoryView>).detail ?? null);
-    window.addEventListener(STORY_EVENT, onStory);
-    return () => window.removeEventListener(STORY_EVENT, onStory);
-  }, []);
   const [createPrefill, setCreatePrefill] = useState<{
     motion: string; topic: string; schedule?: boolean;
     communityId?: string; communityName?: string;
@@ -487,14 +479,6 @@ export default function Home() {
       <NewsPage
         open={activeTab === "news"}
         onClose={() => setActiveTab(null)}
-        onStartDebate={(motion, topic) => {
-          setCreatePrefill({ motion, topic });
-          setShowCreate(true);
-        }}
-      />
-      <StoryModal
-        story={story}
-        onClose={() => setStory(null)}
         onStartDebate={(motion, topic) => {
           setCreatePrefill({ motion, topic });
           setShowCreate(true);

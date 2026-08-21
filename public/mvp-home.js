@@ -302,6 +302,7 @@ function newsSlideHTML(c, i, total) {
       ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="14" height="14" />` : ''}
       <span>${escHTML(s.name)}</span>
     </div>`).join('');
+  const hasUrl = !!(c.url && /^https:\/\//.test(c.url));
   const img = c.imageUrl
     ? `<img class="carousel-news-img" src="${escHTML(c.imageUrl)}" alt="" loading="eager" decoding="async"
          onerror="this.remove()" />`
@@ -320,7 +321,7 @@ function newsSlideHTML(c, i, total) {
           <div class="panel-outlets">${rows}</div>
         </div>
         ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
-        <button class="carousel-watch-btn carousel-news-btn" data-story="${escHTML(JSON.stringify(c.story || {}))}">Read more →</button>
+        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read more ↗</button>` : ''}
       </div>
     </div>`;
 }
@@ -393,13 +394,13 @@ function renderCarousel() {
     });
   });
 
-  // "Read more" opens the in-app story view (React listens on agora:story).
+  // "Read article" opens the outlet's story in a new tab; slides without
+  // a link fall back to the in-app News panel (React listens on agora:tab).
   track.querySelectorAll('.carousel-news-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      let story = null;
-      try { story = JSON.parse(btn.dataset.story || 'null'); } catch { /* malformed */ }
-      if (story && story.headline) window.dispatchEvent(new CustomEvent('agora:story', { detail: story }));
+      const url = btn.dataset.url;
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
       else window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
     });
   });
