@@ -146,12 +146,14 @@ export async function GET() {
   const newsdataKey = process.env.NEWSDATA_API_KEY;
   if (newsdataKey) {
     try {
+      /* Global affairs, not a regional firehose: the world desk of a
+         curated set of international outlets (NewsData's free tier allows
+         five domains per request). No country filter on purpose. */
       const params = new URLSearchParams({
         apikey: newsdataKey,
         language: "en",
-        country: "us",
-        category: "politics,world,business,science,technology",
-        prioritydomain: "top",
+        category: "world",
+        domain: "bbc,aljazeera,theguardian,reuters,apnews",
         removeduplicate: "1",
       });
       const res = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
