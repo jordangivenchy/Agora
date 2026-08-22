@@ -346,7 +346,6 @@ function renderCarousel() {
       <div class="carousel-live-badge"><div class="carousel-live-dot"></div> Live</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">"${escHTML(c.motion)}"</div>
-        <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
       </div>
       <div class="carousel-panel carousel-room-panel">
         <div class="room-panel-kicker"><span class="room-panel-livedot"></span>Live now</div>
@@ -368,6 +367,7 @@ function renderCarousel() {
           </div>
         </div>
         ${c.community ? `<div class="room-panel-host">hosted by <span class="room-panel-community" style="--chip:${escHTML(c.communityColor || '#4a9eff')};">${escHTML(c.community)}</span></div>` : ''}
+        <button class="carousel-watch-btn room-panel-watch" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
       </div>
     </div>
   `;
