@@ -148,9 +148,11 @@ export default function Home() {
         }
 
         const debates = rooms.map((room, i) => {
-          const debaters = (room.participants ?? []).filter(
-            (p: { role: string; left_at: string | null }) => p.role === "debater" && !p.left_at
+          const active = (room.participants ?? []).filter(
+            (p: { left_at: string | null }) => !p.left_at
           );
+          const debaters = active.filter((p: { role: string }) => p.role === "debater");
+          const audienceCount = active.filter((p: { role: string }) => p.role === "spectator").length;
           const proD = debaters.find((p: { stance: string | null }) => p.stance === "PRO");
           const conD = debaters.find((p: { stance: string | null }) => p.stance === "CON");
           const key = TOPIC_MAP[room.topic_key] ?? "culture";
@@ -172,6 +174,9 @@ export default function Home() {
             secondaryTopics: (room.secondary_topics ?? []).map((k: string) => TOPIC_MAP[k] ?? k),
             subTags: [],
             gradient: GRADIENTS[i % GRADIENTS.length],
+            liveSince: room.started_at ?? room.created_at ?? null,
+            speakerCount: debaters.length,
+            audienceCount,
             // Same fallback as the room cards: uploaded thumbnail, else the host's avatar.
             thumbnailUrl: (() => {
               const host = room.host as { avatar_url?: string | null } | { avatar_url?: string | null }[] | null;

@@ -95,6 +95,10 @@
           communityColor: d.communityColor || null,
           votesPro: d.votesPro || 0,
           votesCon: d.votesCon || 0,
+          liveSince: d.liveSince || null,
+          speakerCount: d.speakerCount || 0,
+          audienceCount: d.audienceCount || 0,
+          secondaryTopics: d.secondaryTopics || [],
         };
       });
 

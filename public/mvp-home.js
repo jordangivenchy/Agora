@@ -283,6 +283,18 @@ function getSearchResults(query) {
 // ═══════════════════════════════════════════════
 
 // News headlines come from an external API — escape before innerHTML.
+/* "Live for 14m" / "Live for 1h 20m" from a start timestamp. */
+function liveForLabel(iso) {
+  if (!iso) return ' now';
+  const ms = Date.now() - Date.parse(iso);
+  if (!(ms > 0)) return ' now';
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return ' now';
+  if (m < 60) return ` for ${m}m`;
+  const h = Math.floor(m / 60);
+  return ` for ${h}h ${m % 60}m`;
+}
+
 function escHTML(s) {
   return String(s ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
@@ -348,10 +360,11 @@ function renderCarousel() {
         <div class="carousel-motion">"${escHTML(c.motion)}"</div>
       </div>
       <div class="carousel-panel carousel-room-panel">
-        <div class="room-panel-kicker"><span class="room-panel-livedot"></span>Live now</div>
-        <div class="room-panel-watching">${escHTML(c.viewersDisplay)} watching</div>
+        <div class="room-panel-kicker"><span class="room-panel-livedot"></span>Live${liveForLabel(c.liveSince)}</div>
+        <div class="room-panel-watching">${escHTML(c.viewersDisplay)} watching · ${c.speakerCount || 0} speaker${c.speakerCount === 1 ? '' : 's'} · ${c.audienceCount || 0} in the audience</div>
         <div class="room-panel-facts">
           <span class="room-panel-chip" style="--chip:${escHTML((TOPICS[c.topicKey] || {}).accent || '#4a9eff')};">${escHTML((TOPICS[c.topicKey] || {}).label || 'Discussion')}</span>
+          ${(c.secondaryTopics || []).slice(0, 2).map(k => TOPICS[k] ? `<span class="room-panel-chip" style="--chip:${escHTML(TOPICS[k].accent)};">${escHTML(TOPICS[k].label)}</span>` : '').join('')}
           <span class="room-panel-chip">${escHTML(c.format || 'Open')}</span>
           ${c.language ? `<span class="room-panel-chip">${escHTML(c.language)}</span>` : ''}
         </div>
