@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pathFor } from "@/lib/routes";
+import { slugify } from "@/lib/communityUrls";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
@@ -449,26 +450,6 @@ export default function ProfileView({
     }
   }, [profile, viewerId, blocked, supabase]);
 
-  /* Community chips: on the homepage shell the Communities panel is
-     mounted, so dispatch agora:open-community (the pattern in TopicsHome).
-     From the standalone /users route, go to the board's own URL — the
-     slug segment accepts a raw community id. */
-  const openCommunity = useCallback(
-    (communityId: string) => {
-      if (document.querySelector('[data-nav-id="communities"]')) {
-        (document.querySelector('[data-nav-id="communities"]') as HTMLElement | null)?.click();
-        setTimeout(() => {
-          document.dispatchEvent(
-            new CustomEvent("agora:open-community", { detail: { communityId } })
-          );
-        }, 60);
-        return;
-      }
-      router.push(pathFor.community(communityId));
-    },
-    [router]
-  );
-
   const toggleFollow = useCallback(async () => {
     if (!profile) return;
     if (!viewerId) {
@@ -491,6 +472,19 @@ export default function ProfileView({
   }, [profile, supabase, loadProfile]);
 
   const isSelf = viewerId && profile && viewerId === profile.id;
+
+  /* Inline links inside rows: stop the row's own navigation. */
+  const rowLink = (href: string, label: React.ReactNode, color = "#a9a9b4") => (
+    <a
+      href={href}
+      onClick={(e) => e.stopPropagation()}
+      className="no-underline"
+      style={{ color, fontWeight: 600 }}
+    >
+      {label}
+    </a>
+  );
+  const communityHref = (name: string) => pathFor.community(slugify(name));
 
   const menuItem: React.CSSProperties = {
     display: "flex",
@@ -1043,25 +1037,22 @@ export default function ProfileView({
                         {c.member_count} member{c.member_count === 1 ? "" : "s"}
                       </p>
                     </div>
-                    {!embedded && <span style={{ color: "#6b6b74", fontSize: 12 }}>→</span>}
+                    <span style={{ color: "#6b6b74", fontSize: 12 }}>→</span>
                   </>
                 );
-                /* The open-community handoff needs the home shell; inside
-                   the room drawer we'd yank the viewer out of a live
-                   debate, so rows are inert there. */
-                return embedded ? (
-                  <div key={c.id} className="px-4 py-3 flex items-center gap-3" style={card}>
-                    {inner}
-                  </div>
-                ) : (
-                  <button
+                /* Real link to the board. Inside the room drawer it opens in
+                   a new tab so the viewer isn't yanked out of a live debate. */
+                return (
+                  <a
                     key={c.id}
-                    onClick={() => openCommunity(c.id)}
-                    className="cursor-pointer px-4 py-3 flex items-center gap-3 w-full"
-                    style={{ ...card, fontFamily: "inherit", color: "#c9c9d2" }}
+                    href={pathFor.community(slugify(c.name))}
+                    target={embedded ? "_blank" : undefined}
+                    rel={embedded ? "noopener noreferrer" : undefined}
+                    className="no-underline px-4 py-3 flex items-center gap-3 w-full"
+                    style={{ ...card, color: "#c9c9d2" }}
                   >
                     {inner}
-                  </button>
+                  </a>
                 );
               })
             )}
@@ -1094,9 +1085,9 @@ export default function ProfileView({
                           `${timeAgo(d.created_at)} ago · `
                         )}
                         {d.role === "host"
-                          ? `hosted by @${profile.username}`
+                          ? <>hosted by {rowLink(userPath(profile.username), `@${profile.username}`, "#8b8b94")}</>
                           : d.host_username
-                            ? `debated · hosted by @${d.host_username}`
+                            ? <>debated · hosted by {rowLink(userPath(d.host_username), `@${d.host_username}`, "#8b8b94")}</>
                             : "debated"}
                         {topic ? ` · ${topic.label}` : ""}
                       </p>
@@ -1175,15 +1166,15 @@ export default function ProfileView({
         {(tab === "posts" || tab === "reposts") && (() => {
           const rows = tab === "posts" ? ownPosts : reposts;
           const postCard = (p: PostRow) => (
-            <div
+            <a
               key={p.id}
-              className="px-4 py-3 cursor-pointer"
+              href={pathFor.post(p.id)}
+              className="block px-4 py-3 cursor-pointer no-underline"
               style={card}
-              onClick={() => { window.location.href = pathFor.post(p.id); }}
             >
               <p className="m-0 flex items-center gap-1.5 flex-wrap" style={{ color: "#8b8b94", fontSize: 11 }}>
-                {p.is_repost && <span style={{ color: "#c9b06a" }}>↻ reposted to</span>}
-                <span>{p.community_name} · {timeAgo(p.created_at)} ago</span>
+                {p.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#c9b06a" }}><Icon name="repeat" size={11} /> reposted to</span>}
+                <span>{rowLink(communityHref(p.community_name), p.community_name)} · {timeAgo(p.created_at)} ago</span>
                 {p.tag_name && (
                   <span
                     className="rounded-full"
@@ -1229,15 +1220,15 @@ export default function ProfileView({
                   color: "#8b8b94", fontSize: 11.5,
                 }}>
                   {p.repost_of
-                    ? <>from <span style={{ color: "#c9b06a" }}>{p.orig_community_name ?? "a community"}</span>
-                        {p.orig_author_username && <> · {p.orig_author_display_name?.trim() || `@${p.orig_author_username}`}</>}</>
+                    ? <>from {p.orig_community_name ? rowLink(communityHref(p.orig_community_name), p.orig_community_name, "#c9b06a") : <span style={{ color: "#c9b06a" }}>a community</span>}
+                        {p.orig_author_username && <> · {rowLink(userPath(p.orig_author_username), p.orig_author_display_name?.trim() || `@${p.orig_author_username}`)}</>}</>
                     : "The original post was deleted."}
                 </p>
               )}
               <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
                 <Icon name="arrow-up" size={11} /> {p.score} · <Icon name="message-circle" size={11} /> {p.comment_count}
               </p>
-            </div>
+            </a>
           );
           return (
             <div className="flex flex-col gap-2.5">
@@ -1266,14 +1257,14 @@ export default function ProfileView({
             ) : (
               <>
                 {comments.map((c) => (
-                  <div
+                  <a
                     key={c.id}
-                    className="px-4 py-3 cursor-pointer"
+                    href={`${pathFor.post(c.post_id)}#comment-${c.id}`}
+                    className="block px-4 py-3 cursor-pointer no-underline"
                     style={card}
-                    onClick={() => { window.location.href = pathFor.post(c.post_id); }}
                   >
                     <p className="m-0" style={{ color: "#8b8b94", fontSize: 11 }}>
-                      {c.community_name} · <span style={{ color: "#a9a9b4" }}>{c.post_title}</span>
+                      {rowLink(communityHref(c.community_name), c.community_name)} · <span style={{ color: "#a9a9b4" }}>{c.post_title}</span>
                     </p>
                     <p
                       className="m-0 mt-1"
@@ -1299,9 +1290,9 @@ export default function ProfileView({
                       />
                     )}
                     <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
-                      ▲ {c.score} · {timeAgo(c.created_at)} ago
+                      <Icon name="arrow-up" size={11} /> {c.score} · {timeAgo(c.created_at)} ago
                     </p>
-                  </div>
+                  </a>
                 ))}
                 {commentsHasMore && (
                   <button
