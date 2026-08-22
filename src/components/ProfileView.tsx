@@ -540,6 +540,38 @@ export default function ProfileView({
     [debates]
   );
 
+  /* "Notify me" bells on scheduled rows — same RPCs as the homepage
+     Browse tabs (toggle_room_reminder / get_room_reminders). */
+  const [reminders, setReminders] = useState<Record<string, { count: number; amSet: boolean }>>({});
+  const [reminderBusy, setReminderBusy] = useState<string | null>(null);
+  useEffect(() => {
+    const ids = (upcoming ?? []).map((d) => d.id);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc("get_room_reminders", { p_rooms: ids });
+      if (cancelled || !data) return;
+      const map: Record<string, { count: number; amSet: boolean }> = {};
+      for (const r of data as { room_id: string; reminder_count: number; am_set: boolean }[]) {
+        map[r.room_id] = { count: Number(r.reminder_count), amSet: r.am_set };
+      }
+      setReminders(map);
+    })();
+    return () => { cancelled = true; };
+  }, [upcoming, supabase, viewerId]);
+  const toggleReminder = useCallback(async (roomId: string) => {
+    if (!viewerId) { window.location.href = "/login"; return; }
+    setReminderBusy(roomId);
+    const { data, error } = await supabase.rpc("toggle_room_reminder", { p_room: roomId });
+    setReminderBusy(null);
+    if (error) return;
+    const nowSet = data === true;
+    setReminders((m) => {
+      const cur = m[roomId] ?? { count: 0, amSet: false };
+      return { ...m, [roomId]: { count: Math.max(0, cur.count + (nowSet ? 1 : -1)), amSet: nowSet } };
+    });
+  }, [supabase, viewerId]);
+
   /* TikTok-style split: originals under Posts, reposts under Reposts. */
   const ownPosts = useMemo(() => posts?.filter((p) => !p.is_repost) ?? null, [posts]);
   const reposts = useMemo(() => posts?.filter((p) => p.is_repost) ?? null, [posts]);
@@ -1197,10 +1229,32 @@ export default function ProfileView({
                         <span style={{ color: "#8b8b94", fontWeight: 400 }}>
                           {" "}· {d.role === "host" ? "hosting" : "debating"}
                           {topic ? ` · ${topic.label}` : ""}
+                          {(reminders[d.id]?.count ?? 0) > 0 && ` · ${reminders[d.id].count} waiting`}
                         </span>
                       </p>
                     </div>
-                    <span style={{ color: "#6b6b74", fontSize: 12 }}>→</span>
+                    {(() => {
+                      const set = !!reminders[d.id]?.amSet;
+                      return (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleReminder(d.id); }}
+                          disabled={reminderBusy === d.id}
+                          title={set ? "Reminder set — click to remove" : "Notify me when this goes live"}
+                          aria-pressed={set}
+                          className="cursor-pointer row-inner-link"
+                          style={{
+                            width: 34, height: 34, borderRadius: "50%",
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            padding: 0, flexShrink: 0,
+                            background: set ? "rgba(226,185,107,0.92)" : "rgba(255,255,255,0.05)",
+                            border: set ? "1px solid #d9a238" : "1px solid rgba(255,255,255,0.14)",
+                            color: set ? "#3a2a05" : "#c9c9d2",
+                          }}
+                        >
+                          <Icon name="bell" size={15} />
+                        </button>
+                      );
+                    })()}
                   </div>
                 );
               })
