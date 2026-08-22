@@ -746,6 +746,18 @@ export default function ProfileView({
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             )}
+            {!profile.banner_url && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "rgba(255,255,255,0.18)",
+                }}
+              >
+                <Icon name="circle-help" size={40} strokeWidth={1.5} />
+              </span>
+            )}
             {isSelf && (
               <button
                 onClick={() => setEditOpen(true)}
@@ -761,7 +773,7 @@ export default function ProfileView({
                   backdropFilter: "blur(8px)",
                 }}
               >
-                <Icon name={profile.banner_url ? "pencil" : "circle-help"} size={15} />
+                <Icon name="pencil" size={15} />
               </button>
             )}
           </div>
@@ -782,7 +794,7 @@ export default function ProfileView({
           <span
             className="inline-block shrink-0"
             style={
-              (profile.banner_url || isSelf)
+              profile.banner_url
                 ? { marginTop: -52, borderRadius: "50%", border: "4px solid #101016", background: "#101016", lineHeight: 0 }
                 : { lineHeight: 0 }
             }
