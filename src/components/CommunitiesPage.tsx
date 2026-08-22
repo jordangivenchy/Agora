@@ -30,6 +30,8 @@ import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
 import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
+import RichText from "./community/RichText";
+import FormatToolbar, { handleFormatShortcut } from "./community/FormatToolbar";
 
 interface Props {
   open: boolean;
@@ -149,6 +151,35 @@ const card: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,0.07)",
   borderRadius: 14,
 };
+
+/* Comment / reply composers: single-line look that grows to ~6 lines
+   (same pattern as MessagesDock). */
+const COMPOSER_LINE = 20;
+const COMPOSER_MAX = 6 * COMPOSER_LINE + 18 + 1;
+const composerTextareaStyle: React.CSSProperties = {
+  background: "rgba(10,10,12,0.7)",
+  border: "0.5px solid rgba(255,255,255,0.1)",
+  borderRadius: 9,
+  color: "#eeeef5",
+  fontSize: 13,
+  lineHeight: `${COMPOSER_LINE}px`,
+  padding: "9px 12px",
+  outline: "none",
+  fontFamily: "inherit",
+  width: "100%",
+  display: "block",
+  resize: "none",
+  overflowY: "hidden",
+  minHeight: COMPOSER_LINE + 18 + 1,
+  maxHeight: COMPOSER_MAX,
+  boxSizing: "border-box",
+};
+function autoGrow(ta: HTMLTextAreaElement) {
+  ta.style.height = "auto";
+  const full = ta.scrollHeight + 1; /* border-box: add the 0.5px borders back */
+  ta.style.height = `${Math.min(full, COMPOSER_MAX)}px`;
+  ta.style.overflowY = full > COMPOSER_MAX ? "auto" : "hidden";
+}
 
 const inputStyle: React.CSSProperties = {
   background: "rgba(10,10,12,0.7)",
@@ -389,71 +420,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
      running by FriendsSection on the homepage shell; we only read it. */
   const presence = useSyncExternalStore(subscribePresence, getPresenceSnapshot, () => getPresenceSnapshot());
 
-  /* Rich text-lite for post/comment bodies, one regex pass:
-       @handle          → profile link
-       **bold**         → strong
-       *italic*         → em
-       ~~strike~~       → s
-       `code`           → styled code span
-       https://…        → external link
-     No nesting — plain markers, plainly rendered. */
-  const renderWithMentions = useCallback((text: string): React.ReactNode => {
-    const RX = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*)|(~~[^~\n]+~~)|(@[a-zA-Z0-9_]{3,20})|(https?:\/\/[^\s<>"')]+)/g;
-    const out: React.ReactNode[] = [];
-    let last = 0;
-    let k = 0;
-    let m: RegExpExecArray | null;
-    while ((m = RX.exec(text)) !== null) {
-      if (m.index > last) out.push(text.slice(last, m.index));
-      const tok = m[0];
-      if (m[1]) {
-        out.push(
-          <code key={k++} style={{
-            background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.1)",
-            borderRadius: 4, padding: "0 5px", fontSize: "0.9em",
-          }}>
-            {tok.slice(1, -1)}
-          </code>
-        );
-      } else if (m[2]) {
-        out.push(<strong key={k++} style={{ fontWeight: 700, color: "#eeeef5" }}>{tok.slice(2, -2)}</strong>);
-      } else if (m[3]) {
-        out.push(<em key={k++}>{tok.slice(1, -1)}</em>);
-      } else if (m[4]) {
-        out.push(<s key={k++} style={{ opacity: 0.65 }}>{tok.slice(2, -2)}</s>);
-      } else if (m[5]) {
-        out.push(
-          <a
-            key={k++}
-            href={`/users/${encodeURIComponent(tok.slice(1))}`}
-            className="cursor-pointer no-underline"
-            style={{ color: "#4a9eff", fontWeight: 600 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {tok}
-          </a>
-        );
-      } else {
-        out.push(
-          <a
-            key={k++}
-            href={tok}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "#4a9eff", textDecoration: "underline", textUnderlineOffset: 2 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {tok}
-          </a>
-        );
-      }
-      last = m.index + tok.length;
-    }
-    if (last === 0) return text;
-    if (last < text.length) out.push(text.slice(last));
-    return out;
-  }, []);
-
   const [communities, setCommunities] = useState<Community[]>([]);
   const [tagsByCommunity, setTagsByCommunity] = useState<Record<string, Tag[]>>({});
   const [selected, setSelected] = useState<string>("all"); // 'all' | community id
@@ -495,8 +461,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   /* Emoji picker (shared popover) for the post body / comment box. */
   const [emojiFor, setEmojiFor] = useState<null | "post" | "comment">(null);
-  const commentInputRef = useRef<HTMLInputElement | null>(null);
-  const replyInputRef = useRef<HTMLInputElement | null>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const postImageInputRef = useRef<HTMLInputElement | null>(null);
+  /* Grow/shrink the comment + reply textareas with their drafts (covers
+     typing, toolbar edits, and the reset after a submit). */
+  useEffect(() => { if (commentInputRef.current) autoGrow(commentInputRef.current); }, [commentText]);
+  useEffect(() => { if (replyInputRef.current) autoGrow(replyInputRef.current); }, [replyText]);
   const insertEmoji = useCallback((
     el: HTMLInputElement | HTMLTextAreaElement | null,
     set: (fn: (cur: string) => string) => void,
@@ -1016,94 +987,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     });
   }, []);
 
-  /* Wrap the current selection of any input/textarea in a formatting
-     marker (B/I/S/code). With no selection, inserts a pair and parks the
-     caret between them; if the selection is already wrapped, unwraps. */
-  const wrapIn = useCallback((
-    el: HTMLInputElement | HTMLTextAreaElement | null,
-    value: string,
-    set: (v: string) => void,
-    marker: string,
-  ) => {
-    if (!el) return;
-    const s = el.selectionStart ?? value.length;
-    const e = el.selectionEnd ?? s;
-    const sel = value.slice(s, e);
-    const m = marker.length;
-    const wrapped = value.slice(s - m, s) === marker && value.slice(e, e + m) === marker;
-    let next: string, selStart: number, selEnd: number;
-    if (wrapped) {
-      next = value.slice(0, s - m) + sel + value.slice(e + m);
-      selStart = s - m; selEnd = selStart + sel.length;
-    } else {
-      next = value.slice(0, s) + marker + sel + marker + value.slice(e);
-      selStart = s + m; selEnd = selStart + sel.length;
-    }
-    set(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(selStart, selEnd);
-    });
-  }, []);
-
-  /* ⌘/Ctrl+B → bold, ⌘/Ctrl+I → italic. Returns true if handled. */
-  const formatShortcut = useCallback((
-    ev: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-    value: string,
-    set: (v: string) => void,
-  ): boolean => {
-    if (!(ev.metaKey || ev.ctrlKey)) return false;
-    const k = ev.key.toLowerCase();
-    const marker = k === "b" ? "**" : k === "i" ? "*" : null;
-    if (!marker) return false;
-    ev.preventDefault();
-    wrapIn(ev.currentTarget, value, set, marker);
-    return true;
-  }, [wrapIn]);
-
-  const FORMAT_BUTTONS = [
-    ["**", "B", "Bold (⌘B)", 800, undefined, undefined],
-    ["*", "I", "Italic (⌘I)", 500, "italic", undefined],
-    ["~~", "S", "Strikethrough", 500, undefined, "line-through"],
-    ["`", "<>", "Code", 500, undefined, undefined],
-  ] as const;
-  const formatBar = (
-    el: () => HTMLInputElement | HTMLTextAreaElement | null,
-    value: string,
-    set: (v: string) => void,
-    compact = false,
-  ) => (
-    <div className="flex items-center gap-1">
-      {FORMAT_BUTTONS.map(([marker, label, tip, weight, fs, td]) => (
-        <button
-          key={marker}
-          type="button"
-          onMouseDown={(e) => e.preventDefault() /* keep the field's selection */}
-          onClick={() => wrapIn(el(), value, set, marker)}
-          title={tip}
-          className="cursor-pointer"
-          style={{
-            ...btnGhost,
-            borderRadius: 6,
-            minWidth: compact ? 24 : 28,
-            height: compact ? 22 : 26,
-            padding: "0 6px",
-            fontSize: compact ? 11 : 12,
-            fontWeight: weight,
-            fontStyle: fs,
-            textDecoration: td,
-            fontFamily: label === "<>" ? "monospace" : "inherit",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-
   const pickCommentImage = useCallback((file: File | null) => {
     setCommentImage(file);
     setCommentImagePreview((prev) => {
@@ -1585,15 +1468,15 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}</>}
         </p>
         <p className="m-0 text-[12.5px] font-medium" style={{ color: "rgba(238,238,245,0.88)", marginTop: 5 }}>
-          {p.orig_title}
+          <RichText text={p.orig_title ?? ""} inline />
         </p>
         {p.orig_body && (
-          <p className="m-0 text-[11.5px]" style={{
+          <div className="text-[11.5px]" style={{
             color: "rgba(238,238,245,0.55)", marginTop: 4, lineHeight: 1.5,
             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
           }}>
-            {p.orig_body}
-          </p>
+            <RichText text={p.orig_body} />
+          </div>
         )}
         {p.orig_image_url && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -1700,9 +1583,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             </div>
             {!isCollapsed && (
               <>
-                <p className="m-0 mt-1 text-[12.5px] leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(238,238,245,0.88)" }}>
-                  {renderWithMentions(c.body)}
-                </p>
+                <div className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "rgba(238,238,245,0.88)" }}>
+                  <RichText text={c.body} />
+                </div>
                 {c.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={c.image_url} alt="" className="mt-1.5 rounded-lg"
@@ -1766,18 +1649,19 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 </div>
                 {replyTo === c.id && (
                   <div className="mt-2">
-                    <div className="mb-1.5">{formatBar(() => replyInputRef.current, replyText, setReplyText, true)}</div>
+                    <div className="mb-1.5"><FormatToolbar compact target={() => replyInputRef.current} value={replyText} onChange={setReplyText} /></div>
                     <div className="flex gap-2">
                       <span className="relative flex-1 min-w-0">
-                        <input
+                        <textarea
                           ref={replyInputRef}
-                          style={inputStyle}
+                          rows={1}
+                          style={composerTextareaStyle}
                           placeholder={`Reply to @${c.author_username}…`}
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
                           onKeyDown={(e) => {
-                            if (formatShortcut(e, replyText, setReplyText)) return;
-                            if (e.key === "Enter") submitComment(c.id, replyText, replyImage);
+                            if (handleFormatShortcut(e, replyText, setReplyText)) return;
+                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(c.id, replyText, replyImage); }
                           }}
                           autoFocus
                         />
@@ -2380,12 +2264,12 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       {openPost.tag_name && <TagChip name={openPost.tag_name} color={openPost.tag_color} />}
                     </p>
                     <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                      {renderWithMentions(openPost.title)}
+                      <RichText text={openPost.title} inline />
                     </h2>
                     {openPost.body && (
-                      <p className="m-0 mt-2 text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(238,238,245,0.85)" }}>
-                        {renderWithMentions(openPost.body)}
-                      </p>
+                      <div className="mt-2 text-[13px] leading-relaxed" style={{ color: "rgba(238,238,245,0.85)" }}>
+                        <RichText text={openPost.body} />
+                      </div>
                     )}
                     {openPost.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -2399,18 +2283,19 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
                 {/* comment composer */}
                 <div className="mb-4">
-                  {userId && <div className="mb-1.5">{formatBar(() => commentInputRef.current, commentText, setCommentText, true)}</div>}
+                  {userId && <div className="mb-1.5"><FormatToolbar compact target={() => commentInputRef.current} value={commentText} onChange={setCommentText} /></div>}
                   <div className="flex gap-2">
                     <span className="relative flex-1 min-w-0">
-                      <input
+                      <textarea
                         ref={commentInputRef}
-                        style={inputStyle}
+                        rows={1}
+                        style={composerTextareaStyle}
                         placeholder={userId ? "Add a comment… (@ to mention)" : "Sign in to comment"}
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         onKeyDown={(e) => {
-                          if (formatShortcut(e, commentText, setCommentText)) return;
-                          if (e.key === "Enter") submitComment(null, commentText, commentImage, commentGifUrl);
+                          if (handleFormatShortcut(e, commentText, setCommentText)) return;
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(null, commentText, commentImage, commentGifUrl); }
                         }}
                         onFocus={() => { if (!userId) window.location.href = "/login"; }}
                       />
@@ -2988,13 +2873,20 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                     />
-                    {/* formatting toolbar — wraps the selection */}
-                    <div className="flex items-center gap-2.5">
-                      {formatBar(() => bodyRef.current, newBody, setNewBody)}
-                      <span className="text-[10px]" style={{ color: "rgba(238,238,245,0.25)" }}>
-                        **bold** · *italic* · ~~strike~~ · `code` · @mention · links auto-embed
-                      </span>
-                    </div>
+                    {/* formatting toolbar — markdown subset, see lib/richText.ts */}
+                    <FormatToolbar
+                      target={() => bodyRef.current}
+                      value={newBody}
+                      onChange={setNewBody}
+                      onImage={() => postImageInputRef.current?.click()}
+                      onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "post" ? null : "post") : undefined}
+                      trailing={
+                        <span className="text-[10px] ml-2" style={{ color: "rgba(238,238,245,0.25)" }}
+                          title={"**bold** *italic* ~~strike~~ `code` ^(sup) >!spoiler!< [label](https://url)\n# heading · - bullet · 1. numbered · > quote · ``` code block · | table |"}>
+                          Markdown · @mention
+                        </span>
+                      }
+                    />
                     <span className="relative block">
                       <textarea
                         ref={bodyRef}
@@ -3003,7 +2895,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         maxLength={10000}
                         value={newBody}
                         onChange={(e) => setNewBody(e.target.value)}
-                        onKeyDown={(e) => formatShortcut(e, newBody, setNewBody)}
+                        onKeyDown={(e) => handleFormatShortcut(e, newBody, setNewBody)}
                       />
                       <MentionSuggest text={newBody} onComplete={setNewBody} supabase={supabase} />
                     </span>
@@ -3042,6 +2934,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       <label className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnGhost}>
                         <Icon name="image" size={13} /> {newImage ? "Change image" : "Add image"}
                         <input
+                          ref={postImageInputRef}
                           type="file"
                           accept="image/*"
                           className="hidden"
@@ -3166,15 +3059,15 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} small />}
                       </p>
                       <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#eeeef5" }}>
-                        {renderWithMentions(p.title)}
+                        <RichText text={p.title} inline />
                       </p>
                       {p.body && (
-                        <p className="m-0 mt-1 text-[12px] leading-relaxed" style={{
+                        <div className="mt-1 text-[12px] leading-relaxed" style={{
                           color: "rgba(238,238,245,0.55)",
                           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
                         }}>
-                          {renderWithMentions(p.body)}
-                        </p>
+                          <RichText text={p.body} />
+                        </div>
                       )}
                       {p.image_url && (
                         // eslint-disable-next-line @next/next/no-img-element
