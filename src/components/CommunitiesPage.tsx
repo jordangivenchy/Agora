@@ -2225,7 +2225,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         style={{ maxWidth: "100%", maxHeight: 480 }} />
                     )}
                     {repostEmbed(openPost)}
-                    <div className="mt-2.5">{postActions(openPost, true)}</div>
+                    <div style={{ marginTop: 16 }}>{postActions(openPost, true)}</div>
                   </div>
                 </div>
 
@@ -2992,7 +2992,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           style={{ maxHeight: 220, maxWidth: "100%", objectFit: "cover" }} />
                       )}
                       {repostEmbed(p)}
-                      <div className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
+                      <div className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: 16 }}>
                         {postActions(p, false)}
                       </div>
                     </div>
