@@ -6073,9 +6073,7 @@ body { background: transparent; }
 .carousel-item.has-thumb .carousel-bg-grid { display: none; }
 .carousel-room-thumb {
   position: absolute;
-  /* optically centered: sits a touch low so it reads as resting toward
-     the indicator row rather than floating high */
-  top: 56%;
+  top: 50%;
   /* centered on the FULL slide width, so it lines up with the indicator
      row beneath the carousel (not just the image area left of the panel) */
   left: 50%;
