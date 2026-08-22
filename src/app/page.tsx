@@ -192,18 +192,19 @@ export default function Home() {
 
         const user = auth?.user;
         let profileName: string | null = null;
+        let profileAvatar: string | null = null;
         if (user) {
           const { data: me } = await supabase
             .from("users")
-            .select("username, display_name")
+            .select("username, display_name, avatar_url")
             .eq("id", user.id)
             .maybeSingle();
-          if (me) profileName = displayName(me) || null;
+          if (me) { profileName = displayName(me) || null; profileAvatar = me.avatar_url ?? null; }
         }
         const liveRooms = rooms.filter((r) => r.status === "live");
         const data = {
           debates,
-          user: user ? { id: user.id, name: profileName ?? user.user_metadata?.name ?? user.email ?? "U" } : null,
+          user: user ? { id: user.id, name: profileName ?? user.user_metadata?.name ?? user.email ?? "U", avatarUrl: profileAvatar } : null,
           stats: {
             activeRooms: rooms.length,
             members: memberCount ?? 0,

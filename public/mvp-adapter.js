@@ -142,6 +142,15 @@
     if (signupBtn) signupBtn.style.display = 'none';
     var initial = document.querySelector('.avatar-initial');
     if (initial) initial.textContent = (D0.user.name || 'U').charAt(0).toUpperCase();
+    /* Real profile photo when there is one; the initial stays as fallback. */
+    if (D0.user.avatarUrl && initial) {
+      var img = document.createElement('img');
+      img.className = 'avatar-photo';
+      img.alt = '';
+      img.src = D0.user.avatarUrl;
+      img.onload = function () { initial.style.display = 'none'; };
+      initial.parentNode.insertBefore(img, initial);
+    }
   } else {
     if (loginBtn) loginBtn.addEventListener('click', function () { go('/login'); });
     if (signupBtn) signupBtn.addEventListener('click', function () { go('/login'); });
