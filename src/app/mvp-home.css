@@ -6150,3 +6150,30 @@ body { background: transparent; }
 /* Explore results are React RoomCard blocks now: the wrapper spans the
    legacy grid so the squares flow in rows. */
 #epResultsGrid > .flex { grid-column: 1 / -1; }
+
+
+/* ═══ Carousel indicators as thumbnails ═══ */
+.carousel-dots { gap: 8px; margin-top: 12px; align-items: center; }
+.carousel-dot.thumb {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #16161c;
+  border: 2px solid transparent;
+  opacity: 0.55;
+  transform: scale(0.92);
+  transition: opacity 0.25s, transform 0.25s, border-color 0.25s;
+  display: flex; align-items: center; justify-content: center;
+}
+.carousel-dot.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.carousel-dot.thumb .carousel-dot-initial {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 13px; font-family: 'Space Grotesk', sans-serif;
+}
+.carousel-dot.thumb:hover { opacity: 0.85; }
+.carousel-dot.thumb.active {
+  opacity: 1;
+  transform: scale(1.08);
+  border-color: var(--accent-purple-light);
+  width: 34px; /* override the old active-dot widening */
+}
