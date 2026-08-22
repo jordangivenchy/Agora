@@ -41,8 +41,8 @@ export const FRIENDS_UI = {
 } as const;
 
 const iconBtn: CSSProperties = {
-  width: 30,
-  height: 30,
+  width: 24,
+  height: 24,
   borderRadius: "50%",
   border: "1px solid rgba(255,255,255,0.12)",
   background: "rgba(255,255,255,0.05)",
@@ -56,8 +56,8 @@ const iconBtn: CSSProperties = {
 };
 
 const pill: CSSProperties = {
-  height: 26,
-  padding: "0 11px",
+  height: 22,
+  padding: "0 9px",
   borderRadius: 999,
   border: "none",
   background: FRIENDS_UI.gold,
@@ -332,11 +332,11 @@ export function FriendRow({
               </button>
             ) : (
               <button type="button" className="friends-ui-iconbtn" style={iconBtn} title="Message" aria-label="Message" onClick={() => onMessage(user)}>
-                <Icon name="message-circle" size={14} />
+                <Icon name="message-circle" size={12} />
               </button>
             )}
             <button type="button" className="friends-ui-iconbtn" style={iconBtn} title="More" aria-label="More options" onClick={openMore}>
-              <Icon name="more-horizontal" size={15} />
+              <Icon name="more-horizontal" size={13} />
             </button>
           </>
         ) : (

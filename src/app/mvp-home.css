@@ -5794,7 +5794,7 @@ body { background: transparent; }
 /* ── Compact sidebar (2026-08-17): narrower panel, tight tab stack ──
    Overrides the space-evenly/54px-row treatment above: rows hug the top
    in a dense list instead of stretching to fill half the viewport. */
-:root { --sidebar-width: 178px; }
+:root { --sidebar-width: 240px; }
 
 .sidebar-nav {
   min-height: 0 !important;
