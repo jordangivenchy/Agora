@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "./userMenuContext";
 import UserAvatar from "./UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { formatBookmarks, isGroup, parseBookmarks, safeBookmarks, type Bookmark } from "@/lib/communityBookmarks";
 import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
@@ -48,7 +49,8 @@ type Community = {
   avatar_url: string | null;
   members: number;
   joined: boolean;
-  favorite: boolean;        // bookmarked (pinned to the top of the list)
+  favorite: boolean;        // pinned to the top of the list
+  bookmarks: Bookmark[];    // mod-curated sidebar links (Community Bookmarks)
   my_role: string | null;   // 'owner' | 'moderator' | 'member' | null
   requested: boolean;       // pending join request (private boards)
 };
@@ -515,6 +517,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   // Mod panel drafts
   const [draftDescription, setDraftDescription] = useState("");
   const [draftRules, setDraftRules] = useState("");
+  const [draftBookmarks, setDraftBookmarks] = useState("");
+  const [openBookmarkGroup, setOpenBookmarkGroup] = useState<string | null>(null);
   const [draftPrivate, setDraftPrivate] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
@@ -533,7 +537,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const [commRes, tagRes, reqRes, muteRes] = await Promise.all([
       supabase
         .from("communities")
-        .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, community_members(user_id, role, favorite)"),
+        .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, bookmarks, community_members(user_id, role, favorite)"),
       supabase.from("community_tags").select("id, community_id, name, color"),
       uid
         ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid)
@@ -563,6 +567,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           members: members.length,
           joined: !!mine,
           favorite: !!mine?.favorite,
+          bookmarks: safeBookmarks(c.bookmarks),
           my_role: mine?.role ?? null,
           requested: myRequests.has(c.id),
         };
@@ -842,6 +847,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       loadCommunityExtras(selectedCommunity.id, isMod, selectedCommunity.my_role === "owner");
       setDraftDescription(selectedCommunity.description ?? "");
       setDraftRules(selectedCommunity.rules ?? "");
+      setDraftBookmarks(formatBookmarks(selectedCommunity.bookmarks));
       setDraftPrivate(selectedCommunity.is_private);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1189,10 +1195,17 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       p_rules: draftRules.trim() || "",
       p_is_private: selectedCommunity.my_role === "owner" ? draftPrivate : null,
     });
+    if (!err) {
+      const { error: bmErr } = await supabase.rpc("set_community_bookmarks", {
+        p_community: selectedCommunity.id,
+        p_bookmarks: parseBookmarks(draftBookmarks),
+      });
+      if (bmErr) { setBusy(false); setError(bmErr.message); return; }
+    }
     setBusy(false);
     if (err) { setError(err.message); return; }
     loadCommunities();
-  }, [supabase, selectedCommunity, draftDescription, draftRules, draftPrivate, loadCommunities]);
+  }, [supabase, selectedCommunity, draftDescription, draftRules, draftBookmarks, draftPrivate, loadCommunities]);
 
   /* Branding: banner (wide) and avatar (square-cropped) upload to the
      post-images bucket, then the guarded settings RPC stores the URL.
@@ -2062,6 +2075,62 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     );
                   })()}
 
+                  {/* Community Bookmarks — mod-curated links, pill buttons;
+                      groups expand into their links. */}
+                  {selectedCommunity && selectedCommunity.bookmarks.length > 0 && (
+                    <>
+                      {sectionTitle("COMMUNITY BOOKMARKS")}
+                      <div className="flex flex-col gap-2 mb-4">
+                        {selectedCommunity.bookmarks.map((b) => {
+                          const pill: React.CSSProperties = {
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                            width: "100%", padding: "10px 14px", borderRadius: 999,
+                            background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.08)",
+                            color: "#eeeef5", fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+                            textDecoration: "none", cursor: "pointer",
+                          };
+                          if (!isGroup(b)) {
+                            return (
+                              <a key={b.label} href={b.url} target="_blank" rel="noopener noreferrer nofollow" style={pill}>
+                                {b.label}
+                              </a>
+                            );
+                          }
+                          const open = openBookmarkGroup === b.label;
+                          return (
+                            <div key={b.label}>
+                              <button
+                                onClick={() => setOpenBookmarkGroup(open ? null : b.label)}
+                                aria-expanded={open}
+                                style={pill}
+                              >
+                                {b.label}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                                  <path d="m6 9 6 6 6-6" />
+                                </svg>
+                              </button>
+                              {open && (
+                                <div className="flex flex-col gap-1.5 mt-1.5 px-1">
+                                  {b.items.map((it) => (
+                                    <a
+                                      key={it.url}
+                                      href={it.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer nofollow"
+                                      style={{ ...pill, padding: "8px 12px", fontSize: 12, fontWeight: 500, background: "rgba(255,255,255,0.035)" }}
+                                    >
+                                      {it.label} ↗
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
                   {/* community rules — anchored at the very bottom of the
                       rail for the board currently open */}
                   {selectedCommunity?.rules && (
@@ -2578,6 +2647,16 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                             value={draftRules}
                             onChange={(e) => setDraftRules(e.target.value)}
                           />
+                          <textarea
+                            style={{ ...inputStyle, minHeight: 90, resize: "vertical", marginTop: 8, fontFamily: "'DM Mono', monospace", fontSize: 11.5 }}
+                            placeholder={"Community bookmarks — one per line\nDiscord | https://discord.gg/yourboard\n## Social Links\nX | https://x.com/yourboard\nInstagram | https://instagram.com/yourboard"}
+                            maxLength={4000}
+                            value={draftBookmarks}
+                            onChange={(e) => setDraftBookmarks(e.target.value)}
+                          />
+                          <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.38)" }}>
+                            Bookmarks: <code>Label | URL</code> per line; a line starting with <code>##</code> begins a dropdown group.
+                          </p>
                           <div className="flex items-center gap-3 mt-2.5 flex-wrap">
                             {isOwner && (
                               <label className="flex items-center gap-1.5 text-[12px] cursor-pointer" style={{ color: "rgba(238,238,245,0.65)" }}>
