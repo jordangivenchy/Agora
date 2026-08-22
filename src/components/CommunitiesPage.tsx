@@ -476,6 +476,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [replyText, setReplyText] = useState("");
   const [commentSort, setCommentSort] = useState<"top" | "new">("top");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [pendingCommentId, setPendingCommentId] = useState<string | null>(null);
+  const [flashCommentId, setFlashCommentId] = useState<string | null>(null);
+
 
   // Composers
   const [composing, setComposing] = useState(false);
@@ -737,6 +740,43 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     fetchAvatars(rows.map((c) => c.author_id));
   }, [supabase, comments, loadingMoreComments, fetchAvatars]);
 
+  /* Resolve a deep-linked comment once the thread is in. Pages through
+     the server roots until it's found or the thread is exhausted. */
+  const deepLinkTriesRef = useRef(0);
+  useEffect(() => {
+    if (!openPost || !pendingCommentId) return;
+    if (comments.length === 0 && !hasMoreComments) return; // still loading first page
+    const hit = comments.find((c) => c.id === pendingCommentId);
+    if (hit) {
+      setPendingCommentId(null);
+      deepLinkTriesRef.current = 0;
+      /* Expand any collapsed ancestor so the target is actually visible. */
+      const byId = new Map(comments.map((c) => [c.id, c]));
+      const ancestors: string[] = [];
+      let cur = hit.parent_id ? byId.get(hit.parent_id) : undefined;
+      while (cur) { ancestors.push(cur.id); cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
+      if (ancestors.length) setCollapsed((prev) => {
+        const next = new Set(prev); ancestors.forEach((a) => next.delete(a)); return next;
+      });
+      setFlashCommentId(hit.id);
+      /* The panel scrolls itself to the top when a post opens; land the
+         scroll after that settles, then once more for late layout
+         (images, avatar fetches). */
+      const go = () => document.getElementById(`comment-${hit.id}`)?.scrollIntoView({ block: "center" });
+      setTimeout(go, 120);
+      setTimeout(go, 700);
+      setTimeout(() => setFlashCommentId((id) => (id === hit.id ? null : id)), 2800);
+      return;
+    }
+    if (hasMoreComments && !loadingMoreComments && deepLinkTriesRef.current < 20) {
+      deepLinkTriesRef.current += 1;
+      loadMoreComments();
+    } else if (!hasMoreComments) {
+      setPendingCommentId(null);
+      deepLinkTriesRef.current = 0;
+    }
+  }, [openPost, pendingCommentId, comments, hasMoreComments, loadingMoreComments, loadMoreComments]);
+
   /* Opening/closing a post resets every per-post composer state —
      comments from the previous post, drafts, and pending image
      attachments must never bleed into the next context. */
@@ -859,13 +899,18 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
      so `open` may still be flipping — stash the id and resolve once posts
      are in. */
   const [pendingPostId, setPendingPostId] = useState<string | null>(null);
+  /* /?post=<id>&comment=<cid>: once the post is open, find the comment
+     (paging deeper if it isn't in the first 60 threads), expand its
+     ancestors, scroll to it and flash it. */
   useEffect(() => {
     const onOpen = (e: Event) => {
       const id = (e as CustomEvent).detail?.postId;
+      const cid = (e as CustomEvent).detail?.commentId;
       if (typeof id === "string" && id) {
         setSelected("all");
         setOpenPost(null);
         setPendingPostId(id);
+        setPendingCommentId(typeof cid === "string" && cid ? cid : null);
       }
     };
     /* Community names elsewhere in the app (room cards, feed rows) route
@@ -1152,6 +1197,18 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   }, [supabase, requireAuth, newCommunityName, newCommunityKind, newCommunityPrivate, userId, loadCommunities]);
 
   /* Share: copy a deep link that reopens this post (handled in page.tsx). */
+  const [copiedCommentId, setCopiedCommentId] = useState<string | null>(null);
+  const shareComment = useCallback(async (c: Comment) => {
+    const url = `${window.location.origin}/?post=${c.post_id}&comment=${c.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedCommentId(c.id);
+      setTimeout(() => setCopiedCommentId((id) => (id === c.id ? null : id)), 1600);
+    } catch {
+      setError("Couldn't copy the link — copy it from the address bar instead.");
+    }
+  }, []);
+
   const sharePost = useCallback(async (post: Post) => {
     const url = `${window.location.origin}/?post=${post.id}`;
     try {
@@ -1511,8 +1568,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const isCollapsed = collapsed.has(c.id);
     const hidden = commentTree.subtreeSize(c.id);
     return (
-      <div key={c.id} className="cm-node">
-        <div className="px-4 py-3" style={{ ...card, borderRadius: 14 }}>
+      <div key={c.id} className="cm-node" id={`comment-${c.id}`}>
+        <div className="px-4 py-3" style={{
+          ...card, borderRadius: 14,
+          ...(flashCommentId === c.id
+            ? { boxShadow: "0 0 0 1px rgba(226,185,107,0.55), 0 0 18px rgba(226,185,107,0.18)", transition: "box-shadow 0.3s" }
+            : { transition: "box-shadow 1.2s" }),
+        }}>
             <div className="flex items-center gap-2 flex-wrap">
               {kids.length > 0 && (
                 <button
@@ -1580,6 +1642,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     style={{ color: "#4a9eff", fontFamily: "inherit" }}
                   >
                     Reply
+                  </button>
+                  <button
+                    onClick={() => shareComment(c)}
+                    className="cursor-pointer bg-transparent border-none p-0 text-[10px] inline-flex items-center gap-1"
+                    style={{ color: copiedCommentId === c.id ? "#00b894" : "rgba(238,238,245,0.45)", fontFamily: "inherit" }}
+                  >
+                    {copiedCommentId === c.id ? <><Icon name="check" size={11} /> Link copied</> : <><Icon name="share" size={11} /> Share</>}
                   </button>
                   {/* Mods pin root comments (children live under parents). */}
                   {!c.parent_id && openPost && canModerate(openPost.community_id) && (

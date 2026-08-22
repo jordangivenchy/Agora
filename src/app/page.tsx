@@ -351,11 +351,13 @@ export default function Home() {
      the dispatch lands even while its panel is still closed. */
   useEffect(() => {
     if (!booted) return;
-    const postId = new URLSearchParams(window.location.search).get("post");
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get("post");
     if (!postId) return;
+    const commentId = params.get("comment");
     window.history.replaceState(null, "", "/");
     setActiveTab("communities");
-    document.dispatchEvent(new CustomEvent("agora:open-post", { detail: { postId } }));
+    document.dispatchEvent(new CustomEvent("agora:open-post", { detail: { postId, commentId } }));
   }, [booted]);
 
   /* Deep link from the profile page's sidebar: /?nav=<section> opens
