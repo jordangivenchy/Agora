@@ -140,7 +140,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   const majors = useMemo(() => (stories ?? []).filter((s) => s.major), [stories]);
   const rest = useMemo(() => (stories ?? []).filter((s) => !s.major), [stories]);
 
-  /* ── Queue to debate a headline ──
+  /* ── Queue a conversation a headline ──
      queue_for_headline turns the headline into a debate_topics question
      and joins its matchmaking queue; while anything is queued we poll
      check_topic_match exactly like the Browse board and jump into the
@@ -432,7 +432,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                             </div>
                           ) : (
                             <button onClick={() => { setPickSide(st.id); setQueueError(null); }} style={queueBtn}>
-                              Queue to debate
+                              Queue a conversation
                             </button>
                           )}
                         </div>
