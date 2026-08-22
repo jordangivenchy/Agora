@@ -85,6 +85,16 @@
           thumbnailUrl: d.thumbnailUrl || null,
           topicKey: d.topicKey,
           debateIndex: d._i,
+          // richer panel: the matchup + room facts
+          debater2: d.debater2,
+          color2: d.color2,
+          initials2: (d.debater2 || '?').charAt(0).toUpperCase(),
+          format: d.format || 'Open',
+          language: d.language || 'EN',
+          community: d.community || null,
+          communityColor: d.communityColor || null,
+          votesPro: d.votesPro || 0,
+          votesCon: d.votesCon || 0,
         };
       });
 

@@ -349,15 +349,26 @@ function renderCarousel() {
         <div class="carousel-motion">"${escHTML(c.motion)}"</div>
         <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
       </div>
-      <div class="carousel-panel">
-        <div class="panel-avatar" style="background:${escHTML(c.color)};">${escHTML(c.initials)}</div>
-        <div class="panel-name">${escHTML(c.debater)}</div>
-        <div class="panel-viewers">${escHTML(c.viewersDisplay)} watching</div>
-        <div class="panel-topic">${escHTML(c.motion)}</div>
-        <div class="panel-stance ${c.stance.toLowerCase()}">${c.stance}</div>
-        ${c.factCheck ? `<div class="panel-factcheck">
-          <div class="fact-chip ${c.factCheck.type}">${c.factCheck.type === 'verified' ? '✓' : c.factCheck.type === 'disputed' ? '⚠' : '⟳'} ${c.factCheck.label}</div>
-        </div>` : ''}
+      <div class="carousel-panel carousel-room-panel">
+        <div class="room-panel-kicker"><span class="room-panel-livedot"></span>Live now</div>
+        <div class="room-panel-watching">${escHTML(c.viewersDisplay)} watching</div>
+        <div class="room-panel-facts">
+          <span class="room-panel-chip" style="--chip:${escHTML((TOPICS[c.topicKey] || {}).accent || '#4a9eff')};">${escHTML((TOPICS[c.topicKey] || {}).label || 'Discussion')}</span>
+          <span class="room-panel-chip">${escHTML(c.format || 'Open')}</span>
+          ${c.language ? `<span class="room-panel-chip">${escHTML(c.language)}</span>` : ''}
+        </div>
+        <div class="room-panel-label">Speakers</div>
+        <div class="room-panel-speakers">
+          <div class="room-panel-speaker">
+            <div class="panel-avatar small" style="background:${escHTML(c.color)};">${escHTML(c.initials)}</div>
+            <div class="room-panel-speaker-name">${escHTML(c.debater)}</div>
+          </div>
+          <div class="room-panel-speaker${c.debater2 === 'Open seat' ? ' open' : ''}">
+            <div class="panel-avatar small" style="background:${escHTML(c.color2 || '#4a9eff')};">${c.debater2 === 'Open seat' ? '+' : escHTML(c.initials2)}</div>
+            <div class="room-panel-speaker-name">${c.debater2 === 'Open seat' ? 'Open seat — take it' : escHTML(c.debater2)}</div>
+          </div>
+        </div>
+        ${c.community ? `<div class="room-panel-host">hosted by <span class="room-panel-community" style="--chip:${escHTML(c.communityColor || '#4a9eff')};">${escHTML(c.community)}</span></div>` : ''}
       </div>
     </div>
   `;

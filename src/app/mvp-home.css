@@ -6099,3 +6099,41 @@ body { background: transparent; }
 @media (max-width: 900px) {
   .carousel-room-thumb { right: 0; }
 }
+
+
+/* ═══ Live-room panel: room facts + speakers ═══ */
+.carousel-panel.carousel-room-panel {
+  width: 250px;
+  align-items: stretch;
+  justify-content: center;
+  text-align: left;
+  padding: 22px 20px;
+  gap: 0;
+  background: rgba(11,11,13,0.95) !important; /* same as the Browse pills */
+  border-left: 0.5px solid #2e2e38;
+}
+.carousel-item.has-thumb .carousel-room-thumb { left: calc((100% - 250px) / 2); }
+.carousel-item .carousel-lower-third { right: 250px; }
+.room-panel-kicker {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #ff6b6b;
+}
+.room-panel-livedot { width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 8px rgba(255,77,77,0.8); animation: pulse-live 1.4s ease-in-out infinite; }
+.room-panel-watching { font-size: 12.5px; color: rgba(238,238,245,0.6); margin: 4px 0 14px; }
+.room-panel-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.room-panel-chip {
+  --chip: #8b8b94;
+  font-size: 10.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  color: var(--chip); border: 0.5px solid color-mix(in srgb, var(--chip) 45%, transparent);
+  background: color-mix(in srgb, var(--chip) 12%, transparent);
+}
+.room-panel-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(238,238,245,0.4); margin-bottom: 8px; }
+.room-panel-speakers { display: flex; flex-direction: column; gap: 10px; }
+.room-panel-speaker { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.room-panel-speaker.open .panel-avatar.small { background: rgba(255,255,255,0.06) !important; border: 1px dashed rgba(255,255,255,0.35); color: rgba(255,255,255,0.75); }
+.room-panel-speaker.open .room-panel-speaker-name { color: rgba(238,238,245,0.55); font-weight: 500; }
+.panel-avatar.small { width: 36px; height: 36px; font-size: 14px; flex-shrink: 0; }
+.room-panel-speaker-name { font-size: 13px; font-weight: 600; color: #eeeef5; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-panel-host { font-size: 11.5px; color: rgba(238,238,245,0.55); margin-top: 16px; }
+.room-panel-community { --chip: #4a9eff; color: var(--chip); font-weight: 700; }
