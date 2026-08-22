@@ -48,6 +48,7 @@ type Community = {
   avatar_url: string | null;
   members: number;
   joined: boolean;
+  favorite: boolean;        // bookmarked (pinned to the top of the list)
   my_role: string | null;   // 'owner' | 'moderator' | 'member' | null
   requested: boolean;       // pending join request (private boards)
 };
@@ -532,7 +533,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const [commRes, tagRes, reqRes, muteRes] = await Promise.all([
       supabase
         .from("communities")
-        .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, community_members(user_id, role)"),
+        .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, community_members(user_id, role, favorite)"),
       supabase.from("community_tags").select("id, community_id, name, color"),
       uid
         ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid)
@@ -547,7 +548,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     );
     setCommunities(
       (commRes.data ?? []).map((c) => {
-        const members = (c.community_members ?? []) as { user_id: string; role: string }[];
+        const members = (c.community_members ?? []) as { user_id: string; role: string; favorite?: boolean }[];
         const mine = members.find((m) => m.user_id === uid);
         return {
           id: c.id,
@@ -561,6 +562,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           avatar_url: c.avatar_url ?? null,
           members: members.length,
           joined: !!mine,
+          favorite: !!mine?.favorite,
           my_role: mine?.role ?? null,
           requested: myRequests.has(c.id),
         };
@@ -739,8 +741,22 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     setReplyImagePreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
   }, []);
 
+  /* Bookmark a community: pins it to the top of the list. Members only
+     (the RPC enforces it); optimistic flip, reverted on error. */
+  const toggleFavorite = useCallback(async (c: Community) => {
+    if (!requireAuth() || !c.joined) return;
+    const next = !c.favorite;
+    setCommunities((cs) => cs.map((x) => (x.id === c.id ? { ...x, favorite: next } : x)));
+    const { error } = await supabase.rpc("set_community_favorite", { p_community: c.id, p_favorite: next });
+    if (error) setCommunities((cs) => cs.map((x) => (x.id === c.id ? { ...x, favorite: !next } : x)));
+  }, [supabase, requireAuth]);
+
+  /* Where "Back" returns to: the board a post was opened from, else All. */
+  const backTargetRef = useRef<string>("all");
+
   const openPostDetail = useCallback((p: Post) => {
     openPostIdRef.current = p.id;
+    backTargetRef.current = selected;
     setOpenPost(p);
     setComments([]);
     setHasMoreComments(false);
@@ -751,7 +767,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     setReplyText("");
     clearCommentImages();
     loadComments(p.id);
-  }, [loadComments, clearCommentImages]);
+  }, [loadComments, clearCommentImages, selected]);
 
   const closePostDetail = useCallback(() => {
     openPostIdRef.current = null;
@@ -1646,11 +1662,33 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         background: "rgba(6,6,8,0.45)",
       }}
     >
-      <div className="max-w-[1100px] mx-auto px-6 py-5">
+      <div className="max-w-[1200px] mx-auto px-6 py-5">
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
         <div className="flex items-end gap-3.5 mb-5 flex-wrap">
+          {(openPost || selected !== "all") && (
+            <button
+              onClick={() => {
+                if (openPost) {
+                  const target = backTargetRef.current;
+                  closePostDetail();
+                  setSelected(communities.some((c) => c.id === target) ? target : "all");
+                } else {
+                  setSelected("all");
+                }
+              }}
+              title={openPost ? "Back" : "Back to all posts"}
+              aria-label="Back"
+              className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full self-center"
+              style={{ border: "0.5px solid #2e2e38", background: "rgba(11,11,13,0.95)", color: "#eeeef5", fontSize: 12, fontFamily: "inherit", marginBottom: 2 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          )}
           <span
             className="flex flex-col cursor-pointer"
             style={{ gap: 6 }}
@@ -1723,7 +1761,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         <div className="flex gap-5 items-start flex-col md:flex-row-reverse">
 
           {/* community rail — right side */}
-          <nav className="w-full md:w-[250px] shrink-0">
+          <nav className="w-full md:w-[310px] shrink-0">
             {/* About card — the open board's name and description, up top */}
             {selectedCommunity && (
               <div className="mb-3 overflow-hidden" style={{
@@ -1877,7 +1915,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             {(() => {
               const q = railQuery.trim().toLowerCase();
               const match = (c: Community) => !q || c.name.toLowerCase().includes(q);
-              const joined = communities.filter((c) => c.joined && match(c));
+              const joined = communities
+                .filter((c) => c.joined && match(c))
+                .sort((a, b) => Number(b.favorite) - Number(a.favorite));
               const discover = communities.filter((c) => !c.joined && match(c));
               const row = (c: Community) => (
                 <div
@@ -1909,6 +1949,19 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       {c.members} member{c.members === 1 ? "" : "s"}
                     </span>
                   </span>
+                  {c.joined && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(c); }}
+                      title={c.favorite ? "Remove bookmark" : "Bookmark this community"}
+                      aria-label={c.favorite ? "Remove bookmark" : "Bookmark this community"}
+                      className="cursor-pointer shrink-0 flex items-center justify-center border-none bg-transparent"
+                      style={{ width: 22, height: 22, color: c.favorite ? "#e2b96b" : "rgba(238,238,245,0.28)", padding: 0 }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill={c.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleJoin(c); }}
                     className="cursor-pointer text-[10px] px-2 py-1 rounded-md shrink-0"
@@ -2066,14 +2119,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             {openPost ? (
               /* ── post detail ── */
               <div>
-                <button
-                  onClick={closePostDetail}
-                  className="cursor-pointer text-[12px] px-3 py-1.5 rounded-lg mb-3"
-                  style={btnGhost}
-                >
-                  ← Back to {selectedCommunity?.name ?? "all posts"}
-                </button>
-
+                {/* (the header's Back pill handles navigation) */}
                 <div className="p-4 mb-4 flex gap-3" style={card}>
                   <VoteBox post={openPost} onVote={vote} size={14} />
                   <div className="flex-1 min-w-0">
