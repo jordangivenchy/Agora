@@ -722,68 +722,70 @@ export default function ProfileView({
             : "max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar"
         }
       >
-        {/* ── Banner — always rendered at the real 3:1 size; without a photo
-               it's a plain grey slab. Own profile: a pencil in the corner on
-               hover opens Edit Profile. ── */}
-        <div
-          className="overflow-hidden relative profile-banner"
-          style={{
-            borderRadius: "14px 14px 0 0",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderBottom: "none",
-            width: "100%",
-            aspectRatio: "3 / 1",
-            maxHeight: 240,
-            background: profile.banner_url ? "rgba(16,16,22,0.88)" : "#1e1e24",
-          }}
-        >
-          {profile.banner_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.banner_url}
-              alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-          )}
-          {isSelf && (
-            <button
-              onClick={() => setEditOpen(true)}
-              aria-label={profile.banner_url ? "Change banner" : "Add banner"}
-              title={profile.banner_url ? "Change banner" : "Add banner"}
-              className="cursor-pointer profile-banner-edit"
-              style={{
-                position: "absolute", right: 12, bottom: 12,
-                width: 34, height: 34, borderRadius: "50%",
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.18)",
-                color: "#e3e3ea", padding: 0,
-                backdropFilter: "blur(8px)",
-              }}
-            >
-              <Icon name="pencil" size={14} />
-            </button>
-          )}
-        </div>
+        {/* ── Banner. With a photo: everyone sees it. Without one: only the
+               owner sees a dark grey placeholder with a hover "?" that opens
+               Edit Profile; visitors get the plain header. ── */}
+        {(profile.banner_url || isSelf) && (
+          <div
+            className="overflow-hidden relative profile-banner"
+            style={{
+              borderRadius: "14px 14px 0 0",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderBottom: "none",
+              width: "100%",
+              aspectRatio: "3 / 1",
+              maxHeight: 240,
+              background: profile.banner_url ? "rgba(16,16,22,0.88)" : "#141418",
+            }}
+          >
+            {profile.banner_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.banner_url}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            )}
+            {isSelf && (
+              <button
+                onClick={() => setEditOpen(true)}
+                aria-label={profile.banner_url ? "Change banner" : "Add a banner"}
+                title={profile.banner_url ? "Change banner" : "Add a banner (1500×500 works best)"}
+                className="cursor-pointer profile-banner-edit"
+                style={{
+                  position: "absolute", right: 14, bottom: 14,
+                  width: 34, height: 34, borderRadius: "50%",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#e3e3ea", padding: 0,
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <Icon name={profile.banner_url ? "pencil" : "circle-help"} size={15} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ── Header ── */}
         <section
           className="p-6 flex gap-5 flex-wrap items-start"
           style={{
             ...card,
-            borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none",
+            ...((profile.banner_url || isSelf)
+              ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" }
+              : {}),
           }}
         >
           {/* With a banner, the avatar rides up over its bottom edge,
               ringed in the card color so the crop reads deliberate. */}
           <span
             className="inline-block shrink-0"
-            style={{
-              marginTop: -52,
-              borderRadius: "50%",
-              border: "4px solid #101016",
-              background: "#101016",
-              lineHeight: 0,
-            }}
+            style={
+              (profile.banner_url || isSelf)
+                ? { marginTop: -52, borderRadius: "50%", border: "4px solid #101016", background: "#101016", lineHeight: 0 }
+                : { lineHeight: 0 }
+            }
           >
             <UserAvatar size={92} username={profile.username} avatarUrl={profile.avatar_url} seed={profile.id} />
           </span>
