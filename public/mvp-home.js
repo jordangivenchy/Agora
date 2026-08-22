@@ -374,10 +374,10 @@ function renderCarousel() {
             <div class="panel-avatar small" style="background:${escHTML(c.color)};">${escHTML(c.initials)}</div>
             <div class="room-panel-speaker-name">${escHTML(c.debater)}</div>
           </div>
-          <div class="room-panel-speaker${c.debater2 === 'Open seat' ? ' open' : ''}">
-            <div class="panel-avatar small" style="background:${escHTML(c.color2 || '#4a9eff')};">${c.debater2 === 'Open seat' ? '+' : escHTML(c.initials2)}</div>
-            <div class="room-panel-speaker-name">${c.debater2 === 'Open seat' ? 'Open seat — take it' : escHTML(c.debater2)}</div>
-          </div>
+          ${c.debater2 && c.debater2 !== 'Open seat' ? `<div class="room-panel-speaker">
+            <div class="panel-avatar small" style="background:${escHTML(c.color2 || '#4a9eff')};">${escHTML(c.initials2)}</div>
+            <div class="room-panel-speaker-name">${escHTML(c.debater2)}</div>
+          </div>` : ''}
         </div>
         ${c.community ? `<div class="room-panel-host">hosted by <span class="room-panel-community" style="--chip:${escHTML(c.communityColor || '#4a9eff')};">${escHTML(c.community)}</span></div>` : ''}
         <button class="carousel-watch-btn room-panel-watch" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
