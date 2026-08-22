@@ -124,3 +124,28 @@ describe("composer helpers", () => {
     expect(l.value.slice(l.selStart, l.selEnd)).toBe("url");
   });
 });
+
+describe("wrapSelection nesting", () => {
+  it("does not mistake the inner * of **bold** for italic", () => {
+    const v = "hello **world**";
+    const w = wrapSelection(v, 8, 13, "*");
+    expect(w.value).toBe("hello ***world***");
+  });
+  it("bold+italic renders both", () => {
+    const p = parseInline("***x***");
+    expect(JSON.stringify(p)).toContain('"bold"');
+    expect(JSON.stringify(p)).toContain('"italic"');
+  });
+});
+
+describe("wrapSelection layered toggles", () => {
+  it("italic off from ***x*** leaves **x**", () => {
+    expect(wrapSelection("hello ***world***", 9, 14, "*").value).toBe("hello **world**");
+  });
+  it("bold off from ***x*** leaves *x*", () => {
+    expect(wrapSelection("hello ***world***", 9, 14, "**").value).toBe("hello *world*");
+  });
+  it("strike toggles", () => {
+    expect(wrapSelection("~~a~~", 2, 3, "~~").value).toBe("a");
+  });
+});

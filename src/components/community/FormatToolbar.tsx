@@ -67,11 +67,22 @@ export function applyFormat(action: Action, value: string, s: number, e: number)
 }
 
 function commit(el: Field | null, edit: Edit, onChange: (v: string) => void) {
+  if (el) {
+    /* Write the DOM value first, then tell React. When React re-renders the
+       controlled field its value already matches, so it leaves the caret
+       alone — setting state first would re-render with the old DOM
+       selection and throw the caret to the end. */
+    el.value = edit.value; // instance setter keeps React's value tracker in sync
+    el.focus();
+    el.setSelectionRange(edit.selStart, edit.selEnd);
+  }
   onChange(edit.value);
-  requestAnimationFrame(() => {
-    el?.focus();
-    el?.setSelectionRange(edit.selStart, edit.selEnd);
-  });
+  if (el) {
+    /* Belt and braces for any parent that re-renders the field asynchronously. */
+    requestAnimationFrame(() => {
+      if (el.value === edit.value) el.setSelectionRange(edit.selStart, edit.selEnd);
+    });
+  }
 }
 
 function run(action: Action, el: Field | null, value: string, onChange: (v: string) => void) {

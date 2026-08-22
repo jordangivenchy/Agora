@@ -93,6 +93,10 @@ export function parseInline(src: string): Inline[] {
       if (tryWrap(">!", "!<", (t) => ({ type: "spoiler", children: parseInline(t) }))) continue;
     }
     if (ch === "*") {
+      /* ***bold italic*** — the toolbar produces this when both are applied. */
+      if (src.startsWith("***", i)) {
+        if (tryWrap("***", "***", (t) => ({ type: "bold", children: [{ type: "italic", children: parseInline(t) }] }))) continue;
+      }
       if (src.startsWith("**", i)) {
         if (tryWrap("**", "**", (t) => ({ type: "bold", children: parseInline(t) }))) continue;
       }
@@ -291,8 +295,20 @@ export type Edit = { value: string; selStart: number; selEnd: number };
    inserts the pair and parks the caret between them. */
 export function wrapSelection(value: string, s: number, e: number, open: string, close = open): Edit {
   const sel = value.slice(s, e);
-  const wrapped =
-    value.slice(s - open.length, s) === open && value.slice(e, e + close.length) === close;
+  /* Decide wrap vs unwrap by the run of marker characters on each side:
+     `*world*` and `***world***` both carry an italic layer (odd run),
+     `**world**` carries bold (run ≥ 2) but no italic. */
+  const ch = open[0];
+  const L = open.length;
+  const same = open === close && [...open].every((c) => c === ch);
+  let runL = 0, runR = 0;
+  if (same) {
+    while (s - runL - 1 >= 0 && value[s - runL - 1] === ch) runL++;
+    while (e + runR < value.length && value[e + runR] === ch) runR++;
+  }
+  const wrapped = same
+    ? (L === 1 ? runL % 2 === 1 && runR % 2 === 1 : runL >= L && runR >= L)
+    : value.slice(s - open.length, s) === open && value.slice(e, e + close.length) === close;
   if (wrapped) {
     return {
       value: value.slice(0, s - open.length) + sel + value.slice(e + close.length),
