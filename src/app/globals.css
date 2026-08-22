@@ -1743,3 +1743,9 @@ html.reduce-motion .nav-sparkle {
 .rich-editor .ProseMirror .selectedCell { background: rgba(74, 158, 255, 0.14); }
 .rich-editor .ProseMirror .column-resize-handle { display: none; }
 .rich-text > :last-child { margin-bottom: 0; }
+
+/* Card rows: the title is the real link, stretched over the whole card via
+   ::after; inner links (author, community) sit above it with z-index. */
+.row-card { position: relative; }
+.row-card .stretched-link::after { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
+.row-card .row-inner-link { position: relative; z-index: 1; }

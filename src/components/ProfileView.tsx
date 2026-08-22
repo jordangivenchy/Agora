@@ -60,6 +60,9 @@ type DebateRow = {
   role: string;
   /** For rooms this user debated in (not hosted): who hosted them. */
   host_username?: string | null;
+  host_display_name?: string | null;
+  host_avatar_url?: string | null;
+  host_id?: string | null;
 };
 
 /* Rows from get_community_posts(p_author): scores, tags, images, and
@@ -323,12 +326,19 @@ export default function ProfileView({
       if (hostIds.size > 0) {
         const { data: hostRows } = await supabase
           .from("users")
-          .select("id, username")
+          .select("id, username, display_name, avatar_url")
           .in("id", [...hostIds]);
-        const names = new Map((hostRows ?? []).map((h: { id: string; username: string }) => [h.id, h.username]));
+        type HostRow = { id: string; username: string; display_name: string | null; avatar_url: string | null };
+        const hosts = new Map((hostRows ?? []).map((h: HostRow) => [h.id, h]));
         for (const row of seen.values()) {
           const hid = (row as DebateRow & { host_id?: string | null }).host_id;
-          if (row.role === "debater" && hid) row.host_username = names.get(hid) ?? null;
+          if (row.role === "debater" && hid) {
+            const h = hosts.get(hid);
+            row.host_id = hid;
+            row.host_username = h?.username ?? null;
+            row.host_display_name = h?.display_name ?? null;
+            row.host_avatar_url = h?.avatar_url ?? null;
+          }
         }
       }
       setDebates(
@@ -477,14 +487,31 @@ export default function ProfileView({
   const rowLink = (href: string, label: React.ReactNode, color = "#a9a9b4") => (
     <a
       href={href}
-      onClick={(e) => e.stopPropagation()}
-      className="no-underline"
+      className="no-underline row-inner-link"
       style={{ color, fontWeight: 600 }}
     >
       {label}
     </a>
   );
   const communityHref = (name: string) => pathFor.community(slugify(name));
+
+  /* Avatar + name + @handle, linked. Used at the top of every row so the
+     person behind a debate / post / comment is always visible. */
+  const identity = (u: { id?: string | null; username: string; display_name?: string | null; avatar_url?: string | null }, size = 20) => {
+    const name = u.display_name?.trim() || `@${u.username}`;
+    const showHandle = !!u.display_name?.trim();
+    return (
+      <a
+        href={userPath(u.username)}
+        className="no-underline inline-flex items-center gap-1.5 min-w-0 row-inner-link"
+        style={{ color: "#e3e3ea" }}
+      >
+        <UserAvatar size={size} username={u.username} avatarUrl={u.avatar_url ?? null} seed={u.id ?? u.username} />
+        <span className="truncate" style={{ fontSize: 12.5, fontWeight: 600 }}>{name}</span>
+        {showHandle && <span className="truncate" style={{ color: "#8b8b94", fontSize: 11.5, fontWeight: 400 }}>@{u.username}</span>}
+      </a>
+    );
+  };
 
   const menuItem: React.CSSProperties = {
     display: "flex",
@@ -516,6 +543,27 @@ export default function ProfileView({
   /* TikTok-style split: originals under Posts, reposts under Reposts. */
   const ownPosts = useMemo(() => posts?.filter((p) => !p.is_repost) ?? null, [posts]);
   const reposts = useMemo(() => posts?.filter((p) => p.is_repost) ?? null, [posts]);
+
+  /* Repost rows only carry the original author's username; resolve
+     avatars for the identity chip in one query. */
+  const [avatarByUsername, setAvatarByUsername] = useState<Map<string, { id: string; avatar_url: string | null }>>(new Map());
+  useEffect(() => {
+    const names = [...new Set((reposts ?? []).map((p) => p.orig_author_username).filter((x): x is string => !!x))]
+      .filter((n) => !avatarByUsername.has(n));
+    if (names.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("users").select("id, username, avatar_url").in("username", names);
+      if (cancelled || !data) return;
+      setAvatarByUsername((prev) => {
+        const next = new Map(prev);
+        for (const u of data as { id: string; username: string; avatar_url: string | null }[]) next.set(u.username, { id: u.id, avatar_url: u.avatar_url });
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reposts, supabase]);
 
   const counts = useMemo(
     () => ({
@@ -1075,6 +1123,12 @@ export default function ProfileView({
                 const inner = (
                   <>
                     <div className="flex-1 min-w-[220px]">
+                      <p className="m-0 mb-1.5 flex items-center gap-1.5">
+                        {d.role === "host" || !d.host_username
+                          ? identity(profile)
+                          : identity({ id: d.host_id, username: d.host_username, display_name: d.host_display_name, avatar_url: d.host_avatar_url })}
+                        <span style={{ color: "#6b6b74", fontSize: 11 }}>· host</span>
+                      </p>
                       <p className="m-0" style={{ color: "#f5f5f0", fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                         {d.motion || "Untitled debate"}
                       </p>
@@ -1084,11 +1138,7 @@ export default function ProfileView({
                         ) : (
                           `${timeAgo(d.created_at)} ago · `
                         )}
-                        {d.role === "host"
-                          ? <>hosted by {rowLink(userPath(profile.username), `@${profile.username}`, "#8b8b94")}</>
-                          : d.host_username
-                            ? <>debated · hosted by {rowLink(userPath(d.host_username), `@${d.host_username}`, "#8b8b94")}</>
-                            : "debated"}
+                        {d.role === "host" ? "hosted" : "debated"}
                         {topic ? ` · ${topic.label}` : ""}
                       </p>
                     </div>
@@ -1097,18 +1147,10 @@ export default function ProfileView({
                 );
                 /* Same rule as the communities rail: only LIVE rooms are
                    enterable — an ended debate is history, not a door. */
-                return live ? (
-                  <a
-                    key={d.id}
-                    href={roomPath({ id: d.id, motion: d.motion })}
-                    className="no-underline px-4 py-3 flex items-center gap-3 flex-wrap"
-                    style={card}
-                  >
+                return (
+                  <div key={d.id} className="row-card px-4 py-3 flex items-center gap-3 flex-wrap" style={card}>
                     {inner}
-                  </a>
-                ) : (
-                  <div key={d.id} className="px-4 py-3 flex items-center gap-3 flex-wrap" style={card}>
-                    {inner}
+                    {live && <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link" aria-label="Watch live" />}
                   </div>
                 );
               })
@@ -1129,15 +1171,20 @@ export default function ProfileView({
               upcoming.map((d) => {
                 const topic = TOPICS.find((t) => t.key === d.topic_key);
                 return (
-                  <a
+                  <div
                     key={d.id}
-                    href={roomPath({ id: d.id, motion: d.motion })}
-                    className="no-underline px-4 py-3 flex items-center gap-3 flex-wrap"
+                    className="row-card px-4 py-3 flex items-center gap-3 flex-wrap"
                     style={card}
                   >
                     <div className="flex-1 min-w-[220px]">
-                      <p className="m-0" style={{ color: "#f5f5f0", fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                        {d.motion || "Untitled debate"}
+                      <p className="m-0 mb-1.5 flex items-center gap-1.5">
+                        {d.role === "host" || !d.host_username
+                          ? identity(profile)
+                          : identity({ id: d.host_id, username: d.host_username, display_name: d.host_display_name, avatar_url: d.host_avatar_url })}
+                        <span style={{ color: "#6b6b74", fontSize: 11 }}>· host</span>
+                      </p>
+                      <p className="m-0" style={{ fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                        <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>{d.motion || "Untitled debate"}</a>
                       </p>
                       <p className="m-0 mt-1" style={{ color: "#f4d47c", fontSize: 11.5, fontWeight: 600 }}>
                         {new Date(d.scheduled_start!).toLocaleString(undefined, {
@@ -1154,7 +1201,7 @@ export default function ProfileView({
                       </p>
                     </div>
                     <span style={{ color: "#6b6b74", fontSize: 12 }}>→</span>
-                  </a>
+                  </div>
                 );
               })
             )}
@@ -1166,13 +1213,14 @@ export default function ProfileView({
         {(tab === "posts" || tab === "reposts") && (() => {
           const rows = tab === "posts" ? ownPosts : reposts;
           const postCard = (p: PostRow) => (
-            <a
+            <div
               key={p.id}
-              href={pathFor.post(p.id)}
-              className="block px-4 py-3 cursor-pointer no-underline"
+              className="row-card block px-4 py-3"
               style={card}
             >
-              <p className="m-0 flex items-center gap-1.5 flex-wrap" style={{ color: "#8b8b94", fontSize: 11 }}>
+              <p className="m-0 mb-1 flex items-center gap-1.5 flex-wrap" style={{ color: "#8b8b94", fontSize: 11 }}>
+                {identity(profile)}
+                <span>·</span>
                 {p.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#c9b06a" }}><Icon name="repeat" size={11} /> reposted to</span>}
                 <span>{rowLink(communityHref(p.community_name), p.community_name)} · {timeAgo(p.created_at)} ago</span>
                 {p.tag_name && (
@@ -1189,8 +1237,8 @@ export default function ProfileView({
                   </span>
                 )}
               </p>
-              <p className="m-0 mt-1" style={{ color: "#f5f5f0", fontSize: 14.5, fontWeight: 600 }}>
-                {p.title}
+              <p className="m-0 mt-1" style={{ fontSize: 14.5, fontWeight: 600 }}>
+                <a href={pathFor.post(p.id)} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>{p.title}</a>
               </p>
               {p.body && (
                 <p
@@ -1221,14 +1269,19 @@ export default function ProfileView({
                 }}>
                   {p.repost_of
                     ? <>from {p.orig_community_name ? rowLink(communityHref(p.orig_community_name), p.orig_community_name, "#c9b06a") : <span style={{ color: "#c9b06a" }}>a community</span>}
-                        {p.orig_author_username && <> · {rowLink(userPath(p.orig_author_username), p.orig_author_display_name?.trim() || `@${p.orig_author_username}`)}</>}</>
+                        {p.orig_author_username && <> · {identity({
+                          id: avatarByUsername.get(p.orig_author_username)?.id,
+                          username: p.orig_author_username,
+                          display_name: p.orig_author_display_name,
+                          avatar_url: avatarByUsername.get(p.orig_author_username)?.avatar_url ?? null,
+                        }, 16)}</>}</>
                     : "The original post was deleted."}
                 </p>
               )}
               <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
                 <Icon name="arrow-up" size={11} /> {p.score} · <Icon name="message-circle" size={11} /> {p.comment_count}
               </p>
-            </a>
+            </div>
           );
           return (
             <div className="flex flex-col gap-2.5">
@@ -1257,14 +1310,15 @@ export default function ProfileView({
             ) : (
               <>
                 {comments.map((c) => (
-                  <a
+                  <div
                     key={c.id}
-                    href={`${pathFor.post(c.post_id)}#comment-${c.id}`}
-                    className="block px-4 py-3 cursor-pointer no-underline"
+                    className="row-card block px-4 py-3"
                     style={card}
                   >
-                    <p className="m-0" style={{ color: "#8b8b94", fontSize: 11 }}>
-                      {rowLink(communityHref(c.community_name), c.community_name)} · <span style={{ color: "#a9a9b4" }}>{c.post_title}</span>
+                    <p className="m-0 mb-1 flex items-center gap-1.5 flex-wrap" style={{ color: "#8b8b94", fontSize: 11 }}>
+                      {identity(profile)}
+                      <span>·</span>
+                      <span>commented in {rowLink(communityHref(c.community_name), c.community_name)} · <span style={{ color: "#a9a9b4" }}>{c.post_title}</span></span>
                     </p>
                     <p
                       className="m-0 mt-1"
@@ -1278,7 +1332,7 @@ export default function ProfileView({
                         overflow: "hidden",
                       }}
                     >
-                      {c.body}
+                      <a href={`${pathFor.post(c.post_id)}#comment-${c.id}`} className="stretched-link no-underline" style={{ color: "inherit" }}>{c.body}</a>
                     </p>
                     {c.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -1292,7 +1346,7 @@ export default function ProfileView({
                     <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
                       <Icon name="arrow-up" size={11} /> {c.score} · {timeAgo(c.created_at)} ago
                     </p>
-                  </a>
+                  </div>
                 ))}
                 {commentsHasMore && (
                   <button
