@@ -6,6 +6,16 @@ import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import AvatarCropModal from "./AvatarCropModal";
 import { MAX_SOCIAL_LINKS, normalizeSocialLink } from "@/lib/socialLinks";
+import {
+  BIO_MAX,
+  DISPLAY_NAME_MAX,
+  USERNAME_REGEX,
+  findBlockedTerm,
+  friendlyProfileError,
+  normalizeBio,
+  normalizeDisplayName,
+  normalizeUsername,
+} from "@/lib/profileText";
 
 interface Props {
   open: boolean;
@@ -23,7 +33,6 @@ interface Props {
   onSaved: () => void;
 }
 
-const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 const AVAILABILITY_DEBOUNCE_MS = 450;
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 const MAX_BANNER_WIDTH = 1600;
@@ -103,7 +112,7 @@ export default function EditProfileModal({
     if (!open || usernameLocked) return;
     if (availabilityTimer.current) clearTimeout(availabilityTimer.current);
 
-    const trimmed = username.trim().toLowerCase();
+    const trimmed = normalizeUsername(username);
     if (trimmed === initialUsername.toLowerCase()) {
       setAvailability("idle");
       return;
@@ -214,9 +223,26 @@ export default function EditProfileModal({
     img.src = objectUrl;
   }
 
+  const displayNameBlocked = findBlockedTerm(displayName) !== null;
+  const bioBlocked = findBlockedTerm(bio) !== null;
+
   async function handleSave() {
     setError(null);
-    const trimmed = username.trim().toLowerCase();
+    const trimmed = normalizeUsername(username);
+    const cleanDisplayName = normalizeDisplayName(displayName);
+    const cleanBio = normalizeBio(bio);
+    if (!usernameLocked && findBlockedTerm(trimmed)) {
+      setError("Username contains a blocked term.");
+      return;
+    }
+    if (displayNameBlocked) {
+      setError("Display name contains a blocked term.");
+      return;
+    }
+    if (bioBlocked) {
+      setError("Bio contains a blocked term.");
+      return;
+    }
     if (!USERNAME_REGEX.test(trimmed)) {
       setError("Username must be 3–20 chars, lowercase letters, numbers, or underscores.");
       return;
@@ -229,20 +255,13 @@ export default function EditProfileModal({
     const { error: rpcErr } = await supabase.rpc("update_profile", {
       p_username: usernameLocked ? initialUsername : trimmed,
       p_avatar_url: avatarUrl, // empty string clears the avatar
-      p_bio: bio,              // empty string clears the bio
-      p_display_name: displayName,
+      p_bio: cleanBio,         // empty string clears the bio
+      p_display_name: cleanDisplayName,
     });
     if (rpcErr) {
       setSaving(false);
       const msg = rpcErr.message || "";
-      if (msg.includes("username_cooldown"))
-        setError("You can only change your username once every 7 days.");
-      else if (msg.includes("username_taken")) setError("That username is already taken.");
-      else if (msg.includes("invalid_username"))
-        setError("Username must be 3–20 chars, lowercase letters, numbers, or underscores.");
-      else if (msg.includes("display_name_too_long"))
-        setError("Display name must be 40 characters or fewer.");
-      else setError("Could not save — " + msg);
+      setError(friendlyProfileError(msg) ?? "Could not save — " + msg);
       return;
     }
     const normalizedLinks = links
@@ -255,7 +274,8 @@ export default function EditProfileModal({
     });
     setSaving(false);
     if (extrasErr) {
-      setError("Could not save — " + extrasErr.message);
+      const msg = extrasErr.message || "";
+      setError(friendlyProfileError(msg) ?? "Could not save — " + msg);
       return;
     }
     onSaved();
@@ -269,7 +289,20 @@ export default function EditProfileModal({
 
   const canSave =
     !saving && !uploading && !bannerUploading &&
-    availability !== "taken" && availability !== "invalid";
+    availability !== "taken" && availability !== "invalid" &&
+    !displayNameBlocked && !bioBlocked;
+
+  const counterStyle = (n: number, max: number, blocked: boolean): React.CSSProperties => ({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    minHeight: 16,
+    marginTop: 5,
+    marginBottom: 14,
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 11,
+    color: blocked ? "#fca5a5" : n >= max ? "#fbbf24" : "var(--text-dim)",
+  });
 
   const labelStyle: React.CSSProperties = {
     display: "block",
@@ -538,13 +571,21 @@ export default function EditProfileModal({
         </label>
         <input
           value={displayName}
-          onChange={(e) => setDisplayName(e.target.value.slice(0, 40))}
+          onChange={(e) => setDisplayName(e.target.value.slice(0, DISPLAY_NAME_MAX))}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = displayNameBlocked ? "rgba(239,68,68,0.45)" : "var(--border)";
+            setDisplayName((v) => normalizeDisplayName(v));
+          }}
+          maxLength={DISPLAY_NAME_MAX}
           placeholder="e.g. Jordan J."
           className="transition-all"
-          style={{ ...inputStyle, marginBottom: 14 }}
+          style={{ ...inputStyle, borderColor: displayNameBlocked ? "rgba(239,68,68,0.45)" : "var(--border)" }}
           onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
         />
+        <div style={counterStyle(displayName.length, DISPLAY_NAME_MAX, displayNameBlocked)}>
+          <span>{displayNameBlocked ? "Display name contains a blocked term" : ""}</span>
+          <span>{displayName.length}/{DISPLAY_NAME_MAX}</span>
+        </div>
 
         {/* Username */}
         <label style={labelStyle}>
@@ -622,14 +663,22 @@ export default function EditProfileModal({
         </label>
         <textarea
           value={bio}
-          onChange={(e) => setBio(e.target.value.slice(0, 240))}
+          onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = bioBlocked ? "rgba(239,68,68,0.45)" : "var(--border)";
+            setBio((v) => normalizeBio(v));
+          }}
+          maxLength={BIO_MAX}
           placeholder="Tell the community something about you…"
           rows={3}
           className="w-full transition-all"
-          style={{ ...inputStyle, resize: "none", marginBottom: 14 }}
+          style={{ ...inputStyle, resize: "none", borderColor: bioBlocked ? "rgba(239,68,68,0.45)" : "var(--border)" }}
           onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
         />
+        <div style={counterStyle(bio.length, BIO_MAX, bioBlocked)}>
+          <span>{bioBlocked ? "Bio contains a blocked term" : ""}</span>
+          <span>{bio.length}/{BIO_MAX}</span>
+        </div>
 
         {/* Social links */}
         <label style={labelStyle}>

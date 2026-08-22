@@ -6,6 +6,7 @@ import Wordmark from "@/components/Wordmark";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import AvatarCropModal from "@/components/AvatarCropModal";
+import { friendlyProfileError } from "@/lib/profileText";
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 const AVAILABILITY_DEBOUNCE_MS = 450;
@@ -155,10 +156,7 @@ export default function WelcomePage() {
     setSaving(false);
     if (rpcErr) {
       const msg = rpcErr.message || "";
-      if (msg.includes("username_taken")) setError("That username is already taken.");
-      else if (msg.includes("invalid_username"))
-        setError("Username must be 3–20 characters: lowercase letters, numbers, or underscores.");
-      else setError("Could not save — " + msg);
+      setError(friendlyProfileError(msg) ?? "Could not save — " + msg);
       return;
     }
     if (typeof window !== "undefined") {
