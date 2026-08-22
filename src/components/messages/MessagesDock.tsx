@@ -502,28 +502,64 @@ export default function MessagesDock() {
   );
 
   const searchField = (
-    <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-      <span style={{ position: "absolute", left: 9, top: 8, color: "rgba(255,255,255,0.4)", pointerEvents: "none" }}>
-        <Icon name="search" size={12} />
-      </span>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search"
-        aria-label="Search conversations"
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          height: 28,
-          borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.1)",
-          background: "rgba(255,255,255,0.05)",
-          color: "white",
-          fontSize: 12,
-          padding: "0 8px 0 26px",
-          outline: "none",
-        }}
-      />
+    <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <span
+          style={{
+            position: "absolute",
+            left: 9,
+            display: "inline-flex",
+            alignItems: "center",
+            color: "rgba(255,255,255,0.4)",
+            pointerEvents: "none",
+          }}
+        >
+          <Icon name="search" size={13} />
+        </span>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search conversations"
+          aria-label="Search conversations"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            height: 30,
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(255,255,255,0.05)",
+            color: "white",
+            fontSize: 12.5,
+            lineHeight: "28px",
+            padding: search ? "0 28px 0 28px" : "0 10px 0 28px",
+            outline: "none",
+            fontFamily: "inherit",
+          }}
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            aria-label="Clear search"
+            style={{
+              position: "absolute",
+              right: 4,
+              width: 22,
+              height: 22,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              background: "none",
+              color: "rgba(255,255,255,0.5)",
+              cursor: "pointer",
+              padding: 0,
+              borderRadius: 6,
+            }}
+          >
+            <Icon name="x" size={12} />
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -795,7 +831,6 @@ export default function MessagesDock() {
           >
             Messages{totalUnread > 0 ? ` (${totalUnread})` : ""}
           </span>
-          <div style={{ width: 220, maxWidth: "40%" }}>{searchField}</div>
           <button onClick={() => setOpen(false)} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
             <Icon name="x" size={14} />
           </button>
@@ -811,6 +846,7 @@ export default function MessagesDock() {
               minHeight: 0,
             }}
           >
+            {searchField}
             {threadList}
           </div>
           {threadPane ?? (
@@ -851,11 +887,11 @@ export default function MessagesDock() {
             >
               Messages{totalUnread > 0 ? ` (${totalUnread})` : ""}
             </span>
-            {searchField}
-            <button onClick={() => setOpen(false)} style={iconBtn} aria-label="Close messages">
+            <button onClick={() => setOpen(false)} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
               <Icon name="x" size={14} />
             </button>
           </div>
+          {searchField}
           {threadList}
         </>
       )}
