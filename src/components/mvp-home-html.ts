@@ -31,16 +31,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   <div class="nav-auth">
     <button class="btn-ghost">Log in</button>
     <button class="btn-signup">Sign up</button>
-    <div class="nav-messages-btn" id="nav-messages-btn" role="button" aria-label="Messages" tabindex="0">
-      <div class="nav-messages-glass-wrap">
-        <button class="nav-messages-glass-btn">
-          <span class="nav-messages-glass-text">
-            ${iconSvg("message-circle", 18)}
-          </span>
-        </button>
-        <div class="nav-messages-glass-shadow"></div>
-      </div>
-    </div>
+    <button class="nav-messages-btn" id="nav-messages-btn" type="button" aria-label="Messages">
+      ${iconSvg("message-circle", 16)}
+    </button>
     <!-- Notification bell — React portal target (NotificationsBell.tsx) -->
     <div id="notifBellHost" style="display:flex;align-items:center;"></div>
     <div class="nav-avatar" id="profileAvatarWrap">

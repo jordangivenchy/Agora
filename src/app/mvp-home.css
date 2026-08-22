@@ -209,97 +209,23 @@ body {
   flex-shrink: 0;
 }
 
+/* Messages — same flat 36px circle as the notification bell (NotificationsBell.tsx). */
 .nav-messages-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.nav-messages-glass-wrap {
-  position: relative;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-}
-
-.nav-messages-glass-btn {
-  all: unset;
-  position: relative;
-  isolation: isolate;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  display: block;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 2.2);
-}
-
-.nav-messages-glass-text {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  color: rgba(238,238,245,0.85);
-  z-index: 3;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #c0c0c8;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
 }
-
-.nav-messages-glass-text::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  filter: url(#liquid-glass-modal);
-  isolation: isolate;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.nav-messages-glass-text::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  box-shadow:
-    inset 2px 2px 1px 0 rgba(255,255,255,0.4),
-    inset -1px -1px 1px 1px rgba(255,255,255,0.15),
-    0 0 0 1px rgba(255,255,255,0.15);
-  z-index: 1;
-  pointer-events: none;
-}
-
-.nav-messages-glass-text svg {
-  position: relative;
-  z-index: 4;
-}
-
-.nav-messages-glass-shadow {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  box-shadow: 0 6px 6px rgba(0,0,0,0.25), 0 0 20px rgba(0,0,0,0.1);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.nav-messages-glass-btn:hover .nav-messages-glass-text::after {
-  background: rgba(255,255,255,0.18);
-}
-
-.nav-messages-glass-btn:hover {
-  transform: scale(1.05);
-}
-
-.nav-messages-glass-btn:active {
-  transform: scale(0.97);
-}
+.nav-messages-btn:hover { background: rgba(255,255,255,0.1); }
 
 .nav-messages-badge {
   position: absolute;
