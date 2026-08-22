@@ -6061,10 +6061,10 @@ body { background: transparent; }
    Room thumbnails are 512px squares; a square stretched across a wide
    hero turns to mush, so: a blurred, darkened copy fills the backdrop
    and the sharp square floats beside the panel. */
-.carousel-item.has-thumb .carousel-bg { overflow: hidden; right: 250px; }
+.carousel-item.has-thumb .carousel-bg { overflow: hidden; right: 250px; background: #0b0b0d !important; }
 .carousel-room-backdrop {
-  position: absolute; inset: -6%;
-  width: 112%; height: 112%;
+  position: absolute; inset: -12%;
+  width: 124%; height: 124%;
   object-fit: cover;
   filter: blur(26px) brightness(0.5) saturate(1.15);
   display: block;
