@@ -1429,8 +1429,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           }
         }}
       >
-        <p className="m-0 text-[10px]" style={{ color: "rgba(238,238,245,0.5)" }}>
-          ↻ from <span style={{ color: "#e2b96b" }}>{p.orig_community_name ?? "a community"}</span>
+        <p className="m-0 text-[10px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.5)" }}>
+          <Icon name="repeat" size={11} /> from <span style={{ color: "#e2b96b" }}>{p.orig_community_name ?? "a community"}</span>
           {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}</>}
         </p>
         <p className="m-0 text-[12.5px] font-medium" style={{ color: "rgba(238,238,245,0.88)", marginTop: 5 }}>
@@ -2200,7 +2200,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         {" · "}{authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)} · {timeAgo(openPost.created_at)}
                       </span>
                       <RoleBadge role={openPost.author_role} />
-                      {openPost.is_repost && <span style={{ color: "#e2b96b" }}>↻ repost</span>}
+                      {openPost.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /> repost</span>}
                       {openPost.pinned_at && (
                         <span className="text-[9.5px] font-bold rounded" style={{
                           background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
@@ -2964,7 +2964,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           {authorSpan(p.author_id, p.author_username, p.author_display_name)} · {timeAgo(p.created_at)}
                         </span>
                         <RoleBadge role={p.author_role} />
-                        {p.is_repost && <span style={{ color: "#e2b96b" }}>↻</span>}
+                        {p.is_repost && <span className="inline-flex items-center" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /></span>}
                         {p.pinned_at && (
                           <span className="text-[9px] font-bold rounded" style={{
                             background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
@@ -3030,8 +3030,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             style={{ ...card, maxWidth: 420, background: "rgba(14,14,17,0.97)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="m-0 mb-1 text-[15px] font-semibold" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif" }}>
-              ↻ Repost
+            <p className="m-0 mb-1 text-[15px] font-semibold flex items-center gap-2" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif" }}>
+              <Icon name="repeat" size={16} /> Repost
             </p>
             <p className="m-0 mb-3 text-[11.5px] truncate" style={{ color: "rgba(238,238,245,0.5)" }}>
               “{repostFor.title}”
