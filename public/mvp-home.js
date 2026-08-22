@@ -445,7 +445,7 @@ function goToSlide(index) {
 }
 
 function startAutoPlay() {
-  autoPlayTimer = setInterval(() => goToSlide(currentSlide + 1), 5000);
+  autoPlayTimer = setInterval(() => goToSlide(currentSlide + 1), 9000); // 9s: long enough to read a summary
 }
 
 function resetAutoPlay() {
