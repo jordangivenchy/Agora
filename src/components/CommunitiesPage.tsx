@@ -27,6 +27,8 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { formatBookmarks, isGroup, parseBookmarks, safeBookmarks, type Bookmark } from "@/lib/communityBookmarks";
 import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
+import { communitySlug, findCommunityBySlug } from "@/lib/communityUrls";
+import { pathFor, setSectionTitle } from "@/lib/routes";
 import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
 import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
@@ -339,6 +341,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const presence = useSyncExternalStore(subscribePresence, getPresenceSnapshot, () => getPresenceSnapshot());
 
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [communitiesLoaded, setCommunitiesLoaded] = useState(false);
   const [tagsByCommunity, setTagsByCommunity] = useState<Record<string, Tag[]>>({});
   const [selected, setSelected] = useState<string>("all"); // 'all' | community id
   const [posts, setPosts] = useState<Post[]>([]);
@@ -443,6 +446,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const myRequests = new Set(
       ((reqRes.data ?? []) as { community_id: string }[]).map((r) => r.community_id)
     );
+    setCommunitiesLoaded(true);
     setCommunities(
       (commRes.data ?? []).map((c) => {
         const members = (c.community_members ?? []) as { user_id: string; role: string; favorite?: boolean }[];
@@ -788,6 +792,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
      so `open` may still be flipping — stash the id and resolve once posts
      are in. */
   const [pendingPostId, setPendingPostId] = useState<string | null>(null);
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  const resolvingPostRef = useRef(false);
+  const [routeTick, setRouteTick] = useState(0);
   /* /?post=<id>&comment=<cid>: once the post is open, find the comment
      (paging deeper if it isn't in the first 60 threads), expand its
      ancestors, scroll to it and flash it. */
@@ -812,13 +819,70 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         setSelected(id);
       }
     };
+    /* URL routes from page.tsx (/communities/<slug>, /posts/<id>): the
+       slug resolves against the loaded list below; posts reuse the
+       pending-post flow. */
+    const onRoute = (e: Event) => {
+      const r = (e as CustomEvent).detail as
+        | { kind: "community"; slug: string }
+        | { kind: "post"; id: string; commentId: string | null };
+      if (r?.kind === "community") {
+        setPendingPostId(null);
+        setPendingCommentId(null);
+        setOpenPost(null);
+        setPendingSlug(r.slug);
+      } else if (r?.kind === "post") {
+        setPendingSlug(null);
+        setOpenPost(null);
+        setPendingPostId(r.id);
+        setPendingCommentId(r.commentId ?? null);
+      }
+    };
     document.addEventListener("agora:open-post", onOpen);
     document.addEventListener("agora:open-community", onOpenCommunity);
+    document.addEventListener("agora:route", onRoute);
     return () => {
       document.removeEventListener("agora:open-post", onOpen);
       document.removeEventListener("agora:open-community", onOpenCommunity);
+      document.removeEventListener("agora:route", onRoute);
     };
   }, []);
+  useEffect(() => {
+    if (!pendingSlug || !communitiesLoaded) return;
+    const hit = findCommunityBySlug(pendingSlug, communities);
+    setPendingSlug(null);
+    setSelected(hit ? hit.id : "all");
+  }, [pendingSlug, communitiesLoaded, communities]);
+
+  /* Keep the address bar on the board/post being shown. Pushes only when
+     the desired path changes and differs from the bar, so popstate-driven
+     state (page.tsx re-parses the URL and dispatches agora:route) never
+     adds duplicate entries. Skipped while a route is still resolving. */
+  const lastPushedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { lastPushedRef.current = null; return; }
+    if (pendingSlug || pendingPostId || resolvingPostRef.current) return;
+    const board = selected === "all" ? null : communities.find((c) => c.id === selected) ?? null;
+    const desired = openPost
+      ? pathFor.post(openPost.id)
+      : pathFor.community(board ? communitySlug(board, communities) : null);
+    setSectionTitle(openPost
+      ? `${openPost.title} · AgoraSphere`
+      : board ? `${board.name} · AgoraSphere` : "Communities · AgoraSphere");
+    const first = lastPushedRef.current === null;
+    if (first) lastPushedRef.current = window.location.pathname;
+    if (lastPushedRef.current === desired) return;
+    lastPushedRef.current = desired;
+    if (window.location.pathname === desired) return;
+    /* Landing on /communities/<uuid> (or a stale slug): canonicalise in
+       place rather than stacking a second entry. */
+    if (first && /^\/(communities|posts)\//.test(window.location.pathname)) {
+      window.history.replaceState(null, "", desired + window.location.hash);
+    } else {
+      window.history.pushState(null, "", desired);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, selected, openPost, communities, pendingSlug, pendingPostId, routeTick]);
   useEffect(() => {
     if (!open || !pendingPostId || loadingPosts) return;
     const hit = posts.find((p) => p.id === pendingPostId);
@@ -831,10 +895,12 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
        returns the same row shape as the feed (real score/my_vote/counts). */
     const id = pendingPostId;
     setPendingPostId(null);
+    resolvingPostRef.current = true;
     (async () => {
       const { data } = await supabase.rpc("get_community_post", { p_post: id });
+      resolvingPostRef.current = false;
       const row = (data as Post[] | null)?.[0];
-      if (!row) return;
+      if (!row) { setRouteTick((t) => t + 1); return; } // re-sync the URL to the board
       fetchAvatars([row.author_id]);
       openPostDetail(row);
     })();
@@ -1077,7 +1143,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   /* Share: copy a deep link that reopens this post (handled in page.tsx). */
   const [copiedCommentId, setCopiedCommentId] = useState<string | null>(null);
   const shareComment = useCallback(async (c: Comment) => {
-    const url = `${window.location.origin}/?post=${c.post_id}&comment=${c.id}`;
+    const url = `${window.location.origin}${pathFor.post(c.post_id, c.id)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedCommentId(c.id);
@@ -1088,7 +1154,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   }, []);
 
   const sharePost = useCallback(async (post: Post) => {
-    const url = `${window.location.origin}/?post=${post.id}`;
+    const url = `${window.location.origin}${pathFor.post(post.id)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(post.id);

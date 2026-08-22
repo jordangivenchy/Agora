@@ -13,7 +13,7 @@
    spacing on routes that only borrow the sidebar.
 
    Navigation is a callback: the homepage maps ids to its React panels /
-   MVP page switch; the profile route maps them to /?nav= deep links. */
+   MVP page switch; the profile route maps them to their /trending-style paths (src/lib/routes.ts). */
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import FriendsSection from "@/components/friends/FriendsSection";

@@ -9,6 +9,7 @@
    scheduled, posts, shorts. Moderators see a verify toggle. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { pathFor } from "@/lib/routes";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
@@ -448,35 +449,22 @@ export default function ProfileView({
     }
   }, [profile, viewerId, blocked, supabase]);
 
-  /* Community chips route the same way the rest of the app does: click
-     the Communities nav entry, then dispatch agora:open-community (the
-     pattern in TopicsHome). From the standalone /users route the nav
-     isn't in the DOM yet, so push home first and wait for it to mount —
-     router.push keeps this JS context alive, so the poll survives. */
+  /* Community chips: on the homepage shell the Communities panel is
+     mounted, so dispatch agora:open-community (the pattern in TopicsHome).
+     From the standalone /users route, go to the board's own URL — the
+     slug segment accepts a raw community id. */
   const openCommunity = useCallback(
     (communityId: string) => {
-      const go = () => {
+      if (document.querySelector('[data-nav-id="communities"]')) {
         (document.querySelector('[data-nav-id="communities"]') as HTMLElement | null)?.click();
         setTimeout(() => {
           document.dispatchEvent(
             new CustomEvent("agora:open-community", { detail: { communityId } })
           );
         }, 60);
-      };
-      if (document.querySelector('[data-nav-id="communities"]')) {
-        go();
         return;
       }
-      router.push("/");
-      let tries = 0;
-      const timer = window.setInterval(() => {
-        if (document.querySelector('[data-nav-id="communities"]')) {
-          window.clearInterval(timer);
-          go();
-        } else if (++tries >= 50) {
-          window.clearInterval(timer);
-        }
-      }, 100);
+      router.push(pathFor.community(communityId));
     },
     [router]
   );
@@ -621,7 +609,7 @@ export default function ProfileView({
         <div className="hidden lg:block">
           <HomeSidebar
             activeId={null}
-            onNavigate={(id) => router.push(id === "home" ? "/" : `/?nav=${id}`)}
+            onNavigate={(id) => router.push(pathFor.section(id))}
           />
         </div>
       )}
@@ -1191,7 +1179,7 @@ export default function ProfileView({
               key={p.id}
               className="px-4 py-3 cursor-pointer"
               style={card}
-              onClick={() => { window.location.href = `/?post=${p.id}`; }}
+              onClick={() => { window.location.href = pathFor.post(p.id); }}
             >
               <p className="m-0 flex items-center gap-1.5 flex-wrap" style={{ color: "#8b8b94", fontSize: 11 }}>
                 {p.is_repost && <span style={{ color: "#c9b06a" }}>↻ reposted to</span>}
@@ -1282,7 +1270,7 @@ export default function ProfileView({
                     key={c.id}
                     className="px-4 py-3 cursor-pointer"
                     style={card}
-                    onClick={() => { window.location.href = `/?post=${c.post_id}`; }}
+                    onClick={() => { window.location.href = pathFor.post(c.post_id); }}
                   >
                     <p className="m-0" style={{ color: "#8b8b94", fontSize: 11 }}>
                       {c.community_name} · <span style={{ color: "#a9a9b4" }}>{c.post_title}</span>

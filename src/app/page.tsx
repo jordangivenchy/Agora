@@ -20,6 +20,7 @@ import NewsPage from "@/components/NewsPage";
 import ExploreGrid from "@/components/ExploreGrid";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
+import { parseHomeRoute, canonicalPath, pathFor, sectionTitle, setSectionTitle, type HomeRoute } from "@/lib/routes";
 import "./mvp-home.css";
 
 const TOPIC_MAP: Record<string, string> = {
@@ -320,63 +321,130 @@ export default function Home() {
     else w.loadHomePage?.();
   }, []);
 
-  /* Deep link from profile pages: /?dm=<userId> opens that DM thread once
-     the dock is mounted. */
+  /* ── URL routing ──
+     Sections live as state on this page; next.config rewrites
+     /trending, /news, /explore, /communities[/slug], /posts/:id and
+     /messages[/user] to "/" so the browser keeps the pretty path. On
+     mount and on popstate the path is parsed into state; when state
+     changes from in-app navigation, the matching path is pushed.
+     Community/post routes are resolved by CommunitiesPage (it owns the
+     lists) via the "agora:route" event; legacy ?nav=/?post=/?dm= forms
+     are replaced with the canonical URL. */
+  const routeRef = useRef<{ route: HomeRoute; seq: number } | null>(null);
+  const [pendingRoute, setPendingRoute] = useState<{ route: HomeRoute; seq: number } | null>(null);
+
   useEffect(() => {
-    if (!booted) return;
-    const dm = new URLSearchParams(window.location.search).get("dm");
-    if (!dm) return;
-    window.history.replaceState(null, "", "/");
-    (async () => {
-      const { data } = await supabase
-        .from("users")
-        .select("id, username, avatar_url")
-        .eq("id", dm)
-        .maybeSingle();
-      if (data) {
-        window.dispatchEvent(
-          new CustomEvent("agora:dm", {
-            detail: { userId: data.id, username: data.username, avatarUrl: data.avatar_url },
-          })
-        );
+    let seq = 0;
+    const read = (replaceLegacy: boolean) => {
+      const { route, legacy } = parseHomeRoute(window.location.pathname, window.location.search, window.location.hash);
+      if (legacy && replaceLegacy) {
+        const canon = canonicalPath(route);
+        if (canon) window.history.replaceState(null, "", canon);
       }
-    })();
-  }, [booted, supabase]);
+      const next = { route, seq: ++seq };
+      routeRef.current = next;
+      setPendingRoute(next);
+    };
+    read(true);
+    const onPop = () => read(false);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
-  /* Deep link from share links and the bell: /?post=<id> opens the
-     Communities tab on that post. activeTab is React state and the
-     sync effect above moves the sidebar highlight, so no nav click is
-     needed (clicking would race the MVP adapter's script load).
-     CommunitiesPage's agora:open-post listener registers at mount, so
-     the dispatch lands even while its panel is still closed. */
+  /* Apply a parsed route to state. React panels open immediately (they
+     cover the home shell while it boots); Explore and Messages are
+     MVP/dock driven and wait for `booted`. */
+  const appliedSeqRef = useRef(0);
+  const lastPushedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!booted) return;
-    const params = new URLSearchParams(window.location.search);
-    const postId = params.get("post");
-    if (!postId) return;
-    const commentId = params.get("comment");
-    window.history.replaceState(null, "", "/");
-    setActiveTab("communities");
-    document.dispatchEvent(new CustomEvent("agora:open-post", { detail: { postId, commentId } }));
-  }, [booted]);
-
-  /* Deep link from the profile page's sidebar: /?nav=<section> opens
-     that section directly — same replaceState pattern as ?post, no
-     cross-page click replaying. React panels open IMMEDIATELY on mount
-     (they cover the home shell while it boots, so there's no home
-     flash); only Explore is MVP-rendered and must wait for booted. */
-  useEffect(() => {
-    const nav = new URLSearchParams(window.location.search).get("nav");
-    if (!nav) return;
-    if (nav === "trending" || nav === "communities" || nav === "news") {
-      window.history.replaceState(null, "", "/");
-      setActiveTab(nav);
-    } else if (nav === "explore" && booted) {
-      window.history.replaceState(null, "", "/");
-      // Same click the adapter's own handler performs.
-      (document.querySelector('#sidebar [data-nav-id="explore"]') as HTMLElement | null)?.click();
+    if (!pendingRoute || appliedSeqRef.current === pendingRoute.seq) return;
+    const { route } = pendingRoute;
+    const w = window as unknown as { loadHomePage?: () => void };
+    const done = () => {
+      appliedSeqRef.current = pendingRoute.seq;
+      lastPushedRef.current = window.location.pathname;
+    };
+    switch (route.kind) {
+      case "section":
+        if (route.id === "trending" || route.id === "communities" || route.id === "news") {
+          setActiveTab(route.id);
+          done();
+        } else if (route.id === "explore") {
+          if (!booted) return;
+          setActiveTab(null);
+          setMvpPage("explore");
+          done();
+          /* The MVP engine loads asynchronously after `booted` (three.js,
+             then mvp-home.js); wait for loadExplorePage to exist. */
+          const w2 = window as unknown as { loadExplorePage?: () => void };
+          let tries = 0;
+          const tick = () => {
+            if (typeof w2.loadExplorePage === "function") { w2.loadExplorePage(); return; }
+            if (++tries < 100) setTimeout(tick, 100);
+          };
+          tick();
+        } else {
+          setActiveTab(null);
+          if (mvpPage !== "home") { setMvpPage("home"); w.loadHomePage?.(); }
+          done();
+        }
+        return;
+      case "community":
+      case "post":
+        setActiveTab("communities");
+        document.dispatchEvent(new CustomEvent("agora:route", { detail: route }));
+        done();
+        return;
+      case "messages":
+        if (!booted) return;
+        setActiveTab(null);
+        done();
+        if (!route.username) { window.dispatchEvent(new CustomEvent("agora:messages")); return; }
+        (async () => {
+          const { data } = await supabase
+            .from("users").select("id, username, avatar_url").eq("username", route.username).maybeSingle();
+          if (data) {
+            window.dispatchEvent(new CustomEvent("agora:dm", {
+              detail: { userId: data.id, username: data.username, avatarUrl: data.avatar_url },
+            }));
+          }
+        })();
+        return;
+      case "dm-user":
+        if (!booted) return;
+        done();
+        (async () => {
+          const { data } = await supabase
+            .from("users").select("id, username, avatar_url").eq("id", route.userId).maybeSingle();
+          if (data) {
+            window.history.replaceState(null, "", pathFor.messages(data.username));
+            lastPushedRef.current = window.location.pathname;
+            window.dispatchEvent(new CustomEvent("agora:dm", {
+              detail: { userId: data.id, username: data.username, avatarUrl: data.avatar_url },
+            }));
+          } else {
+            window.history.replaceState(null, "", "/");
+          }
+        })();
+        return;
     }
-  }, [booted]);
+  }, [pendingRoute, booted, supabase, mvpPage]);
+
+  /* Push the section path when in-app navigation changes it. Only pushes
+     when the desired path actually changed (so an unrelated URL such as
+     /messages isn't clobbered) and differs from the address bar (so
+     popstate-driven changes don't add duplicate entries). The
+     Communities panel pushes its own /communities[/slug] and /posts/:id. */
+  useEffect(() => {
+    if (activeTab === "communities") return;
+    const desired = activeTab ? pathFor.section(activeTab) : pathFor.section(mvpPage);
+    setSectionTitle(sectionTitle(activeTab ?? mvpPage));
+    // First run (before the mount route is applied): record, don't push.
+    if (lastPushedRef.current === null) { lastPushedRef.current = desired; return; }
+    if (lastPushedRef.current === desired) return;
+    lastPushedRef.current = desired;
+    if (window.location.pathname !== desired) window.history.pushState(null, "", desired);
+  }, [activeTab, mvpPage]);
 
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };

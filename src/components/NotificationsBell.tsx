@@ -15,6 +15,7 @@
    and starting-soon events reach them even in another tab. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { pathFor } from "@/lib/routes";
 import { Icon } from "@/components/icons";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
@@ -75,7 +76,7 @@ function notifText(n: NotifRow): string {
 }
 
 function notifHref(n: NotifRow): string | null {
-  if (n.post_id && (n.type === "community_post" || n.type === "mention")) return `/?post=${n.post_id}`;
+  if (n.post_id && (n.type === "community_post" || n.type === "mention")) return pathFor.post(n.post_id);
   if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon" || n.type === "room_invite" || n.type === "community_debate")) return `/agora/${n.room_id}`;
   if (n.actor_id && (n.type === "new_follower" || n.type === "friend_accepted")) return `/?profile=${n.actor_id}`;
   return null;
@@ -216,7 +217,7 @@ export default function NotificationsBell({ container }: Props) {
             const n = new Notification("AgoraSphere", { body });
             n.onclick = () => {
               window.focus();
-              if (row.type === "community_post" && row.post_id) window.location.href = `/?post=${row.post_id}`;
+              if (row.type === "community_post" && row.post_id) window.location.href = pathFor.post(row.post_id);
               else if (row.room_id) window.location.href = `/agora/${row.room_id}`;
             };
           }
