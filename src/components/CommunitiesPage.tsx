@@ -1461,7 +1461,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
         style={{ color: copiedId === p.id ? "#00b894" : "rgba(238,238,245,0.32)", fontFamily: "inherit" }}
       >
-        {copiedId === p.id ? "✓ Link copied" : "Share"}
+        {copiedId === p.id ? <><Icon name="check" size={12} /> Link copied</> : <><Icon name="share" size={12} /> Share</>}
       </button>
       <button
         onClick={(e) => {
@@ -1475,7 +1475,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
         style={{ color: "rgba(238,238,245,0.32)", fontFamily: "inherit" }}
       >
-        Repost
+        <Icon name="repeat" size={12} /> Repost
       </button>
       {canModerate(p.community_id) && (
         <button

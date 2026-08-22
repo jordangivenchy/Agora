@@ -338,9 +338,9 @@ export default function TrendingPage({ open, onClose }: Props) {
                 <button
                   onClick={() => share(activeShort)}
                   className="inline-flex items-center justify-center cursor-pointer"
-                  style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "0.5px solid #3a3a42", color: "#d5d5dc", fontSize: 16 }}
+                  style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "0.5px solid #3a3a42", color: "#d5d5dc" }}
                 >
-                  ↗
+                  <Icon name="share" size={18} />
                 </button>
                 <p className="text-[10px] mt-1" style={{ color: shareCopied ? "#97c459" : "#c0c0c8" }}>
                   {shareCopied ? "Copied!" : "Share"}
