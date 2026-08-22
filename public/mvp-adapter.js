@@ -82,6 +82,7 @@
           // No factCheck: real rooms have no fact-checking yet, and stamping
           // "verified" on them was a fabricated trust signal.
           gradient: d.gradient,
+          thumbnailUrl: d.thumbnailUrl || null,
           topicKey: d.topicKey,
           debateIndex: d._i,
         };

@@ -111,7 +111,7 @@ export default function Home() {
           supabase.auth.getUser(),
           supabase
             .from("debate_rooms")
-            .select(`*, participants:debate_participants(*, user:users(username, display_name, avatar_url))`)
+            .select(`*, host:users!host_id(avatar_url), participants:debate_participants(*, user:users(username, display_name, avatar_url))`)
             .in("status", ["live", "created", "scheduled"])
             .order("created_at", { ascending: false })
             .limit(100),
@@ -172,6 +172,13 @@ export default function Home() {
             secondaryTopics: (room.secondary_topics ?? []).map((k: string) => TOPIC_MAP[k] ?? k),
             subTags: [],
             gradient: GRADIENTS[i % GRADIENTS.length],
+            // Same fallback as the room cards: uploaded thumbnail, else the host's avatar.
+            thumbnailUrl: (() => {
+              const host = room.host as { avatar_url?: string | null } | { avatar_url?: string | null }[] | null;
+              const hostAvatar = Array.isArray(host) ? host[0]?.avatar_url : host?.avatar_url;
+              const pick = room.thumbnail_url || hostAvatar || null;
+              return typeof pick === "string" && /^https:\/\//.test(pick) ? pick : null;
+            })(),
             icon: TOPIC_ICONS[key] ?? "🎙️",
             debater1Stance: "PRO",
             debater2Stance: "CON",

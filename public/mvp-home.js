@@ -337,20 +337,23 @@ function renderCarousel() {
   const slideHTML = (c, i) => c.kind === 'news'
     ? newsSlideHTML(c, i, CAROUSEL_DATA.length)
     : `
-    <div class="carousel-item" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
-      <div class="carousel-bg" style="background:${c.gradient};"></div>
+    <div class="carousel-item${c.thumbnailUrl ? ' has-thumb' : ''}" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
+      <div class="carousel-bg" style="background:${c.gradient};">${c.thumbnailUrl
+        ? `<img class="carousel-room-backdrop" src="${escHTML(c.thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.closest('.carousel-item').classList.remove('has-thumb'); this.remove();" />`
+        : ''}</div>
       <div class="carousel-bg-grid"></div>
+      ${c.thumbnailUrl ? `<img class="carousel-room-thumb" src="${escHTML(c.thumbnailUrl)}" alt="" onerror="this.remove()" />` : ''}
       <div class="carousel-live-badge"><div class="carousel-live-dot"></div> Live</div>
-      <div class="carousel-viewers">${c.viewersDisplay} watching</div>
+      <div class="carousel-viewers">${escHTML(c.viewersDisplay)} watching</div>
       <div class="carousel-lower-third">
-        <div class="carousel-motion">"${c.motion}"</div>
+        <div class="carousel-motion">"${escHTML(c.motion)}"</div>
         <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
       </div>
       <div class="carousel-panel">
-        <div class="panel-avatar" style="background:${c.color};">${c.initials}</div>
-        <div class="panel-name">${c.debater}</div>
-        <div class="panel-viewers">${c.viewersDisplay} watching</div>
-        <div class="panel-topic">${c.motion}</div>
+        <div class="panel-avatar" style="background:${escHTML(c.color)};">${escHTML(c.initials)}</div>
+        <div class="panel-name">${escHTML(c.debater)}</div>
+        <div class="panel-viewers">${escHTML(c.viewersDisplay)} watching</div>
+        <div class="panel-topic">${escHTML(c.motion)}</div>
         <div class="panel-stance ${c.stance.toLowerCase()}">${c.stance}</div>
         ${c.factCheck ? `<div class="panel-factcheck">
           <div class="fact-chip ${c.factCheck.type}">${c.factCheck.type === 'verified' ? '✓' : c.factCheck.type === 'disputed' ? '⚠' : '⟳'} ${c.factCheck.label}</div>

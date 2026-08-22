@@ -6055,3 +6055,45 @@ body { background: transparent; }
   .carousel-news-shade,
   .carousel-item.news .carousel-lower-third { right: 0; }
 }
+
+
+/* ═══ Live-room slides with a thumbnail ═══
+   Room thumbnails are 512px squares; a square stretched across a wide
+   hero turns to mush, so: a blurred, darkened copy fills the backdrop
+   and the sharp square floats beside the panel. */
+.carousel-item.has-thumb .carousel-bg { overflow: hidden; }
+.carousel-room-backdrop {
+  position: absolute; inset: -6%;
+  width: 112%; height: 112%;
+  object-fit: cover;
+  filter: blur(26px) brightness(0.5) saturate(1.15);
+  display: block;
+}
+.carousel-item.has-thumb .carousel-bg-grid { opacity: 0.55; }
+.carousel-room-thumb {
+  position: absolute;
+  top: 50%;
+  right: 252px;
+  height: 74%;
+  aspect-ratio: 1 / 1;
+  transform: translateY(-50%);
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+  z-index: 5;
+}
+.carousel-item.has-thumb .carousel-lower-third {
+  right: calc(252px + 0.74 * 440px + 8px); /* panel + thumb + gap */
+}
+@media (max-width: 1150px) {
+  /* not enough width for text + square: the square becomes the cover */
+  .carousel-room-thumb {
+    top: 0; right: 228px; height: 100%; aspect-ratio: auto; left: 0; width: auto;
+    transform: none; border-radius: 0; border: none; box-shadow: none; z-index: 0;
+  }
+  .carousel-item.has-thumb .carousel-lower-third { right: 230px; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, transparent 100%); }
+}
+@media (max-width: 900px) {
+  .carousel-room-thumb { right: 0; }
+}
