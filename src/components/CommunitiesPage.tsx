@@ -2231,7 +2231,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <VoteBox post={openPost} onVote={vote} size={14} />
                   <div className="flex-1 min-w-0">
                     <p className="m-0 text-[11px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.5)" }}>
-                      <span>
+                      <span className="inline-flex items-center gap-1">
                         <span
                           onClick={() => { const cid = openPost.community_id; closePostDetail(); setSelected(cid); }}
                           className="cursor-pointer"
@@ -2240,7 +2240,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         >
                           {openPost.community_name}
                         </span>
-                        {" · "}{authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)} · {timeAgo(openPost.created_at)}
+                        <span>·</span>
+                        {authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)}
+                        <span>·</span>
+                        <span>{timeAgo(openPost.created_at)}</span>
                       </span>
                       <RoleBadge role={openPost.author_role} />
                       {openPost.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /> repost</span>}
@@ -2968,7 +2971,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     <VoteBox post={p} onVote={vote} />
                     <div className="flex-1 min-w-0">
                       <p className="m-0 text-[10.5px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.5)" }}>
-                        <span>
+                        <span className="inline-flex items-center gap-1">
                           {selected === "all" && (
                             <>
                               <span
@@ -2979,10 +2982,12 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                               >
                                 {p.community_name}
                               </span>
-                              {" · "}
+                              <span>·</span>
                             </>
                           )}
-                          {authorSpan(p.author_id, p.author_username, p.author_display_name)} · {timeAgo(p.created_at)}
+                          {authorSpan(p.author_id, p.author_username, p.author_display_name)}
+                          <span>·</span>
+                          <span>{timeAgo(p.created_at)}</span>
                         </span>
                         <RoleBadge role={p.author_role} />
                         {p.is_repost && <span className="inline-flex items-center" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /></span>}
