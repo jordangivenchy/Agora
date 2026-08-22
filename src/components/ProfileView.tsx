@@ -504,6 +504,21 @@ export default function ProfileView({
 
   const isSelf = viewerId && profile && viewerId === profile.id;
 
+  const menuItem: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "none",
+    background: "transparent",
+    color: "#c9c9d2",
+    fontFamily: "inherit",
+    fontSize: 13,
+    fontWeight: 600,
+  };
+
   const isUpcoming = (d: DebateRow) =>
     d.status !== "live" && d.status !== "ended" &&
     !!d.scheduled_start && new Date(d.scheduled_start).getTime() > Date.now();
@@ -878,11 +893,12 @@ export default function ProfileView({
                       background: menuOpen ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
                       color: "#c9c9d2",
                       fontFamily: "inherit",
-                      fontSize: 16,
-                      lineHeight: 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    ⋯
+                    <Icon name="more-horizontal" size={16} />
                   </button>
                 )}
               </div>
@@ -903,18 +919,9 @@ export default function ProfileView({
                   <button
                     onClick={toggleBlock}
                     className="cursor-pointer w-full text-left"
-                    style={{
-                      display: "block",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "transparent",
-                      color: "#e58a8a",
-                      fontFamily: "inherit",
-                      fontSize: 13,
-                      fontWeight: 600,
-                    }}
+                    style={{ ...menuItem, color: "#e58a8a" }}
                   >
+                    <Icon name="ban" size={14} />
                     {blocked ? `Unblock @${profile.username}` : `Block @${profile.username}`}
                   </button>
                   <button
@@ -927,20 +934,28 @@ export default function ProfileView({
                       });
                     }}
                     className="cursor-pointer w-full text-left"
-                    style={{
-                      display: "block",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "transparent",
-                      color: "#c9c9d2",
-                      fontFamily: "inherit",
-                      fontSize: 13,
-                      fontWeight: 600,
-                    }}
+                    style={menuItem}
                   >
+                    <Icon name="flag" size={14} />
                     Report
                   </button>
+                  {viewerIsMod && (
+                    <>
+                      <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "5px 6px" }} />
+                      <p className="m-0" style={{ padding: "3px 12px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#6b6b74" }}>
+                        MODERATOR
+                      </p>
+                      <button
+                        onClick={() => { setMenuOpen(false); toggleVerified(); }}
+                        disabled={busy}
+                        className="cursor-pointer w-full text-left"
+                        style={{ ...menuItem, color: profile.verified ? "#c9c9d2" : "#93bbfd" }}
+                      >
+                        <Icon name={profile.verified ? "circle-x" : "check"} size={14} />
+                        {profile.verified ? "Remove verified badge" : "Verify account"}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
               {blockNote && (
@@ -964,25 +979,6 @@ export default function ProfileView({
                   }}
                 >
                   <Icon name="message-circle" size={13} /> Message
-                </button>
-              )}
-              {viewerIsMod && (
-                <button
-                  onClick={toggleVerified}
-                  disabled={busy}
-                  className="cursor-pointer"
-                  title="Moderator: toggle verification badge"
-                  style={{
-                    padding: "7px 18px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(59,130,246,0.4)",
-                    background: "rgba(59,130,246,0.10)",
-                    color: "#93bbfd",
-                    fontFamily: "inherit",
-                    fontSize: 12,
-                  }}
-                >
-                  {profile.verified ? "Remove badge" : "Verify account"}
                 </button>
               )}
               </div>
