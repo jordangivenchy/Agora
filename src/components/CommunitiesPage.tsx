@@ -496,6 +496,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   /* Emoji picker (shared popover) for the post body / comment box. */
   const [emojiFor, setEmojiFor] = useState<null | "post" | "comment">(null);
   const commentInputRef = useRef<HTMLInputElement | null>(null);
+  const replyInputRef = useRef<HTMLInputElement | null>(null);
   const insertEmoji = useCallback((
     el: HTMLInputElement | HTMLTextAreaElement | null,
     set: (fn: (cur: string) => string) => void,
@@ -1015,19 +1016,93 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     });
   }, []);
 
-  /* Wrap the textarea selection in a formatting marker (B/I/S/code). */
-  const wrapSelection = useCallback((marker: string) => {
-    const ta = bodyRef.current;
-    if (!ta) return;
-    const s = ta.selectionStart ?? 0;
-    const e = ta.selectionEnd ?? 0;
-    const sel = newBody.slice(s, e) || "text";
-    setNewBody(newBody.slice(0, s) + marker + sel + marker + newBody.slice(e));
+  /* Wrap the current selection of any input/textarea in a formatting
+     marker (B/I/S/code). With no selection, inserts a pair and parks the
+     caret between them; if the selection is already wrapped, unwraps. */
+  const wrapIn = useCallback((
+    el: HTMLInputElement | HTMLTextAreaElement | null,
+    value: string,
+    set: (v: string) => void,
+    marker: string,
+  ) => {
+    if (!el) return;
+    const s = el.selectionStart ?? value.length;
+    const e = el.selectionEnd ?? s;
+    const sel = value.slice(s, e);
+    const m = marker.length;
+    const wrapped = value.slice(s - m, s) === marker && value.slice(e, e + m) === marker;
+    let next: string, selStart: number, selEnd: number;
+    if (wrapped) {
+      next = value.slice(0, s - m) + sel + value.slice(e + m);
+      selStart = s - m; selEnd = selStart + sel.length;
+    } else {
+      next = value.slice(0, s) + marker + sel + marker + value.slice(e);
+      selStart = s + m; selEnd = selStart + sel.length;
+    }
+    set(next);
     requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(s + marker.length, s + marker.length + sel.length);
+      el.focus();
+      el.setSelectionRange(selStart, selEnd);
     });
-  }, [newBody]);
+  }, []);
+
+  /* ⌘/Ctrl+B → bold, ⌘/Ctrl+I → italic. Returns true if handled. */
+  const formatShortcut = useCallback((
+    ev: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    value: string,
+    set: (v: string) => void,
+  ): boolean => {
+    if (!(ev.metaKey || ev.ctrlKey)) return false;
+    const k = ev.key.toLowerCase();
+    const marker = k === "b" ? "**" : k === "i" ? "*" : null;
+    if (!marker) return false;
+    ev.preventDefault();
+    wrapIn(ev.currentTarget, value, set, marker);
+    return true;
+  }, [wrapIn]);
+
+  const FORMAT_BUTTONS = [
+    ["**", "B", "Bold (⌘B)", 800, undefined, undefined],
+    ["*", "I", "Italic (⌘I)", 500, "italic", undefined],
+    ["~~", "S", "Strikethrough", 500, undefined, "line-through"],
+    ["`", "<>", "Code", 500, undefined, undefined],
+  ] as const;
+  const formatBar = (
+    el: () => HTMLInputElement | HTMLTextAreaElement | null,
+    value: string,
+    set: (v: string) => void,
+    compact = false,
+  ) => (
+    <div className="flex items-center gap-1">
+      {FORMAT_BUTTONS.map(([marker, label, tip, weight, fs, td]) => (
+        <button
+          key={marker}
+          type="button"
+          onMouseDown={(e) => e.preventDefault() /* keep the field's selection */}
+          onClick={() => wrapIn(el(), value, set, marker)}
+          title={tip}
+          className="cursor-pointer"
+          style={{
+            ...btnGhost,
+            borderRadius: 6,
+            minWidth: compact ? 24 : 28,
+            height: compact ? 22 : 26,
+            padding: "0 6px",
+            fontSize: compact ? 11 : 12,
+            fontWeight: weight,
+            fontStyle: fs,
+            textDecoration: td,
+            fontFamily: label === "<>" ? "monospace" : "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   const pickCommentImage = useCallback((file: File | null) => {
     setCommentImage(file);
@@ -1691,14 +1766,19 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 </div>
                 {replyTo === c.id && (
                   <div className="mt-2">
+                    <div className="mb-1.5">{formatBar(() => replyInputRef.current, replyText, setReplyText, true)}</div>
                     <div className="flex gap-2">
                       <span className="relative flex-1 min-w-0">
                         <input
+                          ref={replyInputRef}
                           style={inputStyle}
                           placeholder={`Reply to @${c.author_username}…`}
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") submitComment(c.id, replyText, replyImage); }}
+                          onKeyDown={(e) => {
+                            if (formatShortcut(e, replyText, setReplyText)) return;
+                            if (e.key === "Enter") submitComment(c.id, replyText, replyImage);
+                          }}
                           autoFocus
                         />
                         <MentionSuggest text={replyText} onComplete={setReplyText} supabase={supabase} />
@@ -2319,6 +2399,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
                 {/* comment composer */}
                 <div className="mb-4">
+                  {userId && <div className="mb-1.5">{formatBar(() => commentInputRef.current, commentText, setCommentText, true)}</div>}
                   <div className="flex gap-2">
                     <span className="relative flex-1 min-w-0">
                       <input
@@ -2327,7 +2408,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         placeholder={userId ? "Add a comment… (@ to mention)" : "Sign in to comment"}
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") submitComment(null, commentText, commentImage, commentGifUrl); }}
+                        onKeyDown={(e) => {
+                          if (formatShortcut(e, commentText, setCommentText)) return;
+                          if (e.key === "Enter") submitComment(null, commentText, commentImage, commentGifUrl);
+                        }}
                         onFocus={() => { if (!userId) window.location.href = "/login"; }}
                       />
                       <MentionSuggest text={commentText} onComplete={setCommentText} supabase={supabase} />
@@ -2905,24 +2989,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       onChange={(e) => setNewTitle(e.target.value)}
                     />
                     {/* formatting toolbar — wraps the selection */}
-                    <div className="flex items-center gap-1.5">
-                      {([["**", "B", "Bold", 700], ["*", "I", "Italic", 400], ["~~", "S", "Strikethrough", 400], ["`", "<>", "Code", 400]] as const).map(([marker, label, tip, weight]) => (
-                        <button
-                          key={marker}
-                          onClick={() => wrapSelection(marker)}
-                          title={tip}
-                          className="cursor-pointer text-[11px]"
-                          style={{
-                            ...btnGhost, borderRadius: 6, padding: "3px 9px",
-                            fontWeight: weight,
-                            fontStyle: label === "I" ? "italic" : undefined,
-                            textDecoration: label === "S" ? "line-through" : undefined,
-                            fontFamily: label === "<>" ? "monospace" : "inherit",
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                    <div className="flex items-center gap-2.5">
+                      {formatBar(() => bodyRef.current, newBody, setNewBody)}
                       <span className="text-[10px]" style={{ color: "rgba(238,238,245,0.25)" }}>
                         **bold** · *italic* · ~~strike~~ · `code` · @mention · links auto-embed
                       </span>
@@ -2935,6 +3003,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         maxLength={10000}
                         value={newBody}
                         onChange={(e) => setNewBody(e.target.value)}
+                        onKeyDown={(e) => formatShortcut(e, newBody, setNewBody)}
                       />
                       <MentionSuggest text={newBody} onComplete={setNewBody} supabase={supabase} />
                     </span>
