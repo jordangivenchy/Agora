@@ -875,7 +875,17 @@ export default function ProfileView({
                 </span>
               )}
               {profile.is_friend && (
-                <span style={{ color: "#6fd3a0", fontSize: 12.5 }}>✓ Friends</span>
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  title="You follow each other"
+                  style={{
+                    color: "#6fd3a0", fontSize: 12, fontWeight: 600,
+                    padding: "3px 10px 3px 8px", borderRadius: 999,
+                    background: "rgba(111,211,160,0.10)", border: "1px solid rgba(111,211,160,0.3)",
+                  }}
+                >
+                  <Icon name="user-check" size={13} /> Friends
+                </span>
               )}
             </div>
             {!isSelf && Array.isArray(profile.mutual_names) && profile.mutual_names.length > 0 && (
@@ -954,7 +964,7 @@ export default function ProfileView({
                         setTimeout(() => setShared(false), 1800);
                       });
                   }}
-                  className="cursor-pointer"
+                  className="cursor-pointer inline-flex items-center justify-center gap-1.5"
                   style={{
                     padding: "8px 20px",
                     borderRadius: 999,
@@ -966,7 +976,7 @@ export default function ProfileView({
                     fontWeight: 600,
                   }}
                 >
-                  {shared ? "✓ Link copied" : "Share profile"}
+                  {shared ? <><Icon name="check" size={13} /> Link copied</> : "Share profile"}
                 </button>
               </div>
             )}
