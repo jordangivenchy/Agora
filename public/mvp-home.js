@@ -361,7 +361,7 @@ function renderCarousel() {
       </div>
       <div class="carousel-panel carousel-room-panel">
         <div class="room-panel-kicker"><span class="room-panel-livedot"></span>Live${liveForLabel(c.liveSince)}</div>
-        <div class="room-panel-watching">${escHTML(c.viewersDisplay)} watching · ${c.speakerCount || 0} speaker${c.speakerCount === 1 ? '' : 's'} · ${c.audienceCount || 0} in the audience</div>
+        <div class="room-panel-watching">${c.speakerCount || 0} speaker${c.speakerCount === 1 ? '' : 's'} · ${c.audienceCount || 0} in the audience</div>
         <div class="room-panel-facts">
           <span class="room-panel-chip" style="--chip:${escHTML((TOPICS[c.topicKey] || {}).accent || '#4a9eff')};">${escHTML((TOPICS[c.topicKey] || {}).label || 'Discussion')}</span>
           ${(c.secondaryTopics || []).slice(0, 2).map(k => TOPICS[k] ? `<span class="room-panel-chip" style="--chip:${escHTML(TOPICS[k].accent)};">${escHTML(TOPICS[k].label)}</span>` : '').join('')}
