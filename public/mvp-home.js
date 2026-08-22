@@ -402,16 +402,9 @@ function renderCarousel() {
   void track.offsetWidth;
   track.style.transition = '';
 
-  // Thumbnail indicators: the host's photo for room slides, the article
-  // image for news; a plain dot only when a slide has no image.
-  dots.innerHTML = CAROUSEL_DATA.map((c, i) => {
-    const img = c.kind === 'news' ? c.imageUrl : c.thumbnailUrl;
-    const label = c.kind === 'news' ? (c.headline || 'News') : (c.motion || 'Discussion');
-    const inner = img
-      ? `<img src="${escHTML(img)}" alt="" loading="lazy" onerror="this.parentElement.classList.add('no-img'); this.remove();" />`
-      : `<span class="carousel-dot-initial" style="background:${escHTML(c.color || '#4a9eff')}">${escHTML((c.initials || '•'))}</span>`;
-    return `<div class="carousel-dot thumb${i === currentSlide ? ' active' : ''}${img ? '' : ' no-img'}" data-index="${i}" role="button" aria-label="Go to: ${escHTML(label)}" title="${escHTML(label)}" tabindex="0">${inner}</div>`;
-  }).join('');
+  dots.innerHTML = CAROUSEL_DATA.map((_, i) =>
+    `<div class="carousel-dot${i === currentSlide ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
+  ).join('');
 
   dots.querySelectorAll('.carousel-dot').forEach(dot => {
     dot.addEventListener('click', () => { goToSlide(parseInt(dot.dataset.index)); resetAutoPlay(); });
