@@ -42,12 +42,11 @@ posthog ✗ cron ✗`. Only PostHog keys and `CRON_SECRET` remain.
    verification attempt" → `public.hook_password_verification`. Until
    enabled, a 2FA user's password alone can still mint a session by
    calling the Supabase auth endpoint directly (normal login is gated).
-4. **GitHub CI** — not set up. Recommended: one Actions workflow
-   (`npm ci` → `tsc --noEmit` → `vitest` → `next build`, with
-   `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY` as repo vars), protect `main` on
-   that check, and add the Supabase vars to Vercel **Preview** so branch
-   deploys stop failing (they've failed for days — that's the "staging"
-   you're missing).
+4. **GitHub CI — DONE 08-22.** `.github/workflows/ci.yml` runs `tsc` →
+   `vitest` → `next build` on every push to `main` and every PR (repo
+   vars `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`). Vercel **Preview** now has
+   the Supabase public vars, so branch deploys build. CI reports but does
+   not block — branch protection on `main` not enabled (would force PRs).
 
 ## Secrets hygiene ledger (rotate)
 
