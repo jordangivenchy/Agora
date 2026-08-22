@@ -1749,3 +1749,11 @@ html.reduce-motion .nav-sparkle {
 .row-card { position: relative; }
 .row-card .stretched-link::after { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
 .row-card .row-inner-link { position: relative; z-index: 1; }
+
+/* Sidebar Friends (src/components/friends/FriendsPanel.tsx) — hover states
+   only; everything else is inline. */
+.friends-ui-card:hover { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.16) !important; }
+.friends-ui-row:hover { background: rgba(255,255,255,0.06); }
+.friends-ui-iconbtn:hover { background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.2) !important; }
+.friends-ui-pill:hover:not(:disabled) { filter: brightness(1.08); }
+.friends-ui-name:hover { text-decoration: underline !important; }

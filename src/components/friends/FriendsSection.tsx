@@ -1,8 +1,8 @@
 "use client";
 
-/* Sidebar Friends section — real data behind the MVP's friend-directory
-   design (header + count, "+" add button, Friend List card with stacked
-   avatars, slide-up overlay panel inside the sidebar).
+/* Sidebar Friends section — data + behaviour. Presentation lives in
+   FriendsPanel.tsx (compact card portaled into the sidebar slot, overlay
+   portaled over the whole sidebar).
 
    Friendship = mutual follow (get_friends). The panel shows presence
    (online / in a room via the global presence channel), favorites pinned
@@ -12,19 +12,13 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
-import { Icon } from "@/components/icons";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { useUserMenu } from "../userMenuContext";
-import UserAvatar from "../UserAvatar";
+import { FriendsCard, FriendsOverlay, type FriendRowModel, type FriendUser } from "./FriendsPanel";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
 
-interface FriendRow {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-}
+type FriendRow = FriendUser;
 
 interface Props {
   container: HTMLElement | null;
@@ -134,178 +128,41 @@ export default function FriendsSection({ container, sidebar }: Props) {
 
   if (!container || !me) return null;
 
-  const card = (
-    <>
-      <div className="friends-header">
-        <h4 className="friends-title">
-          Friends <span className="friends-count">{onlineCount}</span>
-        </h4>
-        <button className="friends-add-btn" title="Add friend" onClick={() => setOpen(true)}>
-          +
-        </button>
-      </div>
-      <div className="friend-directory-bar" onClick={() => setOpen(true)}>
-        <div className="friend-directory-icon"><Icon name="users" size={18} /></div>
-        <div className="friend-directory-info">
-          <span className="friend-directory-title">Friend List</span>
-          <span className="friend-directory-sub">
-            {friends.length} Friend{friends.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        <div className="friend-directory-avatars">
-          {sorted.slice(0, 3).map((f) => (
-            <div key={f.id} className="mini-avatar" style={{ overflow: "hidden", background: "#1c2430" }}>
-              <UserAvatar size={26} username={f.username} avatarUrl={f.avatar_url} seed={f.id} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-
-  const friendRow = (f: FriendRow, isFriend: boolean) => {
+  const toRow = (f: FriendRow, isFriend: boolean): FriendRowModel => {
     const p = presence.get(f.id);
-    const online = !!p;
-    const inRoom = p?.room_id ?? null;
-    return (
-      <div key={f.id} className="friend-item">
-        <div
-          className="friend-avatar-wrap"
-          style={{ cursor: "pointer" }}
-          onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: f.id, username: f.username })}
-        >
-          <div className="friend-avatar" style={{ overflow: "hidden", background: "#1c2430" }}>
-            <UserAvatar size={36} username={f.username} avatarUrl={f.avatar_url} seed={f.id} />
-          </div>
-          {online && <div className="friend-online-dot" />}
-        </div>
-        <div className="friend-info" style={{ minWidth: 0 }}>
-          <span
-            className="friend-name"
-            style={{ cursor: "pointer" }}
-            onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: f.id, username: f.username })}
-          >
-            {displayName(f)}
-            {favorites.has(f.id) && <Icon name="star" size={11} style={{ marginLeft: 4, color: "#e2b96b", fill: "currentColor" }} />}
-          </span>
-          <span className={`friend-status${online ? " online" : ""}`}>
-            {online && (
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "#22c55e",
-                  display: "inline-block",
-                  flexShrink: 0,
-                  marginRight: 4,
-                }}
-              />
-            )}
-            {inRoom ? "In a room" : online ? "Online" : "Offline"}
-          </span>
-        </div>
-        <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
-          {isFriend ? (
-            <>
-              {inRoom && (
-                <button
-                  className="friend-action-btn friend-action-btn--join"
-                  title="Join their room"
-                  onClick={() => {
-                    window.location.href = `/agora/${inRoom}`;
-                  }}
-                >
-                  Join
-                </button>
-              )}
-              <button className="friend-action-btn" title="Message" onClick={() => message(f)}>
-                <Icon name="message-circle" size={14} />
-              </button>
-            </>
-          ) : (
-            <button
-              className="friend-action-btn friend-action-btn--join"
-              disabled={busy === f.id}
-              onClick={() => follow(f)}
-            >
-              Add
-            </button>
-          )}
-        </div>
-      </div>
-    );
+    return { user: f, online: !!p, roomId: p?.room_id ?? null, favorite: favorites.has(f.id), isFriend };
   };
+  const onlineRows = filtered.filter((f) => presence.has(f.id)).map((f) => toRow(f, true));
+  const offlineRows = filtered.filter((f) => !presence.has(f.id)).map((f) => toRow(f, true));
+  const searching = query.trim().length >= 2;
 
   const overlay =
     open && sidebar
       ? createPortal(
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(10, 10, 18, 0.97)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderRadius: 14,
-              zIndex: 200,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
+          <FriendsOverlay
+            friendCount={friends.length}
+            query={query}
+            onQueryChange={setQuery}
+            onClose={() => setOpen(false)}
+            online={onlineRows}
+            offline={offlineRows}
+            addBack={searching ? [] : followsMe.map((f) => toRow(f, false))}
+            results={searchResults.map((f) => toRow(f, false))}
+            busyId={busy}
+            onMessage={message}
+            onAdd={follow}
+            onJoin={(roomId) => {
+              window.location.href = `/agora/${roomId}`;
             }}
-          >
-            <div className="friend-overlay-header">
-              <h2 className="friend-overlay-title">
-                Friend List <span className="friend-overlay-count">{friends.length}</span>
-              </h2>
-              <button
-                onClick={() => setOpen(false)}
-                style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 15 }}
-              >
-                <Icon name="x" size={15} />
-              </button>
-            </div>
-            <div className="friend-search-wrap">
-              <span className="friend-search-icon"><Icon name="search" size={13} /></span>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search friends or add by username…"
-                className="friend-search-input"
-                autoFocus
-              />
-            </div>
-            <div className="friend-overlay-list" style={{ flex: 1, overflowY: "auto" }}>
-              {filtered.map((f) => friendRow(f, true))}
-              {filtered.length === 0 && query.trim().length < 2 && (
-                <p style={{ color: "#8b8b94", fontSize: 12, textAlign: "center", padding: "18px 12px" }}>
-                  No friends yet — search a username above to add one.
-                </p>
-              )}
-
-              {followsMe.length > 0 && query.trim().length < 2 && (
-                <>
-                  <p className="friend-list-divider">Follows you — add back</p>
-                  {followsMe.map((f) => friendRow(f, false))}
-                </>
-              )}
-
-              {searchResults.length > 0 && (
-                <>
-                  <p className="friend-list-divider">Add friend</p>
-                  {searchResults.map((f) => friendRow(f, false))}
-                </>
-              )}
-            </div>
-          </div>,
+            onMore={(at, u) => openUserMenu(at, { userId: u.id, username: u.username })}
+          />,
           sidebar
         )
       : null;
 
   return (
     <>
-      {createPortal(card, container)}
+      {createPortal(<FriendsCard friends={sorted} onlineCount={onlineCount} onOpen={() => setOpen(true)} />, container)}
       {overlay}
     </>
   );
