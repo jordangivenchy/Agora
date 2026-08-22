@@ -6073,10 +6073,11 @@ body { background: transparent; }
 .carousel-item.has-thumb .carousel-bg-grid { display: none; }
 .carousel-room-thumb {
   position: absolute;
-  top: 50%;
-  /* centered in the image area (everything left of the 228px panel) */
+  /* optically centered: sits a touch low so it reads as resting toward
+     the indicator row rather than floating high */
+  top: 56%;
   left: calc((100% - 228px) / 2);
-  height: 74%;
+  height: 80%;
   aspect-ratio: 1 / 1;
   transform: translate(-50%, -50%);
   object-fit: cover;
