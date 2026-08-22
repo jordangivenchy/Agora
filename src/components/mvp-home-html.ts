@@ -157,8 +157,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   <section class="carousel-section">
     <div class="carousel-stage" id="carouselStage">
       <div class="carousel-track" id="carouselTrack"></div>
-      <button class="carousel-arrow left" id="arrowLeft" aria-label="Previous">◀</button>
-      <button class="carousel-arrow right" id="arrowRight" aria-label="Next">▶</button>
+      <button class="carousel-arrow left" id="arrowLeft" aria-label="Previous"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button class="carousel-arrow right" id="arrowRight" aria-label="Next"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
     <!-- News headlines — React portal target (NewsTicker.tsx) -->
