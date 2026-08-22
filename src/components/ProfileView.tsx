@@ -965,7 +965,11 @@ export default function ProfileView({
               )}
               {profile.is_friend && (
                 <button
-                  onClick={() => router.push(`/?dm=${profile.id}`)}
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("agora:dm", {
+                      detail: { userId: profile.id, username: profile.username, avatarUrl: profile.avatar_url ?? null },
+                    }))
+                  }
                   className="cursor-pointer"
                   style={{
                     padding: "9px 22px",
