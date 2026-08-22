@@ -26,10 +26,14 @@ type GiphyHit = {
 };
 
 export default function GifPicker({
-  onPick, onClose,
+  onPick, onClose, placement = "below", align = "left",
 }: {
   onPick: (url: string) => void;
   onClose: () => void;
+  /** Open below (default) or above the anchoring wrapper. */
+  placement?: "below" | "above";
+  /** Which edge of the wrapper to hug. */
+  align?: "left" | "right";
 }) {
   const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState<Gif[]>([]);
@@ -86,9 +90,12 @@ export default function GifPicker({
   return (
     <div
       ref={boxRef}
-      className="absolute left-0 z-30 overflow-hidden"
+      className="absolute z-30 overflow-hidden"
       style={{
-        top: "100%", marginTop: 6, width: 320,
+        [align === "left" ? "left" : "right"]: 0,
+        [placement === "below" ? "top" : "bottom"]: "100%",
+        [placement === "below" ? "marginTop" : "marginBottom"]: 6,
+        width: 320,
         background: "rgba(14,14,17,0.97)",
         backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
         border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12,

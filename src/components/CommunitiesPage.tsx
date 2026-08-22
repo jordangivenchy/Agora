@@ -29,6 +29,7 @@ import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
 import GifPicker, { giphyEnabled } from "./community/GifPicker";
+import EmojiPicker from "./EmojiPicker";
 
 interface Props {
   open: boolean;
@@ -492,6 +493,24 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [gifPickerFor, setGifPickerFor] = useState<null | "post" | "comment">(null);
   const [commentGifUrl, setCommentGifUrl] = useState<string | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  /* Emoji picker (shared popover) for the post body / comment box. */
+  const [emojiFor, setEmojiFor] = useState<null | "post" | "comment">(null);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
+  const insertEmoji = useCallback((
+    el: HTMLInputElement | HTMLTextAreaElement | null,
+    set: (fn: (cur: string) => string) => void,
+    emoji: string,
+  ) => {
+    set((cur) => {
+      const start = el?.selectionStart ?? cur.length;
+      const end = el?.selectionEnd ?? start;
+      requestAnimationFrame(() => {
+        el?.focus();
+        el?.setSelectionRange(start + emoji.length, start + emoji.length);
+      });
+      return cur.slice(0, start) + emoji + cur.slice(end);
+    });
+  }, []);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
   const [creatingCommunity, setCreatingCommunity] = useState(false);
   const [newCommunityName, setNewCommunityName] = useState("");
@@ -2303,6 +2322,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <div className="flex gap-2">
                     <span className="relative flex-1 min-w-0">
                       <input
+                        ref={commentInputRef}
                         style={inputStyle}
                         placeholder={userId ? "Add a comment… (@ to mention)" : "Sign in to comment"}
                         value={commentText}
@@ -2311,6 +2331,22 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         onFocus={() => { if (!userId) window.location.href = "/login"; }}
                       />
                       <MentionSuggest text={commentText} onComplete={setCommentText} supabase={supabase} />
+                    </span>
+                    <span className="relative inline-block shrink-0">
+                      <button
+                        onClick={() => setEmojiFor(emojiFor === "comment" ? null : "comment")}
+                        className="cursor-pointer text-[12px] px-2.5 rounded-lg flex items-center h-full"
+                        style={btnGhost}
+                        title="Emoji"
+                      >
+                        <Icon name="smile" size={14} />
+                      </button>
+                      {emojiFor === "comment" && (
+                        <EmojiPicker
+                          onPick={(e) => insertEmoji(commentInputRef.current, setCommentText, e)}
+                          onClose={() => setEmojiFor(null)}
+                        />
+                      )}
                     </span>
                     <label className="cursor-pointer text-[12px] px-3 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
                       <Icon name="image" size={14} />
@@ -2918,6 +2954,22 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </div>
                     )}
                     <div className="flex items-center gap-3 flex-wrap">
+                      <span className="relative inline-block">
+                        <button
+                          onClick={() => setEmojiFor(emojiFor === "post" ? null : "post")}
+                          className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg"
+                          style={btnGhost}
+                          title="Emoji"
+                        >
+                          <Icon name="smile" size={13} /> Emoji
+                        </button>
+                        {emojiFor === "post" && (
+                          <EmojiPicker
+                            onPick={(e) => insertEmoji(bodyRef.current, setNewBody, e)}
+                            onClose={() => setEmojiFor(null)}
+                          />
+                        )}
+                      </span>
                       <label className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnGhost}>
                         <Icon name="image" size={13} /> {newImage ? "Change image" : "Add image"}
                         <input
