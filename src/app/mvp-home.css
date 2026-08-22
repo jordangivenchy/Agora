@@ -6002,8 +6002,8 @@ body { background: transparent; }
   width: 240px;
   border-radius: 0;
   border: none;
-  border-left: 1px solid rgba(255,255,255,0.08);
-  background: #1c1c20 !important; /* charcoal, matching the v5 glass cards */
+  border-left: 0.5px solid #2e2e38;
+  background: rgba(11,11,13,0.95) !important; /* same as the Browse pills */
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
