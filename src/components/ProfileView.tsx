@@ -495,6 +495,33 @@ export default function ProfileView({
   );
   const communityHref = (name: string) => pathFor.community(slugify(name));
 
+  /* Empty states for the tabs: icon, title, hint, optional CTA. */
+  const emptyState = (icon: IconName, title: string, hint: string, cta?: { label: string; href: string }) => (
+    <div className="flex flex-col items-center text-center" style={{ ...card, padding: "36px 24px" }}>
+      <span
+        className="flex items-center justify-center"
+        style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#8b8b94", marginBottom: 12 }}
+      >
+        <Icon name={icon} size={20} />
+      </span>
+      <p className="m-0" style={{ color: "#e3e3ea", fontSize: 14.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}>{title}</p>
+      <p className="m-0 mt-1" style={{ color: "#8b8b94", fontSize: 12.5, maxWidth: 360, lineHeight: 1.5 }}>{hint}</p>
+      {cta && (
+        <a
+          href={cta.href}
+          className="no-underline mt-4"
+          style={{
+            padding: "8px 18px", borderRadius: 999, fontSize: 12.5, fontWeight: 600,
+            background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402",
+          }}
+        >
+          {cta.label}
+        </a>
+      )}
+    </div>
+  );
+  const first = (profile?.display_name?.trim() || profile?.username || "").split(" ")[0];
+
   /* Avatar + name + @handle, linked. Used at the top of every row so the
      person behind a debate / post / comment is always visible. */
   const identity = (u: { id?: string | null; username: string; display_name?: string | null; avatar_url?: string | null }, size = 20) => {
@@ -1069,9 +1096,12 @@ export default function ProfileView({
             {myCommunities === null ? (
               <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
             ) : myCommunities.length === 0 ? (
-              <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                Not in any communities yet.
-              </p>
+              emptyState(
+                "users",
+                isSelf ? "Not in any communities yet" : `${first} hasn't joined a community`,
+                isSelf ? "Join a board to post, comment, and get its discussions in your feed." : "Communities they join will be listed here.",
+                isSelf ? { label: "Browse communities", href: "/communities" } : undefined,
+              )
             ) : (
               myCommunities.map((c) => {
                 const roleTag =
@@ -1145,9 +1175,12 @@ export default function ProfileView({
             {pastAndLive === null ? (
               <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
             ) : pastAndLive.length === 0 ? (
-              <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                No debates yet.
-              </p>
+              emptyState(
+                "mic",
+                isSelf ? "No debates yet" : `${first} hasn't debated yet`,
+                isSelf ? "Host or join a live discussion and your history builds here." : "Their live and past discussions will show up here.",
+                isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
+              )
             ) : (
               pastAndLive.map((d) => {
                 const topic = TOPICS.find((t) => t.key === d.topic_key);
@@ -1196,9 +1229,14 @@ export default function ProfileView({
             {upcoming === null ? (
               <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
             ) : upcoming.length === 0 ? (
-              <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                Nothing scheduled.
-              </p>
+              emptyState(
+                "calendar",
+                isSelf ? "Nothing on the calendar" : `${first} has nothing scheduled`,
+                isSelf
+                  ? "Schedule a discussion and it shows up here — people can hit the bell to be notified when you go live."
+                  : "When they schedule a discussion it appears here, and you can tap the bell to get notified when it starts.",
+                isSelf ? { label: "Schedule a discussion", href: "/?create=schedule" } : undefined,
+              )
             ) : (
               upcoming.map((d) => {
                 const topic = TOPICS.find((t) => t.key === d.topic_key);
@@ -1342,9 +1380,16 @@ export default function ProfileView({
               {rows === null ? (
                 <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
               ) : rows.length === 0 ? (
-                <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                  {tab === "posts" ? "No community posts yet." : "No reposts yet."}
-                </p>
+                emptyState(
+                  tab === "posts" ? "pencil" : "repeat",
+                  tab === "posts"
+                    ? (isSelf ? "No posts yet" : `${first} hasn't posted yet`)
+                    : (isSelf ? "No reposts yet" : `${first} hasn't reposted anything`),
+                  tab === "posts"
+                    ? (isSelf ? "Posts you write in any community show up here." : "Their community posts will appear here.")
+                    : (isSelf ? "Repost something from a community to share it with another." : "Posts they share across communities will appear here."),
+                  isSelf ? { label: tab === "posts" ? "Write a post" : "Browse communities", href: "/communities" } : undefined,
+                )
               ) : (
                 rows.map(postCard)
               )}
@@ -1358,9 +1403,12 @@ export default function ProfileView({
             {comments === null ? (
               <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
             ) : comments.length === 0 ? (
-              <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                No comments yet.
-              </p>
+              emptyState(
+                "message-circle",
+                isSelf ? "No comments yet" : `${first} hasn't commented yet`,
+                isSelf ? "Join a thread — your comments across communities collect here." : "Their comments across communities will show up here.",
+                isSelf ? { label: "Find a thread", href: "/communities" } : undefined,
+              )
             ) : (
               <>
                 {comments.map((c) => (
@@ -1429,9 +1477,11 @@ export default function ProfileView({
             {clips === null ? (
               <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
             ) : clips.length === 0 ? (
-              <p className="text-center py-8" style={{ ...card, color: "#6b6b74", fontSize: 13 }}>
-                No shorts yet.
-              </p>
+              emptyState(
+                "play",
+                isSelf ? "No shorts yet" : `${first} has no shorts`,
+                "Clips from recorded discussions will land here.",
+              )
             ) : (
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
                 {clips.map((c) => (

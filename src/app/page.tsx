@@ -488,6 +488,19 @@ export default function Home() {
       window.location.reload();
     };
     window.addEventListener("agora:create", onCreate);
+    /* /?create=1 or /?create=schedule (from profile empty states) opens the
+       create modal directly — scheduling pre-toggled for the latter. */
+    {
+      const params = new URLSearchParams(window.location.search);
+      const c = params.get("create");
+      if (c) {
+        params.delete("create");
+        const q = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (q ? `?${q}` : ""));
+        setCreatePrefill({ motion: "", topic: "", schedule: c === "schedule" });
+        setShowCreate(true);
+      }
+    }
     window.addEventListener("agora:profile", onProfile);
     window.addEventListener("agora:tab", onTab);
     window.addEventListener("agora:logout", onLogout);
