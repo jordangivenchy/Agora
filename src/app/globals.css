@@ -1757,3 +1757,9 @@ html.reduce-motion .nav-sparkle {
 .friends-ui-iconbtn:hover { background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.2) !important; }
 .friends-ui-pill:hover:not(:disabled) { filter: brightness(1.08); }
 .friends-ui-name:hover { text-decoration: underline !important; }
+
+/* Profile banner: pencil only on hover / keyboard focus. */
+.profile-banner .profile-banner-edit { opacity: 0; transition: opacity 0.15s ease; }
+.profile-banner:hover .profile-banner-edit,
+.profile-banner .profile-banner-edit:focus-visible { opacity: 1; }
+@media (hover: none) { .profile-banner .profile-banner-edit { opacity: 1; } }

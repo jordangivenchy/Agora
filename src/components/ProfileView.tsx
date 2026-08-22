@@ -722,59 +722,46 @@ export default function ProfileView({
             : "max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar"
         }
       >
-        {/* ── Banner — always rendered so every profile shares one shape;
-               without a photo it's a quiet placeholder (own profile: a hint
-               that opens Edit Profile). ── */}
+        {/* ── Banner — always rendered at the real 3:1 size; without a photo
+               it's a plain grey slab. Own profile: a pencil in the corner on
+               hover opens Edit Profile. ── */}
         <div
-          className="overflow-hidden relative"
+          className="overflow-hidden relative profile-banner"
           style={{
             borderRadius: "14px 14px 0 0",
             border: "1px solid rgba(255,255,255,0.08)",
             borderBottom: "none",
             width: "100%",
-            aspectRatio: profile.banner_url ? "3 / 1" : "6 / 1",
-            maxHeight: profile.banner_url ? 240 : 140,
-            minHeight: profile.banner_url ? undefined : 110,
-            background: profile.banner_url
-              ? "rgba(16,16,22,0.88)"
-              : "radial-gradient(120% 140% at 20% 0%, rgba(124,110,247,0.16), transparent 55%), radial-gradient(90% 120% at 100% 100%, rgba(226,185,107,0.10), transparent 60%), #101016",
+            aspectRatio: "3 / 1",
+            maxHeight: 240,
+            background: profile.banner_url ? "rgba(16,16,22,0.88)" : "#1e1e24",
           }}
         >
-          {profile.banner_url ? (
+          {profile.banner_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.banner_url}
               alt=""
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
-          ) : (
-            <>
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute", inset: 0,
-                  backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
-                  backgroundSize: "18px 18px",
-                  maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)",
-                  WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)",
-                }}
-              />
-              {isSelf && (
-                <button
-                  onClick={() => setEditOpen(true)}
-                  className="cursor-pointer inline-flex items-center gap-1.5"
-                  style={{
-                    position: "absolute", top: 12, right: 12,
-                    padding: "6px 12px", borderRadius: 999,
-                    background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.14)",
-                    color: "#c9c9d2", fontSize: 12, fontFamily: "inherit",
-                    backdropFilter: "blur(8px)",
-                  }}
-                >
-                  <Icon name="image" size={13} /> Add banner
-                </button>
-              )}
-            </>
+          )}
+          {isSelf && (
+            <button
+              onClick={() => setEditOpen(true)}
+              aria-label={profile.banner_url ? "Change banner" : "Add banner"}
+              title={profile.banner_url ? "Change banner" : "Add banner"}
+              className="cursor-pointer profile-banner-edit"
+              style={{
+                position: "absolute", right: 12, bottom: 12,
+                width: 34, height: 34, borderRadius: "50%",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.18)",
+                color: "#e3e3ea", padding: 0,
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <Icon name="pencil" size={14} />
+            </button>
           )}
         </div>
 
