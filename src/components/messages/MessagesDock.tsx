@@ -304,7 +304,7 @@ export default function MessagesDock() {
         setSendError(
           error.code === "42501"
             ? "You can only message friends — you both need to follow each other."
-            : "Couldn't send — try again."
+            : `Couldn't send — ${error.message || "try again."}`
         );
         return false;
       }

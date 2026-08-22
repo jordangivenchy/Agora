@@ -30,6 +30,7 @@ import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
 import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
+import CommunityPicker from "./community/CommunityPicker";
 import RichText from "./community/RichText";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 
@@ -933,6 +934,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       return;
     }
     setComposing(false);
+    try { window.localStorage.setItem("agora:lastPostCommunity", composeCommunity); } catch {}
     setNewTitle(""); setNewBody(""); setNewTagId("");
     setNewGifUrl(null);
     pickImage(null);
@@ -2729,7 +2731,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     onClick={() => {
                       if (!requireAuth()) return;
                       setComposing((v) => !v);
-                      setComposeCommunity(selected !== "all" ? selected : (communities.find((c) => c.joined)?.id ?? communities[0]?.id ?? ""));
+                      setComposeCommunity(selected !== "all" ? selected : (() => {
+                        /* Default to where you last posted, then a favorite, then any joined board. */
+                        const last = typeof window !== "undefined" ? window.localStorage.getItem("agora:lastPostCommunity") : null;
+                        const ok = (id: string | null | undefined) => !!id && communities.some((c) => c.id === id && (!c.is_private || c.joined));
+                        if (ok(last)) return last as string;
+                        return communities.find((c) => c.joined && c.favorite)?.id ?? communities.find((c) => c.joined)?.id ?? communities[0]?.id ?? "";
+                      })());
                     }}
                     className="cursor-pointer text-[12px] px-4 py-1.5 rounded-full ml-auto"
                     style={{ ...btnBlue, borderRadius: 999 }}
@@ -2739,19 +2747,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 </div>
 
                 {composing && (
-                  <div className="p-4 mb-4 flex flex-col gap-2.5" style={card}>
+                  <div className="p-4 mb-4 flex flex-col gap-2.5" style={{ ...card, position: "relative", zIndex: 30 }}>
                     {selected === "all" && (
-                      <select
+                      <CommunityPicker
+                        communities={communities.filter((c) => !c.is_private || c.joined)}
                         value={composeCommunity}
-                        onChange={(e) => { setComposeCommunity(e.target.value); setNewTagId(""); }}
-                        className="text-[13px] px-3 py-2 rounded-lg self-start"
-                        style={{ background: "rgba(16,16,19,0.7)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(238,238,245,0.88)" }}
-                      >
-                        {communities.length === 0 && <option value="">No communities yet</option>}
-                        {communities
-                          .filter((c) => !c.is_private || c.joined)
-                          .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
+                        onChange={(id) => { setComposeCommunity(id); setNewTagId(""); }}
+                      />
                     )}
                     <input
                       style={inputStyle}
