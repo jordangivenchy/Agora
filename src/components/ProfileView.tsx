@@ -722,59 +722,81 @@ export default function ProfileView({
             : "max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar"
         }
       >
-        {/* ── Banner (only when set — layout is unchanged without one) ── */}
-        {profile.banner_url && (
-          <div
-            className="overflow-hidden"
-            style={{
-              // Fused with the header card below: square bottom corners,
-              // shared border, no gap — one visual unit.
-              borderRadius: "14px 14px 0 0",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderBottom: "none",
-              // Explicit width keeps aspect-ratio from transferring the
-              // capped height back into a narrower box (the img just
-              // crops taller instead).
-              width: "100%",
-              aspectRatio: "3 / 1",
-              maxHeight: 240,
-              background: "rgba(16,16,22,0.88)",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* ── Banner — always rendered so every profile shares one shape;
+               without a photo it's a quiet placeholder (own profile: a hint
+               that opens Edit Profile). ── */}
+        <div
+          className="overflow-hidden relative"
+          style={{
+            borderRadius: "14px 14px 0 0",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderBottom: "none",
+            width: "100%",
+            aspectRatio: profile.banner_url ? "3 / 1" : "6 / 1",
+            maxHeight: profile.banner_url ? 240 : 140,
+            minHeight: profile.banner_url ? undefined : 110,
+            background: profile.banner_url
+              ? "rgba(16,16,22,0.88)"
+              : "radial-gradient(120% 140% at 20% 0%, rgba(124,110,247,0.16), transparent 55%), radial-gradient(90% 120% at 100% 100%, rgba(226,185,107,0.10), transparent 60%), #101016",
+          }}
+        >
+          {profile.banner_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.banner_url}
               alt=""
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
-          </div>
-        )}
+          ) : (
+            <>
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute", inset: 0,
+                  backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
+                  backgroundSize: "18px 18px",
+                  maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)",
+                  WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)",
+                }}
+              />
+              {isSelf && (
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="cursor-pointer inline-flex items-center gap-1.5"
+                  style={{
+                    position: "absolute", top: 12, right: 12,
+                    padding: "6px 12px", borderRadius: 999,
+                    background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.14)",
+                    color: "#c9c9d2", fontSize: 12, fontFamily: "inherit",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  <Icon name="image" size={13} /> Add banner
+                </button>
+              )}
+            </>
+          )}
+        </div>
 
         {/* ── Header ── */}
         <section
           className="p-6 flex gap-5 flex-wrap items-start"
           style={{
             ...card,
-            ...(profile.banner_url
-              ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" }
-              : {}),
+            borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none",
           }}
         >
           {/* With a banner, the avatar rides up over its bottom edge,
               ringed in the card color so the crop reads deliberate. */}
           <span
             className="inline-block shrink-0"
-            style={
-              profile.banner_url
-                ? {
-                    marginTop: -52,
-                    borderRadius: "50%",
-                    border: "4px solid #101016",
-                    background: "#101016",
-                    lineHeight: 0,
-                  }
-                : { lineHeight: 0 }
-            }
+            style={{
+              marginTop: -52,
+              borderRadius: "50%",
+              border: "4px solid #101016",
+              background: "#101016",
+              lineHeight: 0,
+            }}
           >
             <UserAvatar size={92} username={profile.username} avatarUrl={profile.avatar_url} seed={profile.id} />
           </span>
