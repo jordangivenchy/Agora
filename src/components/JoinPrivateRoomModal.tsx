@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -185,9 +186,7 @@ export default function JoinPrivateRoomModal({ open, onClose }: Props) {
               e.currentTarget.style.background = "rgba(255,255,255,0.04)";
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon name="x" size={13} />
           </button>
         </div>
         <p style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "18px", lineHeight: 1.5 }}>

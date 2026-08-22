@@ -1,4 +1,32 @@
 // ═══════════════════════════════════════════════
+//  ICONS — inline Lucide strokes for the few UI affordances this legacy
+//  file renders. Plain JS, no imports: paths are duplicated from
+//  src/components/icons.tsx (the source of truth). Keep them in sync.
+// ═══════════════════════════════════════════════
+
+const ICON_PATHS = {
+  'search': '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'send': '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+  'message-circle': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  'star': '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+  'flag': '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+  'trash': '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+  'play': '<polygon points="6 3 20 12 6 21 6 3"/>',
+  'thumbs-up': '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+  'thumbs-down': '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+  'sparkles': '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+  'zap': '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+  'mic': '<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>',
+};
+
+function iconSvg(name, size = 16, extraStyle = '') {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;flex-shrink:0;vertical-align:-0.125em;${extraStyle}">${ICON_PATHS[name] || ''}</svg>`;
+}
+
+
+// ═══════════════════════════════════════════════
 //  DATA REGISTRY
 // ═══════════════════════════════════════════════
 
@@ -380,7 +408,7 @@ function renderCarousel() {
           </div>` : ''}
         </div>
         ${c.community ? `<div class="room-panel-host">hosted by <span class="room-panel-community" style="--chip:${escHTML(c.communityColor || '#4a9eff')};">${escHTML(c.community)}</span></div>` : ''}
-        <button class="carousel-watch-btn room-panel-watch" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
+        <button class="carousel-watch-btn room-panel-watch" data-debate-index="${c.debateIndex}">${iconSvg('play', 11, 'fill:currentColor')} Watch Live</button>
       </div>
     </div>
   `;
@@ -575,7 +603,7 @@ function renderFriends() {
       <button class="friends-add-btn" title="Add friend">+</button>
     </div>
     <div class="friend-directory-bar" id="friendDirectoryBar">
-      <div class="friend-directory-icon">👥</div>
+      <div class="friend-directory-icon">${iconSvg('users', 18)}</div>
       <div class="friend-directory-info">
         <span class="friend-directory-title">Friend List</span>
         <span class="friend-directory-sub">${FRIENDS.length} Friends</span>
@@ -597,10 +625,10 @@ function renderFriends() {
         Friend List
         <span class="friend-overlay-count">${FRIENDS.length}</span>
       </h2>
-      <button id="closeFriendOverlay">✕</button>
+      <button id="closeFriendOverlay">${iconSvg('x', 15)}</button>
     </div>
     <div class="friend-search-wrap">
-      <span class="friend-search-icon">🔍</span>
+      <span class="friend-search-icon">${iconSvg('search', 13)}</span>
       <input type="text" id="friendSearchInput" placeholder="Search friends..." class="friend-search-input" />
     </div>
     <div class="friend-overlay-list">
@@ -655,13 +683,13 @@ function renderFriends() {
   contextMenu.id = 'friendContextMenu';
   contextMenu.className = 'friend-context-menu';
   contextMenu.innerHTML = `
-    <div class="context-menu-item" data-action="invite">📨 Send Invite</div>
-    <div class="context-menu-item" data-action="group-invite">👥 Request Invite to Group</div>
-    <div class="context-menu-item" data-action="whisper">💬 Whisper</div>
-    <div class="context-menu-item" data-action="favorite">⭐ Add to Favorites</div>
+    <div class="context-menu-item" data-action="invite">${iconSvg('send', 14)} Send Invite</div>
+    <div class="context-menu-item" data-action="group-invite">${iconSvg('users', 14)} Request Invite to Group</div>
+    <div class="context-menu-item" data-action="whisper">${iconSvg('message-circle', 14)} Whisper</div>
+    <div class="context-menu-item" data-action="favorite">${iconSvg('star', 14)} Add to Favorites</div>
     <div class="context-menu-divider"></div>
-    <div class="context-menu-item danger" data-action="report">🚩 Report</div>
-    <div class="context-menu-item danger" data-action="remove">🗑️ Remove Friend</div>
+    <div class="context-menu-item danger" data-action="report">${iconSvg('flag', 14)} Report</div>
+    <div class="context-menu-item danger" data-action="remove">${iconSvg('trash', 14)} Remove Friend</div>
   `;
   document.body.appendChild(contextMenu);
 
@@ -823,7 +851,7 @@ function buildDebateCard(d, realIndex) {
   const badge = badgeMap[status] || badgeMap.live;
 
   // CTA buttons
-  let watchBtn  = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">▶ Watch</button>`;
+  let watchBtn  = `<button class="hc-btn hc-btn-watch" onclick="openDebateModal(${realIndex});event.stopPropagation()">${iconSvg('play', 11, 'fill:currentColor')} Watch</button>`;
   let joinBtn;
   if (status === 'live') {
     joinBtn = `<button class="hc-btn hc-btn-join-blue" onclick="openDebateModal(${realIndex});event.stopPropagation()">Join as speaker</button>`;
@@ -905,7 +933,7 @@ function renderDebateGrid() {
       if (results.length === 0) {
         grid.innerHTML = `
           <div class="search-empty-state">
-            <div class="search-empty-icon">🔍</div>
+            <div class="search-empty-icon">${iconSvg('search', 32)}</div>
             <div class="search-empty-title">Nothing matches "${searchQuery}"</div>
             <div class="search-empty-sub">Try a different keyword, name, or topic.</div>
           </div>
@@ -1051,9 +1079,9 @@ function renderDebateRoom(index) {
       </div>
       <div class="feed-arg-text">${a.text}</div>
       <div class="feed-arg-reactions">
-        <button class="feed-reaction-btn" data-arg-reaction="up" title="Strong argument">👍 <span class="react-count">${Math.floor(Math.random()*120)+8}</span></button>
-        <button class="feed-reaction-btn" data-arg-reaction="down" title="Weak argument">👎 <span class="react-count">${Math.floor(Math.random()*30)+2}</span></button>
-        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Compelling">★ <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="up" title="Strong argument">${iconSvg('thumbs-up', 13)} <span class="react-count">${Math.floor(Math.random()*120)+8}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="down" title="Weak argument">${iconSvg('thumbs-down', 13)} <span class="react-count">${Math.floor(Math.random()*30)+2}</span></button>
+        <button class="feed-reaction-btn" data-arg-reaction="fire" title="Compelling">${iconSvg('star', 13)} <span class="react-count">${Math.floor(Math.random()*60)+4}</span></button>
       </div>
     </div>
   `).join('');
@@ -1067,7 +1095,7 @@ function renderDebateRoom(index) {
         <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
       </div>
       <div class="room-viewers-pill">${d.viewers} watching</div>
-      <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">✕</button>
+      <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">${iconSvg('x', 16)}</button>
     </div>
 
     <!-- BODY: stream + vote | argument feed -->
@@ -1130,7 +1158,7 @@ function renderDebateRoom(index) {
             ${voted ? 'disabled' : ''}
             aria-label="Vote PRO on this topic"
           >
-            ${voted === 'pro' ? '✓ Voted PRO' : '👍 PRO'}
+            ${voted === 'pro' ? '✓ Voted PRO' : `${iconSvg('thumbs-up', 13)} PRO`}
           </button>
           <button
             class="room-vote-btn con${voted === 'con' ? ' voted' : ''}"
@@ -1138,7 +1166,7 @@ function renderDebateRoom(index) {
             ${voted ? 'disabled' : ''}
             aria-label="Vote CON on this topic"
           >
-            ${voted === 'con' ? '✓ Voted CON' : '👎 CON'}
+            ${voted === 'con' ? '✓ Voted CON' : `${iconSvg('thumbs-down', 13)} CON`}
           </button>
         </div>
 
@@ -1225,19 +1253,19 @@ function castVote(index, side) {
   if (btnPro) {
     btnPro.disabled  = true;
     btnPro.classList.toggle('voted', side === 'pro');
-    btnPro.textContent = side === 'pro' ? '✓ Voted PRO' : '👍 PRO';
+    btnPro.innerHTML = side === 'pro' ? '✓ Voted PRO' : `${iconSvg('thumbs-up', 13)} PRO`;
   }
   if (btnCon) {
     btnCon.disabled  = true;
     btnCon.classList.toggle('voted', side === 'con');
-    btnCon.textContent = side === 'con' ? '✓ Voted CON' : '👎 CON';
+    btnCon.innerHTML = side === 'con' ? '✓ Voted CON' : `${iconSvg('thumbs-down', 13)} CON`;
   }
 
   // Show toast
   const d = DEBATES[index];
   showToast(
     side === 'pro' ? 'pro-vote' : 'con-vote',
-    side === 'pro' ? '👍' : '👎',
+    side === 'pro' ? iconSvg('thumbs-up', 18) : iconSvg('thumbs-down', 18),
     `You voted ${side.toUpperCase()}`,
     `"${d.motion.substring(0, 45)}${d.motion.length > 45 ? '…' : ''}"`
   );
@@ -1284,7 +1312,7 @@ function showToast(type, icon, title, sub, duration = 3500) {
       <div class="toast-title">${title}</div>
       ${sub ? `<div class="toast-sub">${sub}</div>` : ''}
     </div>
-    <button class="toast-close" aria-label="Dismiss">✕</button>
+    <button class="toast-close" aria-label="Dismiss">${iconSvg('x', 14)}</button>
   `;
 
   toast.querySelector('.toast-close').addEventListener('click', () => dismissToast(id));
@@ -1516,7 +1544,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
         <span class="modal-section-label">Motion / Topic</span>
         <div class="modal-input-row">
           <input class="modal-input" id="motionInput" type="text" placeholder="What's the topic?" autocomplete="off" />
-          <button class="suggest-btn" onclick="_cmSuggest()">✦ Suggest</button>
+          <button class="suggest-btn" onclick="_cmSuggest()">${iconSvg('sparkles', 12)} Suggest</button>
         </div>
       </div>
       <div class="modal-section">
@@ -1573,12 +1601,12 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     modalBody.innerHTML = `
       <div class="entry-cards">
         <div class="entry-card queue" onclick="_cmShowQueue()">
-          <span class="entry-card-icon">⚡</span>
+          <span class="entry-card-icon">${iconSvg('zap', 28)}</span>
           <span class="entry-card-title">Join a queue</span>
           <span class="entry-card-desc">Get paired with someone on your topic and skill level</span>
         </div>
         <div class="entry-card create" onclick="_cmShowCreate()">
-          <span class="entry-card-icon">🎙</span>
+          <span class="entry-card-icon">${iconSvg('mic', 28)}</span>
           <span class="entry-card-title">Create a room</span>
           <span class="entry-card-desc">Host your own room with full control over format, rules, and audience</span>
         </div>
@@ -2134,7 +2162,7 @@ init();
     if (visible === 0 && !existing) {
       grid.insertAdjacentHTML('beforeend', `
         <div class="ds-empty">
-          <span class="ds-empty-icon">🔍</span>
+          <span class="ds-empty-icon">${iconSvg('search', 36)}</span>
           No discussions match your search${q ? ' for <em>"' + q + '"</em>' : ''}
         </div>`);
     } else if (visible > 0 && existing) {

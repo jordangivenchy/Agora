@@ -6,6 +6,7 @@
    on demand so the room bundle doesn't carry it. */
 
 import { useEffect, useRef } from "react";
+import { Icon } from "@/components/icons";
 
 export default function HlsPlayer({ src, onClose }: { src: string; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -69,7 +70,7 @@ export default function HlsPlayer({ src, onClose }: { src: string; onClose: () =
           fontSize: 13,
         }}
       >
-        ✕ Leave stream view
+        <Icon name="x" size={13} /> Leave stream view
       </button>
     </div>
   );

@@ -17,6 +17,7 @@
    OS voice as fallback — see lib/voice/tts. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import { useDebateTranscription } from "@/lib/useDebateTranscription";
 import { extractWake } from "@/lib/wakeWord";
@@ -348,7 +349,7 @@ export default function AgoraAssistant({
               className="ml-auto cursor-pointer bg-transparent border-none text-[13px]"
               style={{ color: "#8b8b94" }}
             >
-              ✕
+              <Icon name="x" size={14} />
             </button>
           </div>
 
@@ -494,7 +495,7 @@ export default function AgoraAssistant({
                 color: voiceOut ? "#9cc4f0" : "#5a5a66", fontSize: 12,
               }}
             >
-              {voiceOut ? "🔊" : "🔇"}
+              {voiceOut ? <Icon name="volume-2" size={14} /> : <Icon name="volume-x" size={14} />}
             </button>
           </form>
         </div>

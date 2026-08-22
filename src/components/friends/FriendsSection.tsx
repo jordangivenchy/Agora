@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
+import { Icon } from "@/components/icons";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { useUserMenu } from "../userMenuContext";
 import UserAvatar from "../UserAvatar";
@@ -144,7 +145,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
         </button>
       </div>
       <div className="friend-directory-bar" onClick={() => setOpen(true)}>
-        <div className="friend-directory-icon">👥</div>
+        <div className="friend-directory-icon"><Icon name="users" size={18} /></div>
         <div className="friend-directory-info">
           <span className="friend-directory-title">Friend List</span>
           <span className="friend-directory-sub">
@@ -185,7 +186,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
             onClick={(e) => openUserMenu({ x: e.clientX, y: e.clientY }, { userId: f.id, username: f.username })}
           >
             {displayName(f)}
-            {favorites.has(f.id) && <span style={{ marginLeft: 4 }}>⭐</span>}
+            {favorites.has(f.id) && <Icon name="star" size={11} style={{ marginLeft: 4, color: "#e2b96b", fill: "currentColor" }} />}
           </span>
           <span className={`friend-status${online ? " online" : ""}`}>
             {online && (
@@ -219,7 +220,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
                 </button>
               )}
               <button className="friend-action-btn" title="Message" onClick={() => message(f)}>
-                💬
+                <Icon name="message-circle" size={14} />
               </button>
             </>
           ) : (
@@ -261,11 +262,11 @@ export default function FriendsSection({ container, sidebar }: Props) {
                 onClick={() => setOpen(false)}
                 style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 15 }}
               >
-                ✕
+                <Icon name="x" size={15} />
               </button>
             </div>
             <div className="friend-search-wrap">
-              <span className="friend-search-icon">🔍</span>
+              <span className="friend-search-icon"><Icon name="search" size={13} /></span>
               <input
                 type="text"
                 value={query}

@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import FriendsSection from "@/components/friends/FriendsSection";
+import { Icon } from "@/components/icons";
 import "./home-sidebar.css";
 
 export type HomeNavId = "home" | "trending" | "explore" | "communities" | "news";
@@ -51,9 +52,7 @@ const NAV: NavItem[] = [
       ["3.1s", "4.6s", "88%", "52%", "4px"],
     ],
     icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-        <path fillRule="evenodd" clipRule="evenodd" d="M11.31 1.776a1 1 0 0 1 1.38 0l8 7.619 2.5 2.381a1 1 0 0 1-1.38 1.448L21 12.452V20a2 2 0 0 1-2 2h-5v-5a2 2 0 0 0-4 0v5H5a2 2 0 0 1-2-2v-7.548l-.81.772a1 1 0 0 1-1.38-1.448l2.5-2.381 8-7.619Z" />
-      </svg>
+      <Icon name="home" size={15} />
     ),
   },
   {
@@ -66,9 +65,7 @@ const NAV: NavItem[] = [
       ["2.7s", "3.8s", "45%", "82%", "-4px"],
     ],
     icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M9.32 15.653a.812.812 0 0 1-.086-.855c.176-.342.245-.733.2-1.118a2.106 2.106 0 0 0-.267-.779 2.027 2.027 0 0 0-.541-.606 3.96 3.96 0 0 1-1.481-2.282c-1.708 2.239-1.053 3.51-.235 4.63a.748.748 0 0 1-.014.901.87.87 0 0 1-.394.283.838.838 0 0 1-.478.023c-1.105-.27-2.145-.784-2.85-1.603a4.686 4.686 0 0 1-.906-1.555 4.811 4.811 0 0 1-.263-1.797s-.133-2.463 2.837-4.876c0 0 3.51-2.978 2.292-5.18a.621.621 0 0 1 .112-.653.558.558 0 0 1 .623-.147l.146.058a7.63 7.63 0 0 1 2.96 3.5c.58 1.413.576 3.06.184 4.527.325-.292.596-.641.801-1.033l.029-.064c.198-.477.821-.325 1.055-.013.086.137 2.292 3.343 1.107 6.048a5.516 5.516 0 0 1-1.84 2.027 6.127 6.127 0 0 1-2.138.893.834.834 0 0 1-.472-.038.867.867 0 0 1-.381-.29z" />
-      </svg>
+      <Icon name="flame" size={15} />
     ),
   },
   {
@@ -82,10 +79,7 @@ const NAV: NavItem[] = [
       ["2.9s", "3.5s", "38%", "22%", "5px"],
     ],
     icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-        <path d="M9.879 9.879L15.536 8.464 14.121 14.121 8.464 15.536z" fill="currentColor" />
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-      </svg>
+      <Icon name="compass" size={15} />
     ),
   },
   {
@@ -97,9 +91,7 @@ const NAV: NavItem[] = [
       ["2.0s", "4.7s", "82%", "76%", "-4px"],
     ],
     icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
+      <Icon name="message-square" size={16} />
     ),
   },
   {
@@ -111,12 +103,7 @@ const NAV: NavItem[] = [
       ["2.3s", "4.6s", "86%", "32%", "4px"],
     ],
     icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a4 4 0 0 1-4-4V6" />
-        <path d="M2 13h6" />
-        <path d="M2 9h6" />
-        <path d="M2 17h6" />
-      </svg>
+      <Icon name="newspaper" size={16} />
     ),
   },
 ];

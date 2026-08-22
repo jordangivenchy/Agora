@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 
 export interface CallSettingsProps {
   cameras: MediaDeviceInfo[];
@@ -138,35 +139,35 @@ const SECTIONS: { key: Section; label: string; icon: React.ReactNode }[] = [
     key: "video",
     label: "Video & effects",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m23 7-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+      <Icon name="video" size={18} />
     ),
   },
   {
     key: "audio",
     label: "Audio",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" /></svg>
+      <Icon name="headphones" size={18} />
     ),
   },
   {
     key: "display",
     label: "Display & controls",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></svg>
+      <Icon name="monitor" size={18} />
     ),
   },
   {
     key: "share",
     label: "Share screen",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2" /><path d="m9 10 3-3 3 3M12 7v6" /></svg>
+      <Icon name="monitor-up" size={18} />
     ),
   },
   {
     key: "access",
     label: "Accessibility",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="4.5" r="1.5" /><path d="M4 9h16M12 9v6m0 0-3 6m3-6 3 6" /></svg>
+      <Icon name="person-standing" size={18} />
     ),
   },
 ];
@@ -266,12 +267,12 @@ export default function CallSettings({
                   toneBusy.current = false;
                 }}
               >
-                <span aria-hidden>▶</span> Test speaker
+                <Icon name="play" size={11} /> Test speaker
               </button>
               <Meter level={toneProgress ?? 0} />
               <div className="ag-set-label">Output volume</div>
               <div className="ag-set-slider">
-                <span aria-hidden>🔇</span>
+                <Icon name="volume-x" size={14} />
                 <input
                   type="range"
                   min={0}
@@ -281,7 +282,7 @@ export default function CallSettings({
                   onChange={(e) => onOutputVolume(Number(e.target.value))}
                   aria-label="Output volume"
                 />
-                <span aria-hidden>🔊</span>
+                <Icon name="volume-2" size={14} />
               </div>
             </div>
 
@@ -362,7 +363,7 @@ export default function CallSettings({
       </div>
 
       <a className="ag-set-all" href="/settings" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
+        <Icon name="settings" size={14} />
         Open all settings
       </a>
     </section>

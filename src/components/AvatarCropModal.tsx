@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Icon } from "@/components/icons";
 import Cropper, { type Area } from "react-easy-crop";
 import useEscapeClose from "@/lib/useEscapeClose";
 
@@ -125,9 +126,7 @@ export default function AvatarCropModal({ open, src, onCancel, onApply }: Props)
               border: "1px solid var(--border)",
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon name="x" size={13} />
           </button>
         </div>
 
@@ -170,10 +169,7 @@ export default function AvatarCropModal({ open, src, onCancel, onApply }: Props)
 
         {/* Zoom slider */}
         <div className="flex items-center gap-3" style={{ margin: "16px 2px 18px" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35M8 11h6" />
-          </svg>
+          <Icon name="zoom-out" size={14} style={{ color: "var(--text-dim)" }} />
           <input
             type="range"
             min={1}
@@ -184,10 +180,7 @@ export default function AvatarCropModal({ open, src, onCancel, onApply }: Props)
             className="flex-1 cursor-pointer"
             style={{ accentColor: "var(--accent-blue)", height: 4 }}
           />
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35M11 8v6M8 11h6" />
-          </svg>
+          <Icon name="zoom-in" size={16} style={{ color: "var(--text-dim)" }} />
         </div>
 
         <p

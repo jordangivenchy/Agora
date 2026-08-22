@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 
@@ -121,9 +122,7 @@ export default function ReportModal({
                 border: "1px solid rgba(34,197,94,0.3)",
               }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+              <Icon name="check" size={22} style={{ color: "#22c55e" }} />
             </div>
             <h2
               className="text-center"
@@ -187,9 +186,7 @@ export default function ReportModal({
                   border: "1px solid var(--border)",
                 }}
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                <Icon name="x" size={13} />
               </button>
             </div>
             <p style={{ color: "var(--text-muted)", fontSize: 12.5, lineHeight: 1.5, marginBottom: 16 }}>

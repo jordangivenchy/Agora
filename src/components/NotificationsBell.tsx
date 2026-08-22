@@ -15,6 +15,7 @@
    and starting-soon events reach them even in another tab. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -267,10 +268,7 @@ export default function NotificationsBell({ container }: Props) {
           color: unread > 0 ? "#f4d47c" : "#c0c0c8",
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-        </svg>
+        <Icon name="bell" size={16} />
         {unread > 0 && (
           <span
             style={{
@@ -336,7 +334,7 @@ export default function NotificationsBell({ container }: Props) {
                 }}
               >
                 <span className="text-[13px]" style={{ marginTop: 1 }}>
-                  {n.type === "new_follower" ? "👤" : n.type === "friend_accepted" ? "🤝" : n.type === "room_invite" ? "📨" : n.type === "room_starting_soon" ? "🔔" : n.type === "community_post" ? "📝" : n.type === "community_debate" ? "🏛" : n.type === "mention" ? "＠" : "🔴"}
+                  {n.type === "mention" ? "＠" : <Icon name={n.type === "new_follower" ? "user" : n.type === "friend_accepted" ? "handshake" : n.type === "room_invite" ? "send" : n.type === "room_starting_soon" ? "bell" : n.type === "community_post" ? "pencil" : n.type === "community_debate" ? "landmark" : "zap"} size={13} />}
                 </span>
                 <span className="flex-1 text-[12.5px]" style={{ color: "#d5d5dc", lineHeight: 1.45 }}>
                   {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)

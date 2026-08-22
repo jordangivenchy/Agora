@@ -28,6 +28,7 @@
    what you're allowed to look at. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import type { VideoTile } from "./useAgoraCall";
 import { tileKey } from "./useAgoraCall";
 import { useUserMenu } from "../userMenuContext";
@@ -75,12 +76,7 @@ interface SideItem {
 }
 
 function ScreenGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <path d="M8 21h8M12 17v4" />
-    </svg>
-  );
+  return <Icon name="monitor" size={15} />;
 }
 
 /** One attached <video>. Screens letterbox, cameras fill — a cropped

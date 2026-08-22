@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import AvatarCropModal from "./AvatarCropModal";
@@ -348,9 +349,7 @@ export default function EditProfileModal({
               e.currentTarget.style.background = "rgba(255,255,255,0.04)";
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon name="x" size={13} />
           </button>
         </div>
 
@@ -398,10 +397,7 @@ export default function EditProfileModal({
                   color: "var(--text-dim)",
                 }}
               >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
+                <Icon name="user" size={26} strokeWidth={1.5} />
               </div>
             )}
             <span
@@ -417,10 +413,7 @@ export default function EditProfileModal({
                 color: "#fff",
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                <circle cx="12" cy="13" r="3" />
-              </svg>
+              <Icon name="camera" size={12} />
             </span>
           </button>
           <div className="flex flex-col gap-1.5">
@@ -498,11 +491,7 @@ export default function EditProfileModal({
               className="flex items-center justify-center gap-2"
               style={{ width: "100%", height: "100%", color: "var(--text-dim)", fontSize: 12 }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="m21 15-5-5L5 21" />
-              </svg>
+              <Icon name="image" size={16} />
               {bannerUploading ? "Uploading…" : "Click to upload a banner"}
             </span>
           )}
@@ -602,10 +591,7 @@ export default function EditProfileModal({
               className="absolute flex items-center"
               style={{ right: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+              <Icon name="lock" size={13} />
             </span>
           )}
         </div>
@@ -695,9 +681,7 @@ export default function EditProfileModal({
                   e.currentTarget.style.borderColor = "var(--border)";
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                <Icon name="x" size={12} />
               </button>
             </div>
           );

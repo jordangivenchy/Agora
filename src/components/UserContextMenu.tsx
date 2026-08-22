@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Icon, type IconName } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { visibleActions, type MenuActionId } from "@/lib/userMenuPermissions";
@@ -20,31 +21,31 @@ export type { MenuRoomContext, MenuChatContext, OpenMenuOptions } from "./userMe
 
 /* ── Row metadata ───────────────────────────────────────────── */
 
-const ROW_META: Record<MenuActionId, { emoji: string; label: string; danger?: boolean; soon?: boolean }> = {
-  view_profile:     { emoji: "👤", label: "View profile" },
-  message:          { emoji: "💬", label: "Message" },
-  favorite:         { emoji: "⭐", label: "Add to favorites" }, // label swapped dynamically
-  invite_room:      { emoji: "📨", label: "Invite to this room" },
-  follow:           { emoji: "🔔", label: "Follow" }, // label swapped dynamically
-  mute_audio:       { emoji: "🔇", label: "Mute their audio" },
-  hide_camera:      { emoji: "📷", label: "Hide their camera" },
-  block:            { emoji: "🚫", label: "Block user", danger: true },
-  report:           { emoji: "🚩", label: "Report user", danger: true },
-  copy_link:        { emoji: "🔗", label: "Copy profile link" },
-  host_stage_pro:   { emoji: "🎤", label: "Bring on stage — PRO" },
-  host_stage_con:   { emoji: "🎤", label: "Bring on stage — CON" },
-  host_to_audience: { emoji: "👥", label: "Move to audience" },
-  host_mute_mic:    { emoji: "🔇", label: "Mute microphone" },
-  host_disable_cam: { emoji: "🎥", label: "Disable camera" },
-  host_end_turn:    { emoji: "⏭", label: "End speaking turn" },
-  host_give_turn:   { emoji: "🎙", label: "Give speaking turn" },
-  host_timeout:     { emoji: "⏱", label: "Timeout (5 min)", danger: true },
-  host_kick:        { emoji: "🚪", label: "Remove from room", danger: true },
-  host_ban:         { emoji: "🚫", label: "Ban from debate", danger: true },
-  mod_panel:        { emoji: "📋", label: "Reports & history" },
-  mod_warn:         { emoji: "⚠️", label: "Warn user" },
-  mod_suspend:      { emoji: "⛔", label: "Suspend account", danger: true },
-  mod_ban_account:  { emoji: "🔨", label: "Ban account", danger: true },
+const ROW_META: Record<MenuActionId, { icon: IconName; label: string; danger?: boolean; soon?: boolean }> = {
+  view_profile:     { icon: "user", label: "View profile" },
+  message:          { icon: "message-circle", label: "Message" },
+  favorite:         { icon: "star", label: "Add to favorites" }, // label swapped dynamically
+  invite_room:      { icon: "send", label: "Invite to this room" },
+  follow:           { icon: "bell", label: "Follow" }, // label swapped dynamically
+  mute_audio:       { icon: "volume-x", label: "Mute their audio" },
+  hide_camera:      { icon: "camera-off", label: "Hide their camera" },
+  block:            { icon: "ban", label: "Block user", danger: true },
+  report:           { icon: "flag", label: "Report user", danger: true },
+  copy_link:        { icon: "link", label: "Copy profile link" },
+  host_stage_pro:   { icon: "mic", label: "Bring on stage — PRO" },
+  host_stage_con:   { icon: "mic", label: "Bring on stage — CON" },
+  host_to_audience: { icon: "users", label: "Move to audience" },
+  host_mute_mic:    { icon: "mic-off", label: "Mute microphone" },
+  host_disable_cam: { icon: "video-off", label: "Disable camera" },
+  host_end_turn:    { icon: "skip-forward", label: "End speaking turn" },
+  host_give_turn:   { icon: "mic", label: "Give speaking turn" },
+  host_timeout:     { icon: "timer", label: "Timeout (5 min)", danger: true },
+  host_kick:        { icon: "door-open", label: "Remove from room", danger: true },
+  host_ban:         { icon: "ban", label: "Ban from debate", danger: true },
+  mod_panel:        { icon: "clipboard-list", label: "Reports & history" },
+  mod_warn:         { icon: "alert-triangle", label: "Warn user" },
+  mod_suspend:      { icon: "circle-x", label: "Suspend account", danger: true },
+  mod_ban_account:  { icon: "hammer", label: "Ban account", danger: true },
 };
 
 interface MenuState {
@@ -431,7 +432,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
         disabled={rowDisabled(id)}
         onClick={() => run(id)}
       >
-        <span className="user-menu-emoji">{ROW_META[id].emoji}</span>
+        <span className="user-menu-emoji"><Icon name={ROW_META[id].icon} size={14} /></span>
         {rowLabel(id)}
         {ROW_META[id].soon && <span className="user-menu-soon">soon</span>}
       </button>
@@ -513,7 +514,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                ✕
+                <Icon name="x" size={14} />
               </button>
             </div>
             <ProfileView username={drawerUsername} embedded />
@@ -628,9 +629,7 @@ function ModerationPanel({
             className="flex items-center justify-center cursor-pointer"
             style={{ width: 28, height: 28, borderRadius: 8, color: "var(--text-muted)", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)" }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon name="x" size={13} />
           </button>
         </div>
 

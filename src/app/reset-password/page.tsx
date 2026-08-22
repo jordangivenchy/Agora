@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { Icon } from "@/components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { validateNewPassword } from "@/lib/passwordPolicy";
@@ -171,11 +172,7 @@ function ResetPasswordInner() {
                   border: "1px solid rgba(239,68,68,0.3)",
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
+                <Icon name="alert-circle" size={24} style={{ color: "#fca5a5" }} />
               </div>
               <h1
                 className="text-center"
@@ -364,9 +361,7 @@ function ResetPasswordInner() {
                   border: "1px solid rgba(34,197,94,0.3)",
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
+                <Icon name="check" size={24} style={{ color: "#22c55e" }} />
               </div>
               <h1
                 className="text-center"

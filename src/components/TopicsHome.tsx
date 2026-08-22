@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
+import { Icon } from "@/components/icons";
 import { TOPICS } from "@/types/database";
 import TopicIcon from "./topicIcons";
 import { useUserMenu } from "./userMenuContext";
@@ -636,7 +637,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                         border: reminders[r.id]?.amSet ? "0.5px solid #d9a238" : "0.5px solid rgba(255,255,255,0.25)",
                       }}
                     >
-                      🔔
+                      <Icon name="bell" size={13} />
                     </button>
                   </div>
                   {/* Info overlaid on the photo — keeps the block a true square */}
@@ -676,7 +677,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                         ? new Date(r.scheduled_start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
                         : "Time TBD"}
                       {" · "}{FORMAT_LABEL[r.format] ?? r.format}
-                      {" · 🔔 "}{reminders[r.id]?.count ?? 0}
+                      {" · "}<Icon name="bell" size={10} /> {reminders[r.id]?.count ?? 0}
                     </p>
                   </div>
                 </div>
@@ -700,7 +701,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 Nothing on the calendar in {selCat.label} yet.
               </p>
               <p className="m-0 text-[11.5px]" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
-                Schedule a debate and it headlines here — everyone who taps 🔔 gets
+                Schedule a debate and it headlines here — everyone who taps <Icon name="bell" size={11} /> gets
                 reminded when doors open, 30 minutes before start.
               </p>
               <button

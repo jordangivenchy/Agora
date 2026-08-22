@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef, use } from "react";
+import { Icon } from "@/components/icons";
 import Wordmark from "@/components/Wordmark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
@@ -875,7 +876,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                   borderRadius: 999,
                 }}
               >
-                📅 Scheduled
+                <Icon name="calendar" size={12} /> Scheduled
               </span>
             )}
             <div className="dot" />
@@ -932,7 +933,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                     textTransform: "uppercase",
                   }}
                 >
-                  ▶ Start Debate
+                  <Icon name="play" size={12} style={{ fill: "currentColor" }} /> Start Debate
                 </button>
               )}
             </div>
@@ -950,7 +951,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                 color: "#22c55e",
               }}
             >
-              ▶ Start Debate
+              <Icon name="play" size={12} style={{ fill: "currentColor" }} /> Start Debate
             </button>
           )}
 
@@ -984,7 +985,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
             }}
           >
             <span>
-              ⏳ Waiting for host to approve you as{" "}
+              <Icon name="hourglass" size={13} /> Waiting for host to approve you as{" "}
               <strong style={{ fontWeight: 700 }}>{myQueueEntry.stance}</strong>
               {myQueuePosition ? (
                 <>
@@ -1165,10 +1166,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                       e.currentTarget.style.background = "var(--accent-blue)";
                     }}
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
+                    <Icon name="eye" size={15} />
                     {joining ? "Joining…" : "Join Audience"}
                   </button>
                   <p style={{ fontSize: "12px", color: "rgba(238,238,245,0.25)" }}>
@@ -1227,10 +1225,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                     e.currentTarget.style.background = "var(--accent-blue)";
                   }}
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
+                  <Icon name="eye" size={15} />
                   {joining ? "Joining…" : "Join Audience"}
                 </button>
               </>

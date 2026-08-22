@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { Icon } from "@/components/icons";
 import {
   LiveKitRoom,
   VideoTrack,
@@ -657,7 +658,7 @@ function DebateStage({
       {/* Host: raised-hand queue in priority order (longest wait first) */}
       {isHost && raisedQueue.length > 0 && (
         <div className="hand-queue-strip">
-          <span className="hand-queue-label">✋ Raised ({raisedQueue.length})</span>
+          <span className="hand-queue-label"><Icon name="hand" size={10} /> Raised ({raisedQueue.length})</span>
           {raisedQueue.map((s, i) => (
             <span key={s.id} className="hand-queue-chip">
               <span className="hand-queue-pos">#{i + 1}</span>
@@ -733,7 +734,7 @@ function DebateStage({
             <div className={`audience-avatar ${hashColor(s.user?.username || "")}`}>
               {getInitials(displayName(s.user) || "?")}
             </div>
-            {s.hand_raised_at && <span className="audience-hand-badge">✋</span>}
+            {s.hand_raised_at && <span className="audience-hand-badge"><Icon name="hand" size={11} /></span>}
           </div>
         ))}
         {participants.length > visibleSpectators.length + 2 && (
@@ -759,13 +760,7 @@ function DebateStage({
               onClick={toggleMic}
               title={isMicOn ? "Mute" : "Unmute"}
             >
-              <svg viewBox="0 0 24 24">
-                <rect x="9" y="2" width="6" height="12" rx="3" />
-                <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
-                <line x1="12" y1="19" x2="12" y2="22" />
-                <line x1="9" y1="22" x2="15" y2="22" />
-                {!isMicOn && <line x1="2" y1="2" x2="22" y2="22" />}
-              </svg>
+              {isMicOn ? <Icon name="mic" size={20} /> : <Icon name="mic-off" size={20} />}
             </button>
 
             <button
@@ -773,11 +768,7 @@ function DebateStage({
               onClick={toggleCam}
               title={isCamOn ? "Camera Off" : "Camera On"}
             >
-              <svg viewBox="0 0 24 24">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" />
-                {!isCamOn && <line x1="2" y1="2" x2="22" y2="22" />}
-              </svg>
+              {isCamOn ? <Icon name="video" size={20} /> : <Icon name="video-off" size={20} />}
             </button>
 
           </>
@@ -792,7 +783,7 @@ function DebateStage({
             title={myHandRaised ? "Lower your hand" : "Raise your hand"}
             aria-pressed={myHandRaised}
           >
-            ✋
+            <Icon name="hand" size={18} />
             <span className="hand-btn-label">
               {myHandRaised ? "Lower hand" : "Raise hand"}
             </span>
@@ -804,12 +795,7 @@ function DebateStage({
           onClick={onToggleNotes}
           title={notesOpen ? "Close Notes" : "Debate Notes"}
         >
-          <svg viewBox="0 0 24 24">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
+          <Icon name="file-text" size={20} />
         </button>
 
         <button
@@ -817,16 +803,11 @@ function DebateStage({
           onClick={onToggleChat}
           title={chatOpen ? "Close Chat" : "Live Chat"}
         >
-          <svg viewBox="0 0 24 24">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <Icon name="message-square" size={20} />
         </button>
 
         <button className="ctrl-btn btn-leave" onClick={promptLeave} title="Leave Stage">
-          <svg viewBox="0 0 24 24">
-            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C9.44 16.29 7.62 14.9 6.06 13.06a19.5 19.5 0 0 1-3-8.59A2 2 0 0 1 4.77 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
-            <line x1="22" y1="2" x2="2" y2="22" />
-          </svg>
+          <Icon name="phone-off" size={20} />
         </button>
       </div>
 
@@ -972,12 +953,12 @@ function SpeakerTile({
       <div className="tile-grid" />
       <div className={`tile-stance ${stanceClass}`}>{stance}</div>
 
-      {isHost && <div className="tile-crown">👑</div>}
+      {isHost && <div className="tile-crown"><Icon name="crown" size={14} style={{ color: "#e2b96b" }} /></div>}
 
       {/* Raised-hand badge — visible to everyone */}
       {handRaised && debater && (
         <div className="tile-hand-raised" aria-label="Hand raised">
-          ✋
+          <Icon name="hand" size={36} />
         </div>
       )}
 
@@ -993,11 +974,7 @@ function SpeakerTile({
           </div>
           {debater && cameraOff && (
             <div className="tile-cam-off-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" />
-                <line x1="2" y1="2" x2="22" y2="22" />
-              </svg>
+              <Icon name="video-off" size={14} />
               Camera off
             </div>
           )}
@@ -1025,18 +1002,7 @@ function SpeakerTile({
         </div>
         {debater && !isMicOn && (
           <div className="tile-mic off">
-            <svg
-              viewBox="0 0 24 24"
-              style={{ width: 11, height: 11 }}
-              fill="none"
-              stroke="rgba(255,110,110,0.95)"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="1" y1="1" x2="23" y2="23" />
-              <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-            </svg>
+            <Icon name="mic-off" size={11} style={{ color: "rgba(255,110,110,0.95)" }} />
           </div>
         )}
       </div>

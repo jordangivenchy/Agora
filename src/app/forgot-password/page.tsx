@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { Icon } from "@/components/icons";
 
 // Resend cooldown — purely a UX nicety (disables the button so someone
 // can't machine-gun submit); the real enforcement is server-side in
@@ -260,11 +261,7 @@ export default function ForgotPasswordPage() {
                   border: "1px solid rgba(34,197,94,0.3)",
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16v16H4z" opacity="0" />
-                  <path d="M22 6 12 13 2 6" />
-                  <path d="M2 6h20v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z" />
-                </svg>
+                <Icon name="mail" size={24} style={{ color: "#22c55e" }} />
               </div>
               <h1
                 className="text-center"

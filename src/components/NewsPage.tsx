@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedNewsItem } from "@/lib/seed-content";
 
@@ -301,7 +302,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 className="text-[10px] font-medium px-2.5 py-0.5 rounded-full"
                 style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", letterSpacing: 1 }}
               >
-                ☀ TODAY'S MOTION · {today}
+                <Icon name="sun" size={11} /> TODAY'S MOTION · {today}
               </span>
               <span className="text-[11px]" style={{ color: "#8b8b94" }}>resets in {resetCountdown()}</span>
             </div>
@@ -330,7 +331,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-lg border-none"
                 style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
               >
-                ✦ Discuss this now
+                <Icon name="sparkles" size={12} /> Discuss this now
               </button>
               <button
                 onClick={() => castVote("pro")}
@@ -352,7 +353,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                   className="cursor-pointer text-[12px] px-4 py-1.5 rounded-lg"
                   style={{ border: "0.5px solid #3a3a42", color: "#e5e5ec", background: "transparent" }}
                 >
-                  ▶ Watch live
+                  <Icon name="play" size={11} style={{ fill: "currentColor" }} /> Watch live
                 </button>
               )}
             </div>

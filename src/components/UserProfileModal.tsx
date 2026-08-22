@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS } from "@/types/database";
@@ -479,11 +480,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                   title="More options"
                   aria-label="More options"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="12" r="1.8" />
-                    <circle cx="12" cy="12" r="1.8" />
-                    <circle cx="19" cy="12" r="1.8" />
-                  </svg>
+                  <Icon name="more-horizontal" size={16} />
                 </button>
               </div>
             )}

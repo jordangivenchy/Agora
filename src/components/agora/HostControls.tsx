@@ -11,6 +11,7 @@
    client. Actions that need the stage migration fail soft with a hint. */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -368,7 +369,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                         : "Bring the front of the line to the mic"
                     }
                   >
-                    🎤 Bring up next
+                    <Icon name="mic" size={13} /> Bring up next
                   </button>
                   {isPrimaryHost && (
                     <button
@@ -384,7 +385,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                 {requests.length === 0 && <div className="ag-host-empty">No raised hands.</div>}
                 {requests.map((p) => (
                   <div key={p.id} className="ag-host-row">
-                    <span className="ag-host-hand">✋</span>
+                    <span className="ag-host-hand"><Icon name="hand" size={13} /></span>
                     <RowIdentity p={p} role="audience" />
                     <button className="ag-host-act primary" disabled={busy !== null} onClick={() => invite(p)}>
                       Invite
@@ -408,7 +409,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                 {audienceList.length === 0 && <div className="ag-host-empty">Nobody here matches.</div>}
                 {audienceList.map(({ p }) => (
                   <div key={p.id} className="ag-host-row">
-                    {p.hand_raised_at && <span className="ag-host-hand">✋</span>}
+                    {p.hand_raised_at && <span className="ag-host-hand"><Icon name="hand" size={13} /></span>}
                     <RowIdentity p={p} role="audience" />
                     <button className="ag-host-act primary" disabled={busy !== null} onClick={() => invite(p)}>
                       Invite
@@ -642,9 +643,5 @@ function RowIdentity({ p, role }: { p: StageParticipant; role: StageRole }) {
 }
 
 function CrownIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.5 10h-15L3 8z" />
-    </svg>
-  );
+  return <Icon name="crown" size={13} />;
 }

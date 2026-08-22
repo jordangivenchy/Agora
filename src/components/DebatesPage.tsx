@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS } from "@/types/database";
@@ -222,7 +223,7 @@ export default function DebatesPage({ open, onClose }: Props) {
               marginBottom: 6,
             }}
           >
-            ⚔️ Debates
+            <Icon name="swords" size={22} style={{ verticalAlign: "-3px" }} /> Debates
           </h1>
           <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
             Your upcoming debates and every past round you&apos;ve taken part in.
@@ -516,7 +517,7 @@ function ScheduledRowCard({
           fontSize: 18,
         }}
       >
-        {isLive ? "🔴" : "📅"}
+        {isLive ? <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#e84040", display: "inline-block" }} /> : <Icon name="calendar" size={18} />}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -609,7 +610,7 @@ function HistoryRowCard({ row }: { row: HistoryRow }) {
     row.status === "cancelled" ? "Cancelled" :
                                  "Ongoing";
 
-  const icon = outcome === "won" ? "🏆" : outcome === "lost" ? "❌" : outcome === "tied" ? "🤝" : isDebater ? "⚔️" : "👁️";
+  const icon = <Icon name={outcome === "won" ? "trophy" : outcome === "lost" ? "circle-x" : outcome === "tied" ? "handshake" : isDebater ? "swords" : "eye"} size={18} />;
 
   const stance = row.stance;
   const stanceColor =

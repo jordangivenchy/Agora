@@ -1,3 +1,5 @@
+import { iconSvg } from "./icons";
+
 export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refraction -->
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
   <defs>
@@ -22,7 +24,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
     <div class="search-active-indicator"></div>
     <input type="text" id="searchInput" placeholder="Search topics, people, or keywords…" aria-label="Search" autocomplete="off">
     <button class="create-btn nav-search-btn" id="searchBtn" type="button" aria-label="Create a discussion">
-      <span class="create-icon">✦</span>
+      <span class="create-icon">${iconSvg("sparkles", 16)}</span>
       <span class="create-label"><span>C</span><span>r</span><span>e</span><span>a</span><span>t</span><span>e</span></span>
     </button>
   </div>
@@ -33,9 +35,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <div class="nav-messages-glass-wrap">
         <button class="nav-messages-glass-btn">
           <span class="nav-messages-glass-text">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+            ${iconSvg("message-circle", 18)}
           </span>
         </button>
         <div class="nav-messages-glass-shadow"></div>
@@ -50,14 +50,14 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       </button>
       <div class="avatar-dropdown" id="profileDropdown" role="menu">
         <a class="avatar-menu-item" href="#profile" role="menuitem">
-          <span class="avatar-menu-icon">👤</span>Profile
+          <span class="avatar-menu-icon">${iconSvg("user", 14)}</span>Profile
         </a>
         <a class="avatar-menu-item" href="#settings" role="menuitem">
-          <span class="avatar-menu-icon">⚙️</span>Settings
+          <span class="avatar-menu-icon">${iconSvg("settings", 14)}</span>Settings
         </a>
         <div class="avatar-dropdown-divider"></div>
         <a class="avatar-menu-item avatar-menu-item--danger" href="#logout" role="menuitem">
-          <span class="avatar-menu-icon">🚪</span>Log out
+          <span class="avatar-menu-icon">${iconSvg("log-out", 14)}</span>Log out
         </a>
       </div>
     </div>
@@ -157,8 +157,8 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   <section class="carousel-section">
     <div class="carousel-stage" id="carouselStage">
       <div class="carousel-track" id="carouselTrack"></div>
-      <button class="carousel-arrow left" id="arrowLeft" aria-label="Previous"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 19-7-7 7-7"/></svg></button>
-      <button class="carousel-arrow right" id="arrowRight" aria-label="Next"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+      <button class="carousel-arrow left" id="arrowLeft" aria-label="Previous">${iconSvg("chevron-left", 26, { strokeWidth: 1.5 })}</button>
+      <button class="carousel-arrow right" id="arrowRight" aria-label="Next">${iconSvg("chevron-right", 26, { strokeWidth: 1.5 })}</button>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
     <!-- News headlines — React portal target (NewsTicker.tsx) -->
@@ -198,7 +198,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 
   <!-- Search bar -->
   <div class="explore-search-wrap">
-    <span class="explore-search-icon">⌕</span>
+    <span class="explore-search-icon">${iconSvg("search", 15)}</span>
     <input id="exploreSearchInput" class="explore-search-input" type="text"
       placeholder="Search topics, people, or keywords…" autocomplete="off" />
   </div>

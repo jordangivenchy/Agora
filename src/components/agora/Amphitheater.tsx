@@ -5,6 +5,7 @@
    speaker-view toggle. The 2D data logic (who's on stage, who's seated)
    lives in the page; this component just lays it out. */
 
+import { Icon } from "@/components/icons";
 import AgoraScene3D, { type AgoraView } from "./AgoraScene3D";
 import { useUserMenu } from "../userMenuContext";
 
@@ -99,11 +100,7 @@ function StripChip({ person }: { person: StagePerson }) {
         {person.speaking && <span className="ag-speaking-ring" />}
         {(role === "host" || role === "cohost") && (
           <span className={`ag-crown ${role}`} aria-label={role}>
-            <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden
-              fill={role === "host" ? "currentColor" : "none"}
-              stroke="currentColor" strokeWidth={role === "host" ? 0 : 2.5}>
-              <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.5 10h-15L3 8z" />
-            </svg>
+            <Icon name="crown" size={10} strokeWidth={role === "host" ? 3 : 2} />
           </span>
         )}
       </div>
@@ -162,10 +159,7 @@ export default function Amphitheater({
             onClick={onSwitchView}
             title={inSpeaker ? "Back to the amphitheater" : "Eye-level with the stage"}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-              <path d="M8 21h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <Icon name="monitor" size={16} />
             <span>
               <strong>{inSpeaker ? "Switch audience view" : "Switch speaker view"}</strong>
               <small>{inSpeaker ? "back to the amphitheater" : "focused view of the debaters"}</small>

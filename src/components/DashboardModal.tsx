@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon, type IconName } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
@@ -18,12 +19,12 @@ const NODES: {
   title: string;
   subtitle: string;
   content: string;
-  icon: string;
+  icon: IconName;
   status: "available" | "coming-soon";
   energy: number;
 }[] = [
-  { key: "debates",     title: "Discussions", subtitle: "Upcoming & past", content: "Your scheduled discussions and full history.",    icon: "📋", status: "available",   energy: 80 },
-  { key: "train",       title: "Train",       subtitle: "Practice",         content: "Sharpen your arguments with AI-powered training.", icon: "🏋️", status: "coming-soon", energy: 50 },
+  { key: "debates",     title: "Discussions", subtitle: "Upcoming & past", content: "Your scheduled discussions and full history.",    icon: "clipboard-list", status: "available",   energy: 80 },
+  { key: "train",       title: "Train",       subtitle: "Practice",         content: "Sharpen your arguments with AI-powered training.", icon: "dumbbell", status: "coming-soon", energy: 50 },
 ];
 
 const RADIUS = 190;
@@ -139,7 +140,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
           }}
           aria-label="Close"
         >
-          ✕
+          <Icon name="x" size={14} />
         </button>
 
         {/* Title */}
@@ -284,7 +285,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
                     transition: "all 0.2s ease",
                   }}
                 >
-                  {node.icon}
+                  <Icon name={node.icon} size={22} />
                 </div>
 
                 {/* Label */}

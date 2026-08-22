@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
@@ -540,9 +541,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               e.currentTarget.style.background = "rgba(255,255,255,0.04)";
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon name="x" size={13} />
           </button>
         </div>
 
@@ -815,7 +814,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                     color: "#c9b06a",
                   }}
                 >
-                  🏛 This discussion belongs to <strong>{communityName ?? "your community"}</strong> — members
+                  <Icon name="landmark" size={13} /> This discussion belongs to <strong>{communityName ?? "your community"}</strong> — members
                   will be notified.
                 </p>
               )}

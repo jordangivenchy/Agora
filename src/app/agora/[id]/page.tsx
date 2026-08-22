@@ -29,6 +29,7 @@ import InvitePrompt from "@/components/agora/InvitePrompt";
 import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
 import type { User } from "@supabase/supabase-js";
+import { Icon } from "@/components/icons";
 import "../agora.css";
 
 function fmtElapsed(fromIso: string | null): string {
@@ -832,8 +833,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             </div>
             <h1 className="ag-motion">{room.motion}</h1>
             <div className="ag-topbar-meta">
-              <span title="Elapsed">🕐 {elapsed} elapsed</span>
-              <span title="Audience">👥 {audienceCount} in audience</span>
+              <span title="Elapsed"><Icon name="clock" size={13} /> {elapsed} elapsed</span>
+              <span title="Audience"><Icon name="users" size={13} /> {audienceCount} in audience</span>
               {topic && (
                 <span title="Topic">
                   {topic.emoji} {topic.label}
@@ -841,7 +842,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               )}
               {communityName && (
                 <span title="Hosted by this community" style={{ color: "#c9b06a" }}>
-                  🏛 {communityName}
+                  <Icon name="landmark" size={13} /> {communityName}
                 </span>
               )}
             </div>
@@ -1094,9 +1095,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             }`}
           >
             {amMicHolder ? (
-              <>🎤 You have the mic</>
+              <><Icon name="mic" size={14} /> You have the mic</>
             ) : myQueuePos === 1 ? (
-              <>✨ YOU&apos;RE NEXT</>
+              <><Icon name="sparkles" size={14} /> YOU&apos;RE NEXT</>
             ) : (
               <>
                 #{myQueuePos} in queue · {myQueuePos! - 1} ahead of you
@@ -1137,7 +1138,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             onClick={call.enableAudio}
           >
             <span className="ag-invite-text">
-              🔊 Your browser muted the room — <strong>tap to listen</strong>
+              <Icon name="volume-2" size={14} /> Your browser muted the room — <strong>tap to listen</strong>
             </span>
           </button>
         )}
@@ -1243,7 +1244,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
               onClick={call.toggleMic}
             >
-              <span className="ag-ctl-ico">{call.micOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/></svg>)}</span>
+              <span className="ag-ctl-ico">{call.micOn ? <Icon name="mic" size={19} /> : <Icon name="mic-off" size={19} />}</span>
               <span className="ag-ctl-label">{call.micOn ? "Mute" : "Mic"}</span>
             </button>
             {onStage(myRole) && call.connected && (
@@ -1257,7 +1258,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   setMicMenuOpen((v) => !v);
                 }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 15 6-6 6 6"/></svg>
+                <Icon name="chevron-up" size={12} />
               </button>
             )}
           </div>
@@ -1326,7 +1327,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
               onClick={call.toggleCam}
             >
-              <span className="ag-ctl-ico">{call.camOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M16 16v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3l5-3v9"/></svg>)}</span>
+              <span className="ag-ctl-ico">{call.camOn ? <Icon name="video" size={19} /> : <Icon name="video-off" size={19} />}</span>
               <span className="ag-ctl-label">{call.mediaBusy ? "…" : call.camOn ? "Stop video" : "Video"}</span>
             </button>
 
@@ -1341,7 +1342,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   setCamMenuOpen((v) => !v);
                 }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 15 6-6 6 6"/></svg>
+                <Icon name="chevron-up" size={12} />
               </button>
             )}
           </div>
@@ -1370,7 +1371,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               disabled={!call.connected}
               onClick={() => setReactOpen((v) => !v)}
             >
-              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
+              <span className="ag-ctl-ico"><Icon name="smile" size={19} /></span>
               <span className="ag-ctl-label">React</span>
             </button>
           </div>
@@ -1378,7 +1379,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           {/* ── Raise hand (or step down, when you hold the mic) ── */}
           {amMicHolder ? (
             <button className="ag-ctl ag-ctl--live" title="Give up the mic" onClick={stepDownFromMic}>
-              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></span>
+              <span className="ag-ctl-ico"><Icon name="mic" size={19} /></span>
               <span className="ag-ctl-label">Step down</span>
             </button>
           ) : (
@@ -1388,7 +1389,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               disabled={!canRaise || requestsLocked || handBusy}
               onClick={toggleHand}
             >
-              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></span>
+              <span className="ag-ctl-ico"><Icon name="hand" size={19} /></span>
               <span className="ag-ctl-label">{handRaised ? "Lower hand" : "Raise hand"}</span>
             </button>
           )}
@@ -1408,7 +1409,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
             onClick={call.toggleScreenShare}
           >
-            <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m9 10 3-3 3 3M12 7v6"/></svg></span>
+            <span className="ag-ctl-ico"><Icon name="monitor-up" size={19} /></span>
             <span className="ag-ctl-label">{call.screenOn ? "Stop share" : "Share"}</span>
           </button>
 
@@ -1427,19 +1428,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               <div className="ag-more-menu" role="menu" aria-label="Room tools">
                 <div className="ag-tool-grid">
                   <button className="ag-tool" role="menuitem" disabled title="Whiteboard — not built yet">
-                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2.5" y="3.5" width="19" height="13" rx="2"/><path d="M12 16.5v4M8.5 20.5h7"/><path d="M6.5 12.5c2-3.5 4-3.5 5.5-1s3.5 2 5.5-2"/></svg></span>
+                    <span className="ag-tool-ico"><Icon name="monitor" size={23} /></span>
                     <span className="ag-tool-label">Whiteboard</span>
                     <span className="ag-tool-soon">Soon</span>
                   </button>
 
                   <button className="ag-tool" role="menuitem" disabled title="Notepad — not built yet">
-                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5.5 3.5h13a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
+                    <span className="ag-tool-ico"><Icon name="clipboard-list" size={23} /></span>
                     <span className="ag-tool-label">Notepad</span>
                     <span className="ag-tool-soon">Soon</span>
                   </button>
 
                   <button className="ag-tool" role="menuitem" disabled title="Documents — not built yet">
-                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M8 2.5h6l4.5 4.5v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M14 2.5V7h4.5"/><path d="M4.5 6v14a1.5 1.5 0 0 0 1.5 1.5h9"/></svg></span>
+                    <span className="ag-tool-ico"><Icon name="file-text" size={23} /></span>
                     <span className="ag-tool-label">Documents</span>
                     <span className="ag-tool-soon">Soon</span>
                   </button>
@@ -1462,7 +1463,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       setRailCollapsed(false);
                     }}
                   >
-                    <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                    <span className="ag-tool-ico"><Icon name="settings" size={23} /></span>
                     <span className="ag-tool-label">Settings</span>
                   </button>
                 </div>
@@ -1497,7 +1498,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               aria-expanded={moreOpen}
               onClick={() => setMoreOpen((v) => !v)}
             >
-              <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></span>
+              <span className="ag-ctl-ico"><Icon name="more-vertical" size={19} /></span>
               <span className="ag-ctl-label">More</span>
             </button>
           </div>
@@ -1515,7 +1516,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               }
             }}
           >
-            <span className="ag-ctl-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+            <span className="ag-ctl-ico"><Icon name="phone-off" size={19} /></span>
             <span className="ag-ctl-label">Leave</span>
           </button>
         </footer>

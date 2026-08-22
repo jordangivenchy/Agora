@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedClip } from "@/lib/seed-content";
 import { displayName } from "@/lib/names";
@@ -263,7 +264,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                     className="inline-flex items-center justify-center"
                     style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "0.5px solid rgba(255,255,255,0.3)", color: "#fff", fontSize: 20 }}
                   >
-                    ▶
+                    <Icon name="play" size={22} style={{ fill: "currentColor" }} />
                   </span>
                   <p className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
                     example clip — recordings attach here once debates are recorded
@@ -321,14 +322,14 @@ export default function TrendingPage({ open, onClose }: Props) {
                     color: hearted[activeShort.id] ? "#f0605e" : "#d5d5dc", fontSize: 18,
                   }}
                 >
-                  ♥
+                  <Icon name="heart" size={20} style={{ fill: hearted[activeShort.id] ? "currentColor" : "none" }} />
                 </button>
                 <p className="text-[10px] mt-1" style={{ color: "#c0c0c8" }}>
                   {fmt(activeShort.hearts + (hearted[activeShort.id] ? 1 : 0))}
                 </p>
               </div>
               <div className="text-center">
-                <span className="inline-flex items-center justify-center" style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "0.5px solid #3a3a42", color: "#d5d5dc", fontSize: 16 }}>💬</span>
+                <span className="inline-flex items-center justify-center" style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "0.5px solid #3a3a42", color: "#d5d5dc", fontSize: 16 }}><Icon name="message-circle" size={18} /></span>
                 <p className="text-[10px] mt-1" style={{ color: "#c0c0c8" }}>
                   {activeShort.comments.length + (localComments[activeShort.id]?.length ?? 0)}
                 </p>
@@ -352,7 +353,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontSize: 16 }}
                   title="Discuss this topic"
                 >
-                  ✦
+                  <Icon name="sparkles" size={18} />
                 </button>
                 <p className="text-[10px] mt-1" style={{ color: "#9cc4f0" }}>Topics</p>
               </div>
@@ -376,7 +377,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                         <span style={{ color: "#f5f5f0", fontWeight: 500 }}>@{c.user}</span> · {c.when}
                       </p>
                       <p className="text-[12px] my-0.5" style={{ color: "#e5e5ec", lineHeight: 1.4 }}>{c.body}</p>
-                      <p className="text-[10px] m-0" style={{ color: "#8b8b94" }}>♥ {fmt(c.likes)} · Reply</p>
+                      <p className="text-[10px] m-0" style={{ color: "#8b8b94" }}><Icon name="heart" size={10} /> {fmt(c.likes)} · Reply</p>
                     </div>
                   </div>
                 ))}
@@ -424,7 +425,7 @@ export default function TrendingPage({ open, onClose }: Props) {
           <>
             <div className="p-4 mb-5" style={{ ...card, background: "rgba(18,18,24,0.6)" }}>
               <div className="flex items-center gap-2.5 mb-3">
-                <span className="inline-flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: 7, background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", fontSize: 12 }}>▶</span>
+                <span className="inline-flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: 7, background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", fontSize: 12 }}><Icon name="play" size={12} style={{ fill: "currentColor" }} /></span>
                 <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0" }}>Shorts</span>
                 <span className="text-[11px]" style={{ color: "#8b8b94" }}>the best 60 seconds of every debate</span>
                 <button
@@ -465,7 +466,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                     <span>
                       <span className="block text-[11px] mb-1" style={{ color: "#f5f5f0", lineHeight: 1.3 }}>{s.title}</span>
                       <span className="block text-[10px]" style={{ color: "#c0c0c8" }}>
-                        {s.videoUrl ? `@${s.uploader.name}` : `♥ ${fmt(s.hearts + (hearted[s.id] ? 1 : 0))}`}
+                        {s.videoUrl ? `@${s.uploader.name}` : <><Icon name="heart" size={10} /> {fmt(s.hearts + (hearted[s.id] ? 1 : 0))}</>}
                       </span>
                     </span>
                   </button>
@@ -487,7 +488,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   className="cursor-pointer text-[12px] font-medium px-4 py-2 rounded-lg border-none"
                   style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
                 >
-                  ✦ Start the first one
+                  <Icon name="sparkles" size={12} /> Start the first one
                 </button>
               </div>
             ) : (
@@ -512,7 +513,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                         </span>
                       )}
                       <span className="absolute bottom-2 right-2 text-[10px] px-2.5 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec" }}>
-                        👁 {fmt(r.viewer_count ?? 0)}
+                        <Icon name="eye" size={11} /> {fmt(r.viewer_count ?? 0)}
                       </span>
                     </div>
                     <div className="flex gap-2.5">

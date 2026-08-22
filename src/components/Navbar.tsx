@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import Wordmark from "@/components/Wordmark";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -198,19 +199,7 @@ export default function Navbar({
         className="flex-1 max-w-[480px] mx-auto relative"
         ref={searchWrapRef}
       >
-        <svg
-          width="15"
-          height="15"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-          className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "var(--text-dim)" }}
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.35-4.35" />
-        </svg>
+        <Icon name="search" size={15} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }} />
         <input
           type="text"
           value={query}
@@ -378,10 +367,7 @@ export default function Navbar({
               }}
               title="Join a private room with an invite code"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+              <Icon name="lock" size={13} />
               Join Private
             </button>
 
@@ -407,9 +393,7 @@ export default function Navbar({
                 e.currentTarget.style.background = "var(--accent-blue)";
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
+              <Icon name="plus" size={13} />
               Create
             </button>
 

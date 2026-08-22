@@ -12,6 +12,7 @@
    collaborator / stream-start flow, not the public page.) */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "../userMenuContext";
 import CallSettings, { type CallSettingsProps } from "./CallSettings";
@@ -157,14 +158,7 @@ export default function AgoraSidebar({
           aria-expanded={false}
           title="Show chat"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Icon name="message-circle" size={16} />
           <span>Chat</span>
         </button>
       )}
@@ -187,9 +181,7 @@ export default function AgoraSidebar({
               aria-expanded={!collapsed}
               title="Hide chat — full-width stage"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <Icon name="chevron-down" size={15} />
             </button>
           </div>
 
@@ -271,7 +263,7 @@ export default function AgoraSidebar({
             </>
           ) : (
             <div className="ag-qa-placeholder">
-              <div className="ag-qa-icon">❓</div>
+              <div className="ag-qa-icon"><Icon name="circle-help" size={26} /></div>
               Audience questions will appear here.
               <small>Q&amp;A is coming soon.</small>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import type { Stance } from "@/types/database";
 import type { User } from "@supabase/supabase-js";
@@ -100,14 +101,14 @@ export default function VotingPanel({ roomId, currentUser }: Props) {
             disabled={voting}
             className="flex-1 bg-pro/10 hover:bg-pro/20 border border-pro/30 text-pro text-sm font-medium py-2 rounded-lg transition-all disabled:opacity-50"
           >
-            👍 PRO
+            <Icon name="thumbs-up" size={14} /> PRO
           </button>
           <button
             onClick={() => vote("CON")}
             disabled={voting}
             className="flex-1 bg-con/10 hover:bg-con/20 border border-con/30 text-con text-sm font-medium py-2 rounded-lg transition-all disabled:opacity-50"
           >
-            👎 CON
+            <Icon name="thumbs-down" size={14} /> CON
           </button>
         </div>
       ) : myVote ? (

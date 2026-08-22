@@ -10,6 +10,7 @@
    explanatory note instead of the message. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import UserAvatar from "../UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -255,7 +256,7 @@ export default function MessagesDock() {
           style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 14 }}
           aria-label="Close messages"
         >
-          ✕
+          <Icon name="x" size={14} />
         </button>
       </div>
 

@@ -33,17 +33,6 @@ const TOPIC_MAP: Record<string, string> = {
   philosophy: "philosophy",
 };
 
-const TOPIC_ICONS: Record<string, string> = {
-  "politics-law": "⚖️",
-  "politics-ethics": "🙏",
-  sports: "🏆",
-  culture: "🎭",
-  economics: "💰",
-  "science-tech": "🔬",
-  "foreign-policy": "🌍",
-  philosophy: "📚",
-};
-
 const GRADIENTS = [
   "linear-gradient(135deg, #0d1b3e 0%, #1e0533 100%)",
   "linear-gradient(135deg, #1a1000 0%, #002d3d 100%)",
@@ -187,7 +176,6 @@ export default function Home() {
               const pick = room.thumbnail_url || hostAvatar || null;
               return typeof pick === "string" && /^https:\/\//.test(pick) ? pick : null;
             })(),
-            icon: TOPIC_ICONS[key] ?? "🎙️",
             debater1Stance: "PRO",
             debater2Stance: "CON",
             status: room.status === "live" ? "live" : room.scheduled_start ? "scheduled" : "queue",

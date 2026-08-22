@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { Icon } from "@/components/icons";
 import { useUserMenu } from "./userMenuContext";
 import UserAvatar from "./UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -1482,7 +1483,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
           style={{ color: "#4a9eff", fontFamily: "inherit" }}
         >
-          {p.pinned_at ? "Unpin" : "📌 Pin"}
+          {p.pinned_at ? "Unpin" : <><Icon name="pin" size={12} /> Pin</>}
         </button>
       )}
       {(p.author_id === userId || canModerate(p.community_id)) && (
@@ -1496,7 +1497,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       )}
       {!inDetail && (
         <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-          💬 {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
+          <Icon name="message-circle" size={12} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
         </span>
       )}
     </span>
@@ -1532,7 +1533,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
                   color: "#4a9eff", padding: "1px 6px", letterSpacing: "0.04em",
                 }}>
-                  📌 PINNED
+                  <Icon name="pin" size={10} /> PINNED
                 </span>
               )}
               {isCollapsed && hidden > 0 && (
@@ -1587,7 +1588,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
                       style={{ color: "#4a9eff", fontFamily: "inherit" }}
                     >
-                      {c.pinned_at ? "Unpin" : "📌 Pin"}
+                      {c.pinned_at ? "Unpin" : <><Icon name="pin" size={12} /> Pin</>}
                     </button>
                   )}
                   {(c.author_id === userId || (openPost && canModerate(openPost.community_id))) && (
@@ -1615,7 +1616,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         <MentionSuggest text={replyText} onComplete={setReplyText} supabase={supabase} />
                       </span>
                       <label className="cursor-pointer text-[11px] px-2.5 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
-                        🖼
+                        <Icon name="image" size={14} />
                         <input type="file" accept="image/*" className="hidden"
                           onChange={(e) => pickReplyImage(e.target.files?.[0] ?? null)} />
                       </label>
@@ -1696,9 +1697,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full self-center"
               style={{ border: "0.5px solid #2e2e38", background: "rgba(11,11,13,0.95)", color: "#eeeef5", fontSize: 12, fontFamily: "inherit", marginBottom: 2 }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
-              </svg>
+              <Icon name="arrow-left" size={14} />
               Back
             </button>
           )}
@@ -1757,7 +1756,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 checked={newCommunityPrivate}
                 onChange={(e) => setNewCommunityPrivate(e.target.checked)}
               />
-              🔒 Private
+              <Icon name="lock" size={12} /> Private
             </label>
             <button
               onClick={createCommunity}
@@ -1796,7 +1795,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         className="cursor-pointer bg-transparent border-none p-0 ml-auto"
                         style={{ fontSize: 12, opacity: myMutes.has(selectedCommunity.id) ? 0.5 : 0.9, lineHeight: 1 }}
                       >
-                        {myMutes.has(selectedCommunity.id) ? "🔕" : "🔔"}
+                        {myMutes.has(selectedCommunity.id) ? <Icon name="bell-off" size={14} /> : <Icon name="bell" size={14} />}
                       </button>
                     )}
                   </p>
@@ -1814,7 +1813,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     </span>
                     <span className="min-w-0">
                       <span className="block text-[13.5px] truncate" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                        {selectedCommunity.is_private && <span style={{ marginRight: 4, fontSize: 11 }}>🔒</span>}
+                        {selectedCommunity.is_private && <Icon name="lock" size={11} style={{ marginRight: 4 }} />}
                         {selectedCommunity.name}
                       </span>
                       <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.4)", marginTop: 1 }}>
@@ -1955,7 +1954,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[12.5px] truncate" style={{ color: "#eeeef5" }}>
-                      {c.is_private && <span title="Private community" style={{ marginRight: 3 }}>🔒</span>}
+                      {c.is_private && <Icon name="lock" size={12} title="Private community" style={{ marginRight: 3 }} />}
                       {c.name}
                     </span>
                     <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
@@ -1970,9 +1969,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       className="cursor-pointer shrink-0 flex items-center justify-center border-none bg-transparent"
                       style={{ width: 22, height: 22, color: c.favorite ? "#e2b96b" : "rgba(238,238,245,0.28)", padding: 0 }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={c.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
-                      </svg>
+                      <Icon name="bookmark" size={14} style={{ fill: c.favorite ? "currentColor" : "none" }} />
                     </button>
                   )}
                   <button
@@ -2105,9 +2102,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                                 style={pill}
                               >
                                 {b.label}
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
-                                  <path d="m6 9 6 6 6-6" />
-                                </svg>
+                                <Icon name="chevron-down" size={12} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
                               </button>
                               {open && (
                                 <div className="flex flex-col gap-1.5 mt-1.5 px-1">
@@ -2211,7 +2206,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
                           color: "#4a9eff", padding: "1px 6px", letterSpacing: "0.04em",
                         }}>
-                          📌 PINNED
+                          <Icon name="pin" size={10} /> PINNED
                         </span>
                       )}
                       {openPost.tag_name && <TagChip name={openPost.tag_name} color={openPost.tag_color} />}
@@ -2249,7 +2244,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       <MentionSuggest text={commentText} onComplete={setCommentText} supabase={supabase} />
                     </span>
                     <label className="cursor-pointer text-[12px] px-3 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
-                      🖼
+                      <Icon name="image" size={14} />
                       <input type="file" accept="image/*" className="hidden"
                         onChange={(e) => { pickCommentImage(e.target.files?.[0] ?? null); setCommentGifUrl(null); }} />
                     </label>
@@ -2385,7 +2380,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                                 color: "rgba(238,238,245,0.88)",
                               }}
                             >
-                              ✕
+                              <Icon name="x" size={12} />
                             </button>
                           )}
                           <label
@@ -2396,7 +2391,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                               background: "rgba(10,10,12,0.7)", border: "0.5px solid rgba(255,255,255,0.25)",
                             }}
                           >
-                            {brandingBusy === "banner" ? "…" : "✏️"}
+                            {brandingBusy === "banner" ? "…" : <Icon name="pencil" size={13} />}
                             <input type="file" accept="image/*" className="hidden" disabled={brandingBusy !== null}
                               onChange={(e) => { const f = e.target.files?.[0]; if (f) setBranding("banner", f); e.target.value = ""; }} />
                           </label>
@@ -2443,7 +2438,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                                   color: "rgba(238,238,245,0.88)",
                                 }}
                               >
-                                ✕
+                                <Icon name="x" size={12} />
                               </button>
                             )}
                             <label
@@ -2454,7 +2449,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                                 background: "rgba(10,10,12,0.9)", border: "0.5px solid rgba(255,255,255,0.25)",
                               }}
                             >
-                              {brandingBusy === "avatar" ? "…" : "✏️"}
+                              {brandingBusy === "avatar" ? "…" : <Icon name="pencil" size={13} />}
                               <input type="file" accept="image/*" className="hidden" disabled={brandingBusy !== null}
                                 onChange={(e) => { const f = e.target.files?.[0]; if (f) setBranding("avatar", f); e.target.value = ""; }} />
                             </label>
@@ -2465,7 +2460,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           lifted off the row's bottom edge */}
                       <span className="flex-1 min-w-0" style={{ paddingTop: 6, paddingBottom: 12, minWidth: 200 }}>
                         <span className="block text-[21px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
-                          {selectedCommunity.is_private && <span title="Private community" style={{ marginRight: 5, fontSize: 16 }}>🔒</span>}
+                          {selectedCommunity.is_private && <Icon name="lock" size={16} title="Private community" style={{ marginRight: 5 }} />}
                           {selectedCommunity.name}
                         </span>
                         <span className="block text-[11px]" style={{ color: "rgba(238,238,245,0.4)", marginTop: 3, letterSpacing: "0.01em" }}>
@@ -2488,7 +2483,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                             onMouseEnter={liftIn} onMouseLeave={liftOut}
                             style={pillGold}
                           >
-                            🎙 Start a discussion
+                            <Icon name="mic" size={13} /> Start a discussion
                           </button>
                         )}
                         <button
@@ -2510,7 +2505,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                             onMouseEnter={liftIn} onMouseLeave={liftOut}
                             style={pillAmber}
                           >
-                            {modOpen ? "Close mod tools" : `🛡 Mod tools${joinRequests.length ? ` (${joinRequests.length})` : ""}`}
+                            {modOpen ? "Close mod tools" : <><Icon name="shield" size={13} /> Mod tools{joinRequests.length ? ` ()` : ""}</>}
                           </button>
                         )}
                       </span>
@@ -2665,7 +2660,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                                   checked={draftPrivate}
                                   onChange={(e) => setDraftPrivate(e.target.checked)}
                                 />
-                                🔒 Private (join by approval)
+                                <Icon name="lock" size={12} /> Private (join by approval)
                               </label>
                             )}
                             <button onClick={saveSettings} disabled={busy}
@@ -2688,7 +2683,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                                   style={{ color: "rgba(238,238,245,0.32)" }}
                                   aria-label={`Delete tag ${t.name}`}
                                 >
-                                  ✕
+                                  <Icon name="x" size={12} />
                                 </button>
                               </span>
                             ))}
@@ -2736,7 +2731,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 {/* locked-out notice for private boards */}
                 {lockedOut ? (
                   <div className="p-8 text-center" style={card}>
-                    <p className="m-0 mb-1 text-[15px]" style={{ color: "#eeeef5" }}>🔒 This community is private</p>
+                    <p className="m-0 mb-1 text-[15px]" style={{ color: "#eeeef5" }}><Icon name="lock" size={14} /> This community is private</p>
                     <p className="m-0 mb-3 text-[12px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                       Posts are visible to members only. Request to join and a moderator will review it.
                     </p>
@@ -2855,7 +2850,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     )}
                     <div className="flex items-center gap-3 flex-wrap">
                       <label className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnGhost}>
-                        🖼 {newImage ? "Change image" : "Add image"}
+                        <Icon name="image" size={13} /> {newImage ? "Change image" : "Add image"}
                         <input
                           type="file"
                           accept="image/*"
@@ -2975,7 +2970,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                             background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
                             color: "#4a9eff", padding: "1px 5px", letterSpacing: "0.04em",
                           }}>
-                            📌 PINNED
+                            <Icon name="pin" size={10} /> PINNED
                           </span>
                         )}
                         {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} small />}
