@@ -56,6 +56,8 @@ interface Props {
   view: "audience" | "speaker";
   /** Identities currently speaking — drives the lift-and-light cue. */
   speaking?: ReadonlySet<string>;
+
+  anchored?: boolean;
 }
 
 /** One entry in the sidebar: a live tile, or a camera-off participant. */
@@ -172,7 +174,7 @@ function Tag({
   );
 }
 
-export default function AgoraStage({ tiles, panes, view, speaking }: Props) {
+export default function AgoraStage({ tiles, panes, view, speaking, anchored }: Props) {
   const { openUserMenu } = useUserMenu();
   /* The viewer's pin — a preference, not a subscription. Held as a tile
      key and resolved against the live list every render, so a feed that
@@ -293,7 +295,11 @@ export default function AgoraStage({ tiles, panes, view, speaking }: Props) {
     const stretch = items.length <= 2 && !showAll;
 
     return (
-      <div className="ag-cast ag-cast--focus" role="region" aria-label="Stage">
+      <div
+        className={`ag-cast ag-cast--focus${anchored ? " ag-cast--anchored" : ""}`}
+        role="region"
+        aria-label="Stage"
+      >
         <div
           className={`ag-cast-main${pinned ? " ag-cast-main--pinned" : ""}`}
           onClick={pinned ? () => setPinKey(null) : undefined}
@@ -315,7 +321,7 @@ export default function AgoraStage({ tiles, panes, view, speaking }: Props) {
             return (
               <button
                 key={item.key}
-                className={`ag-cast-thumb${isSpeaking(item.id) ? " ag-cast-thumb--speaking" : ""}`}
+                className={`ag-cast-thumb${item.tile ? " ag-cast-thumb--live" : ""}${isSpeaking(item.id) ? " ag-cast-thumb--speaking" : ""}`}
                 disabled={!pinnable}
                 onClick={pinnable ? () => setPinKey(item.key) : undefined}
                 aria-label={
@@ -351,7 +357,11 @@ export default function AgoraStage({ tiles, panes, view, speaking }: Props) {
 
   /* ── Duo layout: the two debaters, where the panels stood ── */
   return (
-    <div className="ag-cast" role="region" aria-label="Stage">
+    <div
+      className={`ag-cast${anchored ? " ag-cast--anchored" : ""}`}
+      role="region"
+      aria-label="Stage"
+    >
       <div className="ag-cast-duo">
         {sides.map((side) => {
           const pane = panes[side];
@@ -363,8 +373,10 @@ export default function AgoraStage({ tiles, panes, view, speaking }: Props) {
             <div
               key={side}
               className={`ag-cast-pane ag-cast-pane--${side}${
-                pane && isSpeaking(pane.id) ? " ag-cast-pane--speaking" : ""
-              }${pinnable ? " ag-cast-pane--pinnable" : ""}`}
+                pane?.tile ? " ag-cast-pane--live" : ""
+              }${pane && isSpeaking(pane.id) ? " ag-cast-pane--speaking" : ""}${
+                pinnable ? " ag-cast-pane--pinnable" : ""
+              }`}
               role={pinnable ? "button" : undefined}
               tabIndex={pinnable ? 0 : undefined}
               aria-label={pinnable ? `Pin ${pane!.username}` : undefined}

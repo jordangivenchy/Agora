@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "../userMenuContext";
+import CallSettings, { type CallSettingsProps } from "./CallSettings";
 import { displayName } from "@/lib/names";
 import type { User } from "@supabase/supabase-js";
 
@@ -31,6 +32,8 @@ interface Props {
   /** Rail folded away so the stage can run full width. */
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  /** Call settings take the chat's place in the rail while open. */
+  settings?: CallSettingsProps | null;
 }
 
 const USER_COLORS = [
@@ -68,6 +71,7 @@ export default function AgoraSidebar({
   currentUser,
   collapsed = false,
   onToggleCollapsed,
+  settings,
 }: Props) {
   const { openUserMenu } = useUserMenu();
   const [supabase] = useState(() => createClient());
@@ -166,6 +170,9 @@ export default function AgoraSidebar({
       )}
 
       <aside className="ag-sidebar" aria-hidden={collapsed}>
+        {settings ? (
+          <CallSettings {...settings} />
+        ) : (
         <section className="ag-card ag-chat-card">
           <div className="ag-tabs">
             <button className={`ag-tab ${tab === "chat" ? "active" : ""}`} onClick={() => setTab("chat")}>
@@ -270,6 +277,7 @@ export default function AgoraSidebar({
             </div>
           )}
         </section>
+        )}
       </aside>
     </>
   );
