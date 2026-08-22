@@ -77,8 +77,8 @@ const panelBase: React.CSSProperties = {
 };
 
 const iconBtn: React.CSSProperties = {
-  width: 30,
-  height: 30,
+  width: 34,
+  height: 34,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -281,8 +281,14 @@ export default function MessagesDock() {
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
+    /* border-box: scrollHeight excludes the 1px borders, so add them back
+       or a one-line draft overflows by 2px and grows a scrollbar. Only
+       allow scrolling once the draft exceeds the 4-line cap. */
+    const MAX = 4 * 20 + 14 + 2;
     ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 4 * 20 + 16)}px`;
+    const full = ta.scrollHeight + 2;
+    ta.style.height = `${Math.min(full, MAX)}px`;
+    ta.style.overflowY = full > MAX ? "auto" : "hidden";
   }, [draft, peer]);
 
   const sendMessage = useCallback(
@@ -677,6 +683,7 @@ export default function MessagesDock() {
               minWidth: 0,
               minHeight: 34,
               maxHeight: 96,
+              overflowY: "hidden",
               resize: "none",
               borderRadius: 10,
               border: "1px solid rgba(255,255,255,0.12)",
