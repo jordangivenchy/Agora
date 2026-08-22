@@ -319,13 +319,15 @@ export default function HostControls({ room, participants, currentUser, myRole, 
 
   return (
     <div className="ag-host">
+
       <button
-        className={`ag-host-pill ${open ? "open" : ""}`}
+        className={`ag-ctl ag-ctl--host ${open ? "open" : ""}`}
         onClick={() => setOpen((o) => !o)}
         title="Host controls"
+        aria-expanded={open}
       >
-        <CrownIcon />
-        Host controls
+        <span className="ag-ctl-ico"><CrownIcon /></span>
+        <span className="ag-ctl-label">Host controls</span>
         {requests.length > 0 && <span className="ag-host-badge">{requests.length}</span>}
       </button>
 

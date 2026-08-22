@@ -108,8 +108,9 @@
      The rim keeps the base's seven slots in the same order (four edges,
      inner glow, near glow, far drop) so switching between glass and solid
      interpolates instead of snapping. */
-  --ag-on-green: #30d158;
-  --ag-on-green-hi: #4ade7a;
+
+  --ag-on-green: #34c759;
+  --ag-on-green-hi: #4cd964;
   --ag-on-green-ink: #04240f;
   --ag-on-yellow: #ffd60a;
   --ag-on-yellow-hi: #ffe14d;
@@ -601,8 +602,10 @@
   padding: 0;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: var(--ag-glass-bg);
-  backdrop-filter: blur(18px) saturate(140%);
+
+  background: none;
+
+  backdrop-filter: blur(14px) saturate(150%) brightness(0.72);
   box-shadow: var(--ag-glass-rim);
   color: #cfd3dc;
   font-size: 13px;
@@ -668,7 +671,8 @@
 .ag-ctl svg { flex-shrink: 0; display: block; }
 
 .ag-ctl:hover:not(:disabled) {
-  background: var(--ag-glass-bg-hover);
+  background: none;
+
 }
 
 /* Press: the glass gives slightly under the finger. Scale, not
@@ -677,19 +681,14 @@
   transform: scale(0.96);
 }
 
-/* The one that must never be a mystery circle: Leave stays open, labelled
-   and red — and is the only control coloured while idle.
-
-   These values were previously shadowed by a second .ag-ctl--leave block
-   further down the file, so the #e0483d written here never actually
-   rendered; the button has always been #b3261e. Folded into one rule at
-   the colour that was really shipping. */
 .ag-ctl--leave {
   grid-template-columns: 48px 1fr;
-  background: #b3261e;
-  border-color: #d33a31;
+
+  background: #ff3b30;
+  border-color: #ff3b30;
   color: #fff;
   backdrop-filter: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 .ag-ctl--leave .ag-ctl-label {
@@ -699,8 +698,9 @@
 }
 
 .ag-ctl--leave:hover:not(:disabled) {
-  background: #d33a31;
-  border-color: #e0483d;
+  background: #ff4f45;
+  border-color: #ff4f45;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 /* Tool drawer raised by the More button — same glass, same corner
@@ -796,6 +796,157 @@
   text-transform: uppercase;
 }
 
+.ag-more-menu--down {
+  top: 46px;
+  bottom: auto;
+  left: auto;
+  right: 0;
+  transform: none;
+  width: max-content;
+  min-width: 220px;
+}
+
+.ag-note-input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(5, 7, 15, 0.6);
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 13px;
+  resize: none;
+}
+
+.ag-note-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ag-cam-wrap:hover > .ag-ctl:not(:disabled) {
+  grid-template-columns: 48px 1fr;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.ag-cam-wrap:hover > .ag-ctl:not(:disabled) .ag-ctl-label {
+  opacity: 1;
+  transform: none;
+  padding-right: 20px;
+  transition-delay: 0.1s, 0.1s, 0s;
+}
+
+.ag-ctl-caret {
+  position: absolute;
+  top: -3px;
+  left: 33px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--ag-glass-bg);
+  backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: var(--ag-glass-rim-inlay);
+  color: #e7e9ee;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+  z-index: 2;
+}
+
+.ag-ctl-caret svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.ag-cam-wrap:hover .ag-ctl-caret,
+.ag-ctl-caret:hover,
+.ag-ctl-caret:focus-visible,
+.ag-ctl-caret.is-open {
+  opacity: 1;
+}
+
+.ag-ctl-caret:hover,
+.ag-ctl-caret.is-open {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.ag-cam-menu {
+  width: 260px;
+  padding: 8px;
+}
+
+.ag-cam-menu-title {
+  padding: 6px 10px 8px;
+  color: #8a90a0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ag-cam-menu-empty {
+  padding: 4px 10px 8px;
+  color: #9aa0ac;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ag-cam-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ag-cam-item:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.ag-cam-item:disabled { color: #7f8595; cursor: not-allowed; }
+.ag-cam-item.is-active { color: #fff; }
+
+.ag-cam-check {
+  flex: 0 0 14px;
+  width: 14px;
+  text-align: center;
+  color: var(--ag-on-green);
+  font-weight: 800;
+}
+
+.ag-cam-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-cam-soon {
+  position: static;
+  margin-left: auto;
+}
+
+.ag-cam-menu-sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .ag-more-item {
   display: block;
   width: 100%;
@@ -869,6 +1020,22 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+.ag-cast--anchored {
+  left: var(--ag-anchor-x, 50%);
+
+  top: var(--ag-anchor-ground, 60%);
+  bottom: auto;
+  width: 1000px;
+  height: 300px;
+
+  transform: translate(-50%, -100%) scale(var(--ag-anchor-scale, 0.5));
+  transform-origin: 50% 100%;
+}
+
+.ag-cast--anchored .ag-cast-duo { flex-direction: row-reverse; }
+.ag-cast--anchored .ag-cast-pane--pro { --pane-rot: -9deg; }
+.ag-cast--anchored .ag-cast-pane--con { --pane-rot: 9deg; }
 
 /* The shared screen and the video boxes are one construction: the liquid
    glass, exactly as the buttons wear it. Solid near-black ground (a video
@@ -964,6 +1131,13 @@
    would paint below the <video> child and vanish — this overlay is the
    whole reason the glass reads at all. Shared by surface and thumbs so
    the row is the same object as the screen above it. */
+.ag-cast-main,
+.ag-cast-pane,
+.ag-cast-thumb {
+
+  isolation: isolate;
+}
+
 .ag-cast-main::after,
 .ag-cast-pane::after,
 .ag-cast-thumb::after {
@@ -977,16 +1151,34 @@
   transition: box-shadow 0.15s ease;
 }
 
+.ag-cast-pane:not(.ag-cast-pane--live),
+.ag-cast-thumb:not(.ag-cast-thumb--live) {
+  background: transparent;
+
+  backdrop-filter: brightness(1.35) contrast(1.04) saturate(120%);
+}
+
+.ag-cast-main::after,
+.ag-cast-pane--live::after,
+.ag-cast-thumb--live::after {
+  box-shadow: var(--ag-glass-rim-inset);
+}
+
 .ag-cast-surface {
   width: 100%;
   height: 100%;
   display: block;
+
+  border-radius: inherit;
+  overflow: hidden;
 }
 
 .ag-cast-surface video {
   width: 100%;
   height: 100%;
   display: block;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 /* ── Duo mode: the two debater boxes, where the WebGL panels stood ── */
@@ -1242,6 +1434,335 @@
   }
 }
 
+/* ── Call settings: the chat card's twin, in the same rail ── */
+
+.ag-settings-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ag-set-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ag-set-title {
+  color: #e7e9ee;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ag-set-close {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: #9aa0ac;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ag-set-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.ag-set-sections {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+}
+
+.ag-set-section {
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+
+.ag-set-section.is-open {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ag-set-rowbtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ag-set-rowbtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ag-set-ico {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  color: #cfd3dc;
+}
+
+.ag-set-ico svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.ag-set-rowlabel {
+  flex: 1;
+}
+
+.ag-set-chev {
+  color: #6f7585;
+  font-size: 18px;
+  transition: transform 0.18s ease;
+}
+
+.ag-set-section.is-open .ag-set-chev {
+  transform: rotate(90deg);
+}
+
+.ag-set-body {
+  padding: 2px 12px 12px 44px;
+}
+
+.ag-set-label {
+  margin: 6px 0 8px;
+  color: #8a90a0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ag-set-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ag-set-device {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: #cfd3dc;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ag-set-device:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.ag-set-device.is-active {
+  color: #fff;
+}
+
+.ag-set-check {
+  flex: 0 0 14px;
+  text-align: center;
+  color: var(--ag-on-green);
+  font-weight: 800;
+}
+
+.ag-set-device-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-set-empty,
+.ag-set-text {
+  color: #9aa0ac;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ag-set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: #cfd3dc;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ag-set-row--off {
+  color: #7f8595;
+}
+
+.ag-set-row .ag-tool-soon {
+  position: static;
+}
+
+.ag-set-group {
+  margin: 4px 0 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ag-set-group .ag-set-label:first-child {
+  margin-top: 0;
+}
+
+.ag-set-select {
+  width: 100%;
+  padding: 9px 34px 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  background: rgba(5, 7, 15, 0.6)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cfd3dc' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 14px;
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  appearance: none;
+  cursor: pointer;
+}
+
+.ag-set-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ag-set-testbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ag-set-testbtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.ag-set-testbtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ag-set-testbtn.is-on {
+  border-color: rgba(52, 199, 89, 0.6);
+}
+
+.ag-set-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #cfd3dc;
+}
+
+.ag-set-testbtn.is-on .ag-set-dot {
+  background: var(--ag-on-green);
+  border-color: var(--ag-on-green);
+}
+
+.ag-set-meter {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+  width: 100%;
+  max-width: 260px;
+  height: 30px;
+  margin-top: 8px;
+  padding: 2px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ag-set-meter-cell {
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.08s linear;
+}
+
+.ag-set-meter-cell.is-lit {
+  background: var(--ag-on-green);
+}
+
+.ag-set-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cfd3dc;
+  font-size: 13px;
+}
+
+.ag-set-slider input[type="range"] {
+  flex: 1;
+  accent-color: #7c5cff;
+}
+
+.ag-set-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 12px 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfd3dc;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ag-set-all:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.ag-set-all svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* ── Discussion strip: hosts, co-hosts, promoted speakers ── */
 
 .ag-strip {
@@ -1315,30 +1836,42 @@
 
 .ag-host {
   position: absolute;
-  left: 18px;
-  bottom: 76px;
+
+  left: auto;
+  right: 16px;
+  bottom: calc(((var(--ag-controls-h) - 48px) / 2) + var(--ag-controls-lift));
   z-index: 20;
 }
 
-.ag-host-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(226, 185, 107, 0.4);
-  background: rgba(14, 12, 20, 0.9);
-  color: #e2b96b;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background 0.15s;
+.rail-collapsed .ag-host {
+  right: 118px;
 }
 
-.ag-host-pill:hover, .ag-host-pill.open { background: rgba(30, 25, 18, 0.95); }
+.ag-ctl--host {
+  border-color: rgba(226, 185, 107, 0.45);
+  color: #e2b96b;
+}
+
+.ag-ctl--host:hover:not(:disabled),
+.ag-ctl--host.open {
+  border-color: rgba(226, 185, 107, 0.8);
+  color: #f0cd85;
+}
+
+.ag-ctl--host.open {
+  grid-template-columns: 48px 1fr;
+}
+
+.ag-ctl--host.open .ag-ctl-label {
+  opacity: 1;
+  transform: none;
+  padding-right: 20px;
+}
 
 .ag-host-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
   min-width: 17px;
   height: 17px;
   padding: 0 4px;
@@ -1354,7 +1887,8 @@
 .ag-host-panel {
   position: absolute;
   bottom: 42px;
-  left: 0;
+  left: auto;
+  right: 0;
   width: 340px;
   max-height: 420px;
   display: flex;
@@ -1730,14 +2264,15 @@
   /* Centred within the footer row's height, plus the same lift the row
      takes, so it stays on the same line as Mic / Camera / Leave rather
      than being left behind at the old height. */
-  height: 40px;
-  bottom: calc(((var(--ag-controls-h) - 40px) / 2) + var(--ag-controls-lift));
+
+  height: 48px;
+  bottom: calc(((var(--ag-controls-h) - 48px) / 2) + var(--ag-controls-lift));
   z-index: 6;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
-  border-radius: 12px;
+  padding: 0 18px 0 16px;
+  border-radius: 999px;
   background: var(--ag-glass-bg);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(18px) saturate(140%);

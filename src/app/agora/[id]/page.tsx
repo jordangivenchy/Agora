@@ -26,6 +26,7 @@ import { useAgoraCall } from "@/components/agora/useAgoraCall";
 import HostControls from "@/components/agora/HostControls";
 import HlsPlayer from "@/components/agora/HlsPlayer";
 import InvitePrompt from "@/components/agora/InvitePrompt";
+import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
 import type { User } from "@supabase/supabase-js";
 import "../agora.css";
@@ -120,6 +121,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      watching without the chat in frame. Lives here rather than in the
      rail because the collapsed class drives layout on .ag-root. */
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   /* Audience overflow: watch the composited HLS stream instead of WebRTC. */
   const [hlsOpen, setHlsOpen] = useState(false);
   const [invite, setInvite] = useState<PendingInvite | null>(null);
@@ -129,6 +131,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [handBusy, setHandBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+
+  const [topMenuOpen, setTopMenuOpen] = useState(false);
+
+  const [camMenuOpen, setCamMenuOpen] = useState(false);
+  const camMenuRef = useRef<HTMLDivElement | null>(null);
+  const [micMenuOpen, setMicMenuOpen] = useState(false);
+  const micMenuRef = useRef<HTMLDivElement | null>(null);
+  const topMenuRef = useRef<HTMLDivElement | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [noteDone, setNoteDone] = useState(false);
   const moreWrapRef = useRef<HTMLDivElement | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -267,6 +282,35 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      it fires before focus moves, so the panel is already gone by the time
      whatever was clicked underneath reacts. */
   useEscapeClose(moreOpen, () => setMoreOpen(false));
+  useEscapeClose(topMenuOpen, () => setTopMenuOpen(false));
+  useEscapeClose(camMenuOpen, () => setCamMenuOpen(false));
+  useEscapeClose(micMenuOpen, () => setMicMenuOpen(false));
+  useEffect(() => {
+    if (!micMenuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!micMenuRef.current?.contains(e.target as Node)) setMicMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [micMenuOpen]);
+  useEscapeClose(settingsOpen, () => setSettingsOpen(false));
+  useEffect(() => {
+    if (!camMenuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!camMenuRef.current?.contains(e.target as Node)) setCamMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [camMenuOpen]);
+  useEscapeClose(noteOpen, () => setNoteOpen(false));
+  useEffect(() => {
+    if (!topMenuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!topMenuRef.current?.contains(e.target as Node)) setTopMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [topMenuOpen]);
   useEffect(() => {
     if (!moreOpen) return;
     const onDown = (e: PointerEvent) => {
@@ -474,7 +518,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      pane carries its holder's identity plus their live camera when it's
      on; camera off shows the profile card, no holder shows the open
      seat. */
-  const stagePanes = useMemo(() => {
+
+  const { stagePanes, paneStrip } = useMemo(() => {
     const cams = call.videoTiles.filter((t) => t.source === "camera");
     const mk = (sp: (typeof proSpeakers)[number] | undefined) =>
       sp
@@ -488,8 +533,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             tile: cams.find((t) => t.identity === sp.id) ?? null,
           }
         : null;
-    return { pro: mk(proSpeakers[0]), con: mk(conSpeakers[0]) };
-  }, [call.videoTiles, proSpeakers, conSpeakers, currentUser]);
+    const overflow = [...stageStrip];
+    const pro = proSpeakers[0] ?? overflow.shift();
+    const con = conSpeakers[0] ?? overflow.shift();
+    return {
+      stagePanes: { pro: mk(pro), con: mk(con) },
+      paneStrip: overflow,
+    };
+  }, [call.videoTiles, proSpeakers, conSpeakers, stageStrip, currentUser]);
 
   /* The dock keeps only what the stage doesn't already show at size:
      cameras from people who hold no pane (host, co-host, promoted
@@ -788,9 +839,67 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             >
               {following ? "Following ✓" : "Follow"}
             </button>
-            <button className="ag-more" title="More options">
-              ⋯
-            </button>
+            <div className="ag-react-wrap" ref={topMenuRef}>
+              {topMenuOpen && (
+                <div className="ag-more-menu ag-more-menu--down" role="menu" aria-label="Room options">
+                  <button
+                    className="ag-more-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setTopMenuOpen(false);
+                      if (!room) return;
+                      const host = participants.find((pp) => pp.user_id === room.host_id);
+                      setReportTarget({
+                        userId: room.host_id,
+                        username: host?.user?.username ?? "host",
+                        context: "room",
+                        roomId,
+                      });
+                    }}
+                  >
+                    Report stream
+                  </button>
+                  <button
+                    className="ag-more-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setTopMenuOpen(false);
+                      if (!room) return;
+                      const host = participants.find((pp) => pp.user_id === room.host_id);
+                      setReportTarget({
+                        userId: room.host_id,
+                        username: host?.user?.username ?? "host",
+                        context: "room",
+                        roomId,
+                      });
+                    }}
+                  >
+                    Report something else
+                  </button>
+                  <button
+                    className="ag-more-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setTopMenuOpen(false);
+                      setNoteText("");
+                      setNoteDone(false);
+                      setNoteOpen(true);
+                    }}
+                  >
+                    Request a community note
+                  </button>
+                </div>
+              )}
+              <button
+                className="ag-more"
+                title="Room options"
+                aria-haspopup="menu"
+                aria-expanded={topMenuOpen}
+                onClick={() => setTopMenuOpen((v) => !v)}
+              >
+                ⋯
+              </button>
+            </div>
           </div>
         </header>
         )}
@@ -801,7 +910,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           roomId={roomId}
           proSpeakers={proSpeakers}
           conSpeakers={conSpeakers}
-          stageStrip={stageStrip}
+          stageStrip={paneStrip}
           audience={audience}
           viewerCount={room.viewer_count ?? 0}
           view={view}
@@ -875,6 +984,56 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           </div>
         )}
 
+        <ReportModal target={reportTarget} onClose={() => setReportTarget(null)} />
+
+        {noteOpen && room && (
+          <div className="ag-invite" role="dialog" aria-label="Request a community note">
+            {noteDone ? (
+              <span className="ag-invite-text">
+                Request sent — reviewers will see it with this room attached.
+              </span>
+            ) : (
+              <>
+                <span className="ag-invite-text">
+                  <strong>Request a community note.</strong> What should it address?
+                </span>
+                <textarea
+                  className="ag-note-input"
+                  value={noteText}
+                  maxLength={800}
+                  rows={2}
+                  placeholder="A claim made in this debate that needs context…"
+                  onChange={(e) => setNoteText(e.target.value)}
+                />
+                <div className="ag-invite-actions">
+                  <button className="ag-invite-decline" disabled={noteBusy} onClick={() => setNoteOpen(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="ag-invite-join"
+                    disabled={noteBusy || !noteText.trim()}
+                    onClick={async () => {
+                      setNoteBusy(true);
+                      const { error } = await supabase.rpc("submit_report", {
+                        p_reported: room.host_id,
+                        p_reason: "other",
+                        p_description: `[Community note request] ${noteText.trim()}`,
+                        p_context: "room",
+                        p_room: roomId,
+                        p_message: null,
+                      });
+                      setNoteBusy(false);
+                      if (!error) setNoteDone(true);
+                    }}
+                  >
+                    {noteBusy ? "Sending…" : "Send request"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* ── Invite prompt ── */}
         {invite && (
           <InvitePrompt
@@ -890,7 +1049,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               stars before fading in; audience view shows it as soon as a
               picture is live (no glide to wait out). ── */}
         {(view === "audience" || viewSettled) && (
-          <AgoraStage tiles={call.videoTiles} panes={stagePanes} view={view} speaking={call.speakingIds} />
+          <AgoraStage
+            tiles={call.videoTiles}
+            panes={stagePanes}
+            view={view}
+            speaking={call.speakingIds}
+            anchored={view === "audience"}
+          />
         )}
 
         {/* ── Live camera tiles + floating reactions ── */}
@@ -978,42 +1143,185 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               glass. Leave is the only control that is coloured at rest. */}
 
           {/* ── Mic ── */}
-          <button
-            className={`ag-ctl ${call.micOn ? "ag-ctl--live" : ""}`}
-            title={
-              !onStage(myRole)
-                ? "Mic — speakers only"
-                : !call.connected
-                  ? "Connecting…"
-                  : call.micOn
-                    ? "Mute your mic"
-                    : "Unmute your mic"
-            }
-            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
-            onClick={call.toggleMic}
-          >
-            <span className="ag-ctl-ico">{call.micOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/></svg>)}</span>
-            <span className="ag-ctl-label">{call.micOn ? "Mute" : "Mic"}</span>
-          </button>
+          <div className="ag-react-wrap ag-cam-wrap" ref={micMenuRef}>
+            {micMenuOpen && (
+              <div className="ag-more-menu ag-cam-menu" role="menu" aria-label="Audio">
+                <div className="ag-cam-menu-title">Select a microphone</div>
+                {call.mics.length === 0 && (
+                  <div className="ag-cam-menu-empty">Unmute once to let the browser name your microphones.</div>
+                )}
+                {call.mics.map((d, i) => {
+                  const active = d.deviceId === call.activeMicId;
+                  return (
+                    <button
+                      key={d.deviceId || i}
+                      className={`ag-cam-item${active ? " is-active" : ""}`}
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        call.switchMic(d.deviceId);
+                        setMicMenuOpen(false);
+                      }}
+                    >
+                      <span className="ag-cam-check" aria-hidden>{active ? "✓" : ""}</span>
+                      <span className="ag-cam-name">{d.label || `Microphone ${i + 1}`}</span>
+                    </button>
+                  );
+                })}
+                <div className="ag-cam-menu-sep" />
+                <div className="ag-cam-menu-title">Select a speaker</div>
+                {call.speakers.length === 0 && (
+                  <div className="ag-cam-menu-empty">System default</div>
+                )}
+                {call.speakers.map((d, i) => {
+                  const active = d.deviceId === call.activeSpeakerId;
+                  return (
+                    <button
+                      key={d.deviceId || i}
+                      className={`ag-cam-item${active ? " is-active" : ""}`}
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        call.switchSpeaker(d.deviceId);
+                        setMicMenuOpen(false);
+                      }}
+                    >
+                      <span className="ag-cam-check" aria-hidden>{active ? "✓" : ""}</span>
+                      <span className="ag-cam-name">{d.label || `Speaker ${i + 1}`}</span>
+                    </button>
+                  );
+                })}
+                <div className="ag-cam-menu-sep" />
+                <button
+                  className="ag-cam-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setMicMenuOpen(false);
+                    setSettingsOpen(true);
+                    setRailCollapsed(false);
+                  }}
+                >
+                  <span className="ag-cam-check" />
+                  <span className="ag-cam-name">Audio settings</span>
+                </button>
+              </div>
+            )}
+            <button
+              className={`ag-ctl ${call.micOn ? "ag-ctl--live" : ""}`}
+              title={
+                !onStage(myRole)
+                  ? "Mic — speakers only"
+                  : !call.connected
+                    ? "Connecting…"
+                    : call.micOn
+                      ? "Mute your mic"
+                      : "Unmute your mic"
+              }
+              disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+              onClick={call.toggleMic}
+            >
+              <span className="ag-ctl-ico">{call.micOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/></svg>)}</span>
+              <span className="ag-ctl-label">{call.micOn ? "Mute" : "Mic"}</span>
+            </button>
+            {onStage(myRole) && call.connected && (
+              <button
+                className={`ag-ctl-caret${micMenuOpen ? " is-open" : ""}`}
+                title="Audio options"
+                aria-haspopup="menu"
+                aria-expanded={micMenuOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMicMenuOpen((v) => !v);
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 15 6-6 6 6"/></svg>
+              </button>
+            )}
+          </div>
 
-          {/* ── Video ── */}
-          <button
-            className={`ag-ctl ${call.camOn ? "ag-ctl--live" : ""}`}
-            title={
-              !onStage(myRole)
-                ? "Camera — speakers only"
-                : !call.connected
-                  ? "Connecting…"
-                  : call.camOn
-                    ? "Turn camera off"
-                    : "Turn camera on"
-            }
-            disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
-            onClick={call.toggleCam}
-          >
-            <span className="ag-ctl-ico">{call.camOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M16 16v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3l5-3v9"/></svg>)}</span>
-            <span className="ag-ctl-label">{call.mediaBusy ? "…" : call.camOn ? "Stop video" : "Video"}</span>
-          </button>
+          <div className="ag-react-wrap ag-cam-wrap" ref={camMenuRef}>
+            {camMenuOpen && (
+              <div className="ag-more-menu ag-cam-menu" role="menu" aria-label="Camera">
+                <div className="ag-cam-menu-title">Select a camera</div>
+                {call.cameras.length === 0 && (
+                  <div className="ag-cam-menu-empty">
+                    No cameras found — turn your video on once to let the browser name them.
+                  </div>
+                )}
+                {call.cameras.map((cam, i) => {
+                  const active = cam.deviceId === call.activeCameraId;
+                  return (
+                    <button
+                      key={cam.deviceId || i}
+                      className={`ag-cam-item${active ? " is-active" : ""}`}
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        call.switchCamera(cam.deviceId);
+                        setCamMenuOpen(false);
+                      }}
+                    >
+                      <span className="ag-cam-check" aria-hidden>{active ? "✓" : ""}</span>
+                      <span className="ag-cam-name">{cam.label || `Camera ${i + 1}`}</span>
+                    </button>
+                  );
+                })}
+                <div className="ag-cam-menu-sep" />
+
+                <button className="ag-cam-item" disabled title="Not built yet">
+                  <span className="ag-cam-check" />
+                  <span className="ag-cam-name">Blur my background</span>
+                  <span className="ag-tool-soon ag-cam-soon">Soon</span>
+                </button>
+                <button
+                    className="ag-cam-item"
+                    role="menuitem"
+                    title="Call settings"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setCamMenuOpen(false);
+                      setSettingsOpen(true);
+                      setRailCollapsed(false);
+                    }}
+                  >
+                  <span className="ag-cam-check" />
+                  <span className="ag-cam-name">Video &amp; audio settings</span>
+                </button>
+              </div>
+            )}
+            <button
+              className={`ag-ctl ${call.camOn ? "ag-ctl--live" : ""}`}
+              title={
+                !onStage(myRole)
+                  ? "Camera — speakers only"
+                  : !call.connected
+                    ? "Connecting…"
+                    : call.camOn
+                      ? "Turn camera off"
+                      : "Turn camera on"
+              }
+              disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+              onClick={call.toggleCam}
+            >
+              <span className="ag-ctl-ico">{call.camOn ? (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>) : (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="2" y1="2" x2="22" y2="22"/><path d="M16 16v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3l5-3v9"/></svg>)}</span>
+              <span className="ag-ctl-label">{call.mediaBusy ? "…" : call.camOn ? "Stop video" : "Video"}</span>
+            </button>
+
+            {onStage(myRole) && call.connected && (
+              <button
+                className={`ag-ctl-caret${camMenuOpen ? " is-open" : ""}`}
+                title="Camera options"
+                aria-haspopup="menu"
+                aria-expanded={camMenuOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCamMenuOpen((v) => !v);
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 15 6-6 6 6"/></svg>
+              </button>
+            )}
+          </div>
 
           {/* ── React ── */}
           <div className="ag-react-wrap">
@@ -1120,18 +1428,20 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       tab either way — navigating this one would tear down
                       the LiveKit connection and drop you out of a live room
                       to change a preference. */}
-                  <a
+                  <button
                     className="ag-tool"
                     role="menuitem"
-                    href="/settings"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Settings — opens in a new tab so the room keeps running"
-                    onClick={() => setMoreOpen(false)}
+                    title="Call settings"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setCamMenuOpen(false);
+                      setSettingsOpen(true);
+                      setRailCollapsed(false);
+                    }}
                   >
                     <span className="ag-tool-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                     <span className="ag-tool-label">Settings</span>
-                  </a>
+                  </button>
                 </div>
 
                 {/* Kept from the old list: it is the only secondary action in
@@ -1195,6 +1505,25 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           currentUser={currentUser}
           collapsed={railCollapsed}
           onToggleCollapsed={() => setRailCollapsed((v) => !v)}
+          settings={
+            settingsOpen
+              ? {
+                  cameras: call.cameras,
+                  activeCameraId: call.activeCameraId,
+                  onSwitchCamera: call.switchCamera,
+                  mics: call.mics,
+                  activeMicId: call.activeMicId,
+                  onSwitchMic: call.switchMic,
+                  speakers: call.speakers,
+                  activeSpeakerId: call.activeSpeakerId,
+                  onSwitchSpeaker: call.switchSpeaker,
+                  outputVolume: call.outputVolume,
+                  onOutputVolume: call.setOutputVolume,
+                  getMicStreamTrack: call.getMicStreamTrack,
+                  onClose: () => setSettingsOpen(false),
+                }
+              : null
+          }
         />
       )}
 

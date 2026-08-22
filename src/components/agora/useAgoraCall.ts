@@ -78,6 +78,15 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
   const [screenOn, setScreenOn] = useState(false);
+
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [activeMicId, setActiveMicId] = useState<string | null>(null);
+  const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([]);
+  const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
+  const [outputVolume, setOutputVolumeState] = useState(1);
+  const outputVolumeRef = useRef(1);
   /** Human-readable reason the last mic/camera toggle failed (toast fodder). */
   const [mediaError, setMediaError] = useState<string | null>(null);
   /* Browser refused audio autoplay — the UI shows a tap-to-listen prompt. */
@@ -195,6 +204,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       if (track.kind !== Track.Kind.Audio) return;
       const el = track.attach();
       el.style.display = "none";
+      el.volume = outputVolumeRef.current;
       document.body.appendChild(el);
       audioEls.push(el);
     };
@@ -313,7 +323,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   /* Turn a getUserMedia / publish failure into something a user can act on.
      Swallowing these (the old behavior) made the buttons look dead. */
   const explainMediaError = (
-    kind: "microphone" | "camera" | "screen share",
+    kind: "microphone" | "camera" | "screen share" | "speaker",
     e: unknown
   ): string => {
     const name = e instanceof Error ? e.name : "";
@@ -373,6 +383,90 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     }
   }, [mediaBusy, screenOn, refreshTiles]);
 
+  const refreshCameras = useCallback(async () => {
+    try {
+      const [cams, audio, outs] = await Promise.all([
+        Room.getLocalDevices("videoinput", false),
+        Room.getLocalDevices("audioinput", false),
+        Room.getLocalDevices("audiooutput", false),
+      ]);
+      setCameras(cams);
+      setMics(audio);
+      setSpeakers(outs);
+      const room = roomRef.current;
+      setActiveCameraId(room?.getActiveDevice("videoinput") ?? null);
+      setActiveMicId(room?.getActiveDevice("audioinput") ?? null);
+      setActiveSpeakerId(room?.getActiveDevice("audiooutput") ?? null);
+    } catch {
+      /* no-op */
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCameras();
+    const md = navigator.mediaDevices;
+    if (!md?.addEventListener) return;
+    md.addEventListener("devicechange", refreshCameras);
+    return () => md.removeEventListener("devicechange", refreshCameras);
+  }, [refreshCameras]);
+
+  const switchCamera = useCallback(
+    async (deviceId: string) => {
+      const room = roomRef.current;
+      if (!room) return;
+      try {
+        await room.switchActiveDevice("videoinput", deviceId);
+        setActiveCameraId(deviceId);
+      } catch (e) {
+        console.warn("camera switch failed", e);
+        setMediaError(explainMediaError("camera", e));
+      }
+    },
+    []
+  );
+
+  const switchMic = useCallback(
+    async (deviceId: string) => {
+      const room = roomRef.current;
+      if (!room) return;
+      try {
+        await room.switchActiveDevice("audioinput", deviceId);
+        setActiveMicId(deviceId);
+      } catch (e) {
+        console.warn("mic switch failed", e);
+        setMediaError(explainMediaError("microphone", e));
+      }
+    },
+    []
+  );
+
+  const switchSpeaker = useCallback(async (deviceId: string) => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.switchActiveDevice("audiooutput", deviceId);
+      setActiveSpeakerId(deviceId);
+    } catch (e) {
+      console.warn("speaker switch failed", e);
+      setMediaError(explainMediaError("speaker", e));
+    }
+  }, []);
+
+  const setOutputVolume = useCallback((v: number) => {
+    const clamped = Math.max(0, Math.min(1, v));
+    outputVolumeRef.current = clamped;
+    setOutputVolumeState(clamped);
+    document.querySelectorAll<HTMLMediaElement>("audio[data-lk-track-id], audio").forEach((el) => {
+      if (el.srcObject) el.volume = clamped;
+    });
+  }, []);
+
+  const getMicStreamTrack = useCallback((): MediaStreamTrack | null => {
+    const room = roomRef.current;
+    const pub = room?.localParticipant.getTrackPublication(Track.Source.Microphone);
+    return pub?.track?.mediaStreamTrack ?? null;
+  }, []);
+
   const toggleCam = useCallback(async () => {
     const room = roomRef.current;
     if (!room || mediaBusy) return;
@@ -383,13 +477,15 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       await room.localParticipant.setCameraEnabled(next);
       setCamOn(next);
       refreshTiles();
+
+      refreshCameras();
     } catch (e) {
       console.warn("camera toggle failed", e);
       setMediaError(explainMediaError("camera", e));
     } finally {
       setMediaBusy(false);
     }
-  }, [camOn, mediaBusy, refreshTiles]);
+  }, [camOn, mediaBusy, refreshTiles, refreshCameras]);
 
   const sendReaction = useCallback(
     (emoji: string) => {
@@ -438,6 +534,18 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     clearMediaError: () => setMediaError(null),
     toggleMic,
     toggleCam,
+    cameras,
+    activeCameraId,
+    switchCamera,
+    mics,
+    activeMicId,
+    switchMic,
+    speakers,
+    activeSpeakerId,
+    switchSpeaker,
+    outputVolume,
+    setOutputVolume,
+    getMicStreamTrack,
     screenOn,
     toggleScreenShare,
     sendReaction,

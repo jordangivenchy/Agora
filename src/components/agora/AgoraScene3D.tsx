@@ -841,7 +841,6 @@ function buildStageGlow(scene: THREE.Scene): THREE.PointLight[] {
   return [light];
 }
 
-
 /* ── Speaker queue architecture ─────────────────────────────────────
    Slot plates down the center aisle and the tunnel portal at the
    orchestra rim. Static geometry — the queue members themselves live in
@@ -1226,6 +1225,11 @@ export default function AgoraScene3D({
          sky filling the frame behind them.
        The loop lerps position and look target, so switching views is a
        glide, not a cut. */
+
+    const STAGE_ANCHOR = { y: 5.6, z: 4.2, halfW: 7.6 };
+    const anchorC = new THREE.Vector3();
+    const anchorE = new THREE.Vector3();
+    const anchorG = new THREE.Vector3();
     const CAMS: Record<AgoraView, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
       audience: { pos: new THREE.Vector3(0, 40, 18.5), look: new THREE.Vector3(0, 1, -7) },
       /* Near floor level, gazing up. Two numbers tune this framing and
@@ -1445,6 +1449,25 @@ export default function AgoraScene3D({
       camera.position.copy(camPos);
       if (!stillMotion) camera.position.y += Math.sin(t * 0.07) * 0.35;
       camera.lookAt(camLook);
+
+      anchorC.set(0, STAGE_ANCHOR.y, STAGE_ANCHOR.z).project(camera);
+      anchorE.set(STAGE_ANCHOR.halfW, STAGE_ANCHOR.y, STAGE_ANCHOR.z).project(camera);
+
+      anchorG.set(0, 0.17, STAGE_ANCHOR.z).project(camera);
+      if (anchorC.z < 1) {
+        const ax = (anchorC.x * 0.5 + 0.5) * window.innerWidth;
+        const ay = (1 - (anchorC.y * 0.5 + 0.5)) * window.innerHeight;
+        const gy = (1 - (anchorG.y * 0.5 + 0.5)) * window.innerHeight;
+        const ex = (anchorE.x * 0.5 + 0.5) * window.innerWidth;
+
+        const scale = Math.min(1.5, Math.max(0.12, (Math.abs(ex - ax) * 2) / 1000));
+
+        const rs = document.documentElement.style;
+        rs.setProperty("--ag-anchor-x", `${ax.toFixed(1)}px`);
+        rs.setProperty("--ag-anchor-y", `${ay.toFixed(1)}px`);
+        rs.setProperty("--ag-anchor-ground", `${gy.toFixed(1)}px`);
+        rs.setProperty("--ag-anchor-scale", scale.toFixed(4));
+      }
       /* Speaker queue: damp members toward their slots (advancing = a
          short slide, never a walk), fade spawn glows, pulse the mic. */
       const slideK = 1 - Math.exp(-6 * dt);
