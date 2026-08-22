@@ -1458,10 +1458,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     <span className="inline-flex items-center gap-3">
       <button
         onClick={(e) => { e.stopPropagation(); sharePost(p); }}
-        className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-        style={{ color: copiedId === p.id ? "#00b894" : "rgba(238,238,245,0.32)", fontFamily: "inherit" }}
+        className="cursor-pointer bg-transparent border-none p-0 text-[12px]"
+        style={{ color: copiedId === p.id ? "#00b894" : "rgba(238,238,245,0.55)", fontFamily: "inherit" }}
       >
-        {copiedId === p.id ? <><Icon name="check" size={12} /> Link copied</> : <><Icon name="share" size={12} /> Share</>}
+        {copiedId === p.id ? <><Icon name="check" size={14} /> Link copied</> : <><Icon name="share" size={14} /> Share</>}
       </button>
       <button
         onClick={(e) => {
@@ -1472,32 +1472,32 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           const options = communities.filter((c) => c.joined && c.id !== p.community_id);
           setRepostCommunity(options[0]?.id ?? "");
         }}
-        className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-        style={{ color: "rgba(238,238,245,0.32)", fontFamily: "inherit" }}
+        className="cursor-pointer bg-transparent border-none p-0 text-[12px]"
+        style={{ color: "rgba(238,238,245,0.55)", fontFamily: "inherit" }}
       >
-        <Icon name="repeat" size={12} /> Repost
+        <Icon name="repeat" size={14} /> Repost
       </button>
       {canModerate(p.community_id) && (
         <button
           onClick={(e) => { e.stopPropagation(); togglePostPin(p); }}
-          className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
+          className="cursor-pointer bg-transparent border-none p-0 text-[12px]"
           style={{ color: "#4a9eff", fontFamily: "inherit" }}
         >
-          {p.pinned_at ? "Unpin" : <><Icon name="pin" size={12} /> Pin</>}
+          {p.pinned_at ? "Unpin" : <><Icon name="pin" size={14} /> Pin</>}
         </button>
       )}
       {(p.author_id === userId || canModerate(p.community_id)) && (
         <button
           onClick={(e) => { e.stopPropagation(); deletePost(p); }}
-          className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-          style={{ color: p.author_id === userId ? "rgba(238,238,245,0.32)" : "#e2b96b", fontFamily: "inherit" }}
+          className="cursor-pointer bg-transparent border-none p-0 text-[12px]"
+          style={{ color: p.author_id === userId ? "rgba(238,238,245,0.55)" : "#e2b96b", fontFamily: "inherit" }}
         >
           {p.author_id === userId ? "Delete" : "Remove (mod)"}
         </button>
       )}
       {!inDetail && (
-        <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-          <Icon name="message-circle" size={12} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
+        <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.55)" }}>
+          <Icon name="message-circle" size={14} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
         </span>
       )}
     </span>
