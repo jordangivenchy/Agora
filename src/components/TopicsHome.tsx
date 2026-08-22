@@ -752,9 +752,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 </p>
                 {inQueue && (
                   <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#f4d47c" }}>
-                    <span className="inline-block animate-pulse">●</span> In queue on{" "}
-                    {t.my_stance === "CON" ? "Con" : "Pro"} — you&rsquo;ll be matched the moment
-                    someone takes the other side. Keep this page open.
+                    <span className="inline-block animate-pulse">●</span> In queue — you&rsquo;ll be matched the moment
+                    someone else joins. Keep this page open.
                   </p>
                 )}
               </div>
@@ -769,35 +768,30 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 </button>
               ) : (
                 <div className="flex gap-2 shrink-0">
-                  {/* The side that matches instantly (someone waits opposite) gets the gold treatment. */}
-                  <button
-                    onClick={() => queueUp(t, "PRO")}
-                    disabled={busyId === t.id}
-                    className="cursor-pointer text-[12px] px-3.5 py-2 rounded-lg"
-                    style={{
-                      background: t.con_count > 0 ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(28,46,24,0.9)",
-                      border: t.con_count > 0 ? "0.5px solid #d9a238" : "0.5px solid #3d5a33",
-                      color: t.con_count > 0 ? "#412402" : "#97c459",
-                      fontFamily: "inherit",
-                      fontWeight: t.con_count > 0 ? 600 : 400,
-                    }}
-                  >
-                    {busyId === t.id ? "…" : "Pro"}
-                  </button>
-                  <button
-                    onClick={() => queueUp(t, "CON")}
-                    disabled={busyId === t.id}
-                    className="cursor-pointer text-[12px] px-3.5 py-2 rounded-lg"
-                    style={{
-                      background: t.pro_count > 0 ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(52,24,24,0.9)",
-                      border: t.pro_count > 0 ? "0.5px solid #d9a238" : "0.5px solid #5a3333",
-                      color: t.pro_count > 0 ? "#412402" : "#e05a5a",
-                      fontFamily: "inherit",
-                      fontWeight: t.pro_count > 0 ? 600 : 400,
-                    }}
-                  >
-                    {busyId === t.id ? "…" : "Con"}
-                  </button>
+                  {/* One Join: the side is chosen for you — whichever matches
+                      instantly (someone is waiting opposite), else PRO. Gold
+                      when a match is waiting. */}
+                  {(() => {
+                    const instant = t.con_count > 0 || t.pro_count > 0;
+                    const side: "PRO" | "CON" = t.con_count > 0 ? "PRO" : t.pro_count > 0 ? "CON" : "PRO";
+                    return (
+                      <button
+                        onClick={() => queueUp(t, side)}
+                        disabled={busyId === t.id}
+                        className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                        style={{
+                          background: instant ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
+                          border: instant ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
+                          color: instant ? "#412402" : "#9cc4f0",
+                          fontFamily: "inherit",
+                          fontWeight: instant ? 600 : 500,
+                        }}
+                        title={instant ? "Someone is waiting — you'll be matched right away" : "Join the queue for this question"}
+                      >
+                        {busyId === t.id ? "…" : instant ? "Join — match now" : "Join"}
+                      </button>
+                    );
+                  })()}
                 </div>
               )}
             </div>
