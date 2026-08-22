@@ -6076,7 +6076,9 @@ body { background: transparent; }
   /* optically centered: sits a touch low so it reads as resting toward
      the indicator row rather than floating high */
   top: 56%;
-  left: calc((100% - 228px) / 2);
+  /* centered on the FULL slide width, so it lines up with the indicator
+     row beneath the carousel (not just the image area left of the panel) */
+  left: 50%;
   height: 80%;
   aspect-ratio: 1 / 1;
   transform: translate(-50%, -50%);
@@ -6120,7 +6122,7 @@ body { background: transparent; }
   -webkit-backdrop-filter: none;
   box-shadow: none;
 }
-.carousel-item.has-thumb .carousel-room-thumb { left: calc((100% - 250px) / 2); }
+.carousel-item.has-thumb .carousel-room-thumb { left: 50%; }
 .carousel-item .carousel-lower-third { right: 250px; }
 .room-panel-kicker {
   display: flex; align-items: center; gap: 7px;
