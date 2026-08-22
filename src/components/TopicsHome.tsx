@@ -453,18 +453,11 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           >
             Explore all {selCat.label} rooms →
           </button>
-          <button
-            onClick={() => onCreateLobby(selCat.key)}
-            className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg"
-            style={{ background: "rgba(255,255,255,0.07)", border: "0.5px solid #3a3a42", color: "#e0e0e6", fontFamily: "inherit" }}
-          >
-            + Create a room
-          </button>
         </div>
 
         {selRooms.length === 0 && (
           <p className="m-0 text-[11px]" style={{ color: "#6b6b74" }}>
-            No open rooms in {selCat.label} yet — start one and pick your own question.
+            No open rooms in {selCat.label} yet.
           </p>
         )}
 
