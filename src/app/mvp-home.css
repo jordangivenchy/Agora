@@ -5975,7 +5975,7 @@ body { background: transparent; }
    edge, so no part of the picture is wasted behind it) under a light
    bottom-weighted shade for the headline. The right column is opaque and
    full-height: Reported by · outlets · summary · Read more. */
-.carousel-item.news .carousel-bg { overflow: hidden; right: 240px; }
+.carousel-item.news .carousel-bg { overflow: hidden; right: 250px; }
 .carousel-news-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -5983,12 +5983,12 @@ body { background: transparent; }
   display: block;
 }
 .carousel-news-shade {
-  position: absolute; top: 0; bottom: 0; left: 0; right: 240px;
+  position: absolute; top: 0; bottom: 0; left: 0; right: 250px;
   z-index: 1; pointer-events: none;
   background: linear-gradient(to top, rgba(6,7,12,0.78) 0%, rgba(6,7,12,0.28) 40%, rgba(6,7,12,0) 65%);
 }
 .carousel-item.news .carousel-lower-third {
-  right: 240px;
+  right: 250px;
   background: none;
   padding-bottom: 22px;
 }
@@ -5999,11 +5999,11 @@ body { background: transparent; }
 }
 .carousel-item.news .carousel-panel.carousel-news-card {
   top: 0; right: 0; bottom: 0;
-  width: 240px;
+  width: 250px;
   border-radius: 0;
   border: none;
   border-left: 0.5px solid #2e2e38;
-  background: rgba(11,11,13,0.95) !important; /* same as the Browse pills */
+  background: #0b0b0d !important; /* solid — same surface on every slide */
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
@@ -6061,7 +6061,7 @@ body { background: transparent; }
    Room thumbnails are 512px squares; a square stretched across a wide
    hero turns to mush, so: a blurred, darkened copy fills the backdrop
    and the sharp square floats beside the panel. */
-.carousel-item.has-thumb .carousel-bg { overflow: hidden; }
+.carousel-item.has-thumb .carousel-bg { overflow: hidden; right: 250px; }
 .carousel-room-backdrop {
   position: absolute; inset: -6%;
   width: 112%; height: 112%;
@@ -6110,7 +6110,7 @@ body { background: transparent; }
   padding: 22px 20px;
   gap: 0;
   /* identical surface to the news column */
-  background: rgba(11,11,13,0.95) !important;
+  background: #0b0b0d !important;
   border: none;
   border-left: 0.5px solid #2e2e38;
   border-radius: 0;
