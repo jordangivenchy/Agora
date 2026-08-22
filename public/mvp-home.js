@@ -344,7 +344,6 @@ function renderCarousel() {
       <div class="carousel-bg-grid"></div>
       ${c.thumbnailUrl ? `<img class="carousel-room-thumb" src="${escHTML(c.thumbnailUrl)}" alt="" onerror="this.remove()" />` : ''}
       <div class="carousel-live-badge"><div class="carousel-live-dot"></div> Live</div>
-      <div class="carousel-viewers">${escHTML(c.viewersDisplay)} watching</div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">"${escHTML(c.motion)}"</div>
         <button class="carousel-watch-btn" data-debate-index="${c.debateIndex}">▶ Watch Live</button>
