@@ -6146,3 +6146,7 @@ body { background: transparent; }
 .room-panel-community { --chip: #4a9eff; color: var(--chip); font-weight: 700; }
 
 .room-panel-watch { margin-top: 18px; align-self: flex-start; }
+
+/* Explore results are React RoomCard blocks now: the wrapper spans the
+   legacy grid so the squares flow in rows. */
+#epResultsGrid > .flex { grid-column: 1 / -1; }

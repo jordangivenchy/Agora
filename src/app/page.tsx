@@ -17,6 +17,7 @@ import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
+import ExploreGrid from "@/components/ExploreGrid";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
 import "./mvp-home.css";
@@ -78,6 +79,7 @@ export default function Home() {
   const [mvpPage, setMvpPage] = useState<"home" | "explore">("home");
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
+  const [exploreHost, setExploreHost] = useState<HTMLElement | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{
     motion: string; topic: string; schedule?: boolean;
@@ -101,6 +103,7 @@ export default function Home() {
     setSearchHost(document.getElementById("discoverySocial"));
     setBellHost(document.getElementById("notifBellHost"));
     setNewsHost(document.getElementById("newsTickerHost"));
+    setExploreHost(document.getElementById("epResultsGrid"));
   }, []);
 
   /* Fetch real rooms + auth + platform stats, expose to the MVP scripts.
@@ -467,6 +470,7 @@ export default function Home() {
       <NotificationsBell container={bellHost} />
       <DiscoverySearch container={searchHost} />
       <NewsTicker container={newsHost} />
+      <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <HomeSidebar activeId={activeTab ?? mvpPage} onNavigate={onSidebarNavigate} />
       <TopicsHome

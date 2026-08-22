@@ -1903,49 +1903,14 @@ init();
   }
 
   // ── Render ─────────────────────────────────
+  // Cards are React now (ExploreGrid renders RoomCard blocks into
+  // #epResultsGrid). We keep the filter machinery and hand it the room ids
+  // that survived; React draws them and the empty state.
   function renderCards(list) {
-    const grid = document.getElementById('epResultsGrid');
     const meta = document.getElementById('epResultsMeta');
-    if (!grid) return;
-
-    meta.textContent = `Showing ${list.length} discussion${list.length !== 1 ? 's' : ''}`;
-
-    if (list.length === 0) {
-      grid.innerHTML = `<div class="explore-empty"><span class="explore-empty-icon">🔍</span>Nothing matches your filters</div>`;
-      return;
-    }
-
-    grid.innerHTML = list.map(d => {
-      const statusLabel = d.status === 'live' ? '● Live' : d.status === 'queue' ? 'In queue' : 'Scheduled';
-      const avatarsHtml = d.debaters.map((av, i) => `
-        <div class="explore-avatar" style="background:${av.color}">${av.init}</div>
-        <span class="explore-debater-name">${d.names[i]}</span>
-        ${i < d.debaters.length - 1 ? '<span class="explore-vs">vs</span>' : ''}
-      `).join('');
-      const waitingHtml = d.debaters.length === 1
-        ? `<span class="explore-debater-name" style="color:rgba(255,255,255,0.2)">${d.names[1]}</span>` : '';
-
-      const btn1Class = 'watch';
-      const btn1Label = d.actions[0] === 'watch' ? 'Watch' : d.actions[0] === 'spectate' ? 'Watch' : 'Set reminder';
-      const btn2Class = d.actions[1] === 'queue' ? 'queue-btn' : 'join';
-      const btn2Label = d.actions[1] === 'join' ? 'Join as speaker' : d.actions[1] === 'queue' ? 'Join queue' : 'Register';
-
-      return `
-        <div class="explore-result-card" data-ep-idx="${d.idx}" style="cursor:pointer" data-cat="${d.category}" data-status="${d.status}" data-format="${d.format}" data-lang="${d.lang}" data-ar="${d.ar}">
-          <div class="explore-card-top">
-            <span class="explore-status ${d.status}">${statusLabel}</span>
-            <span class="explore-card-category">${d.category}</span>
-          </div>
-          <div class="explore-card-motion">${d.motion}</div>
-          <div class="explore-debaters">${avatarsHtml}${waitingHtml}</div>
-          <div class="explore-card-meta">${d.meta.map(m => `<span>${m}</span>`).join('')}<span>${d.format} · ${d.lang}</span></div>
-          <div class="explore-card-actions">
-            <button class="explore-card-btn ${btn1Class}">${btn1Label}</button>
-            <button class="explore-card-btn ${btn2Class}">${btn2Label}</button>
-          </div>
-        </div>
-      `;
-    }).join('');
+    if (meta) meta.textContent = `Showing ${list.length} discussion${list.length !== 1 ? 's' : ''}`;
+    const ids = list.map(d => (DEBATES[d.idx] || {}).roomId).filter(Boolean);
+    window.dispatchEvent(new CustomEvent('agora:explore-results', { detail: { ids } }));
   }
 
   // ── Filter ─────────────────────────────────
@@ -1977,12 +1942,7 @@ init();
   }
   window._epApplyFilters = applyFilters;
 
-  // Any click on a card (or its buttons) opens the real room — the adapter's
-  // openDebateModal override navigates to /agora/<id>.
-  document.getElementById('epResultsGrid')?.addEventListener('click', (e) => {
-    const card = e.target.closest?.('.explore-result-card');
-    if (card && card.dataset.epIdx !== undefined) openDebateModal(+card.dataset.epIdx);
-  });
+  // (card clicks are handled by the React RoomCard blocks)
 
   // ── Filter pill handler ─────────────────────
   window._epFilter = function(el, group) {

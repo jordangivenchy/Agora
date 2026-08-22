@@ -1,347 +1,157 @@
 "use client";
 
-import Link from "next/link";
+/* The homepage's discussion block (square thumbnail card with the
+   status badge, topic, motion, host/community, and format line) — shared
+   so Explore and the home feed render the same thing. */
+
 import { TOPICS } from "@/types/database";
-import type { DebateRoom, DebateParticipant } from "@/types/database";
-import { useUserMenu } from "./userMenuContext";
 import { roomPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
+import { useUserMenu } from "./userMenuContext";
 
-interface Props {
-  room: DebateRoom & {
-    participants: (DebateParticipant & {
-      user: { username: string; display_name?: string | null; avatar_url: string | null };
-    })[];
-    vote_counts: { pro: number; con: number };
-  };
+export interface RoomCardRoom {
+  id: string;
+  motion: string;
+  topic_key: string;
+  status: string;
+  format: string;
+  scheduled_start: string | null;
+  viewer_count: number | null;
+  thumbnail_url?: string | null;
+  host: { id: string; username: string; display_name?: string | null; avatar_url: string | null } | null;
+  community: { id: string; name: string; color: string | null } | null;
 }
 
-export default function RoomCard({ room }: Props) {
+const FORMAT_LABEL: Record<string, string> = { open: "Open", oxford: "Oxford", "1v1": "1v1", panel: "Panel" };
+
+const card: React.CSSProperties = {
+  background: "rgba(11,11,13,0.95)",
+  border: "0.5px solid #2e2e38",
+};
+
+const badge = (bg: string): React.CSSProperties => ({
+  position: "absolute", top: 8, left: 8,
+  background: bg, color: "white",
+  fontSize: 9.5, fontWeight: 700, letterSpacing: "0.06em",
+  padding: "2px 7px", borderRadius: 6,
+});
+
+function scheduledLabel(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · " +
+    d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+export default function RoomCard({ room: r, size = 168 }: { room: RoomCardRoom; size?: number }) {
   const { openUserMenu } = useUserMenu();
-  const topic = TOPICS.find((t) => t.key === room.topic_key);
+  const topicLabel = TOPICS.find((t) => t.key === r.topic_key)?.label ?? r.topic_key;
+  const scheduled = r.status !== "live" && !!r.scheduled_start;
 
-  /* Card lives inside a room link — names open the user menu instead. */
-  const nameProps = (d?: DebateParticipant & { user?: { username: string } }) => {
-    const username = d?.user?.username;
-    return d && username
-      ? {
-          onClick: (e: React.MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openUserMenu({ x: e.clientX, y: e.clientY }, { userId: d.user_id, username });
-          },
-          style: { cursor: "pointer" as const, textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 },
-        }
-      : {};
+  const openCommunity = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    (document.querySelector('[data-nav-id="communities"]') as HTMLElement | null)?.click();
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent("agora:open-community", { detail: { communityId: id } }));
+    }, 60);
   };
 
-  const debaters = room.participants.filter((p) => p.role === "debater" && !p.left_at);
-  const proDebater = debaters.find((d) => d.stance === "PRO");
-  const conDebater = debaters.find((d) => d.stance === "CON");
-  const totalVotes = room.vote_counts.pro + room.vote_counts.con;
-  const proPct = totalVotes > 0 ? Math.round((room.vote_counts.pro / totalVotes) * 100) : 50;
-
-  const isLive = room.status === "live";
-  const isScheduled =
-    room.status === "created" &&
-    !!room.scheduled_start &&
-    new Date(room.scheduled_start).getTime() > Date.now();
-
-  const scheduledLabel = (() => {
-    if (!room.scheduled_start) return "";
-    const d = new Date(room.scheduled_start);
-    const now = new Date();
-    const sameDay =
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate();
-    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-    if (sameDay) return `Today · ${time}`;
-    const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    return `${dateStr} · ${time}`;
-  })();
-
-  return (
-    <Link
-      href={roomPath(room)}
-      className="room-card block cursor-pointer transition-all"
-      style={{
-        background: "var(--bg-secondary)",
-        border: "1px solid var(--border)",
-        borderRadius: "16px",
-        overflow: "hidden",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "var(--border-hover)";
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.45)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "none";
-      }}
-    >
-      {/* Thumbnail */}
-      <div
-        className="relative flex items-center justify-center overflow-hidden"
-        style={{
-          height: "120px",
-          background: topic
-            ? `radial-gradient(ellipse at 50% 120%, ${topic.color}2e 0%, ${topic.color}0a 55%, transparent 100%), var(--bg-tertiary)`
-            : "var(--bg-tertiary)",
-        }}
-      >
-        <span className="text-[34px] opacity-40 z-[1]">{topic?.emoji || "⚖️"}</span>
-
-        {/* Hover CTA — live rooms are spectator-only, make that the whole pitch */}
-        {isLive && (
-          <div className="rc-thumb-cta">
-            <span className="rc-cta-btn">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              Join Audience
-            </span>
-          </div>
-        )}
-
-        {/* Live badge */}
-        {isLive && (
-          <div
-            className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-[2]"
-            style={{
-              background: "#ef4444",
-              color: "white",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "10px",
-              fontWeight: 700,
-              padding: "3px 9px",
-              borderRadius: "6px",
-              letterSpacing: "0.06em",
-            }}
-          >
-            <span
-              className="rounded-full bg-white animate-[pulse-live_1.5s_ease-in-out_infinite]"
-              style={{ width: "5px", height: "5px" }}
-            />
-            LIVE
-          </div>
-        )}
-
-        {!isLive && isScheduled && (
-          <div
-            className="absolute top-2.5 left-2.5 flex items-center gap-1 z-[2]"
-            style={{
-              background: "rgba(226,185,107,0.92)",
-              color: "#1a0c00",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "10px",
-              fontWeight: 700,
-              padding: "3px 9px",
-              borderRadius: "6px",
-              letterSpacing: "0.06em",
-            }}
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            SCHEDULED
-          </div>
-        )}
-
-        {!isLive && !isScheduled && (
-          <div
-            className="absolute top-2.5 left-2.5 flex items-center gap-1 z-[2]"
-            style={{
-              background: "rgba(59,130,246,0.85)",
-              color: "white",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "10px",
-              fontWeight: 700,
-              padding: "3px 9px",
-              borderRadius: "6px",
-              letterSpacing: "0.06em",
-            }}
-          >
-            WAITING
-          </div>
-        )}
-
-        {/* Viewers */}
-        <div
-          className="absolute top-2.5 right-2.5 flex items-center gap-1 z-[2]"
-          style={{
-            background: "rgba(0,0,0,0.6)",
-            color: "rgba(255,255,255,0.85)",
-            fontSize: "10.5px",
-            fontWeight: 600,
-            padding: "3px 9px",
-            borderRadius: "6px",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-          {room.viewer_count}
-        </div>
-
-        {/* Private badge (spectator-only room) */}
-        {room.is_private && (
-          <div
-            className="absolute z-[2] flex items-center gap-1"
-            style={{
-              bottom: "8px",
-              left: "10px",
-              background: "rgba(226,185,107,0.15)",
-              border: "1px solid rgba(226,185,107,0.4)",
-              color: "#ffdd85",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "9.5px",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              padding: "3px 8px",
-              borderRadius: "6px",
-            }}
-          >
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            PRIVATE
-          </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: "12px" }}>
-        {/* Topic tag */}
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span style={{ fontSize: "10px", color: topic?.color || "var(--text-dim)" }}>
-            {topic?.emoji} {topic?.label}
-          </span>
-        </div>
-
-        {/* Motion */}
-        <h3
-          className="line-clamp-2"
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: "13.5px",
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
-            color: "var(--text-primary)",
-            lineHeight: 1.4,
-            marginBottom: "8px",
-            minHeight: "38px",
-          }}
-        >
-          {room.motion}
-        </h3>
-
-        {/* Debaters row — each name travels with its avatar */}
-        <div className="flex items-center gap-1.5 mb-2">
-          <span
-            className="flex items-center gap-1.5 min-w-0"
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "11px",
-              color: "var(--text-muted)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              flex: 1,
-            }}
-          >
-            <span {...nameProps(proDebater)} className="inline-flex items-center gap-1.5">
-              <UserAvatar
-                size={20}
-                username={displayName(proDebater?.user)}
-                avatarUrl={proDebater?.user?.avatar_url}
-                seed={proDebater?.user_id}
-              />
-              {displayName(proDebater?.user) || "Waiting"}
-            </span>
-            <span>vs</span>
-            <span {...nameProps(conDebater)} className="inline-flex items-center gap-1.5">
-              <UserAvatar
-                size={20}
-                username={displayName(conDebater?.user)}
-                avatarUrl={conDebater?.user?.avatar_url}
-                seed={conDebater?.user_id}
-              />
-              {displayName(conDebater?.user) || "Waiting"}
-            </span>
-          </span>
-        </div>
-
-        {/* Vote bar */}
-        <div className="flex justify-between items-center mb-1" style={{ fontSize: "9px" }}>
-          <span style={{ color: "rgba(0,184,148,0.7)" }}>PRO {proPct}%</span>
-          <span style={{ color: "rgba(232,64,64,0.7)" }}>CON {100 - proPct}%</span>
-        </div>
-        <div
-          className="flex overflow-hidden"
-          style={{ height: "3px", borderRadius: "100px" }}
-        >
-          <div
-            style={{
-              background: "var(--pro-color)",
-              width: `${proPct}%`,
-              transition: "width 0.6s cubic-bezier(0.25,0.46,0.45,0.94)",
-            }}
-          />
-          <div
-            style={{
-              background: "var(--con-color)",
-              flex: 1,
-              transition: "width 0.6s cubic-bezier(0.25,0.46,0.45,0.94)",
-            }}
-          />
-        </div>
-
-        {/* Footer meta */}
-        <div
-          className="flex items-center justify-between mt-2 pt-2"
-          style={{
-            borderTop: "1px solid rgba(255,255,255,0.05)",
-            fontSize: "10px",
-            color: "var(--text-dim)",
-          }}
-        >
-          {isScheduled ? (
-            <span style={{ color: "#e2b96b", fontWeight: 600 }}>
-              {scheduledLabel}
-            </span>
-          ) : (
-            <span className="capitalize">{room.format}</span>
-          )}
-          <span>{room.language === "en" ? "English" : room.language}</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function MiniAvatar({ name, color }: { name?: string; color: string }) {
   return (
     <div
-      className="rounded-full flex items-center justify-center text-white shrink-0"
-      style={{
-        width: "20px",
-        height: "20px",
-        background: name ? color : "var(--bg-tertiary)",
-        fontFamily: "'Space Grotesk', sans-serif",
-        fontSize: "8px",
-        fontWeight: 700,
-      }}
+      role="link"
+      tabIndex={0}
+      onClick={() => { window.location.href = roomPath(r); }}
+      onKeyDown={(e) => { if (e.key === "Enter") window.location.href = roomPath(r); }}
+      className="cursor-pointer shrink-0"
+      style={{ ...card, width: size, height: size, borderRadius: 16, overflow: "hidden", position: "relative" }}
     >
-      {name ? name[0].toUpperCase() : "?"}
+      {/* Host-picked thumbnail; their profile picture is the default */}
+      <div style={{ position: "absolute", inset: 0 }}>
+        {r.thumbnail_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        ) : (
+          <UserAvatar size={size} radius={0} username={r.host?.username} avatarUrl={r.host?.avatar_url} seed={r.host?.id} />
+        )}
+        {r.status === "live" ? (
+          <span style={badge("#ef4444")}>LIVE</span>
+        ) : scheduled ? (
+          <span style={badge("rgba(139,92,246,0.85)")}>SCHEDULED</span>
+        ) : (
+          <span style={badge("rgba(59,130,246,0.85)")}>OPEN</span>
+        )}
+        <span
+          style={{
+            position: "absolute", top: 9, right: 10,
+            color: "rgba(255,255,255,0.65)", fontSize: 10, fontWeight: 500,
+            textShadow: "0 1px 4px rgba(0,0,0,0.9)",
+          }}
+        >
+          {topicLabel}
+        </span>
+      </div>
+
+      {/* Info overlaid on the photo — keeps the block a true square */}
+      <div
+        className="px-2.5 pb-2 pt-6"
+        style={{
+          position: "absolute", left: 0, right: 0, bottom: 0,
+          background: "linear-gradient(transparent, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.88))",
+        }}
+      >
+        <p
+          className="m-0 text-[12px]"
+          style={{
+            color: "white", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, lineHeight: 1.25,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+            textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+          }}
+        >
+          {r.motion}
+        </p>
+        {(r.community || r.host?.username) && (
+          <p className="m-0 mt-0.5 text-[10.5px] flex items-center gap-1" style={{ color: "rgba(255,255,255,0.8)" }}>
+            <span>by</span>
+            {r.community ? (
+              <span
+                onClick={(e) => openCommunity(e, r.community!.id)}
+                className="inline-flex items-center gap-1"
+                style={{ cursor: "pointer", verticalAlign: "middle", lineHeight: 1 }}
+                title={`Go to ${r.community.name}`}
+              >
+                <span
+                  className="inline-flex items-center justify-center shrink-0"
+                  style={{ width: 13, height: 13, borderRadius: 4, background: r.community.color ?? "#4a9eff", color: "#fff", fontSize: 8, fontWeight: 700 }}
+                >
+                  {r.community.name.charAt(0).toUpperCase()}
+                </span>
+                {r.community.name}
+              </span>
+            ) : r.host ? (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openUserMenu({ x: e.clientX, y: e.clientY }, { userId: r.host!.id, username: r.host!.username });
+                }}
+                className="inline-flex items-center gap-1"
+                style={{ cursor: "pointer", verticalAlign: "middle", lineHeight: 1, textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
+              >
+                <UserAvatar size={13} username={r.host.username} avatarUrl={r.host.avatar_url} seed={r.host.id} />
+                {displayName(r.host)}
+              </span>
+            ) : null}
+          </p>
+        )}
+        <p className="m-0 mt-0.5 text-[9.5px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+          {FORMAT_LABEL[r.format] ?? r.format}
+          {r.status === "live"
+            ? ` · ${r.viewer_count ?? 0} watching`
+            : scheduled
+              ? ` · ${scheduledLabel(r.scheduled_start)}`
+              : " · waiting for speakers"}
+        </p>
+      </div>
     </div>
   );
 }
