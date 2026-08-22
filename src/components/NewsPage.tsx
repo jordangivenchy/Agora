@@ -283,7 +283,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="max-w-[900px] mx-auto px-6 py-5">
+      <div className="max-w-[1280px] mx-auto px-8 py-5">
         <div className="flex items-center gap-3.5 mb-4">
           <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
@@ -375,7 +375,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             {majors.length > 0 && (
               <>
                 <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MAJOR STORIES</p>
-                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
                   {majors.map((st) => (
                     <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
                       <div style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}>
