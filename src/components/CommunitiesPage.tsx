@@ -31,7 +31,7 @@ import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
 import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
 import RichText from "./community/RichText";
-import FormatToolbar, { handleFormatShortcut } from "./community/FormatToolbar";
+import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 
 interface Props {
   open: boolean;
@@ -90,7 +90,6 @@ type Post = {
   pinned_at: string | null;
 };
 
-type MentionUser = { id: string; username: string; display_name: string | null; avatar_url: string | null };
 
 type Comment = {
   id: string;
@@ -152,34 +151,8 @@ const card: React.CSSProperties = {
   borderRadius: 14,
 };
 
-/* Comment / reply composers: single-line look that grows to ~6 lines
-   (same pattern as MessagesDock). */
-const COMPOSER_LINE = 20;
-const COMPOSER_MAX = 6 * COMPOSER_LINE + 18 + 1;
-const composerTextareaStyle: React.CSSProperties = {
-  background: "rgba(10,10,12,0.7)",
-  border: "0.5px solid rgba(255,255,255,0.1)",
-  borderRadius: 9,
-  color: "#eeeef5",
-  fontSize: 13,
-  lineHeight: `${COMPOSER_LINE}px`,
-  padding: "9px 12px",
-  outline: "none",
-  fontFamily: "inherit",
-  width: "100%",
-  display: "block",
-  resize: "none",
-  overflowY: "hidden",
-  minHeight: COMPOSER_LINE + 18 + 1,
-  maxHeight: COMPOSER_MAX,
-  boxSizing: "border-box",
-};
-function autoGrow(ta: HTMLTextAreaElement) {
-  ta.style.height = "auto";
-  const full = ta.scrollHeight + 1; /* border-box: add the 0.5px borders back */
-  ta.style.height = `${Math.min(full, COMPOSER_MAX)}px`;
-  ta.style.overflowY = full > COMPOSER_MAX ? "auto" : "hidden";
-}
+/* Stored markdown length cap for post bodies and comments. */
+const BODY_MAX = 10000;
 
 const inputStyle: React.CSSProperties = {
   background: "rgba(10,10,12,0.7)",
@@ -303,62 +276,6 @@ function TagChip({ name, color, small }: { name: string; color: string | null; s
   );
 }
 
-/* @-autocomplete for composers: when the text ends in "@frag", offers
-   matching users; picking one completes the handle. Rendered inside a
-   position:relative wrapper, dropping below the input. */
-function MentionSuggest({
-  text, onComplete, supabase,
-}: {
-  text: string;
-  onComplete: (nextText: string) => void;
-  supabase: ReturnType<typeof createClient>;
-}) {
-  const [hits, setHits] = useState<MentionUser[]>([]);
-  const frag = useMemo(() => text.match(/@([a-zA-Z0-9_]{1,20})$/)?.[1] ?? null, [text]);
-  useEffect(() => {
-    if (!frag) { setHits([]); return; }
-    let dead = false;
-    const t = setTimeout(async () => {
-      const { data } = await supabase.rpc("search_mention_users", { p_query: frag, p_limit: 5 });
-      if (!dead) setHits(((data ?? []) as MentionUser[]));
-    }, 180);
-    return () => { dead = true; clearTimeout(t); };
-  }, [frag, supabase]);
-  if (!frag || hits.length === 0) return null;
-  return (
-    <div
-      className="absolute left-0 z-20 overflow-hidden"
-      style={{
-        top: "100%", marginTop: 4, minWidth: 220,
-        background: "rgba(14,14,17,0.97)",
-        backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-        border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10,
-        boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
-      }}
-    >
-      {hits.map((u) => (
-        <div
-          key={u.id}
-          /* mousedown so the input doesn't blur before we complete */
-          onMouseDown={(e) => {
-            e.preventDefault();
-            onComplete(text.replace(/@([a-zA-Z0-9_]{1,20})$/, `@${u.username} `));
-          }}
-          className="flex items-center gap-2 px-3 py-2 cursor-pointer"
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
-        >
-          <UserAvatar size={20} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
-          <span className="text-[12px]" style={{ color: "#eeeef5" }}>@{u.username}</span>
-          {u.display_name?.trim() && (
-            <span className="text-[10.5px] truncate" style={{ color: "rgba(238,238,245,0.4)" }}>{u.display_name}</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /* Vote column shared by feed cards and the detail view. */
 function VoteBox({
   post, onVote, size = 13,
@@ -458,31 +375,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [newGifUrl, setNewGifUrl] = useState<string | null>(null);
   const [gifPickerFor, setGifPickerFor] = useState<null | "post" | "comment">(null);
   const [commentGifUrl, setCommentGifUrl] = useState<string | null>(null);
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const bodyRef = useRef<RichEditorHandle | null>(null);
   /* Emoji picker (shared popover) for the post body / comment box. */
   const [emojiFor, setEmojiFor] = useState<null | "post" | "comment">(null);
-  const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const commentInputRef = useRef<RichEditorHandle | null>(null);
   const postImageInputRef = useRef<HTMLInputElement | null>(null);
-  /* Grow/shrink the comment + reply textareas with their drafts (covers
-     typing, toolbar edits, and the reset after a submit). */
-  useEffect(() => { if (commentInputRef.current) autoGrow(commentInputRef.current); }, [commentText]);
-  useEffect(() => { if (replyInputRef.current) autoGrow(replyInputRef.current); }, [replyText]);
-  const insertEmoji = useCallback((
-    el: HTMLInputElement | HTMLTextAreaElement | null,
-    set: (fn: (cur: string) => string) => void,
-    emoji: string,
-  ) => {
-    set((cur) => {
-      const start = el?.selectionStart ?? cur.length;
-      const end = el?.selectionEnd ?? start;
-      requestAnimationFrame(() => {
-        el?.focus();
-        el?.setSelectionRange(start + emoji.length, start + emoji.length);
-      });
-      return cur.slice(0, start) + emoji + cur.slice(end);
-    });
-  }, []);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
   const [creatingCommunity, setCreatingCommunity] = useState(false);
   const [newCommunityName, setNewCommunityName] = useState("");
@@ -1008,6 +905,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const communityId = selected !== "all" ? selected : composeCommunity;
     const title = newTitle.trim();
     if (!communityId || !title) return;
+    if (newBody.length > BODY_MAX) { setError(`Post body is too long (${newBody.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return; }
     setBusy(true);
     let imageUrl: string | null = null;
     if (newImage && userId) {
@@ -1045,6 +943,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     if (busy || !openPost || !requireAuth()) return; // busy: Enter can auto-repeat
     const text = body.trim();
     if (!text) return;
+    if (text.length > BODY_MAX) { setError(`Comment is too long (${text.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return; }
     setBusy(true);
     let imageUrl: string | null = null;
     if (image && userId) {
@@ -1649,23 +1548,16 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 </div>
                 {replyTo === c.id && (
                   <div className="mt-2">
-                    <div className="mb-1.5"><FormatToolbar compact target={() => replyInputRef.current} value={replyText} onChange={setReplyText} /></div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-end">
                       <span className="relative flex-1 min-w-0">
-                        <textarea
-                          ref={replyInputRef}
-                          rows={1}
-                          style={composerTextareaStyle}
-                          placeholder={`Reply to @${c.author_username}…`}
-                          value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (handleFormatShortcut(e, replyText, setReplyText)) return;
-                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(c.id, replyText, replyImage); }
-                          }}
+                        <RichEditor
+                          compact
                           autoFocus
+                          value={replyText}
+                          onChange={setReplyText}
+                          placeholder={`Reply to @${c.author_username}… (⌘↩ to send)`}
+                          onSubmit={() => submitComment(c.id, replyText, replyImage)}
                         />
-                        <MentionSuggest text={replyText} onComplete={setReplyText} supabase={supabase} />
                       </span>
                       <label className="cursor-pointer text-[11px] px-2.5 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
                         <Icon name="image" size={14} />
@@ -2283,23 +2175,18 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
                 {/* comment composer */}
                 <div className="mb-4">
-                  {userId && <div className="mb-1.5"><FormatToolbar compact target={() => commentInputRef.current} value={commentText} onChange={setCommentText} /></div>}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-end">
                     <span className="relative flex-1 min-w-0">
-                      <textarea
+                      <RichEditor
                         ref={commentInputRef}
-                        rows={1}
-                        style={composerTextareaStyle}
-                        placeholder={userId ? "Add a comment… (@ to mention)" : "Sign in to comment"}
+                        compact
                         value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (handleFormatShortcut(e, commentText, setCommentText)) return;
-                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(null, commentText, commentImage, commentGifUrl); }
-                        }}
+                        onChange={setCommentText}
+                        placeholder={userId ? "Add a comment… (@ to mention, ⌘↩ to send)" : "Sign in to comment"}
+                        onSubmit={() => submitComment(null, commentText, commentImage, commentGifUrl)}
+                        mentions={!!userId}
                         onFocus={() => { if (!userId) window.location.href = "/login"; }}
                       />
-                      <MentionSuggest text={commentText} onComplete={setCommentText} supabase={supabase} />
                     </span>
                     <span className="relative inline-block shrink-0">
                       <button
@@ -2312,7 +2199,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </button>
                       {emojiFor === "comment" && (
                         <EmojiPicker
-                          onPick={(e) => insertEmoji(commentInputRef.current, setCommentText, e)}
+                          onPick={(e) => commentInputRef.current?.insertText(e)}
                           onClose={() => setEmojiFor(null)}
                         />
                       )}
@@ -2873,32 +2760,20 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                     />
-                    {/* formatting toolbar — markdown subset, see lib/richText.ts */}
-                    <FormatToolbar
-                      target={() => bodyRef.current}
+                    {/* rich editor — stores markdown, see community/RichEditor.tsx */}
+                    <RichEditor
+                      ref={bodyRef}
                       value={newBody}
                       onChange={setNewBody}
+                      placeholder="Text (optional — @ to mention someone)"
                       onImage={() => postImageInputRef.current?.click()}
                       onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "post" ? null : "post") : undefined}
                       trailing={
-                        <span className="text-[10px] ml-2" style={{ color: "rgba(238,238,245,0.25)" }}
-                          title={"**bold** *italic* ~~strike~~ `code` ^(sup) >!spoiler!< [label](https://url)\n# heading · - bullet · 1. numbered · > quote · ``` code block · | table |"}>
-                          Markdown · @mention
+                        <span className="text-[10px] ml-2" style={{ color: newBody.length > BODY_MAX ? "#e26b6b" : "rgba(238,238,245,0.25)" }}>
+                          {newBody.length > BODY_MAX * 0.9 ? `${newBody.length.toLocaleString()} / ${BODY_MAX.toLocaleString()}` : "@mention"}
                         </span>
                       }
                     />
-                    <span className="relative block">
-                      <textarea
-                        ref={bodyRef}
-                        style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                        placeholder="Text (optional — @ to mention someone)"
-                        maxLength={10000}
-                        value={newBody}
-                        onChange={(e) => setNewBody(e.target.value)}
-                        onKeyDown={(e) => handleFormatShortcut(e, newBody, setNewBody)}
-                      />
-                      <MentionSuggest text={newBody} onComplete={setNewBody} supabase={supabase} />
-                    </span>
                     {composerTags.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>Tag:</span>
@@ -2926,7 +2801,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         </button>
                         {emojiFor === "post" && (
                           <EmojiPicker
-                            onPick={(e) => insertEmoji(bodyRef.current, setNewBody, e)}
+                            onPick={(e) => bodyRef.current?.insertText(e)}
                             onClose={() => setEmojiFor(null)}
                           />
                         )}
