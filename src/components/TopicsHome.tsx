@@ -687,8 +687,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             </div>
             {/* Empty half earns its keep: a standing invitation to fill it. */}
             <div
-              className="flex flex-col items-start justify-center gap-2 p-5"
-              style={{ ...rowCard, minHeight: 168, borderStyle: "dashed", borderColor: "#3a3145" }}
+              className="flex flex-col items-start justify-center"
+              style={{ ...rowCard, minHeight: 168, padding: "22px 24px", gap: 8, borderStyle: "dashed", borderColor: "#3a3145" }}
             >
               <p className="m-0 text-[13px]" style={{ color: "#c9c9d2", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                 Nothing on the calendar in {selCat.label} yet.
@@ -699,8 +699,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               </p>
               <button
                 onClick={() => onCreateLobby(selCat.key, true)}
-                className="cursor-pointer text-[12px] px-4 py-2 rounded-lg mt-1"
-                style={{ background: "rgba(35,24,52,0.85)", border: "0.5px solid #43315e", color: "#c9a6f0", fontFamily: "inherit" }}
+                className="cursor-pointer text-[12px] rounded-lg"
+                style={{ padding: "8px 16px", marginTop: 4, background: "rgba(35,24,52,0.85)", border: "0.5px solid #43315e", color: "#c9a6f0", fontFamily: "inherit" }}
               >
                 Schedule a debate
               </button>
