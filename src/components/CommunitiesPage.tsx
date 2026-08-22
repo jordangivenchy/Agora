@@ -1455,7 +1455,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
   /* Share / repost / delete row under a post. */
   const postActions = (p: Post, inDetail: boolean) => (
-    <span className="inline-flex items-center gap-3">
+    <span className="flex items-center gap-3">
       <button
         onClick={(e) => { e.stopPropagation(); sharePost(p); }}
         className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
@@ -2992,9 +2992,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           style={{ maxHeight: 220, maxWidth: "100%", objectFit: "cover" }} />
                       )}
                       {repostEmbed(p)}
-                      <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
+                      <div className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
                         {postActions(p, false)}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 ))}
