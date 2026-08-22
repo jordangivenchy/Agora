@@ -381,8 +381,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [commentGifUrl, setCommentGifUrl] = useState<string | null>(null);
   const bodyRef = useRef<RichEditorHandle | null>(null);
   /* Emoji picker (shared popover) for the post body / comment box. */
-  const [emojiFor, setEmojiFor] = useState<null | "post" | "comment">(null);
+  const [emojiFor, setEmojiFor] = useState<null | "post" | "comment" | "reply">(null);
   const commentInputRef = useRef<RichEditorHandle | null>(null);
+  const commentImageInputRef = useRef<HTMLInputElement | null>(null);
+  const replyInputRef = useRef<RichEditorHandle | null>(null);
+  const replyImageInputRef = useRef<HTMLInputElement | null>(null);
   const postImageInputRef = useRef<HTMLInputElement | null>(null);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
   const [creatingCommunity, setCreatingCommunity] = useState(false);
@@ -1620,42 +1623,41 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     <div className="flex gap-2 items-end">
                       <span className="relative flex-1 min-w-0">
                         <RichEditor
+                          ref={replyInputRef}
                           compact
                           autoFocus
                           value={replyText}
                           onChange={setReplyText}
                           placeholder={`Reply to @${c.author_username}… (⌘↩ to send)`}
                           onSubmit={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
+                          onImage={() => replyImageInputRef.current?.click()}
+                          onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "reply" ? null : "reply") : undefined}
+                          onEmoji={() => setEmojiFor(emojiFor === "reply" ? null : "reply")}
+                          trailing={
+                            <span className="relative inline-block" style={{ alignSelf: "stretch" }}>
+                              {emojiFor === "reply" && (
+                                <EmojiPicker
+                                  onPick={(e) => replyInputRef.current?.insertText(e)}
+                                  onClose={() => setEmojiFor(null)}
+                                />
+                              )}
+                              {gifPickerFor === "reply" && (
+                                <GifPicker
+                                  onPick={(u) => { setReplyGifUrl(u); pickReplyImage(null); setGifPickerFor(null); }}
+                                  onClose={() => setGifPickerFor(null)}
+                                />
+                              )}
+                            </span>
+                          }
                         />
+                        <input ref={replyImageInputRef} type="file" accept="image/*" className="hidden"
+                          onChange={(e) => { pickReplyImage(e.target.files?.[0] ?? null); setReplyGifUrl(null); e.target.value = ""; }} />
                       </span>
-                      <label className="cursor-pointer text-[11px] px-2.5 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
-                        <Icon name="image" size={14} />
-                        <input type="file" accept="image/*" className="hidden"
-                          onChange={(e) => { pickReplyImage(e.target.files?.[0] ?? null); setReplyGifUrl(null); }} />
-                      </label>
-                      {giphyEnabled && (
-                        <span className="relative inline-block shrink-0">
-                          <button
-                            onClick={() => setGifPickerFor(gifPickerFor === "reply" ? null : "reply")}
-                            className="cursor-pointer text-[10.5px] px-2 rounded-lg flex items-center h-full font-bold"
-                            style={btnGhost}
-                            title="Add a GIF"
-                          >
-                            GIF
-                          </button>
-                          {gifPickerFor === "reply" && (
-                            <GifPicker
-                              onPick={(u) => { setReplyGifUrl(u); pickReplyImage(null); setGifPickerFor(null); }}
-                              onClose={() => setGifPickerFor(null)}
-                            />
-                          )}
-                        </span>
-                      )}
                       <button
                         onClick={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                         disabled={busy || !replyText.trim()}
                         className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
-                        style={{ ...btnBlue, borderRadius: 9 }}
+                        style={{ ...btnBlue, borderRadius: 10, height: 40 }}
                       >
                         Reply
                       </button>
@@ -2270,7 +2272,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   </div>
                 </div>
 
-                {/* comment composer */}
+                {/* comment composer — media/emoji live in the editor toolbar; only
+                    the submit button sits beside the box, bottom-aligned. */}
                 <div className="mb-4">
                   <div className="flex gap-2 items-end">
                     <span className="relative flex-1 min-w-0">
@@ -2283,52 +2286,34 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         onSubmit={() => submitComment(null, commentText, commentImage, commentGifUrl)}
                         mentions={!!userId}
                         onFocus={() => { if (!userId) window.location.href = "/login"; }}
+                        onImage={() => commentImageInputRef.current?.click()}
+                        onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "comment" ? null : "comment") : undefined}
+                        onEmoji={() => setEmojiFor(emojiFor === "comment" ? null : "comment")}
+                        trailing={
+                          <span className="relative inline-block" style={{ alignSelf: "stretch" }}>
+                            {emojiFor === "comment" && (
+                              <EmojiPicker
+                                onPick={(e) => commentInputRef.current?.insertText(e)}
+                                onClose={() => setEmojiFor(null)}
+                              />
+                            )}
+                            {gifPickerFor === "comment" && (
+                              <GifPicker
+                                onPick={(u) => { setCommentGifUrl(u); pickCommentImage(null); setGifPickerFor(null); }}
+                                onClose={() => setGifPickerFor(null)}
+                              />
+                            )}
+                          </span>
+                        }
                       />
+                      <input ref={commentImageInputRef} type="file" accept="image/*" className="hidden"
+                        onChange={(e) => { pickCommentImage(e.target.files?.[0] ?? null); setCommentGifUrl(null); e.target.value = ""; }} />
                     </span>
-                    <span className="relative inline-block shrink-0">
-                      <button
-                        onClick={() => setEmojiFor(emojiFor === "comment" ? null : "comment")}
-                        className="cursor-pointer text-[12px] px-2.5 rounded-lg flex items-center h-full"
-                        style={btnGhost}
-                        title="Emoji"
-                      >
-                        <Icon name="smile" size={14} />
-                      </button>
-                      {emojiFor === "comment" && (
-                        <EmojiPicker
-                          onPick={(e) => commentInputRef.current?.insertText(e)}
-                          onClose={() => setEmojiFor(null)}
-                        />
-                      )}
-                    </span>
-                    <label className="cursor-pointer text-[12px] px-3 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
-                      <Icon name="image" size={14} />
-                      <input type="file" accept="image/*" className="hidden"
-                        onChange={(e) => { pickCommentImage(e.target.files?.[0] ?? null); setCommentGifUrl(null); }} />
-                    </label>
-                    {giphyEnabled && (
-                      <span className="relative inline-block shrink-0">
-                        <button
-                          onClick={() => setGifPickerFor(gifPickerFor === "comment" ? null : "comment")}
-                          className="cursor-pointer text-[11px] px-2.5 rounded-lg flex items-center h-full"
-                          style={btnGhost}
-                          title="Add a GIF"
-                        >
-                          GIF
-                        </button>
-                        {gifPickerFor === "comment" && (
-                          <GifPicker
-                            onPick={(u) => { setCommentGifUrl(u); pickCommentImage(null); }}
-                            onClose={() => setGifPickerFor(null)}
-                          />
-                        )}
-                      </span>
-                    )}
                     <button
                       onClick={() => submitComment(null, commentText, commentImage, commentGifUrl)}
                       disabled={busy || !commentText.trim()}
                       className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0"
-                      style={btnBlue}
+                      style={{ ...btnBlue, height: 40 }}
                     >
                       Comment
                     </button>
@@ -2865,11 +2850,35 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       placeholder="Text (optional — @ to mention someone)"
                       onImage={() => postImageInputRef.current?.click()}
                       onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "post" ? null : "post") : undefined}
+                      onEmoji={() => setEmojiFor(emojiFor === "post" ? null : "post")}
                       trailing={
-                        <span className="text-[10px] ml-2" style={{ color: newBody.length > BODY_MAX ? "#e26b6b" : "rgba(238,238,245,0.25)" }}>
-                          {newBody.length > BODY_MAX * 0.9 ? `${newBody.length.toLocaleString()} / ${BODY_MAX.toLocaleString()}` : "@mention"}
-                        </span>
+                        <>
+                          <span className="relative inline-block" style={{ alignSelf: "stretch" }}>
+                            {emojiFor === "post" && (
+                              <EmojiPicker
+                                onPick={(e) => bodyRef.current?.insertText(e)}
+                                onClose={() => setEmojiFor(null)}
+                              />
+                            )}
+                            {gifPickerFor === "post" && (
+                              <GifPicker
+                                onPick={(u) => { setNewGifUrl(u); pickImage(null); setGifPickerFor(null); }}
+                                onClose={() => setGifPickerFor(null)}
+                              />
+                            )}
+                          </span>
+                          <span className="text-[10px] ml-2" style={{ color: newBody.length > BODY_MAX ? "#e26b6b" : "rgba(238,238,245,0.25)" }}>
+                            {newBody.length > BODY_MAX * 0.9 ? `${newBody.length.toLocaleString()} / ${BODY_MAX.toLocaleString()}` : "@mention"}
+                          </span>
+                        </>
                       }
+                    />
+                    <input
+                      ref={postImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { pickImage(e.target.files?.[0] ?? null); e.target.value = ""; }}
                     />
                     {composerTags.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -2887,49 +2896,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </div>
                     )}
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className="relative inline-block">
-                        <button
-                          onClick={() => setEmojiFor(emojiFor === "post" ? null : "post")}
-                          className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg"
-                          style={btnGhost}
-                          title="Emoji"
-                        >
-                          <Icon name="smile" size={13} /> Emoji
-                        </button>
-                        {emojiFor === "post" && (
-                          <EmojiPicker
-                            onPick={(e) => bodyRef.current?.insertText(e)}
-                            onClose={() => setEmojiFor(null)}
-                          />
-                        )}
-                      </span>
-                      <label className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnGhost}>
-                        <Icon name="image" size={13} /> {newImage ? "Change image" : "Add image"}
-                        <input
-                          ref={postImageInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
-                        />
-                      </label>
-                      {giphyEnabled && (
-                        <span className="relative inline-block">
-                          <button
-                            onClick={() => setGifPickerFor(gifPickerFor === "post" ? null : "post")}
-                            className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg"
-                            style={btnGhost}
-                          >
-                            GIF
-                          </button>
-                          {gifPickerFor === "post" && (
-                            <GifPicker
-                              onPick={(u) => { setNewGifUrl(u); pickImage(null); }}
-                              onClose={() => setGifPickerFor(null)}
-                            />
-                          )}
-                        </span>
-                      )}
                       {newImagePreview && (
                         <span className="inline-flex items-center gap-2">
                           {/* eslint-disable-next-line @next/next/no-img-element */}

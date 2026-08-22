@@ -159,6 +159,8 @@ export type RichEditorProps = {
   onSubmit?: () => void;
   onImage?: () => void;
   onGif?: () => void;
+  /** Emoji button in the toolbar; the caller renders its picker via `trailing`. */
+  onEmoji?: () => void;
   trailing?: ReactNode;
   /* Wraps the editor box (not the toolbar). */
   style?: React.CSSProperties;
@@ -168,7 +170,7 @@ export type RichEditorProps = {
 };
 
 const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEditor({
-  value, onChange, placeholder, compact = false, autoFocus = false, onSubmit, onImage, onGif, trailing, style, mentions = true, onFocus,
+  value, onChange, placeholder, compact = false, autoFocus = false, onSubmit, onImage, onGif, onEmoji, trailing, style, mentions = true, onFocus,
 }, ref) {
   const [supabase] = useState(() => createClient());
   const lastEmitted = useRef<string>(value);
@@ -271,6 +273,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
     const g1: Btn[] = [{ icon: "link", tip: `Link (${MOD}K)`, active: "link", run: () => openLink() }];
     if (onImage) g1.push({ icon: "image", tip: "Add image", run: () => onImage() });
     if (onGif) g1.push({ label: "GIF", tip: "Add a GIF", run: () => onGif() });
+    if (onEmoji) g1.push({ icon: "smile", tip: "Emoji", run: () => onEmoji() });
     const g2: Btn[] = [
       { icon: "bold", tip: `Bold (${MOD}B)`, active: "bold", run: (e) => e.chain().focus().toggleBold().run() },
       { icon: "italic", tip: `Italic (${MOD}I)`, active: "italic", run: (e) => e.chain().focus().toggleItalic().run() },
@@ -293,7 +296,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
       else e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     } });
     return [g1, g2, g3, g4];
-  }, [compact, onImage, onGif, openLink]);
+  }, [compact, onImage, onGif, onEmoji, openLink]);
 
   const tableOps: Btn[] = [
     { icon: "plus", label: "+ row", tip: "Add row below", run: (e) => e.chain().focus().addRowAfter().run() },
