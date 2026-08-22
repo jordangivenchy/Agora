@@ -377,7 +377,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   /* GIPHY picks (mutually exclusive with a file attachment). */
   const [newGifUrl, setNewGifUrl] = useState<string | null>(null);
-  const [gifPickerFor, setGifPickerFor] = useState<null | "post" | "comment">(null);
+  const [gifPickerFor, setGifPickerFor] = useState<null | "post" | "comment" | "reply">(null);
   const [commentGifUrl, setCommentGifUrl] = useState<string | null>(null);
   const bodyRef = useRef<RichEditorHandle | null>(null);
   /* Emoji picker (shared popover) for the post body / comment box. */
@@ -401,6 +401,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [commentImage, setCommentImage] = useState<File | null>(null);
   const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
   const [replyImage, setReplyImage] = useState<File | null>(null);
+  const [replyGifUrl, setReplyGifUrl] = useState<string | null>(null);
   const [replyImagePreview, setReplyImagePreview] = useState<string | null>(null);
 
   // Community header extras
@@ -1038,7 +1039,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       return;
     }
     setCommentText(""); setReplyTo(null); setReplyText("");
-    setCommentGifUrl(null);
+    setCommentGifUrl(null); setReplyGifUrl(null);
     pickCommentImage(null); pickReplyImage(null);
     /* Append the new comment locally instead of refetching — a refetch
        would reset the section to page 1, and a new top-level comment
@@ -1581,7 +1582,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     </button>
                   </span>
                   <button
-                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); } }}
+                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); setReplyGifUrl(null); } }}
                     className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
                     style={{ color: "#4a9eff", fontFamily: "inherit" }}
                   >
@@ -1624,16 +1625,34 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           value={replyText}
                           onChange={setReplyText}
                           placeholder={`Reply to @${c.author_username}… (⌘↩ to send)`}
-                          onSubmit={() => submitComment(c.id, replyText, replyImage)}
+                          onSubmit={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                         />
                       </span>
                       <label className="cursor-pointer text-[11px] px-2.5 rounded-lg shrink-0 flex items-center" style={btnGhost} title="Attach image">
                         <Icon name="image" size={14} />
                         <input type="file" accept="image/*" className="hidden"
-                          onChange={(e) => pickReplyImage(e.target.files?.[0] ?? null)} />
+                          onChange={(e) => { pickReplyImage(e.target.files?.[0] ?? null); setReplyGifUrl(null); }} />
                       </label>
+                      {giphyEnabled && (
+                        <span className="relative inline-block shrink-0">
+                          <button
+                            onClick={() => setGifPickerFor(gifPickerFor === "reply" ? null : "reply")}
+                            className="cursor-pointer text-[10.5px] px-2 rounded-lg flex items-center h-full font-bold"
+                            style={btnGhost}
+                            title="Add a GIF"
+                          >
+                            GIF
+                          </button>
+                          {gifPickerFor === "reply" && (
+                            <GifPicker
+                              onPick={(u) => { setReplyGifUrl(u); pickReplyImage(null); setGifPickerFor(null); }}
+                              onClose={() => setGifPickerFor(null)}
+                            />
+                          )}
+                        </span>
+                      )}
                       <button
-                        onClick={() => submitComment(c.id, replyText, replyImage)}
+                        onClick={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                         disabled={busy || !replyText.trim()}
                         className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
                         style={{ ...btnBlue, borderRadius: 9 }}
@@ -1641,6 +1660,16 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         Reply
                       </button>
                     </div>
+                    {replyGifUrl && (
+                      <span className="inline-flex items-center gap-2 mt-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={replyGifUrl} alt="" className="rounded" style={{ height: 40 }} />
+                        <button onClick={() => setReplyGifUrl(null)}
+                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                          remove
+                        </button>
+                      </span>
+                    )}
                     {replyImagePreview && (
                       <span className="inline-flex items-center gap-2 mt-1.5">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
