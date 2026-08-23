@@ -754,6 +754,54 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       .then(undefined, () => {});
   }, [currentUser, myParticipation, supabase]);
 
+  /* …but a closed tab CAN stamp out: sendBeacon outlives the page. On
+     pagehide (with beforeunload as the fallback for browsers that skip
+     it) the beacon hits /api/rooms/leave, which sets our left_at — and,
+     for a live host, starts the 90-second host_left_at grace so a plain
+     refresh doesn't kill the room (the room-lifecycle cron ends it only
+     if we never come back; the LiveKit webhook is the belt to this
+     brace). Ref-read so the handler never holds a stale seat. */
+  const seatedRef = useRef(false);
+  useEffect(() => {
+    seatedRef.current = !!(currentUser && myParticipation && !myParticipation.left_at);
+  }, [currentUser, myParticipation]);
+  useEffect(() => {
+    if (broadcast) return; // the egress compositor is not a participant
+    const beacon = () => {
+      if (!seatedRef.current) return;
+      seatedRef.current = false; // pagehide + beforeunload can both fire
+      try {
+        navigator.sendBeacon("/api/rooms/leave", JSON.stringify({ roomId }));
+      } catch {
+        /* best effort — the webhook sweep catches what the beacon misses */
+      }
+    };
+    window.addEventListener("pagehide", beacon);
+    window.addEventListener("beforeunload", beacon);
+    return () => {
+      window.removeEventListener("pagehide", beacon);
+      window.removeEventListener("beforeunload", beacon);
+    };
+  }, [roomId, broadcast]);
+
+  /* Host is back: cancel the grace timer. The participant_joined webhook
+     normally clears host_left_at; this covers the race where the page
+     loads before (or without) LiveKit reconnecting. Falls back to a
+     direct update if the RPC isn't migrated yet. */
+  useEffect(() => {
+    if (!currentUser || !room?.host_left_at || room.host_id !== currentUser.id) return;
+    supabase.rpc("clear_host_left", { p_room: roomId }).then(({ error }) => {
+      if (error) {
+        supabase
+          .from("debate_rooms")
+          .update({ host_left_at: null })
+          .eq("id", roomId)
+          .eq("host_id", currentUser.id)
+          .then(undefined, () => {});
+      }
+    });
+  }, [currentUser, room?.host_left_at, room?.host_id, roomId, supabase]);
+
   /* Ended rooms are replays, not dead ends. A visitor who arrives after
      the end goes straight to the replay; someone who was in the room when
      the host closed the stage gets a hand-off card instead (the VOD

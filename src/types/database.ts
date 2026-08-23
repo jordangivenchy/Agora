@@ -37,6 +37,10 @@ export interface DebateRoom {
   ended_at: string | null;
   // Why the room ended: 'inactive' | 'participant_left' | null (host ended).
   close_reason: string | null;
+  // Host disconnect grace (20260855_room_lifecycle): stamped when a live
+  // host drops; the room-lifecycle cron ends the room ~90s later unless
+  // the host returns. Optional so the type tolerates a pre-migration DB.
+  host_left_at?: string | null;
   viewer_count: number;
   created_at: string;
   // Team sizes (new)
