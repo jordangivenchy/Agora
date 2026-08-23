@@ -2757,3 +2757,295 @@
   padding-bottom: 10px;
   margin-bottom: 6px;
 }
+
+/* ── Call layouts: gallery & multi-speaker (CallLayouts.tsx) ──────────
+   Client-side layouts that overlay the 3D scene. Same liquid-glass
+   language as the stage and dock: dark plate, thin light border, the
+   gold ring for live voices. */
+
+.ag-layout-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3; /* over the scene + stage layer, under topbar/controls (5) */
+  background: rgba(6, 6, 10, 0.88);
+  display: flex;
+  flex-direction: column;
+  padding: 96px 28px calc(var(--ag-controls-h) + var(--ag-controls-lift) + 14px);
+  animation: agLayoutIn 0.18s ease;
+}
+
+@keyframes agLayoutIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── One tile ── */
+
+.ag-lt {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0a0a10;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+/* The gold ring: who is actually talking. */
+.ag-lt--speaking {
+  border-color: #e2b96b;
+  box-shadow: 0 0 0 2px #e2b96b, 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.ag-lt-video {
+  position: absolute;
+  inset: 0;
+}
+
+.ag-lt-video video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.ag-lt--screen .ag-lt-video video { object-fit: contain; }
+
+.ag-lt-mock { position: absolute; inset: 0; }
+
+/* Name tag, bottom-left — dock language, not a new invention. */
+.ag-lt-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(11, 11, 13, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: #f5f5f0;
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.ag-lt-tag-ico { display: grid; place-items: center; color: #9aa0ac; }
+.ag-lt-tag-ico svg { width: 12px; height: 12px; display: block; }
+
+.ag-lt-tag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-lt-muted {
+  display: grid;
+  place-items: center;
+  color: #ff6b60;
+  flex: 0 0 auto;
+}
+.ag-lt-muted svg { width: 12px; height: 12px; display: block; }
+
+/* Pin control: appears on hover, top-right. */
+.ag-lt-pin {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 11, 13, 0.72);
+  backdrop-filter: blur(10px);
+  color: #cfd3dc;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  z-index: 2;
+}
+
+.ag-lt:hover .ag-lt-pin,
+.ag-lt-pin:focus-visible,
+.ag-lt-pin.is-pinned {
+  opacity: 1;
+}
+
+.ag-lt-pin:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.ag-lt-pin.is-pinned { color: #e2b96b; border-color: rgba(226, 185, 107, 0.5); }
+
+.ag-lt--small { border-radius: 10px; }
+.ag-lt--small .ag-lt-tag { padding: 3px 7px; font-size: 10px; left: 6px; bottom: 6px; }
+.ag-lt--small .ag-lt-pin { width: 24px; height: 24px; top: 6px; right: 6px; }
+
+/* Empty state — the amphitheater stays visible through the veil. */
+.ag-lt-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #8b8b94;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Gallery ── */
+
+.ag-lgal {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.ag-lgal-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  gap: 12px;
+  width: min(
+    100%,
+    calc((100vh - 260px) / var(--rows, 1) * 1.7778 * var(--cols, 1)),
+    calc(var(--cols, 1) * 640px)
+  );
+  transition: gap 0.15s ease;
+}
+
+.ag-lgal-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ag-lgal-arrow {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 11, 13, 0.72);
+  color: #cfd3dc;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.ag-lgal-arrow:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.ag-lgal-arrow:disabled { opacity: 0.35; cursor: default; }
+
+.ag-lgal-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.ag-lgal-dot.is-active { background: #e2b96b; transform: scale(1.25); }
+
+/* ── Multi-speaker ── */
+
+.ag-lmulti {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.ag-lmulti-featured {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+}
+
+.ag-lmulti-featured .ag-lt {
+  flex: 0 1 auto;
+  width: min(
+    calc((100% - 24px) / var(--n, 1)),
+    calc((100vh - 420px) * 1.7778),
+    720px
+  );
+}
+
+.ag-lmulti-featured[data-n="1"] { --n: 1; }
+.ag-lmulti-featured[data-n="2"] { --n: 2; }
+.ag-lmulti-featured[data-n="3"] { --n: 3; }
+
+.ag-lmulti-strip {
+  display: flex;
+  gap: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.ag-lmulti-strip .ag-lt {
+  flex: 0 0 auto;
+  width: 176px; /* the dock tile's width — same object, new row */
+}
+
+/* ── Layout switcher: segmented pill in the control bar ── */
+
+.ag-layout-switch {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 48px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px) saturate(150%) brightness(0.72);
+  box-shadow: var(--ag-glass-rim);
+}
+
+.ag-layout-seg {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: #cfd3dc;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ag-layout-seg:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+
+.ag-layout-seg.is-active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* The 3D vantage toggle applies to Stage layout only. */
+.ag-root--flat .ag-switch-view {
+  opacity: 0.4;
+  pointer-events: none;
+}

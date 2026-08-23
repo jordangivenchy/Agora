@@ -22,7 +22,8 @@ import AgoraAssistant from "@/components/AgoraAssistant";
 import AgoraVideoDock from "@/components/agora/AgoraVideoDock";
 import AgoraStage from "@/components/agora/AgoraStage";
 import ReactionOverlay from "@/components/agora/ReactionOverlay";
-import { useAgoraCall } from "@/components/agora/useAgoraCall";
+import { useAgoraCall, tileKey } from "@/components/agora/useAgoraCall";
+import { CallGallery, CallMultiSpeaker, type LayoutTile } from "@/components/agora/CallLayouts";
 import HostControls from "@/components/agora/HostControls";
 import HlsPlayer from "@/components/agora/HlsPlayer";
 import DebateReplay from "@/components/agora/DebateReplay";
@@ -120,6 +121,51 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
+  /* ── Call layout: the viewer's own arrangement of the live pictures.
+     Orthogonal to the 3D vantage: "stage" is today's behavior; "gallery"
+     and "multi" are flat overlays above the scene. Local-only — nothing
+     changes on the wire — and remembered across visits. */
+  const [layout, setLayout] = useState<"stage" | "gallery" | "multi">("stage");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("agora:call-layout");
+      if (saved === "gallery" || saved === "multi" || saved === "stage") setLayout(saved);
+    } catch {
+      /* private mode — default stands */
+    }
+  }, []);
+  const pickLayout = useCallback((l: "stage" | "gallery" | "multi") => {
+    setLayout(l);
+    try {
+      localStorage.setItem("agora:call-layout", l);
+    } catch {
+      /* best effort */
+    }
+  }, []);
+  /* The viewer's pin, held as a tile key and resolved against the live
+     list every render — a feed that ends simply stops matching and the
+     multi layout falls back to its recent-speakers logic. */
+  const [layoutPin, setLayoutPin] = useState<string | null>(null);
+  /* `g` cycles layouts, Zoom-fashion — unless something is being typed. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "g" && e.key !== "G") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      setLayout((prev) => {
+        const next = prev === "stage" ? "gallery" : prev === "gallery" ? "multi" : "stage";
+        try {
+          localStorage.setItem("agora:call-layout", next);
+        } catch {
+          /* best effort */
+        }
+        return next;
+      });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   /* The DOM stage holds back until the camera glide lands on the current
      vantage — fading panes in mid-flight read as riding the camera. */
   const [viewSettled, setViewSettled] = useState(false);
@@ -399,15 +445,50 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const myUsername =
     displayName(myParticipation?.user) ||
     (currentUser?.email?.split("@")[0] ?? "Guest");
+  /* Tile count fed back into the call's quality hint (set post-render). */
+  const [liveTileCount, setLiveTileCount] = useState(0);
   const call = useAgoraCall({
     roomId,
     userId: currentUser?.id ?? null,
     username: myUsername,
     canPublish: onStage(myRole),
     ready: loaded && !!room && !gated,
-    highQuality: view === "speaker",
+    /* Big tiles deserve the high simulcast layer: the close-up 3D
+       vantage as before, multi-speaker always (its featured tiles are
+       large), and gallery when tiles are few enough to render big.
+       liveTileCount lags one render behind the call — harmless, it only
+       retunes subscription quality. */
+    highQuality:
+      layout === "multi"
+        ? liveTileCount > 0
+        : layout === "gallery"
+          ? liveTileCount > 0 && liveTileCount <= 4
+          : view === "speaker",
     external: broadcastCreds,
   });
+  useEffect(() => {
+    setLiveTileCount(call.videoTiles.length);
+  }, [call.videoTiles.length]);
+
+  /* Tiles dressed for the flat layouts: display names and mute state
+     from the seated rows; the local mute state from the call itself. */
+  const layoutTiles = useMemo<LayoutTile[]>(
+    () =>
+      call.videoTiles.map((t) => {
+        const p = participants.find((pp) => pp.user_id === t.identity);
+        return {
+          key: tileKey(t),
+          identity: t.identity,
+          username: (p?.user ? displayName(p.user) : "") || t.username,
+          handle: p?.user?.username,
+          local: t.local,
+          source: t.source,
+          track: t.track,
+          micMuted: t.local ? !call.micOn : !!p?.mic_muted,
+        };
+      }),
+    [call.videoTiles, participants, call.micOn]
+  );
 
   useEffect(() => {
     if (!avDebugOn) return;
@@ -810,7 +891,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         : "Raise your hand to request to speak";
 
   return (
-    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}`}>
+    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${layout !== "stage" && !broadcast ? " ag-root--flat" : ""}`}>
       <div className="ag-main">
         {/* ── Top bar ── */}
         {broadcast && (
@@ -964,6 +1045,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           viewerCount={room.viewer_count ?? 0}
           view={view}
           onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
+          viewSwitchDisabled={layout !== "stage"}
           onViewSettled={() => setViewSettled(true)}
           speakerQueue={speakerQueue}
           micHolder={micHolder}
@@ -1124,7 +1206,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               In speaker view it waits for the camera to land among the
               stars before fading in; audience view shows it as soon as a
               picture is live (no glide to wait out). ── */}
-        {(view === "audience" || viewSettled) && (
+        {layout === "stage" && (view === "audience" || viewSettled) && (
           <AgoraStage
             tiles={call.videoTiles}
             panes={stagePanes}
@@ -1134,8 +1216,34 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           />
         )}
 
+        {/* ── Flat call layouts: the viewer's own arrangement, drawn over
+              the dimmed scene so switching back to Stage is instant.
+              These replace the stage and the dock; reactions and the
+              control bar keep working above. ── */}
+        {layout !== "stage" && !broadcast && (
+          <div className="ag-layout-overlay" role="region" aria-label="Call layout">
+            {layout === "gallery" ? (
+              <CallGallery
+                tiles={layoutTiles}
+                speaking={call.speakingIds}
+                onPin={(key) => {
+                  setLayoutPin(key);
+                  pickLayout("multi");
+                }}
+              />
+            ) : (
+              <CallMultiSpeaker
+                tiles={layoutTiles}
+                speaking={call.speakingIds}
+                pinnedKey={layoutPin}
+                onPin={setLayoutPin}
+              />
+            )}
+          </div>
+        )}
+
         {/* ── Live camera tiles + floating reactions ── */}
-        <AgoraVideoDock tiles={dockTiles} />
+        {layout === "stage" && <AgoraVideoDock tiles={dockTiles} />}
         <ReactionOverlay reactions={call.reactions} />
 
         {/* ── Queue position pill: the number reinforces what the 3D line
@@ -1464,6 +1572,29 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             <span className="ag-ctl-ico"><Icon name="monitor-up" size={19} /></span>
             <span className="ag-ctl-label">{call.screenOn ? "Stop share" : "Share"}</span>
           </button>
+
+          {/* ── Layout switcher: how *you* see the room. Local only —
+                every viewer arranges their own pictures. `g` cycles. ── */}
+          <div className="ag-layout-switch" role="group" aria-label="Call layout">
+            {(
+              [
+                { id: "stage", icon: "person-standing", label: "Stage view" },
+                { id: "gallery", icon: "layout-grid", label: "Gallery view" },
+                { id: "multi", icon: "users", label: "Multi-speaker view" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                className={`ag-layout-seg${layout === opt.id ? " is-active" : ""}`}
+                title={`${opt.label} (g cycles)`}
+                aria-label={opt.label}
+                aria-pressed={layout === opt.id}
+                onClick={() => pickLayout(opt.id)}
+              >
+                <Icon name={opt.icon} size={17} />
+              </button>
+            ))}
+          </div>
 
           {/* ── More: the room's tool drawer ──
               Four quadrants rather than a list. The tools are peers, not a

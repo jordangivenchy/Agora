@@ -40,6 +40,8 @@ interface Props {
   viewerCount: number;
   view: AgoraView;
   onSwitchView: () => void;
+  /** A flat 2D layout is up — the 3D vantage toggle doesn't apply. */
+  viewSwitchDisabled?: boolean;
   performanceMode?: boolean;
   /** Camera glide landed on a vantage — passed through to the scene. */
   onViewSettled?: (view: AgoraView) => void;
@@ -118,6 +120,7 @@ export default function Amphitheater({
   viewerCount,
   view,
   onSwitchView,
+  viewSwitchDisabled = false,
   speakerQueue,
   micHolder,
   micLive,
@@ -156,8 +159,15 @@ export default function Amphitheater({
         <div className="ag-stage-center">
           <button
             className="ag-switch-view"
-            onClick={onSwitchView}
-            title={inSpeaker ? "Back to the amphitheater" : "Eye-level with the stage"}
+            onClick={viewSwitchDisabled ? undefined : onSwitchView}
+            disabled={viewSwitchDisabled}
+            title={
+              viewSwitchDisabled
+                ? "3D stage applies to Stage view"
+                : inSpeaker
+                  ? "Back to the amphitheater"
+                  : "Eye-level with the stage"
+            }
           >
             <Icon name="monitor" size={16} />
             <span>
