@@ -472,23 +472,45 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   /* Tiles dressed for the flat layouts: display names and mute state
      from the seated rows; the local mute state from the call itself. */
-  const layoutTiles = useMemo<LayoutTile[]>(
-    () =>
-      call.videoTiles.map((t) => {
-        const p = participants.find((pp) => pp.user_id === t.identity);
-        return {
-          key: tileKey(t),
-          identity: t.identity,
-          username: (p?.user ? displayName(p.user) : "") || t.username,
-          handle: p?.user?.username,
-          local: t.local,
-          source: t.source,
-          track: t.track,
-          micMuted: t.local ? !call.micOn : !!p?.mic_muted,
-        };
-      }),
-    [call.videoTiles, participants, call.micOn]
-  );
+  /* Every on-stage participant gets a tile — live camera when they have
+     one, avatar placeholder otherwise — matching what the stage/dock show.
+     Screen shares ride along as extra tiles. */
+  const layoutTiles = useMemo<LayoutTile[]>(() => {
+    const tiles: LayoutTile[] = call.videoTiles.map((t) => {
+      const p = participants.find((pp) => pp.user_id === t.identity);
+      return {
+        key: tileKey(t),
+        identity: t.identity,
+        username: (p?.user ? displayName(p.user) : "") || t.username,
+        handle: p?.user?.username,
+        local: t.local,
+        source: t.source,
+        track: t.track,
+        micMuted: t.local ? !call.micOn : !!p?.mic_muted,
+        avatarUrl: p?.user?.avatar_url ?? null,
+      };
+    });
+    const haveCamera = new Set(
+      tiles.filter((t) => t.source === "camera").map((t) => t.identity)
+    );
+    for (const p of participants) {
+      if (!room || !onStage(deriveStageRole(p, room))) continue;
+      if (p.left_at || haveCamera.has(p.user_id)) continue;
+      tiles.push({
+        key: `${p.user_id}:off`,
+        identity: p.user_id,
+        username: (p.user ? displayName(p.user) : "") || p.user?.username || "Speaker",
+        handle: p.user?.username,
+        local: p.user_id === userId,
+        source: "camera",
+        track: null,
+        micMuted: p.user_id === userId ? !call.micOn : !!p.mic_muted,
+        avatarUrl: p.user?.avatar_url ?? null,
+        avatarSeed: p.user_id,
+      });
+    }
+    return tiles;
+  }, [call.videoTiles, call.micOn, participants, room, userId]);
 
   useEffect(() => {
     if (!avDebugOn) return;

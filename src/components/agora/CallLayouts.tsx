@@ -25,6 +25,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Track } from "livekit-client";
 import { Icon } from "@/components/icons";
+import UserAvatar from "@/components/UserAvatar";
 
 export interface LayoutTile {
   /** Stable key — identity:local:source, same recipe as tileKey(). */
@@ -38,6 +39,9 @@ export interface LayoutTile {
   micMuted?: boolean;
   /** Scratch-page stand-in: a CSS color painted where video would go. */
   mock?: string;
+  /** For camera-off participants: avatar placeholder instead of video. */
+  avatarUrl?: string | null;
+  avatarSeed?: string;
 }
 
 /* ── Track → <video> element cache ─────────────────────────────────────
@@ -123,18 +127,30 @@ const CallTile = memo(function CallTile({
       onDoubleClick={handlePin}
       title={tile.source === "screen" ? `${tile.username} — screen` : tile.username}
     >
-      <TileVideo
-        track={tile.track}
-        mock={tile.mock}
-        screen={tile.source === "screen"}
-        mirror={tile.local}
-      />
+      {tile.track || tile.mock ? (
+        <TileVideo
+          track={tile.track}
+          mock={tile.mock}
+          screen={tile.source === "screen"}
+          mirror={tile.local}
+        />
+      ) : (
+        /* Camera off: same plate the stage shows — avatar centered. */
+        <span className="ag-lt-video ag-lt-video--off">
+          <UserAvatar
+            size={small ? 44 : 72}
+            username={tile.handle ?? tile.username}
+            avatarUrl={tile.avatarUrl ?? null}
+            seed={tile.avatarSeed ?? tile.identity}
+          />
+        </span>
+      )}
       <span className="ag-lt-tag">
         {tile.source === "screen" && (
           <span className="ag-lt-tag-ico"><Icon name="monitor" size={12} /></span>
         )}
         <span className="ag-lt-tag-name">{tile.username}</span>
-        {tile.source === "camera" && tile.micMuted && (
+        {tile.source !== "screen" && tile.micMuted && (
           <span className="ag-lt-muted" title="Muted"><Icon name="mic-off" size={12} /></span>
         )}
       </span>
