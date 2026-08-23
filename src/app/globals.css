@@ -1826,7 +1826,7 @@ html.reduce-motion .nav-sparkle {
 
 /* Navbar box while the panel is open: active ring + × inside the box. */
 .nav-search[data-search-open] {
-  box-shadow: 0 0 0 2px rgba(74,158,255,0.45), 0 8px 32px rgba(0,0,0,0.35) !important;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.18) !important;
 }
 .nav-search .nav-search-clear {
   display: none; flex-shrink: 0; align-items: center; justify-content: center;
@@ -1840,4 +1840,24 @@ html.reduce-motion .nav-sparkle {
 @media (prefers-reduced-motion: reduce) {
   .search-panel, .search-panel-scrim { transition: opacity 1ms linear; }
   .search-panel { transform: translate(-50%, 0); }
+}
+
+/* Flat search pill — matches the messages / bell buttons (no liquid glass).
+   The Create button inside keeps its own styling. */
+#navSearchWrap.agora-search-shell {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+#navSearchWrap.agora-search-shell::before { display: none !important; }
+#navSearchWrap.agora-search-shell > canvas { display: none !important; }
+#navSearchWrap.agora-search-shell input { background: transparent !important; }
+#navSearchWrap.agora-search-shell:hover { background: rgba(255,255,255,0.07) !important; }
+#navSearchWrap.agora-search-shell[data-search-open],
+#navSearchWrap.agora-search-shell:focus-within {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.2) !important;
 }
