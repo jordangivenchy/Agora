@@ -21,9 +21,13 @@ export type WakeResult =
   | { kind: "open" } // wake word alone — open the panel, no question
   | null;
 
-const HEY_AGORA = /\bhey,?\s+agora\b[,.!?]?\s*(.*)/i;
-const BARE_AGORA = /^\s*agora\b[,.!?]?\s+(.+)$/i;
-const BARE_AGORA_ALONE = /^\s*agora[,.!?]?\s*$/i;
+/* Speech recognizers routinely mishear "Agora": Aurora, Angora, Agoura,
+   "a gora", "ago ra", Agara, Agoda, Igora… Accept the common ones so the
+   wake phrase works for real voices, not just typed text. */
+const AGORA = "(?:agora|agorah|agorra|agoura|agara|agoda|angora|aurora|igora|a\\s?gora|ago\\s?ra|agoras?)";
+const HEY_AGORA = new RegExp(`\\b(?:hey|hi|ok|okay|yo),?\\s+${AGORA}\\b[,.!?]?\\s*(.*)`, "i");
+const BARE_AGORA = new RegExp(`^\\s*${AGORA}\\b[,.!?]?\\s+(.+)$`, "i");
+const BARE_AGORA_ALONE = new RegExp(`^\\s*${AGORA}[,.!?]?\\s*$`, "i");
 
 /** Words that make a bare "Agora …" read as an address rather than the
     start of a sentence about the platform. */

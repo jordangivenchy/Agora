@@ -339,6 +339,23 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     return () => document.removeEventListener("pointerdown", onDown);
   }, [moreOpen]);
 
+  /* Host toggle for Agora's Live Moderator mode (agora_moderator column). */
+  const toggleModerator = useCallback(
+    async (on: boolean) => {
+      if (!currentUser || !room || currentUser.id !== room.host_id) return;
+      setRoom((r) => (r ? { ...r, agora_moderator: on } : r));
+      const { error } = await supabase
+        .from("debate_rooms")
+        .update({ agora_moderator: on })
+        .eq("id", room.id);
+      if (error) {
+        console.error("moderator toggle failed", error);
+        setRoom((r) => (r ? { ...r, agora_moderator: !on } : r));
+      }
+    },
+    [currentUser, room, supabase]
+  );
+
   const myRole = useMemo(() => {
     if (!room) return "audience" as const;
     if (myParticipation) return deriveStageRole(myParticipation, room);
@@ -1589,7 +1606,24 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       {/* Agora AI assistant — the full pipeline (Gemini + retrieval + history)
           lives behind /api/agora; this is its surface in the amphitheater,
           which is where every room entry routes now. */}
-      {!broadcast && <AgoraAssistant motion={room.motion} roomId={roomId} topicKey={room.topic_key} />}
+      {!broadcast && (
+        <AgoraAssistant
+          motion={room.motion}
+          roomId={roomId}
+          topicKey={room.topic_key}
+          /* Background "Hey Agora" listening + transcription for anyone on
+             stage with a mic while the room is live (host, co-host, speakers). */
+          liveListening={
+            room.status === "live" &&
+            call.connected &&
+            myRole !== "audience" &&
+            !myParticipation?.left_at
+          }
+          moderatorOn={!!room.agora_moderator}
+          canModerate={!!currentUser && currentUser.id === room.host_id}
+          onToggleModerator={toggleModerator}
+        />
+      )}
     </div>
   );
 }

@@ -83,3 +83,15 @@ describe("extractWake — bare agora", () => {
     expect(extractWake("the minimum wage doubled since 2010")).toBeNull();
   });
 });
+
+describe("wake word mishearings", () => {
+  it("accepts common recognizer variants of Agora", () => {
+    for (const t of ["hey aurora what is the gdp of france", "Hey Angora, who won", "hey a gora what time is it", "okay agoura explain this"]) {
+      const r = extractWake(t);
+      expect(r?.kind).toBe("question");
+    }
+  });
+  it("bare variant alone opens the panel", () => {
+    expect(extractWake("Aurora")?.kind).toBe("open");
+  });
+});
