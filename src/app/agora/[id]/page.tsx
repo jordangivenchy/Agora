@@ -688,7 +688,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      stage is up, pane holders leave the dock, and a live share empties it
      entirely. Labels prefer the seated row's display name; the raw handle
      rides along for the user context menu. */
-  const stageUp = view === "audience" || viewSettled;
+  const stageUp = view === "speaker" && viewSettled;
   const dockTiles = useMemo(() => {
     if (stageUp && call.videoTiles.some((t) => t.source === "screen")) return [];
     const paneIds = stageUp
@@ -1227,21 +1227,22 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               In speaker view it waits for the camera to land among the
               stars before fading in; audience view shows it as soon as a
               picture is live (no glide to wait out). ── */}
-        {(view === "audience" || viewSettled) && (
+        {/* Camera surfaces exist in settled speaker view only — audience
+              view keeps the open amphitheater, pictures riding the dock. */}
+        {view === "speaker" && viewSettled && (
           layout === "stage" ? (
             <AgoraStage
               tiles={call.videoTiles}
               panes={stagePanes}
               view={view}
               speaking={call.speakingIds}
-              anchored={view === "audience"}
             />
           ) : (
             /* Gallery / multi-speaker take the stage's exact spot and
                lifecycle: same glide-in wait in speaker view, same anchored
                placement in audience view, vantage toggle untouched. */
             <div
-              className={`ag-cast ag-layout-flat${view === "audience" ? " ag-cast--anchored" : ""}`}
+              className="ag-cast ag-layout-flat"
               role="region"
               aria-label="Call layout"
             >
@@ -1267,7 +1268,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         {/* ── Live camera tiles + floating reactions ── */}
-        {layout === "stage" && <AgoraVideoDock tiles={dockTiles} />}
+        {(layout === "stage" || view === "audience") && <AgoraVideoDock tiles={dockTiles} />}
         <ReactionOverlay reactions={call.reactions} />
 
         {/* ── Queue position pill: the number reinforces what the 3D line
