@@ -7,6 +7,11 @@
      RESEND_API_KEY=re_...
      EMAIL_FROM="AgoraSphere <no-reply@agorasphere.net>"  (optional override) */
 
+import {
+  notificationBatchSubject, digestIntro, replaysLine, DIGEST_SUBJECT,
+  type BatchItem, type DigestData,
+} from "@/lib/emailCopy";
+
 const FROM = process.env.EMAIL_FROM ?? "AgoraSphere <no-reply@agorasphere.net>";
 
 export function emailConfigured(): boolean {
@@ -17,6 +22,7 @@ export async function sendEmail(opts: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return false;
@@ -27,7 +33,10 @@ export async function sendEmail(opts: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: FROM, to: [opts.to], subject: opts.subject, html: opts.html }),
+      body: JSON.stringify({
+        from: FROM, to: [opts.to], subject: opts.subject, html: opts.html,
+        ...(opts.text ? { text: opts.text } : {}),
+      }),
     });
     return res.ok;
   } catch {
@@ -38,7 +47,7 @@ export async function sendEmail(opts: {
 /* One shared shell so every mail reads as AgoraSphere: dark header with the
    wordmark, a light body (email clients punish dark-mode-only designs),
    and a muted footer. */
-export function brandedEmail(title: string, bodyHtml: string): string {
+export function brandedEmail(title: string, bodyHtml: string, footerHtml?: string): string {
   return `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f4f7;font-family:'Helvetica Neue',Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
@@ -53,8 +62,8 @@ export function brandedEmail(title: string, bodyHtml: string): string {
         </td></tr>
         <tr><td style="padding:22px 32px 28px;">
           <p style="margin:0;font-size:11.5px;line-height:1.6;color:#9a9aa2;">
-            You're receiving this because of activity on your AgoraSphere account.
-            If this wasn't you, secure your account from Settings right away.
+            ${footerHtml ?? `You're receiving this because of activity on your AgoraSphere account.
+            If this wasn't you, secure your account from Settings right away.`}
             <br/>© AgoraSphere · <a href="https://agorasphere.net" style="color:#4a9eff;text-decoration:none;">agorasphere.net</a>
           </p>
         </td></tr>
@@ -127,4 +136,110 @@ export function debateReplayReadyEmail(motion: string, replayUrl: string): { sub
        </p>`
     ),
   };
+}
+
+/* ── Social notifications + weekly digest ─────────────────── */
+
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function prefFooter(origin: string, unsubUrl: string): string {
+  return `You're receiving this because you turned on email notifications on AgoraSphere.
+    <a href="${esc(origin)}/settings" style="color:#4a9eff;text-decoration:none;">Manage email preferences</a>
+    · <a href="${esc(unsubUrl)}" style="color:#9a9aa2;text-decoration:underline;">Unsubscribe from all email</a>`;
+}
+
+function prefFooterText(origin: string, unsubUrl: string): string {
+  return `Manage email preferences: ${origin}/settings\nUnsubscribe from all email: ${unsubUrl}`;
+}
+
+function itemListHtml(items: BatchItem[]): string {
+  return items.map((it) => {
+    const line = it.url
+      ? `<a href="${esc(it.url)}" style="color:#17171a;text-decoration:none;font-weight:600;">${esc(it.text)}</a>`
+      : `<span style="font-weight:600;color:#17171a;">${esc(it.text)}</span>`;
+    const detail = it.detail ? `<div style="margin-top:3px;color:#6b6b73;font-size:13px;">&ldquo;${esc(it.detail)}&rdquo;</div>` : "";
+    const open = it.url ? `<div style="margin-top:4px;"><a href="${esc(it.url)}" style="color:#4a9eff;font-size:12.5px;text-decoration:none;">Open →</a></div>` : "";
+    return `<div style="padding:12px 0;border-bottom:1px solid #ececf0;">${line}${detail}${open}</div>`;
+  }).join("");
+}
+
+export function notificationBatchEmail(opts: {
+  items: BatchItem[];
+  origin: string;
+  unsubUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { items, origin, unsubUrl } = opts;
+  const subject = notificationBatchSubject(items);
+  const title = items.length === 1 ? "New on AgoraSphere" : `${items.length} new things on AgoraSphere`;
+  const html = brandedEmail(
+    title,
+    `${itemListHtml(items)}
+     <p style="margin-top:18px;">
+       <a href="${esc(origin)}/notifications" style="display:inline-block;background:#4a9eff;color:#ffffff;
+          padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:600;">
+         See all notifications →
+       </a>
+     </p>`,
+    prefFooter(origin, unsubUrl),
+  );
+  const text = [
+    title, "",
+    ...items.map((it) => `• ${it.text}${it.detail ? ` — "${it.detail}"` : ""}${it.url ? `\n  ${it.url}` : ""}`),
+    "", `All notifications: ${origin}/notifications`, "",
+    prefFooterText(origin, unsubUrl),
+  ].join("\n");
+  return { subject, html, text };
+}
+
+function sectionHtml(title: string, inner: string): string {
+  return `<h2 style="margin:22px 0 6px;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#8b8b94;">${title}</h2>${inner}`;
+}
+
+export function weeklyDigestEmail(opts: {
+  data: DigestData;
+  origin: string;
+  unsubUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { data: d, origin, unsubUrl } = opts;
+  const parts: string[] = [`<p style="font-size:15px;">${esc(digestIntro(d))}</p>`];
+  const textParts: string[] = [DIGEST_SUBJECT, "", digestIntro(d)];
+
+  if (d.unread.length) {
+    parts.push(sectionHtml(`Unread (${d.unreadCount})`, itemListHtml(d.unread)));
+    textParts.push("", `Unread (${d.unreadCount}):`, ...d.unread.map((it) => `• ${it.text}${it.url ? ` — ${it.url}` : ""}`));
+  }
+  if (d.upcoming.length) {
+    parts.push(sectionHtml("Upcoming from people you follow", d.upcoming.map((u) =>
+      `<div style="padding:10px 0;border-bottom:1px solid #ececf0;">
+         <a href="${esc(u.url)}" style="color:#17171a;text-decoration:none;font-weight:600;">&ldquo;${esc(u.motion)}&rdquo;</a>
+         <div style="margin-top:3px;color:#6b6b73;font-size:13px;">${esc(u.host)} · ${esc(u.startsAt)}</div>
+       </div>`).join("")));
+    textParts.push("", "Upcoming from people you follow:", ...d.upcoming.map((u) => `• "${u.motion}" — ${u.host} · ${u.startsAt}\n  ${u.url}`));
+  }
+  if (d.topPosts.length) {
+    parts.push(sectionHtml("Top posts this week", d.topPosts.map((p) =>
+      `<div style="padding:10px 0;border-bottom:1px solid #ececf0;">
+         <a href="${esc(p.url)}" style="color:#17171a;text-decoration:none;font-weight:600;">${esc(p.title)}</a>
+         <div style="margin-top:3px;color:#6b6b73;font-size:13px;">${esc(p.community)} · ${p.score} upvote${p.score === 1 ? "" : "s"} · ${p.comments} comment${p.comments === 1 ? "" : "s"}</div>
+       </div>`).join("")));
+    textParts.push("", "Top posts this week:", ...d.topPosts.map((p) => `• ${p.title} (${p.community}, ${p.score} upvotes, ${p.comments} comments)\n  ${p.url}`));
+  }
+  if (d.newFollowers > 0) {
+    const line = `${d.newFollowers} new follower${d.newFollowers === 1 ? "" : "s"} this week.`;
+    parts.push(sectionHtml("Followers", `<p style="margin:0;">${esc(line)} <a href="${esc(origin)}/notifications" style="color:#4a9eff;text-decoration:none;">See who →</a></p>`));
+    textParts.push("", line);
+  }
+  const replays = replaysLine(d.replaysMissed);
+  if (replays) {
+    parts.push(sectionHtml("Live replays you missed", `<p style="margin:0;">${esc(replays)} <a href="${esc(origin)}/" style="color:#4a9eff;text-decoration:none;">Browse replays →</a></p>`));
+    textParts.push("", replays);
+  }
+
+  const html = brandedEmail(
+    "Your week on AgoraSphere",
+    parts.join(""),
+    prefFooter(origin, unsubUrl).replace("turned on email notifications", "get the weekly digest"),
+  );
+  textParts.push("", prefFooterText(origin, unsubUrl));
+  return { subject: DIGEST_SUBJECT, html, text: textParts.join("\n") };
 }

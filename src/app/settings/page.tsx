@@ -297,6 +297,45 @@ export default function SettingsPage() {
     [prefs, supabase]
   );
 
+  /* ── email notification prefs (get/set_email_* RPCs, 20260854) ── */
+  type EmailPrefs = { types: Record<string, boolean>; digest: "off" | "weekly"; unsubscribed: boolean };
+  const [emailPrefs, setEmailPrefs] = useState<EmailPrefs | null>(null);
+  useEffect(() => {
+    if (!authUser) return;
+    let cancelled = false;
+    supabase.rpc("get_email_prefs").then(({ data, error }) => {
+      if (cancelled) return;
+      // Pre-migration DBs have no RPC yet: leave the section disabled.
+      setEmailPrefs(error ? null : ((data as EmailPrefs | null) ?? { types: {}, digest: "weekly", unsubscribed: false }));
+    });
+    return () => { cancelled = true; };
+  }, [authUser, supabase]);
+
+  const applyEmailRpc = useCallback(
+    async (fn: "set_email_pref" | "set_email_digest" | "set_email_unsubscribed", args: Record<string, unknown>, optimistic: (p: EmailPrefs) => EmailPrefs) => {
+      if (!emailPrefs) return;
+      const prev = emailPrefs;
+      setEmailPrefs(optimistic(prev));
+      setToggleError(null);
+      const { data, error } = await supabase.rpc(fn, args);
+      if (error) {
+        setEmailPrefs(prev);
+        setToggleError("Couldn't save — check your connection and try again.");
+      } else {
+        if (data) setEmailPrefs(data as EmailPrefs);
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 1400);
+      }
+    },
+    [emailPrefs, supabase]
+  );
+  const saveEmailPref = (type: string, value: boolean) =>
+    applyEmailRpc("set_email_pref", { p_type: type, p_enabled: value }, (p) => ({ ...p, types: { ...p.types, [type]: value } }));
+  const saveEmailDigest = (on: boolean) =>
+    applyEmailRpc("set_email_digest", { p_mode: on ? "weekly" : "off" }, (p) => ({ ...p, digest: on ? "weekly" : "off" }));
+  const saveEmailUnsub = (on: boolean) =>
+    applyEmailRpc("set_email_unsubscribed", { p_on: on }, (p) => ({ ...p, unsubscribed: on }));
+
   /* ── email change ── */
   const [newEmail, setNewEmail] = useState("");
   const [emailMsg, setEmailMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -723,12 +762,56 @@ export default function SettingsPage() {
                 ))}
               </SectionCard>
             ))}
-            <SectionCard title="Push & email" sub="Delivery beyond the bell. Web push is enabled per browser from the bell menu.">
+            <SectionCard title="Push" sub="Web push is enabled per browser from the bell menu.">
               <p className="m-0 px-4 py-3.5 text-[12.5px]" style={{ color: "#8b8b94" }}>
                 Live, scheduled and replay-ready alerts from people you follow go out as push notifications
-                on every browser where you&apos;ve enabled them; replay-ready also arrives by email.
-                Each one still respects the toggles above.
+                on every browser where you&apos;ve enabled them. Each one still respects the toggles above.
               </p>
+            </SectionCard>
+
+            <SectionCard
+              title="Email"
+              sub={emailPrefs === null
+                ? "Email preferences aren't available yet."
+                : `Sent to ${profile?.email ?? "your address"}. Several at once are grouped into one message. Security emails always arrive.`}
+            >
+              {emailPrefs?.unsubscribed && (
+                <div className="mx-4 my-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2.5"
+                     style={{ background: "rgba(233,176,64,0.1)", border: "0.5px solid rgba(233,176,64,0.35)" }}>
+                  <span className="text-[12.5px]" style={{ color: "#f5f5f0" }}>Unsubscribed from all email</span>
+                  <button
+                    onClick={() => saveEmailUnsub(false)}
+                    className="text-[12px] font-semibold cursor-pointer bg-transparent border-none"
+                    style={{ color: "#4a9eff" }}
+                  >
+                    Resubscribe
+                  </button>
+                </div>
+              )}
+              <Toggle
+                on={emailPrefs?.digest === "weekly"}
+                disabled={emailPrefs === null || Boolean(emailPrefs?.unsubscribed)}
+                onChange={saveEmailDigest}
+                label="Weekly digest"
+                sub="Saturday mornings: unread, upcoming debates from people you follow, top posts in your communities"
+              />
+              {PREF_GROUPS.map((g) => (
+                <div key={g.title}>
+                  <p className="m-0 px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider" style={{ color: "#8b8b94" }}>
+                    {g.title}
+                  </p>
+                  {g.items.map((it) => (
+                    <Toggle
+                      key={it.type}
+                      on={emailPrefs?.types[it.type] ?? false}
+                      disabled={emailPrefs === null || Boolean(emailPrefs?.unsubscribed) || prefs?.[it.type] === false}
+                      onChange={(v) => saveEmailPref(it.type, v)}
+                      label={it.label}
+                      sub={prefs?.[it.type] === false ? "Turned off above — enable the notification first" : it.sub}
+                    />
+                  ))}
+                </div>
+              ))}
             </SectionCard>
           </>
         );
