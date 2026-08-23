@@ -1763,3 +1763,81 @@ html.reduce-motion .nav-sparkle {
 .profile-banner:hover .profile-banner-edit,
 .profile-banner .profile-banner-edit:focus-visible { opacity: 1; }
 @media (hover: none) { .profile-banner .profile-banner-edit { opacity: 1; } }
+
+/* ── Search panel (src/components/search/SearchPage.tsx) ──────────────
+   One surface anchored under the navbar search box. Scrim + panel sit at
+   z 900: above the sidebar and the feed/communities panels (50), below
+   the DM dock (950) and modals (≥1000). */
+.search-panel-scrim {
+  /* Starts under the navbar (z 100) so the box itself stays clickable. */
+  position: fixed; left: 0; right: 0; bottom: 0; top: var(--nav-height, 60px); z-index: 900;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.search-panel-scrim.is-open { opacity: 1; }
+
+.search-panel {
+  position: fixed;
+  top: calc(var(--nav-height, 60px) + 6px);
+  left: 50%;
+  width: min(880px, calc(100vw - 32px));
+  max-height: 78vh;
+  z-index: 901;
+  display: flex; flex-direction: column;
+  background: rgba(10,12,18,0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.4);
+  font-family: 'DM Sans', sans-serif;
+  opacity: 0;
+  transform: translate(-50%, -6px);
+  transition: opacity 180ms ease, transform 180ms cubic-bezier(.2,.7,.2,1);
+  will-change: opacity, transform;
+}
+.search-panel.is-open { opacity: 1; transform: translate(-50%, 0); }
+.search-panel-body {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 18px 22px 20px;
+  scrollbar-width: thin;
+}
+
+/* Suggestion rows (search_suggest) — first one is highlighted by default. */
+.search-panel-suggests { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; }
+.search-panel-suggest {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px; border-radius: 10px; cursor: pointer;
+  background: rgba(255,255,255,0.02);
+  border: 0.5px solid rgba(255,255,255,0.06);
+  transition: background 80ms ease, border-color 80ms ease;
+}
+.search-panel-suggest.is-active { background: rgba(255,255,255,0.09); border-color: #4a4a54; }
+.search-panel-seeall {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #8fc1ff; cursor: pointer;
+  padding: 5px 12px; border-radius: 8px;
+  border: 0.5px solid transparent;
+  transition: background 80ms ease, border-color 80ms ease;
+}
+.search-panel-seeall.is-active { background: rgba(74,158,255,0.14); border-color: rgba(74,158,255,0.4); }
+
+/* Navbar box while the panel is open: active ring + × inside the box. */
+.nav-search[data-search-open] {
+  box-shadow: 0 0 0 2px rgba(74,158,255,0.45), 0 8px 32px rgba(0,0,0,0.35) !important;
+}
+.nav-search .nav-search-clear {
+  display: none; flex-shrink: 0; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin-right: 4px; border-radius: 50%;
+  background: rgba(255,255,255,0.08); border: 0; color: rgba(255,255,255,0.7);
+  cursor: pointer; padding: 0;
+}
+.nav-search .nav-search-clear:hover { background: rgba(255,255,255,0.16); color: #fff; }
+.nav-search[data-search-open] .nav-search-clear { display: inline-flex; }
+
+@media (prefers-reduced-motion: reduce) {
+  .search-panel, .search-panel-scrim { transition: opacity 1ms linear; }
+  .search-panel { transform: translate(-50%, 0); }
+}

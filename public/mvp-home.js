@@ -2058,7 +2058,13 @@ init();
     }).join('');
   }
 
+  // RETIRED: the navbar search now opens the React search panel anchored
+  // under the navbar (src/components/search/SearchPage.tsx, bound to
+  // #searchInput by src/components/search/useNavbarSearch.ts). The
+  // overlay DOM/CSS below is left in place but never shown.
   function openDiscovery() {
+    return;
+    // eslint-disable-next-line no-unreachable
     if (overlay.style.display === 'flex') return;
     renderDiscoveryCards();
     overlay.style.display = 'flex';
@@ -2073,10 +2079,8 @@ init();
   }
   window.openDiscovery = openDiscovery;
 
-  // The navbar search bar is the doorway: focusing or typing in it opens
-  // the overlay (which syncs the text and moves the caret there).
-  mainInput.addEventListener('focus', openDiscovery);
-  mainInput.addEventListener('input', openDiscovery);
+  // (Navbar focus/input used to open this overlay — now handled by the
+  // React search panel; see the note on openDiscovery above.)
 
   function closeDiscovery() {
     overlay.style.display = 'none';
@@ -2115,8 +2119,6 @@ init();
   function _dsFilterResults(query) {
     const q = (query || '').toLowerCase().trim();
 
-    // Let the React layer (people + community-post results) follow the query.
-    document.dispatchEvent(new CustomEvent('agora:discovery-search', { detail: { query: q } }));
 
     // Active filter selections
     const catActive  = (document.querySelector('.filter-pill.active[data-filter-group="category"]')  || {}).textContent || '';

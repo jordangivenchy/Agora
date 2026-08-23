@@ -11,14 +11,14 @@ import CreateRoomModal from "@/components/CreateRoomModal";
 import UserProfileModal from "@/components/UserProfileModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
-import DiscoverySearch from "@/components/DiscoverySearch";
 import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
 import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
-import SearchPage from "@/components/search/SearchPage";
+import SearchPage, { type SearchKeyHandler } from "@/components/search/SearchPage";
+import useNavbarSearch from "@/components/search/useNavbarSearch";
 import ExploreGrid from "@/components/ExploreGrid";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
@@ -69,14 +69,22 @@ export default function Home() {
   const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab | null>(null);
-  /* /search?q=… — the query the Search panel opens on (it then owns ?q=). */
-  const [searchQuery, setSearchQuery] = useState("");
+  /* Search panel (anchored under the navbar box, see search/SearchPage):
+     open+pinned ⇔ activeTab === "search" (/search?q=…); open+unpinned is
+     transient UI state with no URL change. The navbar input is the only
+     input — useNavbarSearch binds to it. */
+  const searchKeyRef = useRef<SearchKeyHandler | null>(null);
+  const searchPinnedFromRef = useRef<string | null>(null);
+  const navSearch = useNavbarSearch({
+    onKey: (e, v) => searchKeyRef.current?.(e, v) ?? false,
+    onCloseRequest: () => closeSearchRef.current(),
+  });
+  const closeSearchRef = useRef<() => void>(() => {});
   /* Signed-in users landing on a bare "/" get their feed. Once they've
      explicitly picked Home in the sidebar, "/" stays the browse page for
      the rest of the session. */
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
-  const [searchHost, setSearchHost] = useState<HTMLElement | null>(null);
   /* Which MVP-rendered page is showing when no React tab is open; the
      sidebar highlights activeTab ?? mvpPage. */
   const [mvpPage, setMvpPage] = useState<"home" | "explore">("home");
@@ -103,7 +111,6 @@ export default function Home() {
     // Portal targets living inside the MVP markup: the Browse section
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
-    setSearchHost(document.getElementById("discoverySocial"));
     setBellHost(document.getElementById("notifBellHost"));
     setNewsHost(document.getElementById("newsTickerHost"));
     setExploreHost(document.getElementById("epResultsGrid"));
@@ -319,7 +326,8 @@ export default function Home() {
      React state now — see HomeSidebar below.) */
   useEffect(() => {
     const main = document.querySelector(".main") as HTMLElement | null;
-    if (main) main.style.display = activeTab ? "none" : "";
+    /* The search panel floats over whatever was showing; it never hides it. */
+    if (main) main.style.display = activeTab && activeTab !== "search" ? "none" : "";
   }, [activeTab, booted]);
 
   /* Sidebar navigation: React panels for trending/communities/news; the
@@ -408,8 +416,9 @@ export default function Home() {
         }
         return;
       case "search":
-        setSearchQuery(route.q);
+        navSearch.setQuery(route.q);
         setActiveTab("search");
+        navSearch.openPanel();
         done();
         return;
       case "community":
@@ -451,7 +460,7 @@ export default function Home() {
         })();
         return;
     }
-  }, [pendingRoute, booted, supabase, mvpPage]);
+  }, [pendingRoute, booted, supabase, mvpPage, navSearch]);
 
   /* Signed-in landing on a bare "/" (no section, no query, no hash):
      open the feed and rewrite the address to /feed. Skipped once the
@@ -488,6 +497,45 @@ export default function Home() {
     lastPushedRef.current = desired;
     if (window.location.pathname !== desired) window.history.pushState(null, "", desired);
   }, [activeTab, mvpPage]);
+
+  /* ── Search panel open / pin / close ── */
+  const searchOpen = navSearch.open || activeTab === "search";
+  const pinSearch = useCallback((q: string) => {
+    const t = q.trim();
+    if (!t) return;
+    if (activeTab !== "search") {
+      searchPinnedFromRef.current = window.location.pathname + window.location.search;
+      window.history.pushState(null, "", pathFor.search(t));
+      lastPushedRef.current = "/search";
+      setActiveTab("search");
+    } else {
+      window.history.replaceState(null, "", pathFor.search(t));
+    }
+    navSearch.setQuery(t);
+    navSearch.openPanel();
+  }, [activeTab, navSearch]);
+  const closeSearch = useCallback(() => {
+    navSearch.closePanel();
+    if (activeTab !== "search") return;
+    /* Pinned: step back to where the user came from if we pushed the
+       /search entry ourselves, else push the prior section path (same
+       pattern as the section-path effect above). */
+    const from = searchPinnedFromRef.current;
+    searchPinnedFromRef.current = null;
+    if (from !== null) { window.history.back(); return; }
+    setActiveTab(null);
+  }, [activeTab, navSearch]);
+  useEffect(() => { closeSearchRef.current = closeSearch; }, [closeSearch]);
+  /* Leaving /search by any other route (back button, sidebar, a result
+     click) drops the pin and closes the panel. */
+  const prevTabRef = useRef<PanelTab | null>(null);
+  useEffect(() => {
+    if (prevTabRef.current === "search" && activeTab !== "search") {
+      searchPinnedFromRef.current = null;
+      navSearch.closePanel();
+    }
+    prevTabRef.current = activeTab;
+  }, [activeTab, navSearch]);
 
   useEffect(() => {
     const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
@@ -582,12 +630,19 @@ export default function Home() {
         </div>
       )}
       <NotificationsBell container={bellHost} />
-      <DiscoverySearch container={searchHost} />
       <NewsTicker container={newsHost} />
       <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />
-      <SearchPage open={activeTab === "search"} initialQuery={searchQuery} onClose={() => setActiveTab(null)} />
+      <SearchPage
+        open={searchOpen}
+        pinned={activeTab === "search"}
+        query={navSearch.query}
+        setQuery={navSearch.setQuery}
+        onClose={closeSearch}
+        onPin={pinSearch}
+        keyHandlerRef={searchKeyRef}
+      />
       <HomeSidebar activeId={activeTab === "search" ? null : (activeTab ?? mvpPage)} onNavigate={onSidebarNavigate} />
       <TopicsHome
         container={fieldsHost}

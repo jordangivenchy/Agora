@@ -131,7 +131,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
     <!-- Results -->
     <div class="discovery-results" id="discoveryResults">
       <div class="results-meta" id="resultsMeta"></div>
-      <div id="discoverySocial"><!-- React: people + community-post results (DiscoverySearch) --></div>
+      <div id="discoverySocial"><!-- legacy overlay slot (unused; search lives in the React panel) --></div>
       <div class="results-grid" id="resultsGrid"><!-- cards generated from real rooms by renderDiscoveryCards() --></div><!-- /results-grid -->
     </div><!-- /discovery-results -->
   </div><!-- /discovery-body -->
