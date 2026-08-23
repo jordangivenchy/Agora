@@ -50,6 +50,12 @@ export interface DebateRoom {
   thumbnail_url?: string | null;
   // Set while an HLS broadcast is running (audience overflow stream).
   hls_url?: string | null;
+  // Persisted VOD playlist + egress window (20260851_debate_recordings):
+  // survives the stream so the ended room can be replayed.
+  recording_url?: string | null;
+  recording_started_at?: string | null;
+  recording_ended_at?: string | null;
+  discussion_post_id?: string | null;
   // Joined fields
   host?: User;
   participants?: DebateParticipant[];

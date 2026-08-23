@@ -10,6 +10,22 @@ import {
 } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 
+/* The live playlist dies with the stream; the recording (recording_url)
+   stays so the ended room can be replayed. recording_ended_at only lands
+   for rooms that were actually recording. */
+async function markStreamStopped(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  roomId: string
+) {
+  await supabase.from("debate_rooms").update({ hls_url: null }).eq("id", roomId);
+  await supabase
+    .from("debate_rooms")
+    .update({ recording_ended_at: new Date().toISOString() })
+    .eq("id", roomId)
+    .not("recording_url", "is", null)
+    .is("recording_ended_at", null);
+}
+
 /**
  * Restream a room to an external RTMP destination (TikTok, Twitch,
  * YouTube…). LiveKit composites the room server-side and pushes RTMP;
@@ -111,8 +127,21 @@ export async function POST(request: NextRequest) {
           }),
         }
       );
-      const hlsUrl = `${hlsEnv.publicBase!.replace(/\/$/, "")}/${roomId}/live.m3u8`;
-      await supabase.from("debate_rooms").update({ hls_url: hlsUrl }).eq("id", roomId);
+      const base = hlsEnv.publicBase!.replace(/\/$/, "");
+      const hlsUrl = `${base}/${roomId}/live.m3u8`;
+      /* index.m3u8 is the VOD playlist LiveKit finalizes when egress stops —
+         it persists in the bucket, so it IS the replay. Record it now (the
+         row outlives the stream) alongside the start time the transcript
+         offsets are measured from. */
+      await supabase
+        .from("debate_rooms")
+        .update({
+          hls_url: hlsUrl,
+          recording_url: `${base}/${roomId}/index.m3u8`,
+          recording_started_at: new Date().toISOString(),
+          recording_ended_at: null,
+        })
+        .eq("id", roomId);
       return NextResponse.json({ egressId: info.egressId, hlsUrl });
     }
 
@@ -121,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (action === "stop_all") {
       const active = await egress.listEgress({ roomName: roomId, active: true });
       await Promise.allSettled(active.map((e) => egress.stopEgress(e.egressId)));
-      await supabase.from("debate_rooms").update({ hls_url: null }).eq("id", roomId);
+      await markStreamStopped(supabase, roomId);
       return NextResponse.json({ ok: true, stopped: active.length });
     }
 
@@ -163,7 +192,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing egressId" }, { status: 400 });
     }
     await egress.stopEgress(egressId);
-    await supabase.from("debate_rooms").update({ hls_url: null }).eq("id", roomId);
+    await markStreamStopped(supabase, roomId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("egress error", e);

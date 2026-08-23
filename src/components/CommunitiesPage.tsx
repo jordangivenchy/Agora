@@ -34,6 +34,7 @@ import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
 import CommunityPicker from "./community/CommunityPicker";
 import RichText from "./community/RichText";
+import PostCard, { RoleBadge, TagChip, VoteBox, timeAgo, type PostRow } from "./community/PostCard";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 
 interface Props {
@@ -64,34 +65,7 @@ type Community = {
 
 type Tag = { id: string; community_id: string; name: string; color: string };
 
-type Post = {
-  id: string;
-  community_id: string;
-  community_name: string;
-  author_id: string | null;
-  author_username: string;
-  author_display_name: string | null;
-  title: string;
-  body: string | null;
-  created_at: string;
-  score: number;
-  my_vote: number | null;
-  comment_count: number;
-  image_url: string | null;
-  tag_id: string | null;
-  tag_name: string | null;
-  tag_color: string | null;
-  author_role: string | null;
-  is_repost: boolean;
-  repost_of: string | null;
-  orig_title: string | null;
-  orig_body: string | null;
-  orig_image_url: string | null;
-  orig_community_name: string | null;
-  orig_author_username: string | null;
-  orig_author_display_name: string | null;
-  pinned_at: string | null;
-};
+type Post = PostRow;
 
 
 type Comment = {
@@ -225,87 +199,10 @@ const liftOut = (e: React.MouseEvent<HTMLButtonElement>) => {
   e.currentTarget.style.filter = "";
 };
 
-function timeAgo(iso: string): string {
-  const mins = Math.floor((Date.now() - +new Date(iso)) / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
-}
-
 function fmtWhen(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
-/* MOD / OWNER badge next to author names. */
-function RoleBadge({ role }: { role: string | null }) {
-  if (role !== "owner" && role !== "moderator") return null;
-  const owner = role === "owner";
-  return (
-    <span
-      className="text-[9px] font-bold px-1.5 rounded"
-      style={{
-        background: owner ? "rgba(226,185,107,0.14)" : "rgba(0,184,148,0.14)",
-        border: `0.5px solid ${owner ? "rgba(226,185,107,0.4)" : "rgba(0,184,148,0.4)"}`,
-        color: owner ? "#e2b96b" : "#00b894",
-        letterSpacing: "0.04em",
-        padding: "1px 5px",
-      }}
-    >
-      {owner ? "OWNER" : "MOD"}
-    </span>
-  );
-}
-
-function TagChip({ name, color, small }: { name: string; color: string | null; small?: boolean }) {
-  const c = color || "rgba(238,238,245,0.5)";
-  return (
-    <span
-      className="rounded-full"
-      style={{
-        fontSize: small ? 9.5 : 10.5,
-        padding: small ? "1px 7px" : "2px 8px",
-        background: `${c}22`,
-        border: `0.5px solid ${c}66`,
-        color: c,
-        fontWeight: 600,
-      }}
-    >
-      {name}
-    </span>
-  );
-}
-
-/* Vote column shared by feed cards and the detail view. */
-function VoteBox({
-  post, onVote, size = 13,
-}: { post: Post; onVote: (p: Post, v: number) => void; size?: number }) {
-  return (
-    <div className="flex flex-col items-center shrink-0" style={{ width: 34 }}>
-      <button
-        onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === 1 ? 0 : 1); }}
-        className="cursor-pointer bg-transparent border-none px-1"
-        style={{ color: post.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", fontSize: size + 1 }}
-        aria-label="Upvote"
-      >
-        ▲
-      </button>
-      <span className="text-center" style={{ color: "#eeeef5", fontSize: size, fontWeight: 600 }}>
-        {post.score}
-      </span>
-      <button
-        onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === -1 ? 0 : -1); }}
-        className="cursor-pointer bg-transparent border-none px-1"
-        style={{ color: post.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", fontSize: size + 1 }}
-        aria-label="Downvote"
-      >
-        ▼
-      </button>
-    </div>
-  );
 }
 
 export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Props) {
@@ -2962,67 +2859,17 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 )}
 
                 {posts.map((p) => (
-                  <div
+                  <PostCard
                     key={p.id}
-                    className="cm-card p-4 mb-3 flex gap-3 cursor-pointer"
-                    style={card}
-                    onClick={() => openPostDetail(p)}
-                  >
-                    <VoteBox post={p} onVote={vote} />
-                    <div className="flex-1 min-w-0">
-                      <p className="m-0 text-[10.5px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.5)" }}>
-                        <span className="inline-flex items-center gap-1">
-                          {selected === "all" && (
-                            <>
-                              <span
-                                onClick={(e) => { e.stopPropagation(); closePostDetail(); setSelected(p.community_id); }}
-                                className="cursor-pointer"
-                                title={`Go to ${p.community_name}`}
-                                style={{ color: "#e2b96b", textDecoration: "underline dotted rgba(226,185,107,0.4)", textUnderlineOffset: 2 }}
-                              >
-                                {p.community_name}
-                              </span>
-                              <span>·</span>
-                            </>
-                          )}
-                          {authorSpan(p.author_id, p.author_username, p.author_display_name)}
-                          <span>·</span>
-                          <span>{timeAgo(p.created_at)}</span>
-                        </span>
-                        <RoleBadge role={p.author_role} />
-                        {p.is_repost && <span className="inline-flex items-center" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /></span>}
-                        {p.pinned_at && (
-                          <span className="text-[9px] font-bold rounded" style={{
-                            background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
-                            color: "#4a9eff", padding: "1px 5px", letterSpacing: "0.04em",
-                          }}>
-                            <Icon name="pin" size={10} /> PINNED
-                          </span>
-                        )}
-                        {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} small />}
-                      </p>
-                      <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#eeeef5" }}>
-                        <RichText text={p.title} inline />
-                      </p>
-                      {p.body && (
-                        <div className="mt-1 text-[12px] leading-relaxed" style={{
-                          color: "rgba(238,238,245,0.55)",
-                          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-                        }}>
-                          <RichText text={p.body} />
-                        </div>
-                      )}
-                      {p.image_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.image_url} alt="" className="mt-1.5 rounded-lg"
-                          style={{ maxHeight: 220, maxWidth: "100%", objectFit: "cover" }} />
-                      )}
-                      {repostEmbed(p)}
-                      <div className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: 16 }}>
-                        {postActions(p, false)}
-                      </div>
-                    </div>
-                  </div>
+                    post={p}
+                    onOpen={openPostDetail}
+                    onVote={vote}
+                    showCommunity={selected === "all"}
+                    onOpenCommunity={(id) => { closePostDetail(); setSelected(id); }}
+                    author={authorSpan(p.author_id, p.author_username, p.author_display_name)}
+                    actions={postActions(p, false)}
+                    embed={repostEmbed(p)}
+                  />
                 ))}
 
                 {/* pagination — appears whenever a full page came back */}

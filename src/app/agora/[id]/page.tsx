@@ -25,6 +25,8 @@ import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall } from "@/components/agora/useAgoraCall";
 import HostControls from "@/components/agora/HostControls";
 import HlsPlayer from "@/components/agora/HlsPlayer";
+import DebateReplay from "@/components/agora/DebateReplay";
+import { roomPath } from "@/lib/urls";
 import InvitePrompt from "@/components/agora/InvitePrompt";
 import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
@@ -92,6 +94,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [participants, setParticipants] = useState<StageParticipant[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
+  /* Status the room had when this visitor first loaded it — 'ended' here
+     means they arrived after the close and should get the replay. */
+  const [firstStatus, setFirstStatus] = useState<string | null>(null);
   const [following, setFollowing] = useState(false);
   /* Host leave flow: leaving as host asks whether to close the stage. */
   const [leavePrompt, setLeavePrompt] = useState(false);
@@ -165,6 +170,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         return;
       }
       setRoom(roomData);
+      setFirstStatus((prev) => prev ?? roomData.status);
       if (partData) setParticipants(partData as StageParticipant[]);
       if (roomData.community_id) {
         const { data: comm } = await supabase
@@ -628,14 +634,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       .then(undefined, () => {});
   }, [currentUser, myParticipation, supabase]);
 
-  /* Stage closed (by the host, here or elsewhere): give the banner a
-     beat to read, then walk everyone out. Also catches visitors landing
-     on an already-ended room link. */
-  useEffect(() => {
-    if (!loaded || room?.status !== "ended") return;
-    const t = setTimeout(() => router.push("/"), 2600);
-    return () => clearTimeout(t);
-  }, [loaded, room?.status, router]);
+  /* Ended rooms are replays, not dead ends. A visitor who arrives after
+     the end goes straight to the replay; someone who was in the room when
+     the host closed the stage gets a hand-off card instead (the VOD
+     playlist finalizes a few seconds after egress stops). */
+  const arrivedEnded = firstStatus === "ended";
+  const [showReplay, setShowReplay] = useState(false);
 
   /* ── Raise / lower hand ────────────────────────────────────────────
      Signed-in listeners only. Landing in the Agora doesn't create a
@@ -732,6 +736,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         <span>Entering the Agora…</span>
       </div>
     );
+  }
+
+  if ((arrivedEnded || showReplay) && !broadcast) {
+    return <DebateReplay roomId={roomId} initialRoom={room} />;
   }
 
   if (gated && opensAtMs !== null) {
@@ -1002,9 +1010,36 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         {/* ── Stage closed: everyone gets walked out ── */}
-        {room?.status === "ended" && (
-          <div className="ag-invite" role="status">
-            <span className="ag-invite-text">The host closed the stage — taking you back home.</span>
+        {room?.status === "ended" && !broadcast && (
+          <div className="ag-ended-card" role="dialog" aria-label="Debate ended">
+            <h2>Debate ended</h2>
+            <p>
+              The host closed the stage.
+              {room.recording_url
+                ? " The replay will be available shortly — the recording finalizes a few seconds after the stream stops."
+                : " The transcript and discussion are open now."}
+            </p>
+            <div className="ag-ended-actions">
+              <button
+                className="ag-invite-join"
+                onClick={() => {
+                  vacateSeat();
+                  window.history.replaceState(null, "", roomPath({ id: room.id, motion: room.motion }));
+                  setShowReplay(true);
+                }}
+              >
+                {room.recording_url ? "Open the replay" : "Transcript & discussion"}
+              </button>
+              <button
+                className="ag-invite-decline"
+                onClick={() => {
+                  vacateSeat();
+                  router.push("/");
+                }}
+              >
+                Back to home
+              </button>
+            </div>
           </div>
         )}
 

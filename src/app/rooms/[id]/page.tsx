@@ -5,7 +5,7 @@ import { Icon } from "@/components/icons";
 import Wordmark from "@/components/Wordmark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import { parseRoomParam } from "@/lib/urls";
+import { parseRoomParam, roomPath } from "@/lib/urls";
 import { TOPICS } from "@/types/database";
 import type { DebateRoom, DebateParticipant, Stance, QueueEntry } from "@/types/database";
 import DebateVideo from "@/components/DebateVideo";
@@ -92,6 +92,8 @@ function ClassicRoom({ roomId }: { roomId: string }) {
   const [isLeaving, setIsLeaving] = useState(false);
   // Ended rooms show the vote tally instead of bouncing everyone home.
   const [showResults, setShowResults] = useState(false);
+  /* True once this client has seen the room in a non-ended state. */
+  const sawOpenRef = useRef(false);
   // Settings → Discussion defaults (join muted / camera off). Loaded once
   // alongside the user; defaults apply for guests and on fetch failure.
   const [mediaDefaults, setMediaDefaults] = useState({ joinMuted: false, joinCameraOff: false });
@@ -154,7 +156,17 @@ function ClassicRoom({ roomId }: { roomId: string }) {
 
       setRoom(data);
       if (data.status === "ended") {
+        /* Arriving at an already-ended room: its home is the replay page
+           (transcript + recording + discussion), not a tally screen.
+           Clients present for the ending keep the results screen. */
+        if (!sawOpenRef.current) {
+          setIsLeaving(true);
+          router.replace(roomPath({ id: data.id, motion: data.motion }));
+          return;
+        }
         setShowResults(true);
+      } else {
+        sawOpenRef.current = true;
       }
     } catch (e) {
       console.error("fetchRoom failed", e);

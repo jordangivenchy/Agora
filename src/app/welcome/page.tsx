@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import AvatarCropModal from "@/components/AvatarCropModal";
 import { friendlyProfileError } from "@/lib/profileText";
+import PeopleSuggestions from "@/components/people/PeopleSuggestions";
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 const AVAILABILITY_DEBOUNCE_MS = 450;
@@ -26,6 +27,10 @@ export default function WelcomePage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Step 2 (optional): follow a few people. Skipped automatically when
+     get_people_suggestions has nothing to offer. */
+  const [step, setStep] = useState<"profile" | "follow">("profile");
+  const [followed, setFollowed] = useState(0);
 
   const [availability, setAvailability] =
     useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
@@ -162,7 +167,7 @@ export default function WelcomePage() {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("profile-updated"));
     }
-    router.replace("/");
+    setStep("follow");
   }
 
   const canContinue =
@@ -191,6 +196,56 @@ export default function WelcomePage() {
         {/* Brand */}
         <Wordmark size={22} className="mb-7" />
 
+        {step === "follow" && (
+          <div
+            className="w-full"
+            style={{
+              background: "rgba(18,18,21,0.7)",
+              border: "1px solid var(--border)",
+              borderRadius: "20px",
+              padding: "32px 24px 26px",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+            }}
+          >
+            <h1
+              className="text-center"
+              style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: "22px", letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: "6px" }}
+            >
+              Follow a few people
+            </h1>
+            <p className="text-center" style={{ color: "var(--text-muted)", fontSize: "13px", lineHeight: 1.55, marginBottom: "18px" }}>
+              Their debates and posts will show up in your feed. Optional — you can always find more under People.
+            </p>
+            <PeopleSuggestions
+              limit={8}
+              layout="row"
+              title={null}
+              onLoaded={(n) => { if (n === 0) router.replace("/"); }}
+              onFollowChange={(_, f) => setFollowed((c) => Math.max(0, c + (f ? 1 : -1)))}
+            />
+            <button
+              onClick={() => router.replace("/")}
+              className="w-full cursor-pointer transition-all"
+              style={{
+                marginTop: "18px",
+                background: "var(--accent-blue)",
+                border: "none",
+                borderRadius: "100px",
+                color: "#fff",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "14px",
+                fontWeight: 600,
+                padding: "12px 20px",
+              }}
+            >
+              {followed > 0 ? `Continue (${followed} followed)` : "Continue"}
+            </button>
+          </div>
+        )}
+
+        {step === "profile" && (
         <div
           className="w-full"
           style={{
@@ -514,6 +569,7 @@ export default function WelcomePage() {
             </>
           )}
         </div>
+        )}
 
         <button
           onClick={() => router.replace("/")}
@@ -527,7 +583,7 @@ export default function WelcomePage() {
             fontWeight: 500,
           }}
         >
-          Skip for now
+          {step === "follow" ? "Skip" : "Skip for now"}
         </button>
       </main>
 

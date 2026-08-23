@@ -1227,8 +1227,10 @@ export default function ProfileView({
                           : identity({ id: d.host_id, username: d.host_username, display_name: d.host_display_name, avatar_url: d.host_avatar_url })}
                         <span style={{ color: "#6b6b74", fontSize: 11 }}>· host</span>
                       </p>
-                      <p className="m-0" style={{ color: "#f5f5f0", fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                        {d.motion || "Untitled debate"}
+                      <p className="m-0" style={{ fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                        <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>
+                          {d.motion || "Untitled debate"}
+                        </a>
                       </p>
                       <p className="m-0 mt-1" style={{ color: "#8b8b94", fontSize: 11.5 }}>
                         {live ? (
@@ -1240,15 +1242,19 @@ export default function ProfileView({
                         {topic ? ` · ${topic.label}` : ""}
                       </p>
                     </div>
-                    {live && <span style={{ color: "#6b6b74", fontSize: 12 }}>→</span>}
+                    <span
+                      className="inline-flex items-center gap-1"
+                      style={{ color: live ? "#e05a5a" : "#8b8b94", fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}
+                    >
+                      <Icon name="play" size={12} /> {live ? "Watch live" : "Replay"}
+                    </span>
                   </>
                 );
-                /* Same rule as the communities rail: only LIVE rooms are
-                   enterable — an ended debate is history, not a door. */
+                /* Live rooms open the amphitheater; ended ones open the
+                   replay (recording + transcript + discussion) at the same URL. */
                 return (
                   <div key={d.id} className="row-card px-4 py-3 flex items-center gap-3 flex-wrap" style={card}>
                     {inner}
-                    {live && <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link" aria-label="Watch live" />}
                   </div>
                 );
               })

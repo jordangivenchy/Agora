@@ -96,6 +96,8 @@ export async function GET(req: Request) {
       report.egressStopped = "livekit_not_configured";
     }
     // A dead room shouldn't advertise a stream that stopped with it.
+    // Only the live playlist is cleared — recording_url / recording_*_at
+    // stay so the room remains replayable (see 20260851_debate_recordings).
     await admin
       .from("debate_rooms")
       .update({ hls_url: null })

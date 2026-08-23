@@ -17,6 +17,8 @@ import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
+import FeedPage from "@/components/feed/FeedPage";
+import PeoplePage from "@/components/people/PeoplePage";
 import ExploreGrid from "@/components/ExploreGrid";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
@@ -54,6 +56,11 @@ const FORMAT_LABEL: Record<string, string> = {
   panel: "Panel",
 };
 
+type PanelTab = "feed" | "trending" | "communities" | "news" | "people";
+const PANEL_TABS: readonly string[] = ["feed", "trending", "communities", "news", "people"];
+const isPanelTab = (s: string): s is PanelTab => PANEL_TABS.includes(s);
+const HOME_CHOSEN_KEY = "agora:home-chosen";
+
 function fmtViewers(n: number): string {
   return n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n);
 }
@@ -61,7 +68,11 @@ function fmtViewers(n: number): string {
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
-  const [activeTab, setActiveTab] = useState<"trending" | "communities" | "news" | null>(null);
+  const [activeTab, setActiveTab] = useState<PanelTab | null>(null);
+  /* Signed-in users landing on a bare "/" get their feed. Once they've
+     explicitly picked Home in the sidebar, "/" stays the browse page for
+     the rest of the session. */
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
   const [searchHost, setSearchHost] = useState<HTMLElement | null>(null);
   /* Which MVP-rendered page is showing when no React tab is open; the
@@ -191,6 +202,7 @@ export default function Home() {
         });
 
         const user = auth?.user;
+        setSignedIn(!!user);
         let profileName: string | null = null;
         let profileAvatar: string | null = null;
         if (user) {
@@ -312,9 +324,12 @@ export default function Home() {
      MVP engine's own page switch for home/explore (it exposes both). */
   const onSidebarNavigate = useCallback((id: HomeNavId) => {
     const w = window as unknown as { loadHomePage?: () => void; loadExplorePage?: () => void };
-    if (id === "trending" || id === "communities" || id === "news") {
+    if (isPanelTab(id)) {
       setActiveTab(id);
       return;
+    }
+    if (id === "home") {
+      try { sessionStorage.setItem(HOME_CHOSEN_KEY, "1"); } catch { /* private mode */ }
     }
     setActiveTab(null);
     setMvpPage(id);
@@ -367,7 +382,7 @@ export default function Home() {
     };
     switch (route.kind) {
       case "section":
-        if (route.id === "trending" || route.id === "communities" || route.id === "news") {
+        if (isPanelTab(route.id)) {
           setActiveTab(route.id);
           done();
         } else if (route.id === "explore") {
@@ -431,6 +446,25 @@ export default function Home() {
     }
   }, [pendingRoute, booted, supabase, mvpPage]);
 
+  /* Signed-in landing on a bare "/" (no section, no query, no hash):
+     open the feed and rewrite the address to /feed. Skipped once the
+     user has chosen Home this session, and never on popstate (the
+     route effect above handles those). */
+  const feedRedirectRef = useRef(false);
+  useEffect(() => {
+    if (feedRedirectRef.current || signedIn !== true || !pendingRoute) return;
+    const { route } = pendingRoute;
+    if (route.kind !== "section" || route.id !== "home") return;
+    if (window.location.pathname !== "/" || window.location.search || window.location.hash) return;
+    let chosen = false;
+    try { chosen = sessionStorage.getItem(HOME_CHOSEN_KEY) === "1"; } catch { /* private mode */ }
+    feedRedirectRef.current = true;
+    if (chosen) return;
+    window.history.replaceState(null, "", pathFor.section("feed"));
+    lastPushedRef.current = "/feed";
+    setActiveTab("feed");
+  }, [signedIn, pendingRoute]);
+
   /* Push the section path when in-app navigation changes it. Only pushes
      when the desired path actually changed (so an unrelated URL such as
      /messages isn't clobbered) and differs from the address bar (so
@@ -472,7 +506,7 @@ export default function Home() {
     };
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
-      if (tab === "trending" || tab === "communities" || tab === "news") setActiveTab(tab);
+      if (typeof tab === "string" && isPanelTab(tab)) setActiveTab(tab);
       else if (tab === "close") setActiveTab(null);
       else if (tab === "home") onSidebarNavigate("home");
       else if (tab === "battle") {
@@ -544,6 +578,8 @@ export default function Home() {
       <NewsTicker container={newsHost} />
       <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
+      <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />
+      <PeoplePage open={activeTab === "people"} onClose={() => setActiveTab(null)} />
       <HomeSidebar activeId={activeTab ?? mvpPage} onNavigate={onSidebarNavigate} />
       <TopicsHome
         container={fieldsHost}

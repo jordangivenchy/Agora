@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
      Keep in step with REWRITTEN_SOURCES in src/lib/routes.ts. */
   async rewrites() {
     return [
-      "/trending", "/news", "/explore", "/communities", "/communities/:slug",
+      "/feed", "/people", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
       "/posts/:id", "/messages", "/messages/:username",
     ].map((source) => ({ source, destination: "/" }));
   },

@@ -5,36 +5,59 @@
    instead. Safari plays HLS natively; everyone else gets hls.js, loaded
    on demand so the room bundle doesn't carry it. */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 
-export default function HlsPlayer({ src, onClose }: { src: string; onClose: () => void }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+/* Attach an HLS source to a <video>: native on Safari, hls.js elsewhere.
+   `live` tunes hls.js for edge-chasing; VOD playlists (the replay) load
+   with defaults so seeking across the whole recording works. Shared by
+   the live overflow overlay and the ended-room replay player. */
+export function useHlsSource(
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  src: string | null,
+  { live = true, autoplay = true }: { live?: boolean; autoplay?: boolean } = {}
+): { error: string | null } {
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !src) return;
     let hls: { destroy: () => void } | null = null;
     let cancelled = false;
+    setError(null);
+
+    const onNativeError = () => setError("This recording couldn't be loaded.");
 
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = src;
-      video.play().catch(() => {});
+      video.addEventListener("error", onNativeError);
+      if (autoplay) video.play().catch(() => {});
     } else {
       import("hls.js").then(({ default: Hls }) => {
         if (cancelled || !Hls.isSupported()) return;
-        const h = new Hls({ liveSyncDurationCount: 3 });
+        const h = new Hls(live ? { liveSyncDurationCount: 3 } : {});
+        h.on(Hls.Events.ERROR, (_evt, data) => {
+          if (data.fatal) setError("This recording couldn't be loaded.");
+        });
         h.loadSource(src);
         h.attachMedia(video);
         hls = h;
-        video.play().catch(() => {});
+        if (autoplay) video.play().catch(() => {});
       });
     }
     return () => {
       cancelled = true;
+      video.removeEventListener("error", onNativeError);
       if (hls) hls.destroy();
     };
-  }, [src]);
+  }, [videoRef, src, live, autoplay]);
+
+  return { error };
+}
+
+export default function HlsPlayer({ src, onClose }: { src: string; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  useHlsSource(videoRef, src, { live: true });
 
   return (
     <div
