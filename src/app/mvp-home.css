@@ -109,6 +109,8 @@ body {
      independent of the logo / auth widths either side. */
   position: absolute;
   width: min(480px, calc(100vw - 640px));
+  /* keep the width even so translateX(-50%) resolves to a whole pixel */
+  width: round(down, min(480px, calc(100vw - 640px)), 2px);
 }
 
 .nav-search input {
@@ -3153,11 +3155,16 @@ a.carousel-watch-btn { text-decoration: none; }
 
 /* ─── STAR BUTTON TRAVEL LIGHT ─── */
 #navSearchWrap {
+  /* Whole-pixel placement so the 1px border never straddles a half pixel:
+     fixed 52px height inside the 60px bar (4px above, 4px below, nudged
+     1px down for optical centering), horizontal centering via an even
+     width so translateX(-50%) stays integral. */
   position: absolute;
   left: 50%;
-  top: 50%;
-  /* +2px: optical center — the pill's glow hangs below it. */
-  transform: translate(-50%, calc(-50% + 2px));
+  top: 5px;
+  height: 52px !important;
+  box-sizing: border-box;
+  transform: translateX(-50%);
   isolation: isolate;
   overflow: visible !important;
 }
