@@ -1067,7 +1067,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           viewerCount={room.viewer_count ?? 0}
           view={view}
           onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
-          viewSwitchDisabled={layout !== "stage"}
           onViewSettled={() => setViewSettled(true)}
           speakerQueue={speakerQueue}
           micHolder={micHolder}
@@ -1228,40 +1227,43 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               In speaker view it waits for the camera to land among the
               stars before fading in; audience view shows it as soon as a
               picture is live (no glide to wait out). ── */}
-        {layout === "stage" && (view === "audience" || viewSettled) && (
-          <AgoraStage
-            tiles={call.videoTiles}
-            panes={stagePanes}
-            view={view}
-            speaking={call.speakingIds}
-            anchored={view === "audience"}
-          />
-        )}
-
-        {/* ── Flat call layouts: the viewer's own arrangement, drawn over
-              the dimmed scene so switching back to Stage is instant.
-              These replace the stage and the dock; reactions and the
-              control bar keep working above. ── */}
-        {layout !== "stage" && !broadcast && (
-          <div className="ag-layout-overlay" role="region" aria-label="Call layout">
-            {layout === "gallery" ? (
-              <CallGallery
-                tiles={layoutTiles}
-                speaking={call.speakingIds}
-                onPin={(key) => {
-                  setLayoutPin(key);
-                  pickLayout("multi");
-                }}
-              />
-            ) : (
-              <CallMultiSpeaker
-                tiles={layoutTiles}
-                speaking={call.speakingIds}
-                pinnedKey={layoutPin}
-                onPin={setLayoutPin}
-              />
-            )}
-          </div>
+        {(view === "audience" || viewSettled) && (
+          layout === "stage" ? (
+            <AgoraStage
+              tiles={call.videoTiles}
+              panes={stagePanes}
+              view={view}
+              speaking={call.speakingIds}
+              anchored={view === "audience"}
+            />
+          ) : (
+            /* Gallery / multi-speaker take the stage's exact spot and
+               lifecycle: same glide-in wait in speaker view, same anchored
+               placement in audience view, vantage toggle untouched. */
+            <div
+              className={`ag-cast ag-layout-flat${view === "audience" ? " ag-cast--anchored" : ""}`}
+              role="region"
+              aria-label="Call layout"
+            >
+              {layout === "gallery" ? (
+                <CallGallery
+                  tiles={layoutTiles}
+                  speaking={call.speakingIds}
+                  onPin={(key) => {
+                    setLayoutPin(key);
+                    pickLayout("multi");
+                  }}
+                />
+              ) : (
+                <CallMultiSpeaker
+                  tiles={layoutTiles}
+                  speaking={call.speakingIds}
+                  pinnedKey={layoutPin}
+                  onPin={setLayoutPin}
+                />
+              )}
+            </div>
+          )
         )}
 
         {/* ── Live camera tiles + floating reactions ── */}

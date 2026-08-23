@@ -2763,20 +2763,15 @@
    language as the stage and dock: dark plate, thin light border, the
    gold ring for live voices. */
 
-.ag-layout-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 3; /* over the scene + stage layer, under topbar/controls (5) */
-  background: rgba(6, 6, 10, 0.88);
-  display: flex;
-  flex-direction: column;
-  padding: 96px 28px calc(var(--ag-controls-h) + var(--ag-controls-lift) + 14px);
-  animation: agLayoutIn 0.18s ease;
+.ag-layout-flat {
+  /* Rides .ag-cast for position/lifecycle; only the inner arrangement
+     differs. No backdrop — the amphitheater stays fully visible. */
+  justify-content: center;
 }
-
-@keyframes agLayoutIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.ag-cast--anchored.ag-layout-flat {
+  /* The anchored (audience-view) fixture is small — keep the grid inside it. */
+  overflow: hidden;
+  border-radius: 14px;
 }
 
 /* ── One tile ── */
