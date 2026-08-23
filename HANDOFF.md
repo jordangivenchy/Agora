@@ -1,11 +1,106 @@
 # AgoraSphere — Context Handoff
 
-_Last updated: 2026-08-22. Covers the 08-21→08-22 marathon: email 2FA
-shipped, Resend/HLS/GIPHY/NewsData activated, profile v2, the React
-sidebar (strangler step 1), scale fixes (presence, comment pagination),
-the news section, Community Bookmarks, the hero carousel redesign, Alan's
-live-AI + data-platform merges. Everything below is LIVE in production
-unless marked otherwise._
+_Last updated: 2026-08-23. Covers the 08-22→08-23 marathon (71 commits on
+top of the 08-22 handoff): CI + Preview env, icon system, TipTap editor,
+standalone URLs, Your Feed, replays/VOD, global search, notifications v2,
+email notifications, DM rework, room lifecycle, call layouts, HLS audience
+overflow. Everything below is LIVE in production unless marked otherwise._
+
+## ⚡ 08-23 session digest (read this first)
+
+**Migrations applied to the live DB this session (files match live):**
+20260847_profile_text_hygiene · 20260848_dm_media · 20260849_home_feed ·
+20260851_debate_recordings · 20260852_notifications_v2 ·
+20260853_global_search · 20260854_email_notifications ·
+20260855_room_lifecycle. Live DB now matches files through **20260855**.
+
+**Process/infra**
+- **CI live**: `.github/workflows/ci.yml` (tsc → vitest → next build) on every
+  push/PR; repo vars NEXT_PUBLIC_SUPABASE_URL/ANON_KEY. Reports, doesn't block.
+- **Vercel Preview env fixed** (Supabase vars added) — branch deploys build.
+- Stray Vercel project `agora` still hooked to the repo and failing on every
+  push (noise); Jordan should delete it in the dashboard.
+- `/api/health` gained a live **AI probe** (`ai.reachable` pings Gemini).
+
+**Product surface (all deployed)**
+- **Icons**: `src/components/icons.tsx` (~130 Lucide-style paths, one map →
+  `<Icon>` JSX + `iconSvg()` strings). Functional emoji swept app-wide.
+- **Community composers**: TipTap rich editor (`community/RichEditor.tsx`) —
+  live formatting, list continuation, tables, spoiler, @mention dropdown;
+  stores markdown; renderer = react-markdown (`community/RichText.tsx`).
+  Image/GIF/emoji live in the editor toolbar.
+- **Standalone URLs** (rewrites → `/`): /feed /trending /news /explore
+  /communities /communities/<slug> /posts/<id>[#comment-<cid>]
+  /messages[/<username>] /search?q= — in-app nav pushes history; legacy
+  ?nav/?post/?dm redirect. `src/lib/routes.ts` is the single source.
+- **Your Feed** (`/feed`, signed-in landing): get_home_feed RPC (live rail,
+  scheduled w/ reminder bells, posts via shared PostCard, filters
+  All/Following/Communities/Popular, reasons). People *tab was removed* —
+  lookup lives in search; suggestions remain in feed/welcome/search.
+- **Replays**: HLS egress persists `recording_url` (R2 `<room>/index.m3u8`);
+  ended rooms at /agora/<id> render DebateReplay (VOD player, click-to-seek
+  transcript, lazily-created discussion post in the room's community or the
+  system **Debates** community `…deba`). Recording is **on by default**:
+  host client auto-starts HLS when live+connected (idempotent).
+- **HLS audience overflow**: audience ≥ HLS_AUDIENCE_THRESHOLD (env, def 15)
+  → new viewers get `{mode:"hls"}` from /api/livekit and watch the broadcast
+  surface (~7-10s behind; 2s segments); stage roles always WebRTC; raise-hand
+  promotion reconnects WebRTC. Reactions from HLS viewers render only
+  locally (data-channel) — known follow-up.
+- **Call layouts**: Stage/Gallery/Multi-speaker segmented control in the
+  room control bar (`community` of `.ag-layout-*`, CallLayouts.tsx), per-viewer,
+  `g` cycles. Layouts live in the stage's slot (speaker view settled);
+  audience view is always the open bowl + dock. Beware the historical trap:
+  the first cut disabled the vantage toggle via BOTH a prop and a CSS rule
+  (`.ag-root--flat .ag-switch-view`) — both are removed now.
+- **Search**: tsvector+trigram, search_all/search_suggest; navbar panel
+  drops from the search box (suggestions + instant results + tabs), Enter
+  pins to /search. Navbar pill is flat (no liquid glass), truly centered.
+- **Notifications v2**: replies/comments/upvote milestones/reposts/
+  followed_scheduled/followed_live/replay_ready/discussion_opened via DB
+  triggers with 10-min coalescing; per-type prefs (Settings) + bell rewrite
+  + /notifications page; minute cron pushes via /api/cron/notifications.
+- **Email**: per-type email prefs (defaults: social-important on),
+  batched sends (1/user/10min), weekly digest (Sat 15:00 UTC cron →
+  /api/cron/digest), HMAC one-click unsubscribe (/api/email/unsubscribe).
+  Tested live 08-23 (Jordan/Alan/Josh received).
+- **DMs**: two-pane dock, conversation search, images/GIF/emoji
+  (direct_messages.image_url), Photo/GIF thread previews.
+- **Room lifecycle**: pagehide beacon (/api/rooms/leave), LiveKit webhook
+  (/api/webhook/livekit — **must be configured in LiveKit Cloud dashboard,
+  NOT DONE YET**), host 90s grace (host_left_at), minute cron ends hostless/
+  abandoned live rooms. Zombie-room cleanup habit obsolete.
+- **Profiles**: text normalization + 52-term blocklist (client+server),
+  banner placeholder (owner-only, hover pencil/?), one-row actions
+  (Following·Message·⋯ with mod Verify inside ⋯), identity chips + real
+  links on every row, empty states with CTAs, reminder bells on Scheduled.
+- **Create room**: trimmed to real features (topic/category/language/
+  schedule/thumbnail/private). Stoa variants, curricula, time limits,
+  PRO/CON pickers removed (10/10 seats passed under the hood).
+- **Mic permission**: pre-prompt card (Allow/Not now 7-day snooze) on home
+  + inline in the room; blocked state shows browser-specific recovery.
+  Wake word listens for on-stage members on /agora (was /rooms-only) and
+  tolerates mishearings (Aurora/Angora/'a gora').
+
+**Watchouts discovered this session**
+- The homepage CSS reset still eats Tailwind spacing in portaled components
+  (bit NotificationsBell; fixed with inline styles — prefer inline spacing
+  in anything portaled into the MVP shell).
+- backdrop-filter on cards creates stacking contexts (bit the community
+  composer dropdowns and the profile banner/avatar) — lift z-index or
+  position consciously.
+- PostgREST schema cache may lag DDL — `notify pgrst, 'reload schema'`
+  fixed DM sends after adding image_url.
+- The embedded browser pane reports document.hidden/vw=0 to JS; trust
+  screenshots + real clicks, not getBoundingClientRect, when driving it.
+
+**Still open (pre-launch list, in order)**: signed-in QA pass (3 founders,
+1 hour each); mobile pass (<768px untested); moderation queue + blocklist on
+posts/comments/DMs; rate limits on follows/DMs; ToS+privacy pages & data-
+platform consent default; LiveKit webhook config (above); GoTrue password
+hook; secrets rotation (R2/Twitch/NewsData); CRON_SECRET + PostHog; OG tags
+for /posts //agora replays; beta-gate exit plan; content seeding; LiveKit
+spend alert (default recording + overflow both bill egress minutes ~$1/hr/room).
 
 ## What this is
 
