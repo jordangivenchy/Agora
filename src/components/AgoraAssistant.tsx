@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { useDebateTranscription } from "@/lib/useDebateTranscription";
 import { extractWake } from "@/lib/wakeWord";
 import { speak as speakVoice, stopSpeaking, subscribeSpeaking, warmVoice } from "@/lib/voice/tts";
+import MicPrompt from "@/components/mic/MicPrompt";
 
 interface Props {
   motion?: string;
@@ -415,6 +416,10 @@ export default function AgoraAssistant({
           )}
 
           <div ref={logRef} className="flex-1 overflow-y-auto flex flex-col gap-2 mb-2" style={{ minHeight: 60 }}>
+            {/* Mic pre-prompt / recovery, right where hands-free matters. */}
+            {(liveListening || hotword || stageListen.unavailable) && (
+              <MicPrompt placement="inline" reason="For hands-free “Hey Agora” and live fact-checks." />
+            )}
             {log.length === 0 && (
               <p className="text-[11px] m-0" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
                 Ask for a fact-check, a statistic, or background on the motion — or just say{" "}
