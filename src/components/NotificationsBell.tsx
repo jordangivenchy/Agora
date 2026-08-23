@@ -284,11 +284,11 @@ export default function NotificationsBell({ container }: Props) {
             zIndex: 300,
           }}
         >
-          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center justify-between" style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
             <p className="m-0 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
               Notifications
               {unread > 0 && (
-                <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(226,185,107,0.18)", color: "#f4d47c", fontWeight: 700 }}>
+                <span className="text-[10px] rounded-full" style={{ marginLeft: 8, padding: "2px 7px", background: "rgba(226,185,107,0.18)", color: "#f4d47c", fontWeight: 700 }}>
                   {unread} new
                 </span>
               )}
@@ -303,7 +303,7 @@ export default function NotificationsBell({ container }: Props) {
             </button>
           </div>
           {items.length === 0 && (
-            <p className="m-0 px-4 py-6 text-[12px] text-center" style={{ color: "#6b6b74" }}>
+            <p className="text-[12px] text-center" style={{ margin: 0, padding: "24px 16px", color: "#6b6b74" }}>
               Nothing yet — follow speakers and set reminders to hear when things go live.
             </p>
           )}
@@ -315,8 +315,10 @@ export default function NotificationsBell({ container }: Props) {
               <button
                 key={n.id}
                 onClick={() => openItem(n)}
-                className="w-full text-left px-4 py-3 flex items-start gap-2.5"
+                className="w-full text-left flex items-start"
                 style={{
+                  padding: "10px 14px",
+                  gap: 10,
                   background: unreadRow ? "rgba(226,185,107,0.05)" : "transparent",
                   border: "none",
                   borderBottom: "1px solid rgba(255,255,255,0.05)",
@@ -339,12 +341,12 @@ export default function NotificationsBell({ container }: Props) {
                     ? `${actorLabel(n)} started following you`
                     : notifText(n)}
                   {detail && (
-                    <span className="block mt-0.5 text-[11.5px] truncate" style={{ color: "#8b8b94" }}>
+                    <span className="block text-[11.5px] truncate" style={{ marginTop: 2, color: "#8b8b94" }}>
                       “{detail}”
                     </span>
                   )}
                   {n.type === "new_follower" && n.actor_id && !followedBack.has(n.actor_id) && (
-                    <span className="flex gap-2 mt-1.5">
+                    <span className="flex" style={{ gap: 8, marginTop: 6 }}>
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
@@ -369,7 +371,7 @@ export default function NotificationsBell({ container }: Props) {
                     </span>
                   )}
                 </span>
-                <span className="text-[10.5px] shrink-0 flex items-center gap-1.5" style={{ color: "#6b6b74", marginTop: 2 }}>
+                <span className="text-[10.5px] shrink-0 flex items-center" style={{ gap: 6, color: "#6b6b74", marginTop: 2 }}>
                   {timeAgo(n.created_at)}
                   {unreadRow && <span style={{ width: 6, height: 6, borderRadius: 3, background: "#f4d47c" }} />}
                 </span>
@@ -378,8 +380,8 @@ export default function NotificationsBell({ container }: Props) {
           })}
           <a
             href="/notifications"
-            className="block w-full text-center px-4 py-2.5 text-[11.5px] no-underline"
-            style={{ color: "#9cc4f0", borderTop: "1px solid rgba(255,255,255,0.06)" }}
+            className="block w-full text-center text-[11.5px] no-underline"
+            style={{ padding: "10px 16px", color: "#9cc4f0", borderTop: "1px solid rgba(255,255,255,0.06)" }}
           >
             See all notifications
           </a>
@@ -387,8 +389,10 @@ export default function NotificationsBell({ container }: Props) {
             <button
               onClick={togglePush}
               disabled={pushState === "busy"}
-              className="w-full text-left px-4 py-2.5 text-[11.5px] flex items-center gap-2 cursor-pointer"
+              className="w-full text-left text-[11.5px] flex items-center cursor-pointer"
               style={{
+                padding: "10px 16px",
+                gap: 8,
                 background: "transparent",
                 border: "none",
                 borderTop: "1px solid rgba(255,255,255,0.06)",
