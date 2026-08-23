@@ -2,7 +2,7 @@
    next.config rewrites every path here to "/"; page.tsx reads the browser
    pathname to pick the section, and pushes these paths as the user moves. */
 
-export type HomeSection = "home" | "feed" | "explore" | "trending" | "communities" | "news" | "people" | "search";
+export type HomeSection = "home" | "feed" | "explore" | "trending" | "communities" | "news" | "search";
 
 export type HomeRoute =
   | { kind: "section"; id: HomeSection }
@@ -35,11 +35,11 @@ export const pathFor = {
 
 /* Rewrites are declared in next.config.ts; keep the two lists in step. */
 export const REWRITTEN_SOURCES = [
-  "/feed", "/people", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
+  "/feed", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
   "/posts/:id", "/messages", "/messages/:username", "/search",
 ];
 
-const SECTIONS: HomeSection[] = ["home", "feed", "explore", "trending", "communities", "news", "people", "search"];
+const SECTIONS: HomeSection[] = ["home", "feed", "explore", "trending", "communities", "news", "search"];
 
 export function isHomeSection(s: string): s is HomeSection {
   return (SECTIONS as string[]).includes(s);
@@ -107,7 +107,6 @@ export function sectionTitle(id: HomeSection): string {
   const names: Record<HomeSection, string> = {
     home: "AgoraSphere",
     feed: "Your feed · AgoraSphere",
-    people: "People · AgoraSphere",
     explore: "Explore · AgoraSphere",
     trending: "Trending · AgoraSphere",
     communities: "Communities · AgoraSphere",

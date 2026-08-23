@@ -3,7 +3,7 @@
 /* "People to follow" — a row (or grid) of suggested accounts from
    get_people_suggestions, each with a reason line and a Follow button
    (follow_user / unfollow_user, the same RPCs ProfileView uses).
-   Shared by the home feed, the /people page and the welcome flow. */
+   Shared by the home feed, search results and the welcome flow. */
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";

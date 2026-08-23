@@ -18,7 +18,6 @@ import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
-import PeoplePage from "@/components/people/PeoplePage";
 import SearchPage from "@/components/search/SearchPage";
 import ExploreGrid from "@/components/ExploreGrid";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
@@ -57,8 +56,8 @@ const FORMAT_LABEL: Record<string, string> = {
   panel: "Panel",
 };
 
-type PanelTab = "feed" | "trending" | "communities" | "news" | "people" | "search";
-const PANEL_TABS: readonly string[] = ["feed", "trending", "communities", "news", "people", "search"];
+type PanelTab = "feed" | "trending" | "communities" | "news" | "search";
+const PANEL_TABS: readonly string[] = ["feed", "trending", "communities", "news", "search"];
 const isPanelTab = (s: string): s is PanelTab => PANEL_TABS.includes(s);
 const HOME_CHOSEN_KEY = "agora:home-chosen";
 
@@ -588,7 +587,6 @@ export default function Home() {
       <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />
-      <PeoplePage open={activeTab === "people"} onClose={() => setActiveTab(null)} />
       <SearchPage open={activeTab === "search"} initialQuery={searchQuery} onClose={() => setActiveTab(null)} />
       <HomeSidebar activeId={activeTab === "search" ? null : (activeTab ?? mvpPage)} onNavigate={onSidebarNavigate} />
       <TopicsHome

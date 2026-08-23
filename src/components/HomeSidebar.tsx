@@ -20,7 +20,7 @@ import FriendsSection from "@/components/friends/FriendsSection";
 import { Icon } from "@/components/icons";
 import "./home-sidebar.css";
 
-export type HomeNavId = "home" | "feed" | "trending" | "explore" | "communities" | "news" | "people";
+export type HomeNavId = "home" | "feed" | "trending" | "explore" | "communities" | "news";
 
 interface Props {
   activeId: HomeNavId | null;
@@ -105,18 +105,6 @@ const NAV: NavItem[] = [
     ],
     icon: (
       <Icon name="message-square" size={16} />
-    ),
-  },
-  {
-    id: "people",
-    label: "People",
-    sparkles: [
-      ["0.6s", "4.3s", "22%", "50%", "-5px"],
-      ["1.4s", "3.9s", "66%", "30%", "6px"],
-      ["2.2s", "4.6s", "84%", "72%", "-4px"],
-    ],
-    icon: (
-      <Icon name="users" size={16} />
     ),
   },
   {
