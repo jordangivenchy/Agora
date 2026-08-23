@@ -963,7 +963,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         : "Raise your hand to request to speak";
 
   return (
-    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${layout !== "stage" && !broadcast ? " ag-root--flat" : ""}`}>
+    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}`}>
       <div className="ag-main">
         {/* ── Top bar ── */}
         {broadcast && (

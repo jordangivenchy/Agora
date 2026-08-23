@@ -3041,12 +3041,6 @@
   color: #fff;
 }
 
-/* The 3D vantage toggle applies to Stage layout only. */
-.ag-root--flat .ag-switch-view {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
 /* Camera-off layout tile: avatar centered on the tile plate. */
 .ag-lt-video--off {
   display: flex;
