@@ -890,7 +890,7 @@ export default function ProfileView({
             </div>
             {!isSelf && Array.isArray(profile.mutual_names) && profile.mutual_names.length > 0 && (
               <p className="m-0 mt-2" style={{ color: "#8b8b94", fontSize: 12.5 }}>
-                Followed by{" "}
+                Also followed by{" "}
                 {profile.mutual_names.map((name, i, arr) => (
                   <span key={name}>
                     <a
@@ -901,8 +901,7 @@ export default function ProfileView({
                     </a>
                     {i < arr.length - 2 ? ", " : i === arr.length - 2 ? " and " : ""}
                   </span>
-                ))}{" "}
-                — people you follow
+                ))}
               </p>
             )}
           </div>
@@ -987,9 +986,10 @@ export default function ProfileView({
                 <button
                   onClick={toggleFollow}
                   disabled={busy}
-                  className="cursor-pointer flex-1"
+                  className="cursor-pointer"
                   style={{
-                    padding: "9px 22px",
+                    height: 38,
+                    padding: "0 22px",
                     borderRadius: 999,
                     border: profile.is_following ? "1px solid rgba(255,255,255,0.18)" : "none",
                     background: profile.is_following ? "transparent" : "#3b6cf6",
@@ -1001,6 +1001,29 @@ export default function ProfileView({
                 >
                   {profile.is_following ? "Following" : profile.is_friend ? "Add friend back" : "Add friend"}
                 </button>
+                {profile.is_friend && (
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("agora:dm", {
+                        detail: { userId: profile.id, username: profile.username, avatarUrl: profile.avatar_url ?? null },
+                      }))
+                    }
+                    className="cursor-pointer inline-flex items-center gap-1.5"
+                    style={{
+                      height: 38,
+                      padding: "0 18px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      background: "rgba(255,255,255,0.05)",
+                      color: "#c9c9d2",
+                      fontFamily: "inherit",
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Icon name="message-circle" size={13} /> Message
+                  </button>
+                )}
                 {viewerId && (
                   <button
                     onClick={() => setMenuOpen((o) => !o)}
@@ -1008,8 +1031,8 @@ export default function ProfileView({
                     aria-expanded={menuOpen}
                     className="cursor-pointer"
                     style={{
-                      width: 36,
-                      height: 36,
+                      width: 38,
+                      height: 38,
                       borderRadius: 999,
                       border: "1px solid rgba(255,255,255,0.14)",
                       background: menuOpen ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
@@ -1084,28 +1107,6 @@ export default function ProfileView({
                 <p className="m-0 text-center" style={{ color: "#8b8b94", fontSize: 11.5 }}>
                   {blockNote}
                 </p>
-              )}
-              {profile.is_friend && (
-                <button
-                  onClick={() =>
-                    window.dispatchEvent(new CustomEvent("agora:dm", {
-                      detail: { userId: profile.id, username: profile.username, avatarUrl: profile.avatar_url ?? null },
-                    }))
-                  }
-                  className="cursor-pointer"
-                  style={{
-                    padding: "9px 22px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "#c9c9d2",
-                    fontFamily: "inherit",
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                  }}
-                >
-                  <Icon name="message-circle" size={13} /> Message
-                </button>
               )}
               </div>
             )}
