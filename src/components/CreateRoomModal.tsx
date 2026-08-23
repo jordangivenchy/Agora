@@ -5,7 +5,6 @@ import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
-import type { Stance } from "@/types/database";
 import { useRouter } from "next/navigation";
 import { roomPath } from "@/lib/urls";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
@@ -52,7 +51,6 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   const [motion, setMotion] = useState("");
   const [topicKey, setTopicKey] = useState("politics-law");
   const [language, setLanguage] = useState("en");
-  const [stance, setStance] = useState<Stance>("PRO");
 
   // Prefill (News → "Start debate"; Topics → "Create a lobby" passes only
   // the field of study, no motion)
@@ -66,8 +64,6 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   }, [open, initialMotion, initialTopic]);
 
   // Team sizes
-  const [proSize, setProSize] = useState(1);
-  const [conSize, setConSize] = useState(1);
 
   // Private rooms
   const [isPrivate, setIsPrivate] = useState(false);
@@ -99,9 +95,6 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       setMotion("");
       setTopicKey("politics-law");
       setLanguage("en");
-      setStance("PRO");
-      setProSize(1);
-      setConSize(1);
       setIsPrivate(false);
       setAllowSpectators(false);
       setScheduleEnabled(false);
@@ -141,26 +134,12 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     );
   }
 
-  function adjustSize(side: "pro" | "con", delta: number) {
-    if (side === "pro") {
-      const next = Math.max(1, Math.min(19, proSize + delta));
-      if (next + conSize <= 20) setProSize(next);
-    } else {
-      const next = Math.max(1, Math.min(19, conSize + delta));
-      if (next + proSize <= 20) setConSize(next);
-    }
-  }
 
   async function handleCreate() {
     if (!motion.trim()) {
       setError("Please enter a motion or topic");
       return;
     }
-    if (proSize + conSize > 20) {
-      setError("Total speakers can't exceed 20");
-      return;
-    }
-
     let scheduledIso: string | null = null;
     if (scheduleEnabled) {
       if (!scheduleAt) {
@@ -196,11 +175,11 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         p_motion:             motion.trim(),
         p_topic_key:          topicKey,
         p_language:           language,
-        p_stance:             stance,
+        p_stance:             "PRO",
         p_is_private:         isPrivate,
         p_allow_spectators:   isPrivate ? allowSpectators : true,
-        p_pro_size:           proSize,
-        p_con_size:           conSize,
+        p_pro_size:           10,
+        p_con_size:           10,
         p_time_limit_seconds: null,
         p_scheduled_start:    scheduledIso,
         p_community:          communityId ?? null,
@@ -554,63 +533,6 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               </select>
             </FieldGroup>
 
-            {/* Position */}
-            <FieldGroup label="Your Position">
-              <div className="flex gap-2">
-                {(["PRO", "CON"] as Stance[]).map((s) => (
-                  <PillSelect
-                    key={s}
-                    label={s}
-                    active={stance === s}
-                    onClick={() => setStance(s)}
-                    activeColor={s === "PRO" ? "var(--pro-color)" : "var(--con-color)"}
-                  />
-                ))}
-              </div>
-            </FieldGroup>
-
-            {/* Team sizes */}
-            <FieldGroup label={`Debaters — ${proSize}v${conSize} · ${proSize + conSize} total`}>
-              <div
-                className="flex items-stretch gap-3"
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  borderRadius: "14px",
-                  padding: "10px 12px",
-                }}
-              >
-                <SideStepper
-                  label="PRO"
-                  color="var(--pro-color)"
-                  value={proSize}
-                  onDec={() => adjustSize("pro", -1)}
-                  onInc={() => adjustSize("pro", +1)}
-                  incDisabled={proSize + conSize >= 20 || proSize >= 19}
-                />
-                <div
-                  className="flex items-center justify-center"
-                  style={{
-                    color: "rgba(255,255,255,0.25)",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    letterSpacing: "0.14em",
-                  }}
-                >
-                  VS
-                </div>
-                <SideStepper
-                  label="CON"
-                  color="var(--con-color)"
-                  value={conSize}
-                  onDec={() => adjustSize("con", -1)}
-                  onInc={() => adjustSize("con", +1)}
-                  incDisabled={proSize + conSize >= 20 || conSize >= 19}
-                />
-              </div>
-            </FieldGroup>
-
             {/* Schedule */}
             <div
               style={{
@@ -940,63 +862,6 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
         />
       </div>
     </label>
-  );
-}
-
-function SideStepper({
-  label,
-  color,
-  value,
-  onDec,
-  onInc,
-  incDisabled,
-}: {
-  label: string;
-  color: string;
-  value: number;
-  onDec: () => void;
-  onInc: () => void;
-  incDisabled?: boolean;
-}) {
-  return (
-    <div
-      className="flex-1 flex flex-col items-center justify-center"
-      style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        borderRadius: "10px",
-        padding: "8px 10px",
-      }}
-    >
-      <span
-        style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: "10px",
-          fontWeight: 700,
-          letterSpacing: "0.14em",
-          color,
-          marginBottom: "4px",
-        }}
-      >
-        {label}
-      </span>
-      <div className="flex items-center gap-2">
-        <StepperBtn onClick={onDec} disabled={value <= 1}>−</StepperBtn>
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: "20px",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-            width: "28px",
-            textAlign: "center",
-          }}
-        >
-          {value}
-        </span>
-        <StepperBtn onClick={onInc} disabled={!!incDisabled}>+</StepperBtn>
-      </div>
-    </div>
   );
 }
 
