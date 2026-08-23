@@ -3156,7 +3156,8 @@ a.carousel-watch-btn { text-decoration: none; }
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  /* +2px: optical center — the pill's glow hangs below it. */
+  transform: translate(-50%, calc(-50% + 2px));
   isolation: isolate;
   overflow: visible !important;
 }
