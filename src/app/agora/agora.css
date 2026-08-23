@@ -3052,3 +3052,12 @@
   justify-content: center;
   background: radial-gradient(80% 90% at 50% 30%, rgba(124,110,247,0.10), transparent 70%), #0a0a10;
 }
+
+/* The flat-layout region is click-transparent: only its tiles and
+   controls take the pointer, so scene furniture behind it stays live. */
+.ag-layout-flat, .ag-layout-flat .ag-lgal, .ag-layout-flat .ag-lmulti { pointer-events: none; }
+.ag-layout-flat .ag-lt,
+.ag-layout-flat .ag-lgal-pager,
+.ag-layout-flat .ag-lgal-arrow,
+.ag-layout-flat .ag-lgal-dot,
+.ag-layout-flat .ag-lmulti-strip { pointer-events: auto; }
