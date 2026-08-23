@@ -1,47 +1,35 @@
 "use client";
 
-/* People + community-post results inside the MVP discovery overlay
-   (portal into #discoverySocial, above the engine-owned room-card grid —
-   rooms stay covered by those cards). The engine broadcasts the query via
-   the 'agora:discovery-search' event from _dsFilterResults in mvp-home.js,
-   which fires on open, on typing, and on filter-pill clicks. */
+/* Navbar search suggestions inside the MVP discovery overlay (portal into
+   #discoverySocial, above the engine-owned room-card grid). The engine
+   broadcasts the query via the 'agora:discovery-search' event from
+   _dsFilterResults in mvp-home.js, which fires on open, on typing, and
+   on filter-pill clicks.
 
-import { useEffect, useRef, useState } from "react";
+   Rows come from search_suggest (migration 20260853): people,
+   communities and live/scheduled debates by prefix. Until that RPC
+   exists the component falls back to the older direct queries. The
+   last row is always "See all results for ⟨q⟩ →", and Enter in either
+   search box (navbar #searchInput or overlay #discoveryInput) opens
+   /search?q=… through the shell router (pushState + popstate). ↑/↓
+   move the highlight; Enter on a highlighted row opens it. */
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
-import { displayName } from "@/lib/names";
+import { pathFor } from "@/lib/routes";
 import { userPath, roomPath } from "@/lib/urls";
+import { Icon } from "./icons";
 import UserAvatar from "./UserAvatar";
 
-type RoomRow = {
+type SuggestKind = "person" | "community" | "debate";
+type Suggestion = {
+  kind: SuggestKind;
   id: string;
-  motion: string;
-  status: string;
-  format: string;
-  scheduled_start: string | null;
-  thumbnail_url: string | null;
-  host: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  } | null;
-};
-
-type PersonRow = {
-  id: string;
-  username: string;
-  display_name: string | null;
+  label: string;
+  sublabel: string | null;
   avatar_url: string | null;
-};
-
-type PostRow = {
-  id: string;
-  title: string;
-  body: string | null;
-  created_at: string;
-  community: { name: string } | null;
-  author: { username: string; display_name: string | null } | null;
+  href_hint: string | null;
 };
 
 const sectionLabel: React.CSSProperties = {
@@ -53,22 +41,34 @@ const sectionLabel: React.CSSProperties = {
   margin: "0 0 8px",
 };
 
-const rowStyle: React.CSSProperties = {
-  background: "rgba(11,11,13,0.95)",
-  border: "0.5px solid #2e2e38",
+const rowStyle = (active: boolean): React.CSSProperties => ({
+  background: active ? "rgba(255,255,255,0.08)" : "rgba(11,11,13,0.95)",
+  border: active ? "0.5px solid #4a4a54" : "0.5px solid #2e2e38",
   borderRadius: 10,
   padding: "8px 12px",
   cursor: "pointer",
-};
+});
+
+const KIND_LABEL: Record<SuggestKind, string> = { person: "Person", community: "Community", debate: "Debate" };
+
+/** Navigate inside the homepage shell (page.tsx re-parses on popstate). */
+function shellNavigate(path: string) {
+  window.history.pushState(null, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function closeOverlay() {
+  document.getElementById("closeDiscovery")?.click();
+}
 
 export default function DiscoverySearch({ container }: { container: HTMLElement | null }) {
   const [supabase] = useState(() => createClient());
   const [query, setQuery] = useState("");
-  const [rooms, setRooms] = useState<RoomRow[]>([]);
-  const [people, setPeople] = useState<PersonRow[]>([]);
-  const [posts, setPosts] = useState<PostRow[]>([]);
+  const [rows, setRows] = useState<Suggestion[]>([]);
+  const [active, setActive] = useState(-1);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seq = useRef(0);
+  const legacy = useRef(false);
 
   useEffect(() => {
     const onSearch = (e: Event) =>
@@ -77,205 +77,160 @@ export default function DiscoverySearch({ container }: { container: HTMLElement 
     return () => document.removeEventListener("agora:discovery-search", onSearch);
   }, []);
 
+  /* Pre-migration fallback: the direct queries this component used to run. */
+  const legacyFetch = useCallback(async (q: string): Promise<Suggestion[]> => {
+    const cleaned = q.replace(/[%_,()]/g, "");
+    if (!cleaned) return [];
+    const term = `%${cleaned}%`;
+    const [peopleRes, commRes, roomsRes] = await Promise.all([
+      supabase.from("users").select("id, username, display_name, avatar_url")
+        .or(`username.ilike.${cleaned}%,display_name.ilike.${cleaned}%`).limit(4),
+      supabase.from("communities").select("id, name, avatar_url").ilike("name", term).limit(3),
+      supabase.from("debate_rooms").select("id, motion, status, thumbnail_url")
+        .in("status", ["live", "created", "scheduled"]).ilike("motion", term)
+        .order("created_at", { ascending: false }).limit(4),
+    ]);
+    const out: Suggestion[] = [];
+    for (const u of (peopleRes.data ?? []) as { id: string; username: string; display_name: string | null; avatar_url: string | null }[]) {
+      out.push({ kind: "person", id: u.id, label: u.display_name?.trim() || `@${u.username}`, sublabel: `@${u.username}`, avatar_url: u.avatar_url, href_hint: userPath(u.username) });
+    }
+    for (const c of (commRes.data ?? []) as { id: string; name: string; avatar_url: string | null }[]) {
+      out.push({ kind: "community", id: c.id, label: c.name, sublabel: null, avatar_url: c.avatar_url, href_hint: pathFor.community(c.id) });
+    }
+    for (const r of (roomsRes.data ?? []) as { id: string; motion: string; status: string; thumbnail_url: string | null }[]) {
+      out.push({ kind: "debate", id: r.id, label: r.motion, sublabel: r.status === "live" ? "Live now" : r.status === "scheduled" ? "Scheduled" : "Open", avatar_url: r.thumbnail_url, href_hint: roomPath(r) });
+    }
+    return out;
+  }, [supabase]);
+
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    if (query.length < 2) {
-      setRooms([]);
-      setPeople([]);
-      setPosts([]);
-      return;
-    }
     const mySeq = ++seq.current;
     timer.current = setTimeout(async () => {
-      /* PostgREST .or() parses commas/parens; ilike wildcards would let a
-         user match everything — strip them all from the term. */
-      const cleaned = query.replace(/[%_,()]/g, "");
-      if (!cleaned) return;
-      const term = `%${cleaned}%`;
-      const [roomsRes, peopleRes, postsRes] = await Promise.all([
-        supabase
-          .from("debate_rooms")
-          .select("id, motion, status, format, scheduled_start, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url)")
-          .in("status", ["live", "created", "scheduled"])
-          .ilike("motion", term)
-          .order("created_at", { ascending: false })
-          .limit(8),
-        supabase
-          .from("users")
-          .select("id, username, display_name, avatar_url")
-          .or(`username.ilike.${term},display_name.ilike.${term}`)
-          .limit(8),
-        supabase
-          .from("community_posts")
-          .select("id, title, body, created_at, community:communities(name), author:users!author_id(username, display_name)")
-          .or(`title.ilike.${term},body.ilike.${term}`)
-          .order("created_at", { ascending: false })
-          .limit(8),
-      ]);
+      setActive(-1);
+      if (query.length < 2) { setRows([]); return; }
+      let list: Suggestion[] = [];
+      if (!legacy.current) {
+        const { data, error } = await supabase.rpc("search_suggest", { p_q: query, p_limit: 10 });
+        if (error) {
+          legacy.current = /does not exist|not find|schema cache/i.test(error.message ?? "");
+          list = legacy.current ? await legacyFetch(query) : [];
+        } else {
+          list = (data ?? []) as Suggestion[];
+        }
+      } else {
+        list = await legacyFetch(query);
+      }
       if (seq.current !== mySeq) return; // a newer query superseded this one
-      setRooms((roomsRes.data ?? []) as unknown as RoomRow[]);
-      setPeople((peopleRes.data ?? []) as PersonRow[]);
-      setPosts((postsRes.data ?? []) as unknown as PostRow[]);
-    }, 220);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
+      setRows(list);
+    }, query.length < 2 ? 0 : 200);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [query, supabase, legacyFetch]);
+
+  const goSearch = useCallback((q: string) => {
+    const t = q.trim();
+    if (!t) return;
+    closeOverlay();
+    shellNavigate(pathFor.search(t));
+  }, []);
+
+  const openRow = useCallback((s: Suggestion) => {
+    if (s.kind === "person") { window.location.href = s.href_hint || userPath(s.label.replace(/^@/, "")); return; }
+    if (s.kind === "community") { closeOverlay(); shellNavigate(pathFor.community(s.id)); return; }
+    window.location.href = roomPath({ id: s.id, motion: s.label });
+  }, []);
+
+  /* Keyboard: Enter / ↑ / ↓ in either search box. Capture phase so the
+     engine's own Escape handler and focus logic aren't disturbed. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const id = el?.id;
+      if (id !== "searchInput" && id !== "discoveryInput") return;
+      const q = (el as HTMLInputElement).value.trim();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (active >= 0 && active < rows.length && q === query) openRow(rows[active]);
+        else goSearch(q);
+        return;
+      }
+      if (rows.length === 0 || q.length < 2) return;
+      // The "See all results" row sits at index rows.length.
+      if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(rows.length, a + 1)); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(-1, a - 1)); }
+      else if (active >= 0 && e.key.length === 1) setActive(-1);
     };
-  }, [query, supabase]);
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [active, rows, query, goSearch, openRow]);
 
   if (!container) return null;
-  if (query.length < 2 || (rooms.length === 0 && people.length === 0 && posts.length === 0)) {
-    return createPortal(null, container);
-  }
+  if (query.length < 2) return createPortal(null, container);
 
-  const openPost = (p: PostRow) => {
-    document.getElementById("closeDiscovery")?.click();
-    (document.querySelector('[data-nav-id="communities"]') as HTMLElement | null)?.click();
-    setTimeout(() => {
-      document.dispatchEvent(new CustomEvent("agora:open-post", { detail: { postId: p.id } }));
-    }, 150);
-  };
-
-  const openRoom = (r: RoomRow) => {
-    window.location.href = roomPath(r);
-  };
-
-  const roomTag = (r: RoomRow) => {
-    if (r.status === "live") {
-      return <span style={{ color: "#e05a5a", fontWeight: 700 }}>LIVE</span>;
+  const avatar = (s: Suggestion) => {
+    if (s.kind === "person") {
+      return <UserAvatar size={30} username={s.sublabel?.replace(/^@/, "") ?? "?"} avatarUrl={s.avatar_url} seed={s.id} />;
     }
-    if (r.status === "scheduled" && r.scheduled_start) {
-      return (
-        <span style={{ color: "#a78bfa", fontWeight: 600 }}>
-          {new Date(r.scheduled_start).toLocaleDateString([], { month: "short", day: "numeric" })}
-        </span>
-      );
+    if (s.avatar_url) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={s.avatar_url} alt="" width={30} height={30} style={{ width: 30, height: 30, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />;
     }
-    return <span style={{ color: "#8b8b94" }}>Open</span>;
+    return (
+      <span
+        className="inline-flex items-center justify-center shrink-0"
+        style={{ width: 30, height: 30, borderRadius: 8, background: s.kind === "community" ? "#4a9eff" : "rgba(255,255,255,0.08)", color: "#fff", fontSize: 12, fontWeight: 700 }}
+      >
+        {s.kind === "community" ? s.label.charAt(0).toUpperCase() : <Icon name="monitor-play" size={14} />}
+      </span>
+    );
   };
+
+  const seeAll = active === rows.length;
 
   return createPortal(
-    <div style={{ margin: "4px 0 18px", display: "flex", flexDirection: "column", gap: 16 }}>
-      {rooms.length > 0 && (
-        <div>
-          <p style={sectionLabel}>ROOMS</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {rooms.map((r) => (
-              <div
-                key={r.id}
-                role="link"
-                tabIndex={0}
-                onClick={() => openRoom(r)}
-                onKeyDown={(e) => { if (e.key === "Enter") openRoom(r); }}
-                className="flex items-center gap-2.5"
-                style={rowStyle}
-              >
-                {r.thumbnail_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.thumbnail_url}
-                    alt=""
-                    width={34}
-                    height={34}
-                    style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
-                  />
-                ) : (
-                  <UserAvatar
-                    size={34}
-                    radius={8}
-                    username={r.host?.username ?? "?"}
-                    avatarUrl={r.host?.avatar_url ?? null}
-                    seed={r.host?.id ?? r.id}
-                  />
-                )}
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <p
-                    className="m-0 text-[12.5px]"
-                    style={{
-                      color: "#f5f5f0",
-                      fontWeight: 600,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 1,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {r.motion}
-                  </p>
-                  <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
-                    {roomTag(r)}
-                    {r.host ? <> · by {displayName(r.host)}</> : null}
-                  </p>
-                </div>
-              </div>
-            ))}
+    <div style={{ margin: "4px 0 18px", display: "flex", flexDirection: "column", gap: 8 }} role="listbox" aria-label="Search suggestions">
+      {rows.length > 0 && <p style={sectionLabel}>SUGGESTIONS</p>}
+      {rows.map((s, i) => (
+        <div
+          key={`${s.kind}-${s.id}`}
+          role="option"
+          aria-selected={active === i}
+          tabIndex={0}
+          onMouseEnter={() => setActive(i)}
+          onClick={() => openRow(s)}
+          onKeyDown={(e) => { if (e.key === "Enter") openRow(s); }}
+          className="flex items-center gap-2.5"
+          style={rowStyle(active === i)}
+        >
+          {avatar(s)}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p className="m-0 text-[12.5px] truncate" style={{ color: "#f5f5f0", fontWeight: 600 }}>{s.label}</p>
+            <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>
+              {s.kind === "debate" && s.sublabel === "Live now"
+                ? <span style={{ color: "#e05a5a", fontWeight: 700 }}>LIVE</span>
+                : s.sublabel}
+              {s.sublabel ? " · " : ""}{KIND_LABEL[s.kind]}
+            </p>
           </div>
         </div>
-      )}
-      {people.length > 0 && (
-        <div>
-          <p style={sectionLabel}>PEOPLE</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {people.map((u) => (
-              <div
-                key={u.id}
-                role="link"
-                tabIndex={0}
-                onClick={() => { window.location.href = userPath(u.username); }}
-                onKeyDown={(e) => { if (e.key === "Enter") window.location.href = userPath(u.username); }}
-                className="flex items-center gap-2.5"
-                style={rowStyle}
-              >
-                <UserAvatar size={28} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
-                <div>
-                  <p className="m-0 text-[12.5px]" style={{ color: "#f5f5f0", fontWeight: 600 }}>
-                    {displayName(u)}
-                  </p>
-                  <p className="m-0 text-[10.5px]" style={{ color: "#8b8b94" }}>@{u.username}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {posts.length > 0 && (
-        <div>
-          <p style={sectionLabel}>COMMUNITY POSTS</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {posts.map((p) => (
-              <div
-                key={p.id}
-                role="link"
-                tabIndex={0}
-                onClick={() => openPost(p)}
-                onKeyDown={(e) => { if (e.key === "Enter") openPost(p); }}
-                style={rowStyle}
-              >
-                <p className="m-0 text-[13px]" style={{ color: "#f5f5f0", fontWeight: 600 }}>
-                  {p.title}
-                </p>
-                {p.body && (
-                  <p
-                    className="m-0 mt-0.5 text-[11.5px]"
-                    style={{
-                      color: "#8b8b94",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {p.body}
-                  </p>
-                )}
-                <p className="m-0 mt-1 text-[10.5px]" style={{ color: "#6b6b74" }}>
-                  {p.community?.name ? `${p.community.name} · ` : ""}
-                  {p.author ? `by ${displayName(p.author)}` : ""}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      ))}
+      <div
+        role="option"
+        aria-selected={seeAll}
+        tabIndex={0}
+        onMouseEnter={() => setActive(rows.length)}
+        onClick={() => goSearch(query)}
+        onKeyDown={(e) => { if (e.key === "Enter") goSearch(query); }}
+        className="flex items-center gap-2.5"
+        style={rowStyle(seeAll)}
+      >
+        <span className="inline-flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(74,158,255,0.18)", color: "#8fc1ff" }}>
+          <Icon name="search" size={14} />
+        </span>
+        <p className="m-0 text-[12.5px]" style={{ color: "#f5f5f0", fontWeight: 600 }}>
+          See all results for &ldquo;{query}&rdquo; →
+        </p>
+      </div>
     </div>,
     container
   );

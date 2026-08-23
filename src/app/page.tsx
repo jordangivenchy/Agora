@@ -19,6 +19,7 @@ import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
 import PeoplePage from "@/components/people/PeoplePage";
+import SearchPage from "@/components/search/SearchPage";
 import ExploreGrid from "@/components/ExploreGrid";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
@@ -56,8 +57,8 @@ const FORMAT_LABEL: Record<string, string> = {
   panel: "Panel",
 };
 
-type PanelTab = "feed" | "trending" | "communities" | "news" | "people";
-const PANEL_TABS: readonly string[] = ["feed", "trending", "communities", "news", "people"];
+type PanelTab = "feed" | "trending" | "communities" | "news" | "people" | "search";
+const PANEL_TABS: readonly string[] = ["feed", "trending", "communities", "news", "people", "search"];
 const isPanelTab = (s: string): s is PanelTab => PANEL_TABS.includes(s);
 const HOME_CHOSEN_KEY = "agora:home-chosen";
 
@@ -69,6 +70,8 @@ export default function Home() {
   const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab | null>(null);
+  /* /search?q=… — the query the Search panel opens on (it then owns ?q=). */
+  const [searchQuery, setSearchQuery] = useState("");
   /* Signed-in users landing on a bare "/" get their feed. Once they've
      explicitly picked Home in the sidebar, "/" stays the browse page for
      the rest of the session. */
@@ -405,6 +408,11 @@ export default function Home() {
           done();
         }
         return;
+      case "search":
+        setSearchQuery(route.q);
+        setActiveTab("search");
+        done();
+        return;
       case "community":
       case "post":
         setActiveTab("communities");
@@ -471,7 +479,8 @@ export default function Home() {
      popstate-driven changes don't add duplicate entries). The
      Communities panel pushes its own /communities[/slug] and /posts/:id. */
   useEffect(() => {
-    if (activeTab === "communities") return;
+    /* Search owns its own /search?q=… (replaceState as the user types). */
+    if (activeTab === "communities" || activeTab === "search") return;
     const desired = activeTab ? pathFor.section(activeTab) : pathFor.section(mvpPage);
     setSectionTitle(sectionTitle(activeTab ?? mvpPage));
     // First run (before the mount route is applied): record, don't push.
@@ -580,7 +589,8 @@ export default function Home() {
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />
       <PeoplePage open={activeTab === "people"} onClose={() => setActiveTab(null)} />
-      <HomeSidebar activeId={activeTab ?? mvpPage} onNavigate={onSidebarNavigate} />
+      <SearchPage open={activeTab === "search"} initialQuery={searchQuery} onClose={() => setActiveTab(null)} />
+      <HomeSidebar activeId={activeTab === "search" ? null : (activeTab ?? mvpPage)} onNavigate={onSidebarNavigate} />
       <TopicsHome
         container={fieldsHost}
         onCreateLobby={async (topic, schedule) => {

@@ -2,10 +2,12 @@
    next.config rewrites every path here to "/"; page.tsx reads the browser
    pathname to pick the section, and pushes these paths as the user moves. */
 
-export type HomeSection = "home" | "feed" | "explore" | "trending" | "communities" | "news" | "people";
+export type HomeSection = "home" | "feed" | "explore" | "trending" | "communities" | "news" | "people" | "search";
 
 export type HomeRoute =
   | { kind: "section"; id: HomeSection }
+  /* /search?q=… — the query rides along so the panel can open on it. */
+  | { kind: "search"; q: string }
   | { kind: "community"; slug: string }
   | { kind: "post"; id: string; commentId: string | null }
   | { kind: "messages"; username: string | null }
@@ -25,15 +27,19 @@ export const pathFor = {
   messages(username?: string | null): string {
     return username ? `/messages/${encodeURIComponent(username)}` : "/messages";
   },
+  search(q?: string | null): string {
+    const t = (q ?? "").trim();
+    return t ? `/search?q=${encodeURIComponent(t)}` : "/search";
+  },
 };
 
 /* Rewrites are declared in next.config.ts; keep the two lists in step. */
 export const REWRITTEN_SOURCES = [
   "/feed", "/people", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
-  "/posts/:id", "/messages", "/messages/:username",
+  "/posts/:id", "/messages", "/messages/:username", "/search",
 ];
 
-const SECTIONS: HomeSection[] = ["home", "feed", "explore", "trending", "communities", "news", "people"];
+const SECTIONS: HomeSection[] = ["home", "feed", "explore", "trending", "communities", "news", "people", "search"];
 
 export function isHomeSection(s: string): s is HomeSection {
   return (SECTIONS as string[]).includes(s);
@@ -68,6 +74,9 @@ export function parseHomeRoute(
     if (seg[0] === "messages") {
       return { route: { kind: "messages", username: seg[1] ?? null }, legacy: false };
     }
+    if (seg.length === 1 && seg[0] === "search") {
+      return { route: { kind: "search", q: (params.get("q") ?? "").trim() }, legacy: false };
+    }
     if (seg.length === 1 && isHomeSection(seg[0])) {
       return { route: { kind: "section", id: seg[0] }, legacy: false };
     }
@@ -89,6 +98,7 @@ export function canonicalPath(route: HomeRoute): string | null {
     case "community": return pathFor.community(route.slug);
     case "post": return pathFor.post(route.id, route.commentId);
     case "messages": return pathFor.messages(route.username);
+    case "search": return pathFor.search(route.q);
     case "dm-user": return null;
   }
 }
@@ -102,6 +112,7 @@ export function sectionTitle(id: HomeSection): string {
     trending: "Trending · AgoraSphere",
     communities: "Communities · AgoraSphere",
     news: "News · AgoraSphere",
+    search: "Search · AgoraSphere",
   };
   return names[id];
 }

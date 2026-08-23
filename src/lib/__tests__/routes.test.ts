@@ -11,6 +11,8 @@ describe("parseHomeRoute", () => {
     expect(parseHomeRoute("/posts/p1", "?comment=c2", "").route).toEqual({ kind: "post", id: "p1", commentId: "c2" });
     expect(parseHomeRoute("/messages", "", "").route).toEqual({ kind: "messages", username: null });
     expect(parseHomeRoute("/messages/jordan", "", "").route).toEqual({ kind: "messages", username: "jordan" });
+    expect(parseHomeRoute("/search", "?q=free%20speech", "").route).toEqual({ kind: "search", q: "free speech" });
+    expect(parseHomeRoute("/search", "", "").route).toEqual({ kind: "search", q: "" });
   });
   it("accepts the legacy query forms and flags them", () => {
     expect(parseHomeRoute("/", "?nav=news", "")).toEqual({ route: { kind: "section", id: "news" }, legacy: true });
@@ -27,6 +29,9 @@ describe("pathFor / canonicalPath", () => {
     expect(pathFor.section("home")).toBe("/");
     expect(pathFor.community(null)).toBe("/communities");
     expect(pathFor.post("p1", "c1")).toBe("/posts/p1#comment-c1");
+    expect(pathFor.search("free speech")).toBe("/search?q=free%20speech");
+    expect(pathFor.search("")).toBe("/search");
+    expect(canonicalPath({ kind: "search", q: "a b" })).toBe("/search?q=a%20b");
     expect(canonicalPath({ kind: "post", id: "p1", commentId: null })).toBe("/posts/p1");
     expect(canonicalPath({ kind: "dm-user", userId: "u" })).toBeNull();
     const p = pathFor.community("a-b");

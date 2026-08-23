@@ -110,3 +110,21 @@ export function passwordChangedEmail(): { subject: string; html: string } {
     ),
   };
 }
+
+export function debateReplayReadyEmail(motion: string, replayUrl: string): { subject: string; html: string } {
+  const safe = motion.replace(/</g, "&lt;");
+  return {
+    subject: `Your replay is ready: ${motion}`,
+    html: brandedEmail(
+      "Your debate replay is ready",
+      `<p style="font-size:15px;"><strong>&ldquo;${safe}&rdquo;</strong></p>
+       <p>The recording has been finalized. Watch it back, read the transcript, and keep the conversation going in the discussion thread.</p>
+       <p style="margin-top:20px;">
+         <a href="${replayUrl}" style="display:inline-block;background:#4a9eff;color:#ffffff;
+            padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600;">
+           Watch the replay →
+         </a>
+       </p>`
+    ),
+  };
+}

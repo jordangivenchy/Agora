@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import webpush from "web-push";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { getAppConfig } from "@/lib/appConfig";
 import { debateReminderEmail, emailConfigured, sendEmail } from "@/lib/email";
 import { roomPath } from "@/lib/urls";
+import { sendPushToUsers } from "@/lib/webPush";
 
 /* Email + web-push fanout for one scheduled debate whose doors just
    opened. Triggered by the pg_cron job (send_due_room_reminders → pg_net
@@ -61,42 +61,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Web push
-    let pushed = 0;
-    if (cfg.vapid_public_key && cfg.vapid_private_key) {
-      webpush.setVapidDetails(
-        cfg.vapid_subject ?? "mailto:no-reply@agorasphere.net",
-        cfg.vapid_public_key,
-        cfg.vapid_private_key
-      );
-      const ids = users.map((s) => s.user_id);
-      const { data: subs } = await admin
-        .from("push_subscriptions")
-        .select("endpoint, p256dh, auth")
-        .in("user_id", ids);
-      const payload = JSON.stringify({
-        title: "Starting in 30 minutes",
-        body: `“${room.motion}” — doors are open, take your seat.`,
-        url: roomUrl,
-      });
-      await Promise.allSettled(
-        (subs ?? []).map(async (s) => {
-          try {
-            await webpush.sendNotification(
-              { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-              payload
-            );
-            pushed++;
-          } catch (e) {
-            // 404/410 = the browser dropped the subscription — prune it.
-            const code = (e as { statusCode?: number }).statusCode;
-            if (code === 404 || code === 410) {
-              await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
-            }
-          }
-        })
-      );
-    }
+    // Web push (shared sender — prunes dead subscriptions)
+    const payload = {
+      title: "Starting in 30 minutes",
+      body: `“${room.motion}” — doors are open, take your seat.`,
+      url: roomUrl,
+    };
+    const pushed = await sendPushToUsers(admin, cfg, users.map((s) => s.user_id), () => payload);
 
     return NextResponse.json({ ok: true, signups: users.length, emailed, pushed });
   } catch {

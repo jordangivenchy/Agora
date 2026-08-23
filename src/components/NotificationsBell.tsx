@@ -1,8 +1,9 @@
 "use client";
 
 /* Notification bell — the delivery surface for the notifications backend
-   (20260814 + 20260819 migrations: new_follower, room_live,
-   room_starting_soon; realtime-published, RLS-scoped to the owner).
+   (20260814 → 20260852 migrations; realtime-published, RLS-scoped to the
+   owner). Copy / icons / hrefs live in src/lib/notifications.ts, shared
+   with the /notifications page.
 
    Used two ways:
    - <NotificationsBell />                   → inline (React Navbar)
@@ -15,12 +16,13 @@
    and starting-soon events reach them even in another tab. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { pathFor } from "@/lib/routes";
 import { Icon } from "@/components/icons";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
-import { displayName } from "@/lib/names";
+import {
+  actorLabel, notifDetail, notifHref, notifIcon, notifText, timeAgo, type NotifRow,
+} from "@/lib/notifications";
 
 interface Props {
   container?: HTMLElement | null;
@@ -33,62 +35,27 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-type NotifRow = {
-  id: string;
-  type: string;
-  actor_id: string | null;
-  actor_username: string | null;
-  actor_display_name: string | null;
-  room_id: string | null;
-  room_motion: string | null;
-  read_at: string | null;
-  created_at: string;
-  post_id: string | null;
-  post_title: string | null;
-  community_name: string | null;
+/* One-line OS-notification bodies per type (the realtime payload carries
+   no joined names, so these stay generic). */
+const OS_BODY: Record<string, string> = {
+  room_starting_soon: "A debate you set a reminder for starts soon.",
+  room_live: "A debate you set a reminder for just went live.",
+  followed_live: "Someone you follow just went live.",
+  followed_scheduled: "Someone you follow scheduled a debate.",
+  debate_replay_ready: "Your debate replay is ready to watch.",
+  discussion_opened: "Someone opened the discussion on your debate.",
+  friend_accepted: "Friend request accepted — you're now friends.",
+  room_invite: "A friend invited you to a room.",
+  community_post: "New post in a community you joined.",
+  community_debate: "A debate was started in your community.",
+  mention: "Someone mentioned you in a thread.",
+  post_comment: "Someone commented on your post.",
+  post_reply: "Someone replied to your comment.",
+  post_upvotes: "Your post hit an upvote milestone.",
+  comment_upvotes: "Your comment hit an upvote milestone.",
+  repost: "Someone reposted your post.",
+  new_follower: "Someone wants to be your friend.",
 };
-
-function actorName(n: NotifRow): string {
-  return displayName({ display_name: n.actor_display_name, username: n.actor_username });
-}
-
-function notifText(n: NotifRow): string {
-  switch (n.type) {
-    case "new_follower":
-      return `${actorName(n) || "Someone"} wants to be your friend`;
-    case "friend_accepted":
-      return `${actorName(n) || "Someone"} accepted your friend request — you're now friends 🎉`;
-    case "room_live":
-      return `${actorName(n) || "A speaker"} is live: “${n.room_motion ?? "a discussion"}”`;
-    case "room_starting_soon":
-      return `Starting soon: “${n.room_motion ?? "a discussion"}”`;
-    case "room_invite":
-      return `${actorName(n) || "A friend"} invited you to “${n.room_motion ?? "their room"}”`;
-    case "community_post":
-      return `${actorName(n) || "Someone"} posted in ${n.community_name ?? "a community you joined"}: “${n.post_title ?? "a new thread"}”`;
-    case "community_debate":
-      return `New discussion in ${n.community_name ?? "your community"}: “${n.room_motion ?? "a discussion"}”`;
-    case "mention":
-      return `${actorName(n) || "Someone"} mentioned you in “${n.post_title ?? "a thread"}”`;
-    default:
-      return "New activity";
-  }
-}
-
-function notifHref(n: NotifRow): string | null {
-  if (n.post_id && (n.type === "community_post" || n.type === "mention")) return pathFor.post(n.post_id);
-  if (n.room_id && (n.type === "room_live" || n.type === "room_starting_soon" || n.type === "room_invite" || n.type === "community_debate")) return `/agora/${n.room_id}`;
-  if (n.actor_id && (n.type === "new_follower" || n.type === "friend_accepted")) return `/?profile=${n.actor_id}`;
-  return null;
-}
-
-function timeAgo(iso: string): string {
-  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "now";
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
-}
 
 export default function NotificationsBell({ container }: Props) {
   const [supabase] = useState(() => createClient());
@@ -107,7 +74,7 @@ export default function NotificationsBell({ container }: Props) {
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
     if (!uid) return;
-    const { data } = await supabase.rpc("get_notifications", { p_limit: 30 });
+    const { data } = await supabase.rpc("get_notifications", { p_limit: 30, p_before: null });
     const rows = (data ?? []) as NotifRow[];
     setItems(rows);
     const actorIds = [...new Set(rows.filter((n) => n.type === "new_follower" && n.actor_id).map((n) => n.actor_id!))];
@@ -200,28 +167,20 @@ export default function NotificationsBell({ container }: Props) {
           load();
           const row = payload.new as { type?: string; room_id?: string; post_id?: string };
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            const body =
-              row.type === "room_starting_soon" ? "A discussion you set a reminder for starts soon."
-              : row.type === "room_live" ? "A discussion you follow just went live."
-              : row.type === "friend_accepted"
-                ? "Friend request accepted — you're now friends."
-                : row.type === "room_invite"
-                  ? "A friend invited you to a room."
-                  : row.type === "community_post"
-                    ? "New post in a community you joined."
-                    : row.type === "community_debate"
-                      ? "A discussion was started in your community."
-                      : row.type === "mention"
-                        ? "Someone mentioned you in a thread."
-                        : "Someone wants to be your friend.";
+            const body = OS_BODY[row.type ?? ""] ?? "New activity on AgoraSphere.";
             const n = new Notification("AgoraSphere", { body });
             n.onclick = () => {
               window.focus();
-              if (row.type === "community_post" && row.post_id) window.location.href = pathFor.post(row.post_id);
+              if (row.post_id) window.location.href = `/posts/${row.post_id}`;
               else if (row.room_id) window.location.href = `/agora/${row.room_id}`;
             };
           }
         }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        () => { load(); }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -246,11 +205,25 @@ export default function NotificationsBell({ container }: Props) {
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission();
     }
-    if (unread > 0) {
-      supabase.rpc("mark_notifications_read");
-      setItems((xs) => xs.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
-    }
-  }, [open, unread, supabase]);
+  }, [open]);
+
+  const markAllRead = useCallback(async () => {
+    if (unread === 0) return;
+    setItems((xs) => xs.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
+    await supabase.rpc("mark_all_notifications_read");
+  }, [unread, supabase]);
+
+  const openItem = useCallback(
+    (n: NotifRow) => {
+      const href = notifHref(n);
+      if (!n.read_at) {
+        setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
+        supabase.rpc("mark_notification_read", { p_id: n.id });
+      }
+      if (href) window.location.href = href;
+    },
+    [supabase]
+  );
 
   if (!userId) return null;
 
@@ -311,9 +284,24 @@ export default function NotificationsBell({ container }: Props) {
             zIndex: 300,
           }}
         >
-          <p className="m-0 px-4 py-3 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            Notifications
-          </p>
+          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <p className="m-0 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
+              Notifications
+              {unread > 0 && (
+                <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(226,185,107,0.18)", color: "#f4d47c", fontWeight: 700 }}>
+                  {unread} new
+                </span>
+              )}
+            </p>
+            <button
+              onClick={markAllRead}
+              disabled={unread === 0}
+              className="flex items-center gap-1 text-[11px] cursor-pointer bg-transparent border-none"
+              style={{ color: unread > 0 ? "#9cc4f0" : "#55555e", fontFamily: "inherit" }}
+            >
+              <Icon name="check-check" size={12} /> Mark all read
+            </button>
+          </div>
           {items.length === 0 && (
             <p className="m-0 px-4 py-6 text-[12px] text-center" style={{ color: "#6b6b74" }}>
               Nothing yet — follow speakers and set reminders to hear when things go live.
@@ -321,26 +309,40 @@ export default function NotificationsBell({ container }: Props) {
           )}
           {items.filter((n) => !dismissed.has(n.id)).map((n) => {
             const href = notifHref(n);
+            const detail = notifDetail(n);
+            const unreadRow = !n.read_at;
             return (
               <button
                 key={n.id}
-                onClick={() => { if (href) window.location.href = href; }}
+                onClick={() => openItem(n)}
                 className="w-full text-left px-4 py-3 flex items-start gap-2.5"
                 style={{
-                  background: "transparent",
+                  background: unreadRow ? "rgba(226,185,107,0.05)" : "transparent",
                   border: "none",
                   borderBottom: "1px solid rgba(255,255,255,0.05)",
                   cursor: href ? "pointer" : "default",
                   fontFamily: "inherit",
                 }}
               >
-                <span className="text-[13px]" style={{ marginTop: 1 }}>
-                  {n.type === "mention" ? "＠" : <Icon name={n.type === "new_follower" ? "user" : n.type === "friend_accepted" ? "handshake" : n.type === "room_invite" ? "send" : n.type === "room_starting_soon" ? "bell" : n.type === "community_post" ? "pencil" : n.type === "community_debate" ? "landmark" : "zap"} size={13} />}
+                <span
+                  className="flex items-center justify-center shrink-0"
+                  style={{
+                    width: 26, height: 26, borderRadius: 8, marginTop: 1,
+                    background: unreadRow ? "rgba(226,185,107,0.14)" : "rgba(255,255,255,0.06)",
+                    color: unreadRow ? "#f4d47c" : "#9a9aa4",
+                  }}
+                >
+                  <Icon name={notifIcon(n.type)} size={13} />
                 </span>
-                <span className="flex-1 text-[12.5px]" style={{ color: "#d5d5dc", lineHeight: 1.45 }}>
+                <span className="flex-1 text-[12.5px]" style={{ color: unreadRow ? "#f0f0f4" : "#c4c4cc", lineHeight: 1.45 }}>
                   {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)
-                    ? `${actorName(n) || "Someone"} started following you`
+                    ? `${actorLabel(n)} started following you`
                     : notifText(n)}
+                  {detail && (
+                    <span className="block mt-0.5 text-[11.5px] truncate" style={{ color: "#8b8b94" }}>
+                      “{detail}”
+                    </span>
+                  )}
                   {n.type === "new_follower" && n.actor_id && !followedBack.has(n.actor_id) && (
                     <span className="flex gap-2 mt-1.5">
                       <button
@@ -367,12 +369,20 @@ export default function NotificationsBell({ container }: Props) {
                     </span>
                   )}
                 </span>
-                <span className="text-[10.5px] shrink-0" style={{ color: "#6b6b74", marginTop: 2 }}>
+                <span className="text-[10.5px] shrink-0 flex items-center gap-1.5" style={{ color: "#6b6b74", marginTop: 2 }}>
                   {timeAgo(n.created_at)}
+                  {unreadRow && <span style={{ width: 6, height: 6, borderRadius: 3, background: "#f4d47c" }} />}
                 </span>
               </button>
             );
           })}
+          <a
+            href="/notifications"
+            className="block w-full text-center px-4 py-2.5 text-[11.5px] no-underline"
+            style={{ color: "#9cc4f0", borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            See all notifications
+          </a>
           {pushState !== "unsupported" && (
             <button
               onClick={togglePush}

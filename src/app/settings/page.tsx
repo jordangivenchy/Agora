@@ -19,6 +19,7 @@ import EditProfileModal from "@/components/EditProfileModal";
 import DataAndCoachPanel from "@/components/DataAndCoachPanel";
 import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
+import { PREF_GROUPS } from "@/lib/notifications";
 
 /* ── types ─────────────────────────────────────────────────── */
 
@@ -260,6 +261,40 @@ export default function SettingsPage() {
       }
     },
     [authUser, settings, supabase]
+  );
+
+  /* ── per-type notification prefs (get/set_notification_pref RPCs) ── */
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
+  useEffect(() => {
+    if (!authUser) return;
+    let cancelled = false;
+    supabase.rpc("get_notification_prefs").then(({ data }) => {
+      if (!cancelled) setPrefs((data as Record<string, boolean> | null) ?? {});
+    });
+    return () => { cancelled = true; };
+  }, [authUser, supabase]);
+
+  const savePref = useCallback(
+    async (type: string, value: boolean) => {
+      if (!prefs) return;
+      const prev = prefs[type] ?? true;
+      setPrefs((p) => ({ ...(p ?? {}), [type]: value }));
+      setToggleError(null);
+      const { data, error } = await supabase.rpc("set_notification_pref", { p_type: type, p_enabled: value });
+      if (error) {
+        setPrefs((p) => ({ ...(p ?? {}), [type]: prev }));
+        setToggleError("Couldn't save — check your connection and try again.");
+      } else {
+        if (data) setPrefs(data as Record<string, boolean>);
+        // Mirror the legacy booleans the rest of the form still carries.
+        if (type === "new_follower" || type === "friend_accepted") setSettings((s) => ({ ...s, notify_follows: value }));
+        if (type === "room_live" || type === "followed_live") setSettings((s) => ({ ...s, notify_room_live: value }));
+        if (type === "community_post") setSettings((s) => ({ ...s, notify_community_posts: value }));
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 1400);
+      }
+    },
+    [prefs, supabase]
   );
 
   /* ── email change ── */
@@ -667,29 +702,35 @@ export default function SettingsPage() {
 
       case "notifications":
         return (
-          <SectionCard
-            title="In-app notifications"
-            sub="Applied when the notification is created — turning one off stops it at the source."
-          >
-            <Toggle
-              on={settings.notify_follows}
-              onChange={(v) => saveToggle("notify_follows", v)}
-              label="New followers"
-              sub="When someone starts following you"
-            />
-            <Toggle
-              on={settings.notify_room_live}
-              onChange={(v) => saveToggle("notify_room_live", v)}
-              label="Live discussions"
-              sub="When someone you follow goes live"
-            />
-            <Toggle
-              on={settings.notify_community_posts}
-              onChange={(v) => saveToggle("notify_community_posts", v)}
-              label="Community posts"
-              sub="When someone posts in a community you've joined"
-            />
-          </SectionCard>
+          <>
+            {PREF_GROUPS.map((g) => (
+              <SectionCard
+                key={g.title}
+                title={g.title}
+                sub={g.title === "Debates"
+                  ? "Applied when the notification is created — turning one off stops it at the source."
+                  : undefined}
+              >
+                {g.items.map((it) => (
+                  <Toggle
+                    key={it.type}
+                    on={prefs?.[it.type] ?? true}
+                    disabled={prefs === null}
+                    onChange={(v) => savePref(it.type, v)}
+                    label={it.label}
+                    sub={it.sub}
+                  />
+                ))}
+              </SectionCard>
+            ))}
+            <SectionCard title="Push & email" sub="Delivery beyond the bell. Web push is enabled per browser from the bell menu.">
+              <p className="m-0 px-4 py-3.5 text-[12.5px]" style={{ color: "#8b8b94" }}>
+                Live, scheduled and replay-ready alerts from people you follow go out as push notifications
+                on every browser where you&apos;ve enabled them; replay-ready also arrives by email.
+                Each one still respects the toggles above.
+              </p>
+            </SectionCard>
+          </>
         );
 
       case "appearance":
