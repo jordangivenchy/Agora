@@ -105,10 +105,9 @@ body {
 }
 
 .nav-search {
-  /* True page center, independent of the logo / auth widths either side. */
+  /* Centered on the navbar (both axes) by the #navSearchWrap rule below,
+     independent of the logo / auth widths either side. */
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   width: min(480px, calc(100vw - 640px));
 }
 
@@ -3156,7 +3155,8 @@ a.carousel-watch-btn { text-decoration: none; }
 #navSearchWrap {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   isolation: isolate;
   overflow: visible !important;
 }
