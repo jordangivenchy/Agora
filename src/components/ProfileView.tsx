@@ -784,6 +784,9 @@ export default function ProfileView({
           className="p-6 flex gap-5 flex-wrap items-start"
           style={{
             ...card,
+            /* Above the (positioned) banner so the overlapping avatar paints on top. */
+            position: "relative",
+            zIndex: 1,
             ...((profile.banner_url || isSelf)
               ? { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderTop: "none" }
               : {}),
