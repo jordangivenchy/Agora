@@ -35,7 +35,7 @@ export function useHlsSource(
     } else {
       import("hls.js").then(({ default: Hls }) => {
         if (cancelled || !Hls.isSupported()) return;
-        const h = new Hls(live ? { liveSyncDurationCount: 3 } : {});
+        const h = new Hls(live ? { liveSyncDurationCount: 2, maxLiveSyncPlaybackRate: 1.05 } : {});
         h.on(Hls.Events.ERROR, (_evt, data) => {
           if (data.fatal) setError("This recording couldn't be loaded.");
         });
@@ -53,6 +53,113 @@ export function useHlsSource(
   }, [videoRef, src, live, autoplay]);
 
   return { error };
+}
+
+/* ── Audience-overflow broadcast surface ─────────────────────────────
+   The stage surface for viewers admitted in HLS mode: the composited
+   broadcast fills the same slot AgoraStage owns (or the dock corner in
+   audience view). Autoplay must start muted to satisfy browser policy —
+   a tap-to-unmute overlay does the gesture — and a small pill is honest
+   about the segment delay so the ~15s lag never reads as "broken". */
+export function HlsBroadcastSurface({ src, compact = false }: { src: string; compact?: boolean }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const { error } = useHlsSource(videoRef, src, { live: true });
+  const [muted, setMuted] = useState(true);
+
+  const unmute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    v.play().catch(() => {});
+    setMuted(false);
+  };
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        borderRadius: compact ? 12 : 16,
+        overflow: "hidden",
+        background: "#050507",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+      }}
+    >
+      <video
+        ref={videoRef}
+        muted={muted}
+        autoPlay
+        playsInline
+        /* Belt to autoplay's brace: if the initial play() raced the
+           source attach (or the tab was busy), retry once decodable. */
+        onCanPlay={(e) => {
+          const v = e.currentTarget;
+          if (v.paused) v.play().catch(() => {});
+        }}
+        style={{ width: "100%", height: "100%", objectFit: "contain", background: "black" }}
+      />
+      {error && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#c0c0c8",
+            fontSize: 13,
+            padding: 16,
+            textAlign: "center",
+          }}
+        >
+          The broadcast stream couldn&apos;t be loaded — it may be restarting.
+        </div>
+      )}
+      {muted && !error && (
+        <button
+          onClick={unmute}
+          className="cursor-pointer"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            padding: compact ? "7px 12px" : "10px 18px",
+            borderRadius: 999,
+            background: "rgba(10,10,14,0.78)",
+            border: "0.5px solid rgba(255,255,255,0.28)",
+            color: "#f5f5f0",
+            fontSize: compact ? 12 : 14,
+            fontFamily: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+          }}
+        >
+          <Icon name="volume-2" size={compact ? 13 : 15} /> Tap to unmute
+        </button>
+      )}
+      <span
+        style={{
+          position: "absolute",
+          left: 10,
+          bottom: 10,
+          padding: "4px 9px",
+          borderRadius: 999,
+          background: "rgba(10,10,14,0.7)",
+          border: "0.5px solid rgba(255,255,255,0.16)",
+          color: "#c9c9d2",
+          fontSize: 10.5,
+          letterSpacing: "0.03em",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Broadcast view · ~15s behind live
+      </span>
+    </div>
+  );
 }
 
 export default function HlsPlayer({ src, onClose }: { src: string; onClose: () => void }) {

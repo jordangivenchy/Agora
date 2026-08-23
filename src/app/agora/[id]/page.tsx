@@ -25,7 +25,7 @@ import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall, tileKey } from "@/components/agora/useAgoraCall";
 import { CallGallery, CallMultiSpeaker, type LayoutTile } from "@/components/agora/CallLayouts";
 import HostControls from "@/components/agora/HostControls";
-import HlsPlayer from "@/components/agora/HlsPlayer";
+import HlsPlayer, { HlsBroadcastSurface } from "@/components/agora/HlsPlayer";
 import DebateReplay from "@/components/agora/DebateReplay";
 import { roomPath } from "@/lib/urls";
 import InvitePrompt from "@/components/agora/InvitePrompt";
@@ -469,6 +469,25 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     setLiveTileCount(call.videoTiles.length);
   }, [call.videoTiles.length]);
+
+  /* ── HLS audience mode ─────────────────────────────────────────────
+     Over the spectator ceiling the token API answers "watch the
+     broadcast" instead of minting a WebRTC token: the stage surface
+     renders the composited HLS stream and the publish controls hide.
+     Chat, Q&A and hand-raise are Supabase-driven and keep working.
+     Promotion is seamless: an approved raise-hand updates our
+     participants row, onStage(myRole) flips, and the call hook's
+     connect effect re-requests a token with the new role — the server
+     sees the stage row and hands out WebRTC. */
+  const hlsAudience = !broadcast && !!call.hlsMode;
+  const { hlsMode, retryConnect } = call;
+  useEffect(() => {
+    /* Egress died mid-watch (hls_url nulled via realtime): fall back to
+       requesting a WebRTC token — with no stream the threshold check
+       lets everyone in. */
+    if (!hlsMode || broadcast || !room) return;
+    if (room.status === "live" && !room.hls_url) retryConnect();
+  }, [hlsMode, broadcast, room, retryConnect]);
 
   /* Tiles dressed for the flat layouts: display names and mute state
      from the seated rows; the local mute state from the call itself. */
@@ -1309,7 +1328,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         {/* Camera surfaces exist in settled speaker view only — audience
               view keeps the open amphitheater, pictures riding the dock. */}
         {view === "speaker" && viewSettled && (
-          layout === "stage" ? (
+          hlsAudience ? (
+            /* HLS audience mode: the broadcast IS the stage — one feed,
+               same slot and lifecycle as AgoraStage. */
+            <div className="ag-cast" role="region" aria-label="Broadcast view">
+              <HlsBroadcastSurface src={call.hlsMode!.url} />
+            </div>
+          ) : layout === "stage" ? (
             <AgoraStage
               tiles={call.videoTiles}
               panes={stagePanes}
@@ -1347,7 +1372,26 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         {/* ── Live camera tiles + floating reactions ── */}
-        {(layout === "stage" || view === "audience") && <AgoraVideoDock tiles={dockTiles} />}
+        {hlsAudience && view === "audience" && (
+          /* Audience vantage in HLS mode: the broadcast rides where the
+             video dock sits — small, corner, the amphitheater stays the
+             show. */
+          <div
+            style={{
+              position: "absolute",
+              right: 16,
+              bottom: 96,
+              width: 300,
+              aspectRatio: "16 / 9",
+              zIndex: 18,
+            }}
+          >
+            <HlsBroadcastSurface src={call.hlsMode!.url} compact />
+          </div>
+        )}
+        {!hlsAudience && (layout === "stage" || view === "audience") && (
+          <AgoraVideoDock tiles={dockTiles} />
+        )}
         <ReactionOverlay reactions={call.reactions} />
 
         {/* ── Queue position pill: the number reinforces what the 3D line
@@ -1431,6 +1475,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               glass. Leave is the only control that is coloured at rest. */}
 
           {/* ── Mic ── */}
+          {/* HLS audience mode has no WebRTC leg — mic/cam/share can't
+              exist, so the controls hide rather than sit dead. */}
+          {!hlsAudience && (
+          <>
           <div className="ag-react-wrap ag-cam-wrap" ref={micMenuRef}>
             {micMenuOpen && (
               <div className="ag-more-menu ag-cam-menu" role="menu" aria-label="Audio">
@@ -1610,6 +1658,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               </button>
             )}
           </div>
+          </>
+          )}
 
           {/* ── React ── */}
           <div className="ag-react-wrap">
@@ -1631,8 +1681,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             )}
             <button
               className={`ag-ctl ${reactOpen ? "ag-ctl--reacting" : ""}`}
-              title={call.connected ? "Send a reaction" : "Connecting…"}
-              disabled={!call.connected}
+              title={call.connected || hlsAudience ? "Send a reaction" : "Connecting…"}
+              disabled={!call.connected && !hlsAudience}
               onClick={() => setReactOpen((v) => !v)}
             >
               <span className="ag-ctl-ico"><Icon name="smile" size={19} /></span>
@@ -1659,6 +1709,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           )}
 
           {/* ── Share screen ── */}
+          {!hlsAudience && (
           <button
             className={`ag-ctl ${call.screenOn ? "ag-ctl--sharing" : ""}`}
             title={
@@ -1676,9 +1727,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             <span className="ag-ctl-ico"><Icon name="monitor-up" size={19} /></span>
             <span className="ag-ctl-label">{call.screenOn ? "Stop share" : "Share"}</span>
           </button>
+          )}
 
           {/* ── Layout switcher: how *you* see the room. Local only —
-                every viewer arranges their own pictures. `g` cycles. ── */}
+                every viewer arranges their own pictures. `g` cycles.
+                Hidden in HLS mode — the broadcast is a single feed. ── */}
+          {!hlsAudience && (
           <div className="ag-layout-switch" role="group" aria-label="Call layout">
             {(
               [
@@ -1699,6 +1753,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               </button>
             ))}
           </div>
+          )}
 
           {/* ── More: the room's tool drawer ──
               Four quadrants rather than a list. The tools are peers, not a

@@ -93,6 +93,14 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [speakingIds, setSpeakingIds] = useState<Set<string>>(new Set());
+  /* Audience overflow: the token API answered "watch the broadcast"
+     instead of minting a token — no WebRTC connection exists; the page
+     renders the HLS stream on the stage surface instead. Cleared the
+     moment a later request (promotion, egress death) yields a token. */
+  const [hlsMode, setHlsMode] = useState<{ url: string; viewerCount?: number } | null>(null);
+  /* Bumping this re-runs the connect effect — the page uses it to
+     escape HLS mode when the stream dies (hls_url goes null). */
+  const [connectNonce, setConnectNonce] = useState(0);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [videoTiles, setVideoTiles] = useState<VideoTile[]>([]);
   const hqRef = useRef(highQuality);
@@ -236,8 +244,18 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           }),
         });
         if (!res.ok) throw new Error(`livekit token ${res.status}`);
-        const { token } = await res.json();
-        if (!token || cancelled) return;
+        const body = await res.json();
+        if (cancelled) return;
+        if (body.mode === "hls" && typeof body.url === "string") {
+          /* The room is over the audience ceiling: watch the broadcast
+             instead of connecting. The effect's cleanup still runs (the
+             Room was never connected — disconnect is a no-op). */
+          setHlsMode({ url: body.url, viewerCount: body.viewerCount });
+          return;
+        }
+        const { token } = body;
+        if (!token) return;
+        setHlsMode(null);
 
         room
           .on(RoomEvent.TrackSubscribed, (track, publication) => {
@@ -318,7 +336,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     };
     // `external` is stable for the life of a broadcast page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, roomId, userId, canPublish, pushReaction, refreshTiles, external?.token]);
+  }, [ready, roomId, userId, canPublish, pushReaction, refreshTiles, external?.token, connectNonce]);
 
   /* Turn a getUserMedia / publish failure into something a user can act on.
      Swallowing these (the old behavior) made the buttons look dead. */
@@ -502,6 +520,12 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
 
   return {
     connected,
+    /* Non-null → the audience-overflow broadcast view is in effect. */
+    hlsMode,
+    /* Re-run the token request / connection attempt (used to leave HLS
+       mode when the live playlist dies — the server will hand out a
+       WebRTC token once hls_url is gone). */
+    retryConnect: useCallback(() => setConnectNonce((n) => n + 1), []),
     micOn,
     camOn,
     mediaBusy,

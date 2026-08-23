@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
+import { audienceThresholdFromEnv, decideAudienceMode } from "@/lib/audienceMode";
 
 /* LiveKit token mint. Identity is server-verified: the Supabase cookie
    session decides who you are — the client's claimed userId is never
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     const { data: room } = await supabase
       .from("debate_rooms")
-      .select("host_id, status, scheduled_start")
+      .select("host_id, status, scheduled_start, hls_url")
       .eq("id", roomId)
       .maybeSingle();
     if (!room) {
@@ -81,6 +82,77 @@ export async function POST(request: NextRequest) {
           { error: "room_not_open", opensAt: new Date(opensAt).toISOString() },
           { status: 403 }
         );
+      }
+    }
+
+    /* ── Audience overflow → HLS ─────────────────────────────────────
+       Above a spectator ceiling, NEW audience members watch the room's
+       composited HLS stream (already produced by default recording,
+       R2-delivered, free egress) instead of taking a LiveKit WebRTC
+       seat. Stage roles always get WebRTC; existing WebRTC viewers are
+       never migrated (they never re-request a token mid-session). The
+       decision is evaluated fresh per request — never cached — so a
+       room dipping under the ceiling admits newcomers over WebRTC
+       again by itself; that is the hysteresis, no floor constant
+       needed. Any LiveKit hiccup fails open to a normal token. */
+    if (room.status === "live" && room.hls_url) {
+      let isStage = false;
+      if (user) {
+        if (user.id === room.host_id) {
+          isStage = true;
+        } else {
+          /* Mirror the client's deriveStageRole: explicit stage_role
+             promotion, or the debater role, means on-stage. Guests are
+             always audience. */
+          const { data: seat } = await supabase
+            .from("debate_participants")
+            .select("role, stage_role")
+            .eq("room_id", roomId)
+            .eq("user_id", user.id)
+            .is("left_at", null)
+            .maybeSingle();
+          isStage =
+            !!seat &&
+            (seat.role === "debater" ||
+              ["host", "cohost", "speaker"].includes(seat.stage_role ?? ""));
+        }
+      }
+      if (!isStage) {
+        try {
+          const lkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+          if (!lkUrl) throw new Error("no livekit url");
+          const svc = new RoomServiceClient(
+            lkUrl.replace(/^wss?:\/\//, "https://"),
+            apiKey,
+            apiSecret
+          );
+          const parts = await svc.listParticipants(roomId);
+          /* Audience = connected non-publishers. Publish rights track the
+             stage exactly (tokens above), and the filter also drops the
+             hidden egress recorder so it never pads the count. */
+          const audienceCount = parts.filter(
+            (p) =>
+              !p.permission?.canPublish &&
+              !p.permission?.hidden &&
+              !p.permission?.recorder
+          ).length;
+          const decision = decideAudienceMode({
+            isStage,
+            audienceCount,
+            hlsUrl: room.hls_url,
+            threshold: audienceThresholdFromEnv(process.env.HLS_AUDIENCE_THRESHOLD),
+          });
+          if (decision.mode === "hls") {
+            return NextResponse.json({
+              mode: "hls",
+              url: decision.url,
+              viewerCount: audienceCount,
+            });
+          }
+        } catch {
+          /* LiveKit unreachable (or room not yet created there) —
+             fail open: mint the WebRTC token as always. */
+        }
       }
     }
 

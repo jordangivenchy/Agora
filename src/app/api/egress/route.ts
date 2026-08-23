@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
             filenamePrefix: `${roomId}/seg`,
             playlistName: `${roomId}/index.m3u8`,
             livePlaylistName: `${roomId}/live.m3u8`,
-            segmentDuration: 4,
+            segmentDuration: 2, // shorter segments ≈ 7-10s glass-to-glass for broadcast viewers
             protocol: SegmentedFileProtocol.HLS_PROTOCOL,
             output: {
               case: "s3",
