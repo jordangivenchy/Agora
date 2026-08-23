@@ -105,10 +105,11 @@ body {
 }
 
 .nav-search {
-  flex: 1;
-  max-width: 480px;
-  margin: 0 auto;
-  position: relative;
+  /* True page center, independent of the logo / auth widths either side. */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 640px));
 }
 
 .nav-search input {
