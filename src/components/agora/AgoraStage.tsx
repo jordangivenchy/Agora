@@ -42,6 +42,8 @@ export interface StagePane {
   avatarUrl: string | null;
   /** This pane is the signed-in viewer — suppresses the profile menu. */
   local: boolean;
+  /** Muted badge on the name tag. */
+  micMuted?: boolean;
   /** The pane holder's live camera, when it's on. */
   tile: VideoTile | null;
 }
@@ -146,11 +148,13 @@ function Tag({
   name,
   screen,
   small,
+  muted,
   onName,
 }: {
   name: string;
   screen?: boolean;
   small?: boolean;
+  muted?: boolean;
   onName?: (e: React.MouseEvent) => void;
 }) {
   return (
@@ -165,6 +169,11 @@ function Tag({
       >
         {name}
       </span>
+      {muted && !screen && (
+        <span className="ag-cast-tag-muted" title="Muted" aria-label="Muted">
+          <Icon name="mic-off" size={11} />
+        </span>
+      )}
       {screen && <span className="ag-cast-tag-pill">SCREEN</span>}
     </span>
   );
@@ -305,6 +314,7 @@ export default function AgoraStage({ tiles, panes, view, speaking, anchored }: P
           <Tag
             name={mainName}
             screen={main.source === "screen"}
+            muted={mainOwnerPane?.micMuted}
             onName={nameMenu(main.identity, mainOwnerPane?.handle ?? mainName, main.local)}
           />
         </div>
@@ -389,6 +399,7 @@ export default function AgoraStage({ tiles, panes, view, speaking, anchored }: P
               {pane && (
                 <Tag
                   name={pane.username}
+                  muted={pane.micMuted}
                   onName={nameMenu(pane.id, pane.handle ?? pane.username, pane.local)}
                 />
               )}

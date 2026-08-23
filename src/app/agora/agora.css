@@ -440,7 +440,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  /* Above the stage/flat-layout surfaces (3): the view toggle must stay
+     pressable in every layout. */
+  z-index: 4;
 }
 
 /* The scene darkens into the rail rather than meeting it at a hard line
@@ -3057,7 +3059,19 @@
    controls take the pointer, so scene furniture behind it stays live. */
 .ag-layout-flat, .ag-layout-flat .ag-lgal, .ag-layout-flat .ag-lmulti { pointer-events: none; }
 .ag-layout-flat .ag-lt,
-.ag-layout-flat .ag-lgal-pager,
 .ag-layout-flat .ag-lgal-arrow,
-.ag-layout-flat .ag-lgal-dot,
-.ag-layout-flat .ag-lmulti-strip { pointer-events: auto; }
+.ag-layout-flat .ag-lgal-dot { pointer-events: auto; }
+/* The pager row and filmstrip are wide, mostly-empty bands — only their
+   children take the pointer, never the band itself. */
+.ag-layout-flat .ag-lgal-pager,
+.ag-layout-flat .ag-lmulti-strip,
+.ag-layout-flat .ag-lmulti-featured { pointer-events: none; }
+
+/* Muted badge on stage name tags — dock language. */
+.ag-cast-tag-muted {
+  display: inline-grid;
+  place-items: center;
+  margin-left: 5px;
+  color: #e05a5a;
+}
+.ag-cast-tag-muted svg { width: 11px; height: 11px; display: block; }

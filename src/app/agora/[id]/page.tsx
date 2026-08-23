@@ -550,6 +550,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       avatarUrl: p.user?.avatar_url ?? null,
       /* Real voice activity once the call is up; DB heartbeat otherwise. */
       speaking: call.connected ? call.speakingIds.has(p.user_id) : !p.mic_muted,
+      micMuted: p.user_id === currentUser?.id ? !call.micOn : !!p.mic_muted,
       stageRole,
     });
     return {
@@ -669,6 +670,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             handle: sp.username,
             avatarUrl: sp.avatarUrl,
             local: currentUser?.id === sp.id,
+            micMuted: sp.micMuted,
             tile: cams.find((t) => t.identity === sp.id) ?? null,
           }
         : null;
