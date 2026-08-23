@@ -291,6 +291,32 @@ export default function Home() {
   }, [loadData, supabase]);
 
   /* Load the MVP engine once, after the DOM above is in place. */
+  /* Ask for the microphone as soon as the home page is up, so "Hey Agora"
+     and joining a stage never stall on a permission prompt later. Only
+     when the browser hasn't decided yet; the stream is released at once.
+     Safari ignores prompts without a gesture — it just no-ops there. */
+  useEffect(() => {
+    if (!booted) return;
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return;
+    if (sessionStorage.getItem("agora:mic-asked")) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const perms = (navigator as Navigator & { permissions?: Permissions }).permissions;
+        if (perms?.query) {
+          const st = await perms.query({ name: "microphone" as PermissionName });
+          if (st.state !== "prompt") return; // already granted or blocked
+        }
+        sessionStorage.setItem("agora:mic-asked", "1");
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!cancelled) stream.getTracks().forEach((t) => t.stop());
+      } catch {
+        /* denied or unavailable — nothing to do; the room UI explains later */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [booted]);
+
   useEffect(() => {
     if (!booted) return;
     const w = window as unknown as Record<string, unknown>;
