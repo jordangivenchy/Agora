@@ -87,6 +87,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "start_hls") {
+      /* Idempotent: an HLS egress already filming this room is reused —
+         the auto-start on the host's client can fire safely on reconnects. */
+      {
+        const active = await egress.listEgress({ roomName: roomId, active: true });
+        const existing = active.find((e) => e.request?.case === "roomComposite");
+        if (existing) {
+          return NextResponse.json({ egressId: existing.egressId, reused: true });
+        }
+      }
       if (!hlsConfigured) {
         return NextResponse.json({ error: "hls_not_configured" }, { status: 400 });
       }

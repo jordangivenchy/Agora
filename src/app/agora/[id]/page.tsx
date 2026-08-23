@@ -523,6 +523,35 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     setView("speaker");
   }, [broadcast]);
 
+  /* ── Default recording: every live debate streams to HLS/R2 so the
+        replay always exists and overflow viewers can watch. The host's
+        client starts it once connected; harmless if already running
+        (the egress route reuses an active stream) and best-effort —
+        the debate never blocks on it. Cron/close-stage stop it. ── */
+  const autoHlsRef = useRef(false);
+  useEffect(() => {
+    if (broadcast || autoHlsRef.current) return;
+    if (!room || room.status !== "live" || room.hls_url) return;
+    if (!currentUser || currentUser.id !== room.host_id || !call.connected) return;
+    autoHlsRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/egress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId: room.id, action: "start_hls" }),
+        });
+        if (!res.ok) {
+          console.warn("[agora] auto HLS start failed:", await res.text());
+          autoHlsRef.current = false; // allow a retry on the next state change
+        }
+      } catch (e) {
+        console.warn("[agora] auto HLS start failed:", e);
+        autoHlsRef.current = false;
+      }
+    })();
+  }, [broadcast, room, currentUser, call.connected]);
+
   const recordingSignaledRef = useRef(false);
   useEffect(() => {
     if (!broadcast || recordingSignaledRef.current) return;
