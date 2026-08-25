@@ -121,6 +121,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
+  /* Queue-matched 1v1 ("duel"): pro_size/con_size of 1 are written only
+     by queue_for_topic — the create modal passes 10/10 under the hood.
+     Duels eliminate the amphitheater vantage for everyone in the room:
+     no view toggle, no layout switch — just the two speaker screens
+     (gallery layout, which renders exactly two face-to-face panes). */
+  const duel = !broadcastCreds && room?.pro_size === 1 && room?.con_size === 1;
   /* ── Call layout: the viewer's own arrangement of the live pictures.
      Orthogonal to the 3D vantage: "stage" is today's behavior; "gallery"
      and "multi" are flat overlays above the scene. Local-only — nothing
@@ -150,6 +156,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "g" && e.key !== "G") return;
+      if (duel) return; // duels are locked to the two-pane gallery
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
@@ -165,7 +172,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [duel]);
+  /* Duel rooms land everyone in the two-pane view. setLayout directly
+     (not pickLayout) so the viewer's saved layout preference for normal
+     rooms is left alone. */
+  useEffect(() => {
+    if (!duel) return;
+    setView("speaker");
+    setLayout("gallery");
+  }, [duel]);
   /* The DOM stage holds back until the camera glide lands on the current
      vantage — fading panes in mid-flight read as riding the camera. */
   const [viewSettled, setViewSettled] = useState(false);
@@ -489,6 +504,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     if (room.status === "live" && !room.hls_url) retryConnect();
   }, [hlsMode, broadcast, room, retryConnect]);
 
+  /* Raised-hand fast lane, waiting side: a broadcast viewer whose hand is
+     up but who was beyond the fast-lane cap re-asks the token API each
+     time the line moves forward (someone ahead was brought up or gave
+     up) — the server re-ranks and may now grant the real-time WebRTC
+     seat. Deliberately narrow deps + a decrease check: hlsMode is a
+     fresh object per token answer, so keying on it would loop. */
+  const prevQueuePosRef = useRef<number | null>(null);
+
   /* Tiles dressed for the flat layouts: display names and mute state
      from the seated rows; the local mute state from the call itself. */
   /* Every on-stage participant gets a tile — live camera when they have
@@ -561,7 +584,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           body: JSON.stringify({ roomId: room.id, action: "start_hls" }),
         });
         if (!res.ok) {
-          console.warn("[agora] auto HLS start failed:", await res.text());
+          const txt = await res.text();
+          /* Host turned VODs off, or their storage allowance is full —
+             a choice, not a fault: stay quiet and don't retry. */
+          if (/recording_disabled|storage_full/.test(txt)) return;
+          console.warn("[agora] auto HLS start failed:", txt);
           autoHlsRef.current = false; // allow a retry on the next state change
         }
       } catch (e) {
@@ -672,6 +699,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     const idx = speakerQueue.findIndex((p) => p.id === currentUser.id);
     return idx < 0 ? null : idx + 1;
   }, [speakerQueue, currentUser]);
+
+  useEffect(() => {
+    const prev = prevQueuePosRef.current;
+    prevQueuePosRef.current = myQueuePos;
+    if (!hlsAudience || myQueuePos == null) return;
+    if (prev != null && myQueuePos < prev) retryConnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires only when the line moves; see prevQueuePosRef comment
+  }, [myQueuePos]);
 
   /* Auto-advance driver: in open-mic mode the host's client brings up the
      front of the line whenever the mic is free. Host-gated server-side too. */
@@ -864,6 +899,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      participant row, so the first raise seats you in the room (upsert,
      mirroring the classic room page's rejoin-safe flow). */
   const handRaised = !!myParticipation?.hand_raised_at;
+  /* True while this viewer holds a raised-hand fast-lane WebRTC seat they
+     hopped into from the HLS broadcast — lowering the hand gives it back. */
+  const handFastLaneRef = useRef(false);
   const requestsLocked = !!room?.speaker_requests_locked;
   const canRaise = !!currentUser && room?.status === "live" && !isHostRole(myRole) && myRole !== "speaker";
 
@@ -906,6 +944,18 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         }
       }
       fetchAll();
+      /* Fast-lane hop: raising while watching the ~10s-behind broadcast
+         immediately re-asks the token API — near the front of the queue
+         it now mints a real-time WebRTC seat, so a viewer who might be
+         brought up is already at the live edge. Lowering re-asks too,
+         which hands the seat back (the server answers HLS again). */
+      if (!handRaised && call.hlsMode) {
+        handFastLaneRef.current = true;
+        retryConnect();
+      } else if (handRaised && handFastLaneRef.current) {
+        handFastLaneRef.current = false;
+        retryConnect();
+      }
     } catch (e) {
       console.error("raise hand failed", e);
     } finally {
@@ -976,7 +1026,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         style={{ textAlign: "center", padding: "0 24px", flexDirection: "column", gap: 0, alignItems: "center", justifyContent: "center" }}
       >
         <p className="m-0 text-[11px]" style={{ color: "#c9a6f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, letterSpacing: "0.08em" }}>
-          SCHEDULED DEBATE
+          SCHEDULED DISCUSSION
         </p>
         <h1 className="m-0 mt-2 text-[22px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, maxWidth: 640 }}>
           {room.motion}
@@ -1014,7 +1064,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}`}>
       <div className="ag-main">
         {/* ── Top bar ── */}
-        {broadcast && (
+        {(broadcast || duel) && (
           <style>{`.ag-switch-view { display: none !important; }`}</style>
         )}
         {broadcast && (
@@ -1055,7 +1105,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           <div className="ag-topbar-info">
             <div className="ag-live-tag">
               <span className={`ag-live-dot ${room.status === "live" ? "" : "idle"}`} />
-              {room.status === "live" ? "LIVE DEBATE" : room.status === "created" ? "STARTING SOON" : "DEBATE"}
+              {room.status === "live" ? "LIVE DISCUSSION" : room.status === "created" ? "STARTING SOON" : "DISCUSSION"}
             </div>
             <h1 className="ag-motion">{room.motion}</h1>
             <div className="ag-topbar-meta">
@@ -1229,8 +1279,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
         {/* ── Stage closed: everyone gets walked out ── */}
         {room?.status === "ended" && !broadcast && (
-          <div className="ag-ended-card" role="dialog" aria-label="Debate ended">
-            <h2>Debate ended</h2>
+          <div className="ag-ended-card" role="dialog" aria-label="Discussion ended">
+            <h2>Discussion ended</h2>
             <p>
               The host closed the stage.
               {room.recording_url
@@ -1279,7 +1329,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   value={noteText}
                   maxLength={800}
                   rows={2}
-                  placeholder="A claim made in this debate that needs context…"
+                  placeholder="A claim made in this discussion that needs context…"
                   onChange={(e) => setNoteText(e.target.value)}
                 />
                 <div className="ag-invite-actions">
@@ -1355,6 +1405,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   tiles={layoutTiles}
                   speaking={call.speakingIds}
                   onPin={(key) => {
+                    if (duel) return; // two panes, nothing to pin into
                     setLayoutPin(key);
                     pickLayout("multi");
                   }}
@@ -1732,7 +1783,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           {/* ── Layout switcher: how *you* see the room. Local only —
                 every viewer arranges their own pictures. `g` cycles.
                 Hidden in HLS mode — the broadcast is a single feed. ── */}
-          {!hlsAudience && (
+          {!hlsAudience && !duel && (
           <div className="ag-layout-switch" role="group" aria-label="Call layout">
             {(
               [

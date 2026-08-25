@@ -123,7 +123,7 @@ export default function NotesPopout({ isOpen, onClose, roomId, userId }: Props) 
         className="notes-editor"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Start typing your debate notes…"
+        placeholder="Start typing your discussion notes…"
         spellCheck={true}
       />
 

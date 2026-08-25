@@ -21,6 +21,7 @@ import TopicIcon from "./topicIcons";
 import { useUserMenu } from "./userMenuContext";
 import { roomPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
+import { setPresenceQueued } from "@/lib/presence";
 import UserAvatar from "./UserAvatar";
 
 interface Props {
@@ -82,6 +83,17 @@ const EXPLORE_PILL: Record<string, string> = {
   philosophy: "Philosophy",
 };
 
+/* The rotation flips when Postgres's current_date does — midnight UTC. */
+function msToUtcMidnight(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
+}
+function fmtRotate(ms: number): string {
+  const m = Math.max(1, Math.round(ms / 60000));
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+}
+
 const rowCard: React.CSSProperties = {
   background: "rgba(11,11,13,0.95)",
   border: "0.5px solid #2e2e38",
@@ -91,6 +103,31 @@ const rowCard: React.CSSProperties = {
 export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [supabase] = useState(() => createClient());
   const { openUserMenu } = useUserMenu();
+
+  /* Countdown to the next daily rotation — 30s tick keeps the minute
+     display honest without a per-second render loop. */
+  const [rotateLeft, setRotateLeft] = useState(() => msToUtcMidnight());
+  useEffect(() => {
+    const t = setInterval(() => setRotateLeft(msToUtcMidnight()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* "Explore all …" shows only when the room strip actually overflows —
+     measured, not guessed, so it tracks viewport resizes too. */
+  const roomsRowRef = useRef<HTMLDivElement | null>(null);
+  const [roomsOverflow, setRoomsOverflow] = useState(false);
+  /* Re-measure whenever the strip's contents could have changed (data
+     load or category switch) and on resize. Lives up here, above the
+     `!container` early return, to keep the hook order stable. */
+  useEffect(() => {
+    const el = roomsRowRef.current;
+    if (!el) { setRoomsOverflow(false); return; }
+    const check = () => setRoomsOverflow(el.scrollWidth > el.clientWidth + 4);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
 
   /* Clickable username → unified user context menu (profile, follow, report). */
   const nameSpan = (u: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null | undefined) =>
@@ -151,6 +188,10 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const anyQueued = topics.some((t) => t.am_queued);
+
+  /* Friends lists show "In queue" while we wait — clear it on unmount. */
+  useEffect(() => { setPresenceQueued(anyQueued); }, [anyQueued]);
+  useEffect(() => () => setPresenceQueued(false), []);
 
   const load = useCallback(async () => {
     const [{ data: auth }, topicsRes, roomsRes] = await Promise.all([
@@ -431,10 +472,14 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
         {/* Selected field: popular rooms */}
         <div className="flex items-center gap-3 mb-0.5">
-          <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
+          <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
             POPULAR ROOMS
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+          {/* The escape hatch earns its place only when the strip actually
+              overflows — with everything already visible (or nothing at
+              all), "Explore all" is a button to nowhere new. */}
+          {roomsOverflow && (
           <button
             onClick={() => {
               // Hand off to the MVP Explore page with this field's category
@@ -453,6 +498,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           >
             Explore all {selCat.label} rooms →
           </button>
+          )}
         </div>
 
         {selRooms.length === 0 && (
@@ -462,7 +508,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         )}
 
         {selRooms.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          <div ref={roomsRowRef} className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             {selRooms.map((r) => (
               <div
                 key={r.id}
@@ -573,7 +619,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {selScheduled.length > 0 ? (
           <>
             <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-              <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+              <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
                 SCHEDULED
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -680,31 +726,14 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-0.5">
-              <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+              <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
                 SCHEDULED
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
             </div>
-            {/* Empty half earns its keep: a standing invitation to fill it. */}
-            <div
-              className="flex flex-col items-start justify-center"
-              style={{ ...rowCard, minHeight: 168, padding: "22px 24px", gap: 8, borderStyle: "dashed", borderColor: "#3a3145" }}
-            >
-              <p className="m-0 text-[13px]" style={{ color: "#c9c9d2", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                Nothing on the calendar in {selCat.label} yet.
-              </p>
-              <p className="m-0 text-[11.5px]" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
-                Schedule a debate and it headlines here — everyone who taps <Icon name="bell" size={11} /> gets
-                reminded when doors open, 30 minutes before start.
-              </p>
-              <button
-                onClick={() => onCreateLobby(selCat.key, true)}
-                className="cursor-pointer text-[12px] rounded-lg"
-                style={{ padding: "8px 16px", marginTop: 4, background: "rgba(35,24,52,0.85)", border: "0.5px solid #43315e", color: "#c9a6f0", fontFamily: "inherit" }}
-              >
-                Schedule a debate
-              </button>
-            </div>
+            <p className="m-0 text-[11px]" style={{ color: "#6b6b74" }}>
+              Nothing on the calendar in {selCat.label} yet.
+            </p>
           </>
         )}
         </div>
@@ -712,10 +741,13 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
         {/* Selected field: queue questions */}
         <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-          <span className="text-[11px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
+          <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
             QUEUE
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+          <span className="text-[11px] whitespace-nowrap inline-flex items-center gap-1.5" style={{ color: "#6b6b74" }}>
+            <Icon name="refresh-cw" size={11} /> new topics in {fmtRotate(rotateLeft)}
+          </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 10 }}>
         {selRows.map((t) => {
@@ -733,21 +765,45 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                   {t.question}
                 </p>
-                <p className="m-0 mt-1 text-[11px]" style={{ color: "#6b6b74" }}>
-                  {t.queue_count > 0 ? (
-                    <>
-                      <span style={{ color: t.pro_count > 0 ? "#97c459" : "#6b6b74" }}>{t.pro_count} on Pro</span>
-                      {" · "}
-                      <span style={{ color: t.con_count > 0 ? "#e05a5a" : "#6b6b74" }}>{t.con_count} on Con</span>
-                    </>
-                  ) : (
-                    "no one waiting yet"
-                  )}
-                </p>
-                {inQueue && (
-                  <p className="m-0 mt-1.5 text-[11px]" style={{ color: "#f4d47c" }}>
-                    <span className="inline-block animate-pulse">●</span> In queue — you&rsquo;ll be matched the moment
-                    someone else joins. Keep this page open.
+                {inQueue ? (
+                  /* Your own seat in line replaces the count (which would
+                     just be counting you) — a proper status chip plus a
+                     quiet explainer, not a wall of gold text. */
+                  <div style={{ marginTop: 14.75 }}>
+                    {/* Pill on its own line between the title and the
+                        directions — status first, explanation under it.
+                        Inline 15px margins: no Tailwind step at 15, and
+                        arbitrary utilities are unreliable under the
+                        mvp-home reset. */}
+                    <span
+                      className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full"
+                      style={{
+                        background: "rgba(226,185,107,0.1)",
+                        border: "0.5px solid rgba(226,185,107,0.4)",
+                        color: "#f4d47c",
+                        fontWeight: 600,
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      <span
+                        className="inline-block animate-pulse"
+                        style={{ width: 6, height: 6, borderRadius: "50%", background: "#f4d47c" }}
+                      />
+                      In queue
+                    </span>
+                    <p className="m-0 text-[11px]" style={{ marginTop: 15, color: "#8b8b94" }}>
+                      You&rsquo;ll be matched the moment someone joins — keep this page open.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="m-0 mt-1 text-[11px]" style={{ color: "#6b6b74" }}>
+                    {t.queue_count > 0 ? (
+                      <span style={{ color: "#97c459" }}>
+                        {t.queue_count} waiting to talk
+                      </span>
+                    ) : (
+                      "no one waiting yet"
+                    )}
                   </p>
                 )}
               </div>
@@ -762,24 +818,16 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 </button>
               ) : (
                 <div className="flex gap-2 shrink-0">
-                  {/* One Join: the side is chosen for you — whichever matches
-                      instantly (someone is waiting opposite), else PRO. Gold
-                      when a match is waiting. */}
+                  {/* One Join — matching is stanceless (the server pairs
+                      you with whoever is waiting; seats are assigned
+                      invisibly). Gold when a match is waiting. */}
                   {(() => {
-                    const instant = t.con_count > 0 || t.pro_count > 0;
-                    const side: "PRO" | "CON" = t.con_count > 0 ? "PRO" : t.pro_count > 0 ? "CON" : "PRO";
+                    const instant = t.queue_count > 0;
                     return (
                       <button
-                        onClick={() => queueUp(t, side)}
+                        onClick={() => queueUp(t, "PRO")}
                         disabled={busyId === t.id}
-                        className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
-                        style={{
-                          background: instant ? "linear-gradient(135deg,#f7e3a0,#d9a238)" : "rgba(24,48,82,0.9)",
-                          border: instant ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
-                          color: instant ? "#412402" : "#9cc4f0",
-                          fontFamily: "inherit",
-                          fontWeight: instant ? 600 : 500,
-                        }}
+                        className={`queue-join-btn${instant ? " queue-join-btn--instant" : ""}`}
                         title={instant ? "Someone is waiting — you'll be matched right away" : "Join the queue for this question"}
                       >
                         {busyId === t.id ? "…" : instant ? "Join — match now" : "Join"}

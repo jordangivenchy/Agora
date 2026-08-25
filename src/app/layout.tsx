@@ -20,7 +20,7 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: "AgoraSphere — Live Discussion Platform",
-  description: "Join live debates, challenge ideas, and sharpen your arguments.",
+  description: "Join live discussions, challenge ideas, and sharpen your arguments.",
 };
 
 export default function RootLayout({

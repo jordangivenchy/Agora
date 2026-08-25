@@ -27,6 +27,8 @@ import { createClient } from "@/lib/supabase-browser";
 
 export interface PresenceInfo {
   room_id: string | null;
+  /** Waiting in a debate queue (set by the queue boards while queued). */
+  queued: boolean;
 }
 
 const STALE_MS = 90_000;
@@ -34,16 +36,17 @@ const HEARTBEAT_MS = 45_000;
 const POLL_MS = 45_000;
 const POLL_JITTER_MS = 5_000;
 
-type Row = { user_id: string; room_id: string | null; last_seen_at: string };
+type Row = { user_id: string; room_id: string | null; queued?: boolean | null; last_seen_at: string };
 
 let polling = false;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let selfId: string | null = null;
 let selfRoom: string | null = null;
+let selfQueued = false;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
 
 /* Live rows by user id; the exported snapshot only includes fresh ones. */
-const rows = new Map<string, { room_id: string | null; lastSeen: number }>();
+const rows = new Map<string, { room_id: string | null; queued: boolean; lastSeen: number }>();
 
 /* Immutable snapshot (useSyncExternalStore requires stable references). */
 let snapshot: ReadonlyMap<string, PresenceInfo> = new Map();
@@ -53,7 +56,7 @@ function rebuildSnapshot() {
   const cutoff = Date.now() - STALE_MS;
   const next = new Map<string, PresenceInfo>();
   for (const [id, r] of rows) {
-    if (r.lastSeen >= cutoff) next.set(id, { room_id: r.room_id });
+    if (r.lastSeen >= cutoff) next.set(id, { room_id: r.room_id, queued: r.queued });
     else rows.delete(id);
   }
   snapshot = next;
@@ -63,6 +66,7 @@ function rebuildSnapshot() {
 function ingest(row: Row) {
   rows.set(row.user_id, {
     room_id: row.room_id ?? null,
+    queued: !!row.queued,
     lastSeen: new Date(row.last_seen_at).getTime(),
   });
 }
@@ -71,12 +75,21 @@ function beat() {
   if (!selfId) return;
   const id = selfId;
   const room = selfRoom;
+  const queued = selfQueued;
   const supabase = createClient();
-  supabase.rpc("touch_presence", { p_room: room }).then(() => {
+  supabase.rpc("touch_presence", { p_room: room, p_queued: queued }).then(() => {
     // Reflect our own write immediately — don't wait for the next poll.
-    ingest({ user_id: id, room_id: room, last_seen_at: new Date().toISOString() });
+    ingest({ user_id: id, room_id: room, queued, last_seen_at: new Date().toISOString() });
     rebuildSnapshot();
   }, () => {});
+}
+
+/** Queue boards flip this while the local user is waiting in a debate
+    queue. Only a change triggers an immediate heartbeat. */
+export function setPresenceQueued(queued: boolean) {
+  if (queued === selfQueued) return;
+  selfQueued = queued;
+  if (selfId) beat();
 }
 
 /* One poll: fetch everyone fresh within the staleness window and rebuild
@@ -86,7 +99,7 @@ function poll() {
   const supabase = createClient();
   supabase
     .from("user_presence")
-    .select("user_id, room_id, last_seen_at")
+    .select("user_id, room_id, queued, last_seen_at")
     .gt("last_seen_at", new Date(Date.now() - STALE_MS).toISOString())
     .then(({ data }) => {
       if (data) {

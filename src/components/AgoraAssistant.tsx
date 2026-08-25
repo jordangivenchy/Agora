@@ -287,7 +287,7 @@ export default function AgoraAssistant({
         onClick={() => setOpenPanel((v) => !v)}
         title={
           orbLive
-            ? "Agora is listening — say “Agora, …” or “Hey, Agora …”, or just debate; it fact-checks live"
+            ? "Agora is listening — say “Agora, …” or “Hey, Agora …”, or just keep talking; it fact-checks live"
             : stageListen.listening
               ? "Agora is listening in the background (interference off)"
               : 'Ask Agora — or say "Hey, Agora"'
@@ -426,7 +426,7 @@ export default function AgoraAssistant({
                 <span style={{ color: "#9cc4f0" }}>&ldquo;Agora, …&rdquo;</span> or{" "}
                 <span style={{ color: "#9cc4f0" }}>&ldquo;Hey, Agora…&rdquo;</span>
                 {liveListening
-                  ? " while you debate. I'm listening and will speak up if a claim needs correcting."
+                  ? " while you talk. I'm listening and will speak up if a claim needs correcting."
                   : "."}
               </p>
             )}
@@ -468,7 +468,7 @@ export default function AgoraAssistant({
                 liveListening
                   ? interferenceActive
                     ? "Agora may jump in: wake-phrase answers and spoken corrections. Click to silence it (listening continues in the background)."
-                    : "Agora is muted in the debate — it still listens and takes style notes. Click to let it jump in again."
+                    : "Agora is muted in the discussion — it still listens and takes style notes. Click to let it jump in again."
                   : interferenceActive
                     ? "Hands-free is on — say “Hey, Agora …” anytime. Click to stop."
                     : 'Hands-free: listen for "Hey, Agora"'

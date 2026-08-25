@@ -37,7 +37,7 @@ export function digestHasContent(d: DigestData): boolean {
 export function digestIntro(d: DigestData): string {
   const bits: string[] = [];
   if (d.unreadCount > 0) bits.push(`${d.unreadCount} unread notification${d.unreadCount === 1 ? "" : "s"}`);
-  if (d.upcoming.length > 0) bits.push(`${d.upcoming.length} upcoming debate${d.upcoming.length === 1 ? "" : "s"}`);
+  if (d.upcoming.length > 0) bits.push(`${d.upcoming.length} upcoming discussion${d.upcoming.length === 1 ? "" : "s"}`);
   if (d.newFollowers > 0) bits.push(`${d.newFollowers} new follower${d.newFollowers === 1 ? "" : "s"}`);
   if (!bits.length) return "Here's what happened in your corner of AgoraSphere this week.";
   return `This week: ${bits.join(", ")}.`;
@@ -46,6 +46,6 @@ export function digestIntro(d: DigestData): string {
 export function replaysLine(n: number): string | null {
   if (n <= 0) return null;
   return n === 1
-    ? "1 debate from someone you follow was recorded this week — the replay is waiting."
-    : `${n} debates from people you follow were recorded this week — the replays are waiting.`;
+    ? "1 discussion from someone you follow was recorded this week — the replay is waiting."
+    : `${n} discussions from people you follow were recorded this week — the replays are waiting.`;
 }

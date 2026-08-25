@@ -51,7 +51,7 @@ interface Props {
 export type SearchKind = "all" | "debate" | "post" | "comment" | "community" | "person";
 const TABS: { id: SearchKind; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "debate", label: "Debates" },
+  { id: "debate", label: "Discussions" },
   { id: "post", label: "Posts" },
   { id: "comment", label: "Comments" },
   { id: "community", label: "Communities" },
@@ -118,7 +118,7 @@ type Suggest = {
   avatar_url: string | null;
   href_hint: string | null;
 };
-const KIND_LABEL: Record<SuggestKind, string> = { person: "Person", community: "Community", debate: "Debate" };
+const KIND_LABEL: Record<SuggestKind, string> = { person: "Person", community: "Community", debate: "Discussion" };
 
 const card: React.CSSProperties = {
   background: "rgba(14,14,17,0.72)",
@@ -655,7 +655,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
               )}
               {recent.length === 0 && (!trending || trending.length === 0) && (
                 <p className="m-0 text-[13px]" style={{ color: "rgba(238,238,245,0.5)" }}>
-                  Search for debates, posts, people, communities and comments.
+                  Search for discussions, posts, people, communities and comments.
                 </p>
               )}
             </div>
@@ -758,7 +758,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                 <>
                   {debates.length > 0 && (
                     <section className="mb-5">
-                      {kind === "all" && <p className="m-0 mb-2 text-[12px] font-semibold" style={{ color: "rgba(238,238,245,0.7)" }}>Debates</p>}
+                      {kind === "all" && <p className="m-0 mb-2 text-[12px] font-semibold" style={{ color: "rgba(238,238,245,0.7)" }}>Discussions</p>}
                       <div className={railClass} style={railStyle}>{debates.map(renderDebate)}</div>
                     </section>
                   )}

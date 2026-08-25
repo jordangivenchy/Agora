@@ -1118,7 +1118,7 @@ export default function ProfileView({
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1.5 mt-5 mb-4 flex-wrap">
-          {tabBtn("debates", "Debates", counts.debates)}
+          {tabBtn("debates", "Discussions", counts.debates)}
           {tabBtn("scheduled", "Scheduled", counts.scheduled)}
           {tabBtn("posts", "Posts", counts.posts)}
           {tabBtn("reposts", "Reposts", counts.reposts)}
@@ -1214,7 +1214,7 @@ export default function ProfileView({
             ) : pastAndLive.length === 0 ? (
               emptyState(
                 "mic",
-                isSelf ? "No debates yet" : `${first} hasn't debated yet`,
+                isSelf ? "No discussions yet" : `${first} hasn't joined a discussion yet`,
                 isSelf ? "Host or join a live discussion and your history builds here." : "Their live and past discussions will show up here.",
                 isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
               )
@@ -1233,7 +1233,7 @@ export default function ProfileView({
                       </p>
                       <p className="m-0" style={{ fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                         <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>
-                          {d.motion || "Untitled debate"}
+                          {d.motion || "Untitled discussion"}
                         </a>
                       </p>
                       <p className="m-0 mt-1" style={{ color: "#8b8b94", fontSize: 11.5 }}>
@@ -1242,7 +1242,7 @@ export default function ProfileView({
                         ) : (
                           `${timeAgo(d.created_at)} ago · `
                         )}
-                        {d.role === "host" ? "hosted" : "debated"}
+                        {d.role === "host" ? "hosted" : "spoke"}
                         {topic ? ` · ${topic.label}` : ""}
                       </p>
                     </div>
@@ -1297,7 +1297,7 @@ export default function ProfileView({
                         <span style={{ color: "#6b6b74", fontSize: 11 }}>· host</span>
                       </p>
                       <p className="m-0" style={{ fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                        <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>{d.motion || "Untitled debate"}</a>
+                        <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>{d.motion || "Untitled discussion"}</a>
                       </p>
                       <p className="m-0 mt-1" style={{ color: "#f4d47c", fontSize: 11.5, fontWeight: 600 }}>
                         {new Date(d.scheduled_start!).toLocaleString(undefined, {
@@ -1308,7 +1308,7 @@ export default function ProfileView({
                           minute: "2-digit",
                         })}
                         <span style={{ color: "#8b8b94", fontWeight: 400 }}>
-                          {" "}· {d.role === "host" ? "hosting" : "debating"}
+                          {" "}· {d.role === "host" ? "hosting" : "speaking"}
                           {topic ? ` · ${topic.label}` : ""}
                           {(reminders[d.id]?.count ?? 0) > 0 && ` · ${reminders[d.id].count} waiting`}
                         </span>

@@ -172,7 +172,7 @@ export default function Amphitheater({
             <Icon name="monitor" size={16} />
             <span>
               <strong>{inSpeaker ? "Switch audience view" : "Switch speaker view"}</strong>
-              <small>{inSpeaker ? "back to the amphitheater" : "focused view of the debaters"}</small>
+              <small>{inSpeaker ? "back to the amphitheater" : "focused view of the speakers"}</small>
             </span>
           </button>
         </div>

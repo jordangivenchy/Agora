@@ -78,9 +78,9 @@ export function debateReminderEmail(motion: string, startsAt: Date, roomUrl: str
   return {
     subject: `Starting soon: ${motion}`,
     html: brandedEmail(
-      "Your debate starts in 30 minutes",
+      "Your discussion starts in 30 minutes",
       `<p style="font-size:15px;"><strong>&ldquo;${motion.replace(/</g, "&lt;")}&rdquo;</strong></p>
-       <p>Doors are open now — the debate begins at ${time}.</p>
+       <p>Doors are open now — the discussion begins at ${time}.</p>
        <p style="margin-top:20px;">
          <a href="${roomUrl}" style="display:inline-block;background:#4a9eff;color:#ffffff;
             padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600;">
@@ -125,7 +125,7 @@ export function debateReplayReadyEmail(motion: string, replayUrl: string): { sub
   return {
     subject: `Your replay is ready: ${motion}`,
     html: brandedEmail(
-      "Your debate replay is ready",
+      "Your discussion replay is ready",
       `<p style="font-size:15px;"><strong>&ldquo;${safe}&rdquo;</strong></p>
        <p>The recording has been finalized. Watch it back, read the transcript, and keep the conversation going in the discussion thread.</p>
        <p style="margin-top:20px;">

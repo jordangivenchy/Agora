@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       } else if (r.type === "followed_scheduled") {
         const when = whenLabel(r.room.scheduled_start);
         payloads.set(r.user_id, {
-          title: `${who} scheduled a debate`,
+          title: `${who} scheduled a discussion`,
           body: `${motion}${when ? ` · ${when}` : ""}`,
           url,
         });

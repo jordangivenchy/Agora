@@ -250,7 +250,7 @@ export default function AgoraSidebar({
                       type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder="Message #debate-chat"
+                      placeholder="Message #discussion-chat"
                       maxLength={200}
                     />
                   </form>

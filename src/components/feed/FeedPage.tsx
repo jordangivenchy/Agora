@@ -387,7 +387,7 @@ export default function FeedPage({ open, onClose }: Props) {
               Your feed is for members
             </p>
             <p className="m-0 mb-4 text-[12px]" style={{ color: "rgba(238,238,245,0.5)" }}>
-              Sign in to see live debates from people you follow, posts from your communities, and what&apos;s coming up.
+              Sign in to see live discussions from people you follow, posts from your communities, and what&apos;s coming up.
             </p>
             <a href="/login" className="no-underline text-[12px] px-4 py-2 rounded-lg inline-block" style={{ background: "#4a9eff", color: "#fff", fontWeight: 600 }}>
               Sign in

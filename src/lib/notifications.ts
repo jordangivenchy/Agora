@@ -112,7 +112,7 @@ const q = (s: string | null | undefined, fallback: string) => `“${s ?? fallbac
 
 /** Plain-text sentence for a notification (also used for OS/push bodies). */
 export function notifText(n: NotifRow, now: Date = new Date()): string {
-  const motion = q(n.room_motion, "a debate");
+  const motion = q(n.room_motion, "a discussion");
   const post = q(n.post_title, "your post");
   switch (n.type) {
     case "new_follower":
@@ -139,7 +139,7 @@ export function notifText(n: NotifRow, now: Date = new Date()): string {
     case "community_post":
       return `${actorLabel(n)} posted in ${n.community_name ?? "a community you joined"}: ${q(n.post_title, "a new thread")}`;
     case "community_debate":
-      return `New debate in ${n.community_name ?? "your community"}: ${motion}`;
+      return `New discussion in ${n.community_name ?? "your community"}: ${motion}`;
     case "mention":
       return `${actorLabel(n)} mentioned you in ${q(n.post_title, "a thread")}`;
     case "post_comment":
@@ -218,16 +218,16 @@ export type PrefGroup = { title: string; items: { type: string; label: string; s
 
 export const PREF_GROUPS: PrefGroup[] = [
   {
-    title: "Debates",
+    title: "Discussions",
     items: [
       { type: "followed_live", label: "Someone you follow goes live", sub: "The moment their amphitheater opens" },
-      { type: "followed_scheduled", label: "Someone you follow schedules a debate", sub: "So you can set a reminder early" },
-      { type: "room_live", label: "Reminders you set", sub: "When a debate you asked about goes live" },
-      { type: "room_starting_soon", label: "Starting soon", sub: "30 minutes before a debate you set a reminder for" },
+      { type: "followed_scheduled", label: "Someone you follow schedules a discussion", sub: "So you can set a reminder early" },
+      { type: "room_live", label: "Reminders you set", sub: "When a discussion you asked about goes live" },
+      { type: "room_starting_soon", label: "Starting soon", sub: "30 minutes before a discussion you set a reminder for" },
       { type: "room_invite", label: "Room invites", sub: "When a friend invites you to a room" },
-      { type: "debate_replay_ready", label: "Replay ready", sub: "When a debate you hosted or spoke in is recorded" },
-      { type: "discussion_opened", label: "Discussion opened", sub: "When someone starts the thread on your debate" },
-      { type: "community_debate", label: "Community debates", sub: "When a debate starts in a community you joined" },
+      { type: "debate_replay_ready", label: "Replay ready", sub: "When a discussion you hosted or spoke in is recorded" },
+      { type: "discussion_opened", label: "Discussion opened", sub: "When someone starts the thread on your conversation" },
+      { type: "community_debate", label: "Community discussions", sub: "When a discussion starts in a community you joined" },
     ],
   },
   {

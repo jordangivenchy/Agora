@@ -102,6 +102,21 @@ export async function POST(request: NextRequest) {
       if (room.status !== "live") {
         return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
       }
+      /* VOD gating: recording is a host choice (Settings → Recordings),
+         and stops being offered once the host's storage allowance is
+         full — the allowance is the paid-plan lever. Both answers are
+         benign choices, not faults; the auto-start client skips quietly.
+         A pre-migration DB returns null and fails open. */
+      const { data: vod } = await supabase.rpc("get_recording_usage");
+      if (vod && typeof vod === "object") {
+        const v = vod as { used_bytes?: number; limit_mb?: number; record_debates?: boolean };
+        if (v.record_debates === false) {
+          return NextResponse.json({ error: "recording_disabled" }, { status: 409 });
+        }
+        if ((v.used_bytes ?? 0) >= (v.limit_mb ?? 5120) * 1024 * 1024) {
+          return NextResponse.json({ error: "storage_full" }, { status: 409 });
+        }
+      }
       const info = await egress.startRoomCompositeEgress(
         roomId,
         {

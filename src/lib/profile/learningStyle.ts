@@ -90,7 +90,7 @@ export function deriveLearningStyle(
       "You tend to back your points with evidence and sources — a real strength for persuading skeptical audiences.",
       "You often reason from conviction more than cited evidence, which reads as confident but is easy to challenge.",
       "Push further: when you cite, name the specific study or number so it can't be waved away.",
-      "Try grounding one key claim per debate in a concrete source — it makes your strongest points unshakeable."
+      "Try grounding one key claim per discussion in a concrete source — it makes your strongest points unshakeable."
     ),
     concrete_vs_abstract: dim(
       concrete, "concrete-example-driven",
@@ -103,7 +103,7 @@ export function deriveLearningStyle(
       revises, "updates-under-challenge",
       "You engage counterarguments and adjust — a sign of genuine reasoning, not just winning.",
       "You tend to hold your line under pressure, which is forceful but can miss a chance to strengthen your case.",
-      "Keep it up, and name what changed your mind aloud — audiences trust debaters who visibly reason.",
+      "Keep it up, and name what changed your mind aloud — audiences trust speakers who visibly reason.",
       "When a counterpoint lands, try conceding the narrow point and re-anchoring — it disarms and strengthens you."
     ),
     inquiry_seeking: dim(

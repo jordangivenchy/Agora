@@ -111,7 +111,8 @@ export default function FriendsSection({ container, sidebar }: Props) {
   const sorted = useMemo(() => {
     const rank = (f: FriendRow) => {
       const p = presence.get(f.id);
-      return (favorites.has(f.id) ? 0 : 4) + (p?.room_id ? 0 : p ? 1 : 2);
+      // room < queue < online < offline, favorites first within each band
+      return (favorites.has(f.id) ? 0 : 4) + (p?.room_id ? 0 : p?.queued ? 0.5 : p ? 1 : 2);
     };
     return [...friends].sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b)));
   }, [friends, favorites, presence]);
@@ -130,7 +131,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
 
   const toRow = (f: FriendRow, isFriend: boolean): FriendRowModel => {
     const p = presence.get(f.id);
-    return { user: f, online: !!p, roomId: p?.room_id ?? null, favorite: favorites.has(f.id), isFriend };
+    return { user: f, online: !!p, roomId: p?.room_id ?? null, queued: !!p?.queued, favorite: favorites.has(f.id), isFriend };
   };
   const onlineRows = filtered.filter((f) => presence.has(f.id)).map((f) => toRow(f, true));
   const offlineRows = filtered.filter((f) => !presence.has(f.id)).map((f) => toRow(f, true));

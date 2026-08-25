@@ -80,7 +80,11 @@ export function FollowButton({
 export function PersonCard({
   person, following, busy, onToggle, compact,
 }: { person: Suggestion; following: boolean; busy: boolean; onToggle: (id: string, current: boolean) => void; compact?: boolean }) {
-  const name = person.display_name?.trim() || `@${person.username}`;
+  /* Every card renders the same three lines — name, @handle, reason —
+     whether or not a display name exists, so a row of cards stays the
+     same height and the Follow buttons sit on one line (mt-auto pins
+     them to the bottom as the final guarantee). */
+  const name = person.display_name?.trim() || person.username;
   return (
     <a
       href={`/@${encodeURIComponent(person.username)}`}
@@ -99,16 +103,16 @@ export function PersonCard({
         <span className="truncate">{name}</span>
         {person.verified && <VerifiedBadge size={12} />}
       </p>
-      {person.display_name?.trim() && (
-        <p className="m-0 text-[11px] truncate max-w-full" style={{ color: "rgba(238,238,245,0.45)" }}>@{person.username}</p>
-      )}
-      <p className="m-0 mt-1 text-[10.5px] leading-snug" style={{
+      <p className="m-0 mt-0.5 text-[11px] truncate max-w-full" style={{ color: "rgba(238,238,245,0.45)" }}>@{person.username}</p>
+      <p className="m-0 text-[10.5px] leading-snug" style={{
         color: "rgba(238,238,245,0.5)", minHeight: 26,
         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
       }}>
         {person.reason}
       </p>
-      <div className="mt-2">
+      {/* Gap above the button mirrors the card's bottom padding, so the
+          button floats an equal distance from the text and the edge. */}
+      <div className="mt-auto" style={{ paddingTop: compact ? 12 : 16 }}>
         <FollowButton userId={person.id} following={following} busy={busy} onToggle={onToggle} small={compact} />
       </div>
     </a>

@@ -1861,3 +1861,34 @@ html.reduce-motion .nav-sparkle {
   background: rgba(255,255,255,0.08) !important;
   border-color: rgba(255,255,255,0.2) !important;
 }
+
+/* ── Queue board Join button ──────────────────────────────────────────
+   Two states: waiting (quiet blue pill) and instant-match (gold, lit —
+   someone is in line, one click starts the conversation). Hover/active
+   feedback lives here because inline styles can't express it. */
+.queue-join-btn {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 9px 22px;
+  border-radius: 999px;
+  border: none;
+  background: #2f7fe0;
+  color: #fff;
+  white-space: nowrap;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+.queue-join-btn:hover { background: #3c8ceb; }
+.queue-join-btn:active { transform: scale(0.97); }
+.queue-join-btn:disabled { opacity: 0.55; cursor: default; }
+.queue-join-btn--instant {
+  background: #d9a238;
+  color: #2b1a02;
+  box-shadow: 0 2px 14px rgba(217, 162, 56, 0.3);
+}
+.queue-join-btn--instant:hover {
+  background: #e5b04a;
+  box-shadow: 0 3px 20px rgba(217, 162, 56, 0.45);
+}

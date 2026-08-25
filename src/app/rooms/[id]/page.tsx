@@ -389,7 +389,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
     // Once a debate is live, only the host may (re)take a debater seat.
     // Everyone else joins as a spectator so the debate isn't interrupted.
     if (role === "debater" && room?.status === "live" && currentUser.id !== room.host_id) {
-      setError("This debate is already live — you can join the audience.");
+      setError("This discussion is already live — you can join the audience.");
       return;
     }
 
@@ -924,8 +924,8 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                 <strong style={{ fontWeight: 700 }}>Scheduled for {scheduledLabel}.</strong>
                 {" "}
                 {isHost
-                  ? "Start the debate whenever you're ready — it'll go live for everyone."
-                  : "The host will start the debate at the scheduled time."}
+                  ? "Start the discussion whenever you're ready — it'll go live for everyone."
+                  : "The host will start the discussion at the scheduled time."}
               </span>
               {isHost && (
                 <button
@@ -945,7 +945,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                     textTransform: "uppercase",
                   }}
                 >
-                  <Icon name="play" size={12} style={{ fill: "currentColor" }} /> Start Debate
+                  <Icon name="play" size={12} style={{ fill: "currentColor" }} /> Start Discussion
                 </button>
               )}
             </div>
@@ -963,13 +963,13 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                 color: "#22c55e",
               }}
             >
-              <Icon name="play" size={12} style={{ fill: "currentColor" }} /> Start Debate
+              <Icon name="play" size={12} style={{ fill: "currentColor" }} /> Start Discussion
             </button>
           )}
 
           {isHost && room!.status === "live" && (
             <button className="end-debate-btn" onClick={endRoom}>
-              End Debate
+              End Discussion
             </button>
           )}
         </div>
@@ -1151,7 +1151,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
             {!currentUser ? (
               room!.is_private ? (
                 <p style={{ fontSize: "12px", color: "rgba(238,238,245,0.25)" }}>
-                  <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to join this debate
+                  <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to join this discussion
                 </p>
               ) : (
                 /* Signed-out visitor on a public room — audience-only entry */
@@ -1182,7 +1182,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                     {joining ? "Joining…" : "Join Audience"}
                   </button>
                   <p style={{ fontSize: "12px", color: "rgba(238,238,245,0.25)" }}>
-                    <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to debate, chat, or raise your hand
+                    <a href="/login" style={{ color: "var(--accent-blue)", fontWeight: 700 }}>Sign in</a> to discuss, chat, or raise your hand
                   </p>
                 </>
               )
@@ -1211,7 +1211,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
                       color: "#fca5a5",
                     }}
                   >
-                    Debate in progress — join the audience
+                    Discussion in progress — join the audience
                   </span>
                 </div>
 

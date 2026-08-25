@@ -58,7 +58,7 @@ function buildHighlights(
 ): string[] {
   const out: string[] = [];
   if (behavior.top_topics.length) {
-    out.push(`You engage most with ${behavior.top_topics.slice(0, 2).map((t) => t.topic).join(" and ")} debates.`);
+    out.push(`You engage most with ${behavior.top_topics.slice(0, 2).map((t) => t.topic).join(" and ")} discussions.`);
   }
   // Lead with the learner's strongest observed dimension.
   const strongest = Object.values(learning).sort((a, b) => b.score - a.score)[0];

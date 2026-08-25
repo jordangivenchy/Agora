@@ -143,7 +143,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     let scheduledIso: string | null = null;
     if (scheduleEnabled) {
       if (!scheduleAt) {
-        setError("Pick a start time for the scheduled debate");
+        setError("Pick a start time for the scheduled discussion");
         return;
       }
       const parsed = new Date(scheduleAt);
@@ -188,7 +188,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       if (rpcError) {
         const msg = rpcError.message || "";
         if (msg.includes("max_scheduled_rooms") || msg.includes("schedule at most 3")) {
-          setError("You can only have 3 scheduled debates at once. End or cancel one first.");
+          setError("You can only have 3 scheduled discussions at once. End or cancel one first.");
         } else if (msg.includes("scheduled_start_too_soon")) {
           setError("Scheduled time must be at least 1 minute from now.");
         } else {
@@ -354,7 +354,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
             }}
           >
             {allowSpectators
-              ? "This room will appear in public listings marked “Private”. Anyone can watch as a spectator, but only invited users can debate."
+              ? "This room will appear in public listings marked “Private”. Anyone can watch as a spectator, but only invited users can speak."
               : "This room is fully hidden — it won't appear anywhere. Only people with the code can enter."}
           </div>
 
@@ -602,7 +602,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                       color: "var(--text-dim)",
                     }}
                   >
-                    Scheduled debates appear on Explore under the Scheduled filter. People can queue up, but the room only goes live when you hit Start.
+                    Scheduled discussions appear on Explore under the Scheduled filter. People can queue up, but the room only goes live when you hit Start.
                     {" "}You can have at most 3 scheduled at once.
                   </p>
                 </>

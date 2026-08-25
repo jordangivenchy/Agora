@@ -361,7 +361,7 @@ function newsSlideHTML(c, i, total) {
           <div class="panel-outlets">${rows}</div>
         </div>
         ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
-        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read article at ${escHTML((c.sources && c.sources[0] && c.sources[0].name) || 'source')} ↗</button>` : ''}
+        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read at ${escHTML((c.sources && c.sources[0] && c.sources[0].name) || 'source')} ↗</button>` : ''}
       </div>
     </div>`;
 }
@@ -456,6 +456,16 @@ function renderCarousel() {
       const url = btn.dataset.url;
       if (url) window.open(url, '_blank', 'noopener,noreferrer');
       else window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
+    });
+    // Long outlet names ("The Washington Post") shrink the type until the
+    // label fits the pill on one line, instead of getting ellipsized.
+    // scrollWidth needs layout — defer a frame so the slide has a size.
+    requestAnimationFrame(() => {
+      let size = 13;
+      while (size > 10 && btn.scrollWidth > btn.clientWidth) {
+        size -= 0.5;
+        btn.style.fontSize = size + 'px';
+      }
     });
   });
 }
@@ -1568,7 +1578,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
         <div>
           <span class="modal-section-label">Format</span>
           <div class="pill-group" id="formatPills">
-            ${['Open Debate','Oxford Style','1v1','Panel (2v2)'].map((f,i) =>
+            ${['Open Discussion','Oxford Style','1v1','Panel (2v2)'].map((f,i) =>
               `<span class="pill${i===0?' selected':''}" onclick="_cmSelectOne(this,'formatPills')">${f}</span>`
             ).join('')}
           </div>

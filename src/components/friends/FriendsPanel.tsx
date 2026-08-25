@@ -22,6 +22,8 @@ export interface FriendRowModel {
   user: FriendUser;
   online: boolean;
   roomId: string | null;
+  /** Waiting in a debate queue (distinct from being in a room). */
+  queued: boolean;
   favorite: boolean;
   /** Friends get message (or Join when in a room) + ⋯; others get the gold "Add" pill. */
   isFriend: boolean;
@@ -234,7 +236,7 @@ export function FriendRow({
   onJoin: (roomId: string) => void;
   onMore: (at: { x: number; y: number }, u: FriendUser) => void;
 }) {
-  const { user, online, roomId, favorite, isFriend } = row;
+  const { user, online, roomId, queued, favorite, isFriend } = row;
   const href = `/users/${user.username}`;
   const openMore = (e: MouseEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -304,14 +306,19 @@ export function FriendRow({
             fontSize: 11,
             lineHeight: "13px",
             whiteSpace: "nowrap",
-            color: roomId ? FRIENDS_UI.live : online ? FRIENDS_UI.secondary : FRIENDS_UI.muted,
-            fontWeight: roomId ? 600 : 400,
+            color: roomId ? FRIENDS_UI.live : queued ? FRIENDS_UI.gold : online ? FRIENDS_UI.secondary : FRIENDS_UI.muted,
+            fontWeight: roomId || queued ? 600 : 400,
           }}
         >
           {roomId ? (
             <>
               <Dot color={FRIENDS_UI.live} size={5} />
               In a room
+            </>
+          ) : queued ? (
+            <>
+              <Dot color={FRIENDS_UI.gold} size={5} />
+              In queue
             </>
           ) : online ? (
             <>

@@ -371,7 +371,7 @@ export default function DebateReplay({
       <div className="dr-root">
         <div className="dr-wrap">
           <div className="dr-empty" style={{ paddingTop: 80 }}>
-            This debate isn&apos;t available.
+            This discussion isn&apos;t available.
             <div style={{ marginTop: 16 }}>
               <button className="dr-btn" onClick={() => router.push("/")}>
                 ← Back to home
@@ -383,7 +383,7 @@ export default function DebateReplay({
     );
   }
 
-  const motion = room.motion || initialRoom?.motion || "Debate";
+  const motion = room.motion || initialRoom?.motion || "Discussion";
   const topic = TOPICS.find((t) => t.key === (room.topic_key ?? initialRoom?.topic_key));
   const recorded = !!room.recording_url;
   const startMs = room.recording_started_at ?? room.started_at;
@@ -404,7 +404,7 @@ export default function DebateReplay({
             ←
           </button>
           <span className="dr-tag">
-            <span className="dr-tag-dot" /> {recorded ? "Replay" : "Ended debate"}
+            <span className="dr-tag-dot" /> {recorded ? "Replay" : "Ended discussion"}
           </span>
           <span className="dr-spacer" />
           <button className="dr-btn" onClick={share} title="Copy the replay link">
@@ -479,7 +479,7 @@ export default function DebateReplay({
                 {room.host && (
                   <UserAvatar username={room.host.username} avatarUrl={room.host.avatar_url} seed={room.host.id} size={56} />
                 )}
-                <strong>This debate wasn&apos;t recorded</strong>
+                <strong>This discussion wasn&apos;t recorded</strong>
                 <span>
                   {hasTranscript
                     ? "The host didn't stream it, but the stage transcript is here — and the discussion is open."
@@ -512,7 +512,7 @@ export default function DebateReplay({
             >
               {!hasTranscript && (
                 <div className="dr-empty">
-                  No transcript for this debate.
+                  No transcript for this discussion.
                   <br />
                   Transcripts are captured when speakers have live listening on.
                 </div>

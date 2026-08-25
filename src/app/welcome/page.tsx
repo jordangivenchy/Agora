@@ -216,7 +216,7 @@ export default function WelcomePage() {
               Follow a few people
             </h1>
             <p className="text-center" style={{ color: "var(--text-muted)", fontSize: "13px", lineHeight: 1.55, marginBottom: "18px" }}>
-              Their debates and posts will show up in your feed. Optional — you can always find more under People.
+              Their discussions and posts will show up in your feed. Optional — you can always find more under People.
             </p>
             <PeopleSuggestions
               limit={8}
@@ -280,7 +280,7 @@ export default function WelcomePage() {
               marginBottom: "26px",
             }}
           >
-            This is how other debaters will see you. You can change it anytime.
+            This is how other speakers will see you. You can change it anytime.
           </p>
 
           {error && (

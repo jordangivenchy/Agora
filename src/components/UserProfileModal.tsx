@@ -510,7 +510,7 @@ export default function UserProfileModal({ userId, onClose, onOpenProfile }: Pro
                   fontSize: 12.5,
                 }}
               >
-                No live or upcoming debates.
+                No live or upcoming discussions.
               </div>
             ) : (
               <div className="flex flex-col gap-2">

@@ -38,16 +38,16 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 /* One-line OS-notification bodies per type (the realtime payload carries
    no joined names, so these stay generic). */
 const OS_BODY: Record<string, string> = {
-  room_starting_soon: "A debate you set a reminder for starts soon.",
-  room_live: "A debate you set a reminder for just went live.",
+  room_starting_soon: "A discussion you set a reminder for starts soon.",
+  room_live: "A discussion you set a reminder for just went live.",
   followed_live: "Someone you follow just went live.",
-  followed_scheduled: "Someone you follow scheduled a debate.",
-  debate_replay_ready: "Your debate replay is ready to watch.",
-  discussion_opened: "Someone opened the discussion on your debate.",
+  followed_scheduled: "Someone you follow scheduled a discussion.",
+  debate_replay_ready: "Your discussion replay is ready to watch.",
+  discussion_opened: "Someone opened the comment thread on your discussion.",
   friend_accepted: "Friend request accepted — you're now friends.",
   room_invite: "A friend invited you to a room.",
   community_post: "New post in a community you joined.",
-  community_debate: "A debate was started in your community.",
+  community_debate: "A discussion was started in your community.",
   mention: "Someone mentioned you in a thread.",
   post_comment: "Someone commented on your post.",
   post_reply: "Someone replied to your comment.",
@@ -405,7 +405,7 @@ export default function NotificationsBell({ container }: Props) {
                 ? "…"
                 : pushState === "on"
                   ? "Push notifications on — reminders reach this device even with the tab closed"
-                  : "Enable push notifications for debate reminders"}
+                  : "Enable push notifications for discussion reminders"}
             </button>
           )}
         </div>

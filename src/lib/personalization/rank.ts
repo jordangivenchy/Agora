@@ -49,7 +49,7 @@ export function rankRecommendations(
     const score = hasSignal ? aff * 2 + base * 0.5 : base;
     const reason =
       hasSignal && aff > 0.15
-        ? `Because you engage most with ${c.topicKey} debates`
+        ? `Because you engage most with ${c.topicKey} discussions`
         : base > 0
           ? "Popular and active right now"
           : "New — worth a look";

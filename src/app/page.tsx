@@ -626,7 +626,7 @@ export default function Home() {
           }}
         >
           <strong style={{ fontWeight: 600 }}>Database unreachable</strong> — showing the
-          interface with example content. Live debates, sign-in, and your profile need the
+          interface with example content. Live discussions, sign-in, and your profile need the
           Supabase project to be running.
         </div>
       )}

@@ -115,7 +115,7 @@ export const TOPICS = [
 ] as const;
 
 export const FORMATS: { value: DebateFormat; label: string }[] = [
-  { value: "open", label: "Open Debate" },
+  { value: "open", label: "Open Discussion" },
   { value: "oxford", label: "Oxford Style" },
   { value: "1v1", label: "1v1" },
   { value: "panel", label: "Panel 2v2" },

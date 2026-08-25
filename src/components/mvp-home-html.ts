@@ -108,7 +108,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <div class="filter-group">
         <span class="filter-group-title">Format</span>
         <button class="filter-pill active" data-filter-group="format" onclick="_dsFilter(this)">All formats</button>
-        <button class="filter-pill" data-filter-group="format" onclick="_dsFilter(this)">Open Debate</button>
+        <button class="filter-pill" data-filter-group="format" onclick="_dsFilter(this)">Open Discussion</button>
         <button class="filter-pill" data-filter-group="format" onclick="_dsFilter(this)">Oxford Style</button>
         <button class="filter-pill" data-filter-group="format" onclick="_dsFilter(this)">1v1</button>
         <button class="filter-pill" data-filter-group="format" onclick="_dsFilter(this)">Panel (2v2)</button>

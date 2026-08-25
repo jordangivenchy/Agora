@@ -28,7 +28,7 @@ export const SEED_SHORTS: SeedClip[] = [
       { user: "rhetoricfan", color: "#7f77dd", when: "2h", body: "the pause after he cited the actual study 💀", likes: 1200 },
       { user: "mun_delegate", color: "#1d9e75", when: "1h", body: "this is why you bring receipts to an oxford round", likes: 640 },
       { user: "justdebate", color: "#d4537e", when: "44m", body: "KairosMind actually recovered well after this, watch the full one", likes: 287 },
-      { user: "stoic_sam", color: "#e2b96b", when: "12m", body: "came from the clip, stayed for the whole debate", likes: 96 },
+      { user: "stoic_sam", color: "#e2b96b", when: "12m", body: "came from the clip, stayed for the whole discussion", likes: 96 },
     ],
   },
   {
@@ -159,7 +159,7 @@ export type SeedCommunity = {
 
 export const SEED_COMMUNITIES: SeedCommunity[] = [
   {
-    id: "c-1", name: "Stanford Debate Society", kind: "university",
+    id: "c-1", name: "Stanford Speech Society", kind: "university",
     kindLabel: "University · British Parliamentary",
     color: "linear-gradient(135deg,#8c1515,#5a0d0d)", initial: "S",
     members: 1284, activity: { text: "● 2 live now", color: "#f09595" },
@@ -183,7 +183,7 @@ export const SEED_COMMUNITIES: SeedCommunity[] = [
     members: 1051, activity: { text: "tryouts open", color: "#97c459" },
   },
   {
-    id: "c-5", name: "Lincoln HS Debate", kind: "hs-team",
+    id: "c-5", name: "Lincoln HS Speech Team", kind: "hs-team",
     kindLabel: "HS team · NSDA Lincoln-Douglas",
     color: "linear-gradient(135deg,#1d9e75,#0f4e3a)", initial: "L",
     members: 214, activity: { text: "practice Tue 4 PM", color: "#f4d47c" },

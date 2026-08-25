@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
+import { setPresenceQueued } from "@/lib/presence";
 import type { SeedNewsItem } from "@/lib/seed-content";
 
 interface Props {
@@ -87,26 +88,26 @@ function Outlets({ sources, max = 3 }: { sources: Source[]; max?: number }) {
   );
 }
 
+/* Solid pill language, matching the queue board's Join buttons: outline
+   pill for the outbound link, solid blue for the primary action, solid
+   purple for queueing. */
 const readBtn: React.CSSProperties = {
-  border: "0.5px solid #3a3a42", background: "transparent", color: "#e5e5ec",
-  borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  border: "0.5px solid #3f3f48", background: "transparent", color: "#e5e5ec",
+  borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 500,
+  cursor: "pointer", fontFamily: "inherit",
   textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
   textAlign: "center", display: "block",
 };
 const queueBtn: React.CSSProperties = {
-  border: "0.5px solid #5b4a86", background: "rgba(50,36,84,0.55)", color: "#c9b8f2",
-  borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  border: "none", background: "#6d55c8", color: "#fff",
+  borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600,
+  cursor: "pointer", fontFamily: "inherit",
   whiteSpace: "nowrap", textAlign: "center", display: "block", width: "100%",
 };
-const sideBtn = (active: boolean, side: "PRO" | "CON"): React.CSSProperties => ({
-  flex: 1, borderRadius: 9, padding: "7px 0", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-  border: side === "PRO" ? "0.5px solid #d9a238" : "0.5px solid #2c5382",
-  background: active ? (side === "PRO" ? "rgba(217,162,56,0.25)" : "rgba(44,83,130,0.35)") : "transparent",
-  color: side === "PRO" ? "#f4d47c" : "#85b7eb",
-});
 const discussBtn: React.CSSProperties = {
-  border: "0.5px solid #2c5382", background: "rgba(24,48,82,0.9)", color: "#9cc4f0",
-  borderRadius: 9, padding: "7px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+  border: "none", background: "#2f7fe0", color: "#fff",
+  borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600,
+  cursor: "pointer", fontFamily: "inherit",
   whiteSpace: "nowrap", textAlign: "center", display: "block", width: "100%",
 };
 
@@ -147,8 +148,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
      check_topic_match exactly like the Browse board and jump into the
      room on a match. */
   const [userId, setUserId] = useState<string | null>(null);
-  const [pickSide, setPickSide] = useState<string | null>(null); // story id showing PRO/CON
-  const [queued, setQueued] = useState<Record<string, { topicId: string; stance: "PRO" | "CON" }>>({});
+  const [queued, setQueued] = useState<Record<string, { topicId: string }>>({});
   const [queueBusy, setQueueBusy] = useState<string | null>(null);
   const [queueError, setQueueError] = useState<string | null>(null);
 
@@ -157,14 +157,16 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
   }, [open, supabase]);
 
-  const queueUp = async (st: Story, stance: "PRO" | "CON") => {
+  /* Stanceless: the server pairs you with whoever is waiting on this
+     headline; seats are assigned invisibly (p_stance is only a default). */
+  const queueUp = async (st: Story) => {
     if (!userId) { window.location.href = "/login"; return; }
     setQueueBusy(st.id);
     setQueueError(null);
     const { data, error } = await supabase.rpc("queue_for_headline", {
       p_question: st.headline,
       p_topic_key: topicFor(st.category),
-      p_stance: stance,
+      p_stance: "PRO",
       p_source_url: st.url,
     });
     setQueueBusy(null);
@@ -174,8 +176,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
     }
     const res = data as { status: string; room_id?: string; topic_id?: string };
     if (res?.status === "matched" && res.room_id) { window.location.href = `/agora/${res.room_id}`; return; }
-    if (res?.topic_id) setQueued((q) => ({ ...q, [st.id]: { topicId: res.topic_id!, stance } }));
-    setPickSide(null);
+    if (res?.topic_id) setQueued((q) => ({ ...q, [st.id]: { topicId: res.topic_id! } }));
   };
 
   const leaveQueue = async (st: Story) => {
@@ -188,6 +189,10 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   };
 
   const anyQueued = Object.keys(queued).length > 0;
+
+  /* Friends lists show "In queue" while we wait — clear it on unmount. */
+  useEffect(() => { setPresenceQueued(anyQueued); }, [anyQueued]);
+  useEffect(() => () => setPresenceQueued(false), []);
   useEffect(() => {
     if (!anyQueued || !userId) return;
     const t = setInterval(async () => {
@@ -312,8 +317,8 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             <div className="flex items-center gap-3 mb-3 flex-wrap">
               <div style={{ flex: 1, maxWidth: 300 }}>
                 <div className="flex justify-between text-[10px] mb-1">
-                  <span style={{ color: "#f4d47c" }}>PRO {pct.pro}%</span>
-                  <span style={{ color: "#85b7eb" }}>CON {100 - pct.pro}%</span>
+                  <span style={{ color: "#f4d47c" }}>Agree {pct.pro}%</span>
+                  <span style={{ color: "#85b7eb" }}>Disagree {100 - pct.pro}%</span>
                 </div>
                 <div className="flex overflow-hidden" style={{ height: 5, borderRadius: 3 }}>
                   <div style={{ width: `${pct.pro}%`, background: "linear-gradient(90deg,#f7e3a0,#d9a238)" }} />
@@ -322,7 +327,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
               </div>
               <span className="text-[11px]" style={{ color: "#9a9aa2" }}>
                 {pct.total.toLocaleString()} votes
-                {liveNow > 0 && <> · <span style={{ color: "#f09595" }}>● {liveNow} debate{liveNow === 1 ? "" : "s"} live</span></>}
+                {liveNow > 0 && <> · <span style={{ color: "#f09595" }}>● {liveNow} discussion{liveNow === 1 ? "" : "s"} live</span></>}
               </span>
             </div>
             <div className="flex gap-2.5 flex-wrap">
@@ -338,14 +343,14 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 className="cursor-pointer text-[12px] px-4 py-1.5 rounded-lg"
                 style={{ border: voted === "pro" ? "0.5px solid #d9a238" : "0.5px solid #3a3a42", color: voted === "pro" ? "#f4d47c" : "#e5e5ec", background: "transparent" }}
               >
-                Vote PRO
+                Agree
               </button>
               <button
                 onClick={() => castVote("con")}
                 className="cursor-pointer text-[12px] px-4 py-1.5 rounded-lg"
                 style={{ border: voted === "con" ? "0.5px solid #2c5382" : "0.5px solid #3a3a42", color: voted === "con" ? "#85b7eb" : "#e5e5ec", background: "transparent" }}
               >
-                Vote CON
+                Disagree
               </button>
               {liveNow > 0 && (
                 <button
@@ -414,27 +419,19 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           {queued[st.id] ? (
                             <div className="flex flex-col gap-1.5">
                               <p className="m-0 text-[11px] text-center" style={{ color: "#c9b8f2" }}>
-                                <span className="inline-block animate-pulse">●</span> In queue as{" "}
-                                <strong style={{ color: queued[st.id].stance === "PRO" ? "#f4d47c" : "#85b7eb" }}>{queued[st.id].stance}</strong>
-                                {" "}— waiting for an opponent
+                                <span className="inline-block animate-pulse">●</span> In queue — waiting for a partner
                               </p>
                               <button onClick={() => leaveQueue(st)} disabled={queueBusy === st.id} style={{ ...readBtn, width: "100%" }}>
                                 Leave queue
                               </button>
                             </div>
-                          ) : pickSide === st.id ? (
+                          ) : (
                             <div className="flex flex-col gap-1.5">
-                              <p className="m-0 text-[10.5px] text-center" style={{ color: "#8b8b94" }}>Take a side to get matched</p>
-                              <div className="flex gap-2">
-                                <button onClick={() => queueUp(st, "PRO")} disabled={queueBusy === st.id} style={sideBtn(false, "PRO")}>PRO</button>
-                                <button onClick={() => queueUp(st, "CON")} disabled={queueBusy === st.id} style={sideBtn(false, "CON")}>CON</button>
-                              </div>
+                              <button onClick={() => queueUp(st)} disabled={queueBusy === st.id} style={queueBtn}>
+                                {queueBusy === st.id ? "…" : "Queue a conversation"}
+                              </button>
                               {queueError && <p className="m-0 text-[10.5px] text-center" style={{ color: "#fca5a5" }}>{queueError}</p>}
                             </div>
-                          ) : (
-                            <button onClick={() => { setPickSide(st.id); setQueueError(null); }} style={queueBtn}>
-                              Queue a conversation
-                            </button>
                           )}
                         </div>
                       </div>

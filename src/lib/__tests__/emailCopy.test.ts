@@ -52,8 +52,8 @@ describe("digest copy", () => {
   });
   it("pluralises replays", () => {
     expect(replaysLine(0)).toBeNull();
-    expect(replaysLine(1)).toContain("1 debate from someone you follow");
-    expect(replaysLine(3)).toContain("3 debates");
+    expect(replaysLine(1)).toContain("1 discussion from someone you follow");
+    expect(replaysLine(3)).toContain("3 discussions");
   });
   it("renders every section", () => {
     const { subject, html, text } = weeklyDigestEmail({

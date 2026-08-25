@@ -29,7 +29,7 @@ const PAGE = 30;
 const FILTERS: { id: NotifFilter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "mentions", label: "Mentions" },
-  { id: "debates", label: "Debates" },
+  { id: "debates", label: "Discussions" },
   { id: "posts", label: "Posts" },
 ];
 

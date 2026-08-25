@@ -17,7 +17,7 @@ type Consent = Record<ConsentCategory, boolean>;
 
 const CATEGORIES: { key: ConsentCategory; title: string; blurb: string }[] = [
   { key: "analytics", title: "Activity analytics", blurb: "What you view, watch, like, and follow in the app — to personalize your feed." },
-  { key: "debate_analysis", title: "In-debate analysis", blurb: "Agora analyzes how you argue and the positions you express on stage, to build your profile and coaching. The listening indicator always shows when this is active." },
+  { key: "debate_analysis", title: "In-discussion analysis", blurb: "Agora analyzes how you argue and the positions you express on stage, to build your profile and coaching. The listening indicator always shows when this is active." },
   { key: "personalization", title: "Personalized recommendations", blurb: "Use your profile to rank rooms, topics, and people for you — with a visible reason for each." },
   { key: "coaching", title: "Persona notes & coach", blurb: "Turn your profile into specific, constructive coaching on how you argue and learn." },
 ];
@@ -78,7 +78,7 @@ export default function DataAndCoachPanel() {
   }, []);
 
   const erase = useCallback(async () => {
-    if (!confirm("Delete everything Agora has derived about you? Your account and your own words in past debates stay; all profiles, positions, recommendations, and coach notes are permanently removed.")) return;
+    if (!confirm("Delete everything Agora has derived about you? Your account and your own words in past discussions stay; all profiles, positions, recommendations, and coach notes are permanently removed.")) return;
     setBusy(true);
     try {
       await fetch("/api/me/data", { method: "DELETE" });
@@ -98,7 +98,7 @@ export default function DataAndCoachPanel() {
       </h2>
       <p style={{ fontSize: 13, color: "#8b8b94", marginBottom: 20 }}>
         Agora builds your profile and coaching from how you use the app and
-        debate. You can turn any of it off here, and download or delete
+        speak on stage. You can turn any of it off here, and download or delete
         everything it derives — it&rsquo;s built to coach you, not to profile
         you for anyone else.
       </p>

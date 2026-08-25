@@ -41,7 +41,7 @@ const ROW_META: Record<MenuActionId, { icon: IconName; label: string; danger?: b
   host_give_turn:   { icon: "mic", label: "Give speaking turn" },
   host_timeout:     { icon: "timer", label: "Timeout (5 min)", danger: true },
   host_kick:        { icon: "door-open", label: "Remove from room", danger: true },
-  host_ban:         { icon: "ban", label: "Ban from debate", danger: true },
+  host_ban:         { icon: "ban", label: "Ban from discussion", danger: true },
   mod_panel:        { icon: "clipboard-list", label: "Reports & history" },
   mod_warn:         { icon: "alert-triangle", label: "Warn user" },
   mod_suspend:      { icon: "circle-x", label: "Suspend account", danger: true },
@@ -287,7 +287,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
         await rpcToast(
           "host_set_participant_role",
           { p_room: room.roomId, p_user: target.userId, p_role: "debater", p_stance: stance },
-          `@${target.username} is now debating ${stance}`
+          `@${target.username} is now speaking ${stance}`
         );
         break;
       }
@@ -347,11 +347,11 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
       case "host_ban":
         if (!room) return;
-        if (!window.confirm(`Ban @${target.username} from this debate? They will not be able to rejoin.`)) return;
+        if (!window.confirm(`Ban @${target.username} from this discussion? They will not be able to rejoin.`)) return;
         await rpcToast(
           "host_ban_user",
           { p_room: room.roomId, p_user: target.userId, p_minutes: null },
-          `@${target.username} banned from this debate`
+          `@${target.username} banned from this discussion`
         );
         break;
 
@@ -499,7 +499,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
           >
             <div className="flex items-center justify-between px-5 pt-4">
               <span style={{ color: "#8b8b94", fontSize: 12.5, fontFamily: "'DM Sans', sans-serif" }}>
-                Profile — the debate keeps playing
+                Profile — the discussion keeps playing
               </span>
               <button
                 onClick={() => setDrawerUsername(null)}

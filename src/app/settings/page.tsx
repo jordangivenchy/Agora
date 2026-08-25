@@ -26,6 +26,7 @@ import { PREF_GROUPS } from "@/lib/notifications";
 type SettingsRow = {
   join_muted: boolean;
   join_camera_off: boolean;
+  record_debates: boolean;
   reduce_motion: boolean;
   show_debate_history: boolean;
   notify_follows: boolean;
@@ -36,6 +37,7 @@ type SettingsRow = {
 const DEFAULT_SETTINGS: SettingsRow = {
   join_muted: false,
   join_camera_off: false,
+  record_debates: true,
   reduce_motion: false,
   show_debate_history: true,
   notify_follows: true,
@@ -61,6 +63,7 @@ type SectionKey =
   | "profile"
   | "account"
   | "discussion"
+  | "recordings"
   | "notifications"
   | "appearance"
   | "privacy"
@@ -72,6 +75,7 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "profile",    label: "Profile",                sub: "Name, username, bio, avatar" },
   { key: "account",    label: "Account & security",     sub: "Email, password, sessions" },
   { key: "discussion", label: "Discussion defaults",    sub: "Mic and camera on join" },
+  { key: "recordings", label: "Recordings & storage",   sub: "VODs of your discussions, storage space" },
   { key: "notifications", label: "Notifications",       sub: "What you get notified about" },
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
@@ -173,6 +177,19 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [active, setActive] = useState<SectionKey>("profile");
+
+  /* Recording storage usage — fetched when the Recordings section opens. */
+  const [recUsage, setRecUsage] = useState<{ used_bytes: number; limit_mb: number } | null>(null);
+  useEffect(() => {
+    if (active !== "recordings" || !authUser) return;
+    let cancelled = false;
+    supabase.rpc("get_recording_usage").then(({ data }) => {
+      if (cancelled || !data || typeof data !== "object") return;
+      const d = data as { used_bytes?: number; limit_mb?: number };
+      setRecUsage({ used_bytes: d.used_bytes ?? 0, limit_mb: d.limit_mb ?? 5120 });
+    });
+    return () => { cancelled = true; };
+  }, [active, authUser, supabase]);
   // Mobile is list ⇄ panel; desktop always shows both.
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
@@ -204,6 +221,7 @@ export default function SettingsPage() {
         setSettings({
           join_muted: r.join_muted,
           join_camera_off: r.join_camera_off,
+          record_debates: (r.record_debates as boolean | undefined) ?? true,
           reduce_motion: r.reduce_motion,
           show_debate_history: r.show_debate_history,
           notify_follows: r.notify_follows ?? true,
@@ -739,6 +757,64 @@ export default function SettingsPage() {
           </SectionCard>
         );
 
+      case "recordings": {
+        const usedGb = recUsage ? recUsage.used_bytes / (1024 ** 3) : null;
+        const limitGb = recUsage ? recUsage.limit_mb / 1024 : null;
+        const pct = recUsage
+          ? Math.min(100, (recUsage.used_bytes / (recUsage.limit_mb * 1024 * 1024)) * 100)
+          : 0;
+        const full = recUsage
+          ? recUsage.used_bytes >= recUsage.limit_mb * 1024 * 1024
+          : false;
+        return (
+          <>
+            <SectionCard
+              title="Discussion recordings (VODs)"
+              sub="Recordings power replays of your ended discussions and let big audiences watch over the broadcast stream."
+            >
+              <Toggle
+                on={settings.record_debates}
+                onChange={(v) => saveToggle("record_debates", v)}
+                label="Record discussions I host"
+                sub="Turning this off means no replay exists afterward, and very large audiences can't overflow to the broadcast view"
+              />
+            </SectionCard>
+            <SectionCard title="Storage" sub="Recordings of discussions you host count against your space.">
+              <div className="px-4 pb-3">
+                {recUsage ? (
+                  <>
+                    <div className="flex items-baseline justify-between mb-1.5">
+                      <span className="text-[13px]" style={{ color: "#f5f5f0", fontWeight: 600 }}>
+                        {usedGb! < 0.1 && recUsage.used_bytes > 0 ? "<0.1" : usedGb!.toFixed(1)} GB
+                        <span style={{ color: "#8b8b94", fontWeight: 400 }}> of {limitGb!.toFixed(0)} GB used</span>
+                      </span>
+                      {full && (
+                        <span className="text-[11px]" style={{ color: "#f0a5a5" }}>
+                          Storage full — new discussions aren&rsquo;t recorded
+                        </span>
+                      )}
+                    </div>
+                    <div className="overflow-hidden" style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)" }}>
+                      <div style={{
+                        width: `${pct}%`, height: "100%", borderRadius: 3,
+                        background: full ? "#e05a5a" : pct > 80 ? "#e2b96b" : "#4a9eff",
+                        transition: "width 0.3s ease",
+                      }} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="m-0 text-[12px]" style={{ color: "#8b8b94" }}>Loading your usage…</p>
+                )}
+                <p className="m-0 mt-3 text-[11px]" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
+                  Every account includes 5 GB of recording space — roughly 2½ hours of discussion.
+                  More storage is coming with AgoraSphere subscriptions.
+                </p>
+              </div>
+            </SectionCard>
+          </>
+        );
+      }
+
       case "notifications":
         return (
           <>
@@ -746,7 +822,7 @@ export default function SettingsPage() {
               <SectionCard
                 key={g.title}
                 title={g.title}
-                sub={g.title === "Debates"
+                sub={g.title === "Discussions"
                   ? "Applied when the notification is created — turning one off stops it at the source."
                   : undefined}
               >
@@ -793,7 +869,7 @@ export default function SettingsPage() {
                 disabled={emailPrefs === null || Boolean(emailPrefs?.unsubscribed)}
                 onChange={saveEmailDigest}
                 label="Weekly digest"
-                sub="Saturday mornings: unread, upcoming debates from people you follow, top posts in your communities"
+                sub="Saturday mornings: unread, upcoming discussions from people you follow, top posts in your communities"
               />
               {PREF_GROUPS.map((g) => (
                 <div key={g.title}>

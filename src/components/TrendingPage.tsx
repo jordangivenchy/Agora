@@ -103,7 +103,7 @@ export default function TrendingPage({ open, onClose }: Props) {
       setDbClips(
         clipRows.map((c, i) => {
           const uploader = (c as unknown as { uploader?: { username: string } }).uploader;
-          const name = uploader?.username ?? "debater";
+          const name = uploader?.username ?? "speaker";
           return {
             id: c.id,
             title: c.title,
@@ -267,7 +267,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                     <Icon name="play" size={22} style={{ fill: "currentColor" }} />
                   </span>
                   <p className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
-                    example clip — recordings attach here once debates are recorded
+                    example clip — recordings attach here once discussions are recorded
                   </p>
                 </div>
               )}
@@ -302,7 +302,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                 </p>
                 {activeShort.roomId ? (
                   <a href={`/agora/${activeShort.roomId}`} className="text-[11px] no-underline" style={{ color: "#9cc4f0" }}>
-                    watch full debate ⤢
+                    watch full discussion ⤢
                   </a>
                 ) : activeShort.opponent ? (
                   <p className="text-[11px] m-0" style={{ color: "#c0c0c8" }}>vs {activeShort.opponent}</p>
@@ -427,7 +427,7 @@ export default function TrendingPage({ open, onClose }: Props) {
               <div className="flex items-center gap-2.5 mb-3">
                 <span className="inline-flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: 7, background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", fontSize: 12 }}><Icon name="play" size={12} style={{ fill: "currentColor" }} /></span>
                 <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0" }}>Shorts</span>
-                <span className="text-[11px]" style={{ color: "#8b8b94" }}>the best 60 seconds of every debate</span>
+                <span className="text-[11px]" style={{ color: "#8b8b94" }}>the best 60 seconds of every discussion</span>
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
@@ -481,7 +481,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                   Nothing trending yet
                 </p>
                 <p className="m-0 mb-3 text-[12px]" style={{ color: "#8b8b94" }}>
-                  Debates appear here the moment they go live.
+                  Discussions appear here the moment they go live.
                 </p>
                 <button
                   onClick={() => window.dispatchEvent(new CustomEvent("agora:create"))}

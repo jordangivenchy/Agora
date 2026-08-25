@@ -622,7 +622,7 @@ function DebateStage({
       {roomLive && inactivityDeadline && !reconnect && (
         <div className="inactivity-banner">
           <span className="inactivity-dot" />
-          No activity detected. This debate will end in{" "}
+          No activity detected. This discussion will end in{" "}
           <strong>{Math.max(0, Math.ceil((inactivityDeadline - Date.now()) / 1000))}s</strong>
           &nbsp;— say something to keep it going.
         </div>
@@ -632,7 +632,7 @@ function DebateStage({
       {roomLive && reconnect && (
         <div className="inactivity-banner is-reconnect">
           <span className="inactivity-dot" />
-          {reconnect.stance} debater disconnected — waiting{" "}
+          {reconnect.stance} speaker disconnected — waiting{" "}
           <strong>{formatTime(Math.max(0, (reconnect.deadline - Date.now()) / 1000))}</strong>
           &nbsp;for them to reconnect.
         </div>
@@ -793,7 +793,7 @@ function DebateStage({
         <button
           className={`ctrl-btn ${notesOpen ? "state-notes-open" : ""}`}
           onClick={onToggleNotes}
-          title={notesOpen ? "Close Notes" : "Debate Notes"}
+          title={notesOpen ? "Close Notes" : "Discussion Notes"}
         >
           <Icon name="file-text" size={20} />
         </button>
@@ -818,11 +818,11 @@ function DebateStage({
         >
           <div className="leave-modal-box">
             <div className="leave-modal-title">
-              {currentUserId === hostId ? "End Debate?" : "Leave Stage?"}
+              {currentUserId === hostId ? "End Discussion?" : "Leave Stage?"}
             </div>
             <div className="leave-modal-body">
               {currentUserId === hostId
-                ? "You're the host — leaving will end the debate for everyone."
+                ? "You're the host — leaving will end the discussion for everyone."
                 : "Are you sure you want to leave? You'll be redirected to the home page."}
             </div>
             <div className="leave-modal-actions">
@@ -830,7 +830,7 @@ function DebateStage({
                 Cancel
               </button>
               <button className="modal-btn modal-btn-leave" onClick={confirmLeave}>
-                {currentUserId === hostId ? "End Debate" : "Leave Stage"}
+                {currentUserId === hostId ? "End Discussion" : "Leave Stage"}
               </button>
             </div>
           </div>

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
-import { audienceThresholdFromEnv, decideAudienceMode } from "@/lib/audienceMode";
+import {
+  audienceThresholdFromEnv,
+  decideAudienceMode,
+  handFastLaneCapFromEnv,
+} from "@/lib/audienceMode";
 
 /* LiveKit token mint. Identity is server-verified: the Supabase cookie
    session decides who you are — the client's claimed userId is never
@@ -97,6 +101,7 @@ export async function POST(request: NextRequest) {
        needed. Any LiveKit hiccup fails open to a normal token. */
     if (room.status === "live" && room.hls_url) {
       let isStage = false;
+      let handRaised = false;
       if (user) {
         if (user.id === room.host_id) {
           isStage = true;
@@ -106,7 +111,7 @@ export async function POST(request: NextRequest) {
              always audience. */
           const { data: seat } = await supabase
             .from("debate_participants")
-            .select("role, stage_role")
+            .select("role, stage_role, hand_raised_at")
             .eq("room_id", roomId)
             .eq("user_id", user.id)
             .is("left_at", null)
@@ -115,43 +120,72 @@ export async function POST(request: NextRequest) {
             !!seat &&
             (seat.role === "debater" ||
               ["host", "cohost", "speaker"].includes(seat.stage_role ?? ""));
+          handRaised = !isStage && !!seat?.hand_raised_at;
         }
       }
       if (!isStage) {
-        try {
-          const lkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-          if (!lkUrl) throw new Error("no livekit url");
-          const svc = new RoomServiceClient(
-            lkUrl.replace(/^wss?:\/\//, "https://"),
-            apiKey,
-            apiSecret
-          );
-          const parts = await svc.listParticipants(roomId);
-          /* Audience = connected non-publishers. Publish rights track the
-             stage exactly (tokens above), and the filter also drops the
-             hidden egress recorder so it never pads the count. */
-          const audienceCount = parts.filter(
-            (p) =>
-              !p.permission?.canPublish &&
-              !p.permission?.hidden &&
-              !p.permission?.recorder
-          ).length;
-          const decision = decideAudienceMode({
-            isStage,
-            audienceCount,
-            hlsUrl: room.hls_url,
-            threshold: audienceThresholdFromEnv(process.env.HLS_AUDIENCE_THRESHOLD),
-          });
-          if (decision.mode === "hls") {
-            return NextResponse.json({
-              mode: "hls",
-              url: decision.url,
-              viewerCount: audienceCount,
+        /* Raised-hand fast lane: whoever is near the front of the speaker
+           queue may be brought up any moment — they need the live edge,
+           not a ~10s-behind broadcast. Rank comes from the same ordering
+           every client and advance_speaker_queue use (hand_raised_at asc,
+           user_id tiebreak): fetch the first cap-many raised hands and
+           look for ourselves. Capped so mass hand-raising in a 20k room
+           can't stampede back onto billed WebRTC seats. */
+        let handQueueRank: number | null = null;
+        const handFastLaneCap = handFastLaneCapFromEnv(process.env.HLS_HAND_FAST_LANE_CAP);
+        if (user && handRaised && handFastLaneCap > 0) {
+          const { data: lane } = await supabase
+            .from("debate_participants")
+            .select("user_id")
+            .eq("room_id", roomId)
+            .is("left_at", null)
+            .not("hand_raised_at", "is", null)
+            .order("hand_raised_at", { ascending: true })
+            .order("user_id", { ascending: true })
+            .limit(handFastLaneCap);
+          const idx = (lane ?? []).findIndex((r) => r.user_id === user.id);
+          if (idx >= 0) handQueueRank = idx;
+        }
+        /* In the fast lane the decision is WebRTC no matter the crowd
+           size — skip the LiveKit head-count round-trip entirely. */
+        if (handQueueRank === null) {
+          try {
+            const lkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+            if (!lkUrl) throw new Error("no livekit url");
+            const svc = new RoomServiceClient(
+              lkUrl.replace(/^wss?:\/\//, "https://"),
+              apiKey,
+              apiSecret
+            );
+            const parts = await svc.listParticipants(roomId);
+            /* Audience = connected non-publishers. Publish rights track the
+               stage exactly (tokens above), and the filter also drops the
+               hidden egress recorder so it never pads the count. */
+            const audienceCount = parts.filter(
+              (p) =>
+                !p.permission?.canPublish &&
+                !p.permission?.hidden &&
+                !p.permission?.recorder
+            ).length;
+            const decision = decideAudienceMode({
+              isStage,
+              audienceCount,
+              hlsUrl: room.hls_url,
+              threshold: audienceThresholdFromEnv(process.env.HLS_AUDIENCE_THRESHOLD),
+              handQueueRank,
+              handFastLaneCap,
             });
+            if (decision.mode === "hls") {
+              return NextResponse.json({
+                mode: "hls",
+                url: decision.url,
+                viewerCount: audienceCount,
+              });
+            }
+          } catch {
+            /* LiveKit unreachable (or room not yet created there) —
+               fail open: mint the WebRTC token as always. */
           }
-        } catch {
-          /* LiveKit unreachable (or room not yet created there) —
-             fail open: mint the WebRTC token as always. */
         }
       }
     }
