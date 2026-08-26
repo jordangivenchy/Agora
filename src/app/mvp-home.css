@@ -6167,11 +6167,11 @@ body { background: transparent; }
    strip sliced off by the rail's edge; it widens with the expansion. */
 @media (min-width: 901px) {
   .sidebar-link {
-    max-width: 208px;
+    /* Track the rail so the box keeps the same 9px inset on BOTH sides
+       in every state: 18px = 2×8px nav padding + 2×1px sidebar border.
+       (A fixed 208px cap left the expanded pill 9px left / 23px right.) */
+    max-width: calc(var(--sidebar-width, 240px) - 18px);
     border-radius: 10px !important;
-    transition: max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s ease, color 0.18s ease !important;
-  }
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-link {
-    max-width: 46px;
+    transition: background 0.18s ease, color 0.18s ease !important;
   }
 }

@@ -438,8 +438,8 @@ export default function MessagesDock() {
               padding: wide ? "9px 10px" : "10px 14px",
               cursor: "pointer",
               borderBottom: "1px solid rgba(255,255,255,0.04)",
-              background: active ? "rgba(124,110,247,0.16)" : "transparent",
-              borderLeft: active ? "2px solid #7c6ef7" : "2px solid transparent",
+              background: active ? "rgba(47,127,224,0.16)" : "transparent",
+              borderLeft: active ? "2px solid #2f7fe0" : "2px solid transparent",
             }}
           >
             <UserAvatar size={30} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
@@ -479,7 +479,7 @@ export default function MessagesDock() {
             {t.unread > 0 && (
               <span
                 style={{
-                  background: "#7c6ef7",
+                  background: "#2f7fe0",
                   color: "white",
                   borderRadius: 999,
                   fontSize: 10.5,
@@ -643,7 +643,7 @@ export default function MessagesDock() {
                 maxWidth: "80%",
                 padding: m.image_url ? 4 : "7px 11px",
                 borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
-                background: mine ? "#4a5fd0" : "rgba(255,255,255,0.07)",
+                background: mine ? "#2f7fe0" : "rgba(255,255,255,0.07)",
                 color: "#f2f2f5",
                 fontSize: 13,
                 lineHeight: 1.35,
@@ -795,7 +795,7 @@ export default function MessagesDock() {
             aria-label="Send"
             style={{
               ...iconBtn,
-              background: canSend ? "#7c6ef7" : "rgba(124,110,247,0.35)",
+              background: canSend ? "#2f7fe0" : "rgba(47,127,224,0.35)",
               color: "white",
               cursor: canSend ? "pointer" : "default",
             }}
