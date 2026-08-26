@@ -50,6 +50,9 @@ export interface DebateRoom {
   // whether the room appears in public listings (as spectator-only) or is
   // completely hidden and requires an invite code.
   allow_spectators: boolean;
+  // Private-room access mode (20260865): who can enter without the invite
+  // code. Optional so the type tolerates a pre-migration DB.
+  access_mode?: "code" | "followers" | "friends" | null;
   // Host-picked card art (falls back to the host's profile picture).
   thumbnail_url?: string | null;
   // Set while an HLS broadcast is running (audience overflow stream).

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const { data: room } = await supabase
       .from("debate_rooms")
-      .select("host_id, status, scheduled_start, hls_url")
+      .select("host_id, status, scheduled_start, hls_url, is_private, access_mode")
       .eq("id", roomId)
       .maybeSingle();
     if (!room) {
@@ -74,6 +74,23 @@ export async function POST(request: NextRequest) {
     }
     if (room.status === "ended") {
       return NextResponse.json({ error: "room_ended" }, { status: 403 });
+    }
+    /* Followers/friends private rooms: the token is the thing that actually
+       admits you, so the eligibility check lives here, not just in the UI.
+       can_enter_room passes the host, existing participants (code-admitted),
+       and mode-eligible users; code-mode rooms keep link-is-key behavior.
+       access_mode is optional pre-migration, so this is a no-op until then. */
+    if (
+      room.is_private &&
+      (room.access_mode === "followers" || room.access_mode === "friends")
+    ) {
+      const { data: allowed, error: accessErr } = await supabase.rpc("can_enter_room", {
+        p_room: roomId,
+        p_user: user?.id ?? null,
+      });
+      if (accessErr || !allowed) {
+        return NextResponse.json({ error: "room_private" }, { status: 403 });
+      }
     }
     if (
       room.scheduled_start &&

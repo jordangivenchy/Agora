@@ -445,11 +445,40 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   }, [opensAtMs]);
   const gated = opensAtMs !== null && nowTs < opensAtMs && myRole !== "host" && !broadcast;
 
+  /* ── Private-room access modes (20260865) ──────────────────────────
+     Followers/friends rooms admit only eligible visitors; the server is
+     the authority (seat-insert RLS + the token route), this check just
+     picks the right screen. Code-mode private rooms keep today's rule:
+     holding the link is holding the key. */
+  const accessRestricted =
+    !!room && room.is_private &&
+    (room.access_mode === "followers" || room.access_mode === "friends");
+  const [accessAllowed, setAccessAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!room) return;
+    if (!accessRestricted || (currentUser && currentUser.id === room.host_id)) {
+      setAccessAllowed(true);
+      return;
+    }
+    let stale = false;
+    supabase
+      .rpc("can_enter_room", { p_room: roomId })
+      .then(({ data, error }) => {
+        /* Fail open on transport errors — RLS still holds the door. */
+        if (!stale) setAccessAllowed(error ? true : !!data);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [room, accessRestricted, currentUser, roomId, supabase]);
+  const accessDenied = accessRestricted && accessAllowed === false;
+  const accessOk = !accessRestricted || accessAllowed === true;
+
   /* ── Seat heartbeat ────────────────────────────────────────────────
      touch_seat stamps our participant row's last_seen_at; ghost seats
      are swept server-side after 5 minutes of silence. */
   const heartbeatOn =
-    !!currentUser && !!room && room.status !== "ended" && !gated && !broadcast;
+    !!currentUser && !!room && room.status !== "ended" && !gated && !broadcast && accessOk;
   useEffect(() => {
     if (!heartbeatOn) return;
     const beat = () => supabase.rpc("touch_seat", { p_room: roomId }).then(undefined, () => {});
@@ -472,7 +501,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     userId: currentUser?.id ?? null,
     username: myUsername,
     canPublish: onStage(myRole),
-    ready: loaded && !!room && !gated,
+    ready: loaded && !!room && !gated && accessOk,
     /* Big tiles deserve the high simulcast layer: the close-up 3D
        vantage as before, multi-speaker always (its featured tiles are
        large), and gallery when tiles are few enough to render big.
@@ -804,6 +833,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     if (seatAttemptedRef.current) return;
     if (!loaded || !currentUser || !room || room.status === "ended" || gated) return;
+    if (!accessOk) return; // don't mark attempted — retry once access resolves
     if (myParticipation) {
       seatAttemptedRef.current = true;
       return;
@@ -832,7 +862,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         /* seating is cosmetic — the room still works unlisted */
       }
     })();
-  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll, gated]);
+  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll, gated, accessOk]);
 
   /* Leaving vacates the seat (best effort — a closed tab can't stamp out). */
   const vacateSeat = useCallback(() => {
@@ -1013,6 +1043,50 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   if ((arrivedEnded || showReplay) && !broadcast) {
     return <DebateReplay roomId={roomId} initialRoom={room} />;
+  }
+
+  if (accessDenied) {
+    const hostRow = participants.find((pp) => pp.user_id === room.host_id);
+    const hostName = hostRow?.user ? displayName(hostRow.user) : null;
+    const who = hostName ? `@${hostRow?.user?.username ?? hostName}` : "the host";
+    return (
+      <div
+        className="ag-root ag-loading"
+        style={{ textAlign: "center", padding: "0 24px", flexDirection: "column", gap: 0, alignItems: "center", justifyContent: "center" }}
+      >
+        <p className="m-0 text-[11px]" style={{ color: "#c9a6f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, letterSpacing: "0.08em" }}>
+          PRIVATE ROOM
+        </p>
+        <h1 className="m-0 mt-2 text-[22px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, maxWidth: 640 }}>
+          {room.motion}
+        </h1>
+        <p className="m-0 mt-3 text-[13px]" style={{ color: "#c0c0c8", maxWidth: 480, lineHeight: 1.6 }}>
+          {room.access_mode === "friends"
+            ? `This room is open to ${who}'s friends only.`
+            : `This room is open to people who follow ${who}.`}
+          {!currentUser && " Sign in if that's you."}
+        </p>
+        <p className="m-0 mt-1.5 text-[12px]" style={{ color: "#8b8b94" }}>
+          Have an invite code? Enter it from the Create menu on the home page.
+        </p>
+        <button
+          onClick={() => router.push("/")}
+          className="mt-5 cursor-pointer"
+          style={{
+            background: "#2f7fe0",
+            border: "none",
+            color: "#fff",
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "13px",
+            fontWeight: 600,
+            padding: "9px 22px",
+            borderRadius: "100px",
+          }}
+        >
+          Back to the Agora
+        </button>
+      </div>
+    );
   }
 
   if (gated && opensAtMs !== null) {

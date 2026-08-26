@@ -68,6 +68,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   // Private rooms
   const [isPrivate, setIsPrivate] = useState(false);
   const [allowSpectators, setAllowSpectators] = useState(false);
+  // Who can enter a private room without the invite code.
+  const [accessMode, setAccessMode] = useState<"code" | "followers" | "friends">("code");
 
   // Scheduling
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -97,6 +99,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       setLanguage("en");
       setIsPrivate(false);
       setAllowSpectators(false);
+      setAccessMode("code");
       setScheduleEnabled(false);
       setScheduleAt(defaultScheduleValue());
       setThumbFile(null);
@@ -183,6 +186,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         p_time_limit_seconds: null,
         p_scheduled_start:    scheduledIso,
         p_community:          communityId ?? null,
+        p_access_mode:        isPrivate ? accessMode : "code",
       });
 
       if (rpcError) {
@@ -295,8 +299,11 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
             Private room created
           </h2>
           <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "22px", lineHeight: 1.5 }}>
-            Share this code with the people you want to invite. They can enter it from the
-            &ldquo;Join Private&rdquo; button next to Create.
+            {accessMode === "followers"
+              ? "Your followers can enter straight from the room link — share this code with anyone else you want to let in."
+              : accessMode === "friends"
+                ? "Your friends can enter straight from the room link — share this code with anyone else you want to let in."
+                : "Share this code with the people you want to invite. They can enter it from the “Join Private” button next to Create."}
           </p>
 
           <div
@@ -717,11 +724,48 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                       background: "rgba(255,255,255,0.05)",
                     }}
                   />
-                  <Toggle
-                    label="Allow spectators to watch"
-                    checked={allowSpectators}
-                    onChange={setAllowSpectators}
-                  />
+                  <div style={{ marginBottom: 10 }}>
+                    <span
+                      style={{
+                        display: "block",
+                        marginBottom: 8,
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "rgba(255,255,255,0.4)",
+                      }}
+                    >
+                      Who can enter
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <PillSelect
+                        label="Invite code"
+                        active={accessMode === "code"}
+                        onClick={() => setAccessMode("code")}
+                        activeColor="#2f7fe0"
+                      />
+                      <PillSelect
+                        label="My followers"
+                        active={accessMode === "followers"}
+                        onClick={() => setAccessMode("followers")}
+                        activeColor="#2f7fe0"
+                      />
+                      <PillSelect
+                        label="Friends only"
+                        active={accessMode === "friends"}
+                        onClick={() => setAccessMode("friends")}
+                        activeColor="#2f7fe0"
+                      />
+                    </div>
+                  </div>
+                  {accessMode === "code" && (
+                    <Toggle
+                      label="Allow spectators to watch"
+                      checked={allowSpectators}
+                      onChange={setAllowSpectators}
+                    />
+                  )}
                   <p
                     style={{
                       marginTop: "8px",
@@ -730,9 +774,13 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                       color: "var(--text-dim)",
                     }}
                   >
-                    {allowSpectators
-                      ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; speakers must use the invite code."
-                      : "Room is completely hidden from all listings and search. Only people with the invite code can enter."}
+                    {accessMode === "followers"
+                      ? "Hidden from listings and search. Anyone who follows you can enter directly; your invite code also works for anyone else."
+                      : accessMode === "friends"
+                        ? "Hidden from listings and search. Only friends (people you follow back) can enter directly; your invite code also works for anyone else."
+                        : allowSpectators
+                          ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; speakers must use the invite code."
+                          : "Room is completely hidden from all listings and search. Only people with the invite code can enter."}
                   </p>
                 </>
               )}
