@@ -53,7 +53,9 @@ export async function POST(request: NextRequest) {
         profile?.username ||
         user.email?.split("@")[0] ||
         "User";
-      canPublish = role === "debater";
+      // canPublish is decided server-side below from the actual seat —
+      // never from the client-supplied `role` (that let anyone request
+      // "debater" and publish onto a live stage they only spectate).
     } else {
       /* Keep the client's guest id when it looks like one (harmless — no
          publish rights, no user mapping), so its local bookkeeping lines up. */
@@ -94,6 +96,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    /* ── Publish rights are server-authoritative ─────────────────────
+       Only the host or a seated on-stage participant (debater, or a
+       host/cohost/speaker stage_role) may publish. The client's `role`
+       argument is ignored — requesting "debater" from curl must not mint
+       a publishing token for a spectator. */
+    let stageSeat: { role: string | null; stage_role: string | null; hand_raised_at: string | null } | null = null;
+    if (user) {
+      if (user.id === room.host_id) {
+        canPublish = true;
+      } else {
+        const { data: seat } = await supabase
+          .from("debate_participants")
+          .select("role, stage_role, hand_raised_at")
+          .eq("room_id", roomId)
+          .eq("user_id", user.id)
+          .is("left_at", null)
+          .maybeSingle();
+        stageSeat = seat ?? null;
+        canPublish =
+          !!seat &&
+          (seat.role === "debater" ||
+            ["host", "cohost", "speaker"].includes(seat.stage_role ?? ""));
+      }
+    }
+
     /* ── Audience overflow → HLS ─────────────────────────────────────
        Above a spectator ceiling, NEW audience members watch the room's
        composited HLS stream (already produced by default recording,
@@ -105,29 +132,10 @@ export async function POST(request: NextRequest) {
        again by itself; that is the hysteresis, no floor constant
        needed. Any LiveKit hiccup fails open to a normal token. */
     if (room.status === "live" && room.hls_url) {
-      let isStage = false;
-      let handRaised = false;
-      if (user) {
-        if (user.id === room.host_id) {
-          isStage = true;
-        } else {
-          /* Mirror the client's deriveStageRole: explicit stage_role
-             promotion, or the debater role, means on-stage. Guests are
-             always audience. */
-          const { data: seat } = await supabase
-            .from("debate_participants")
-            .select("role, stage_role, hand_raised_at")
-            .eq("room_id", roomId)
-            .eq("user_id", user.id)
-            .is("left_at", null)
-            .maybeSingle();
-          isStage =
-            !!seat &&
-            (seat.role === "debater" ||
-              ["host", "cohost", "speaker"].includes(seat.stage_role ?? ""));
-          handRaised = !isStage && !!seat?.hand_raised_at;
-        }
-      }
+      /* On-stage roles (canPublish, computed above) always get WebRTC;
+         a raised hand near the front of the queue does too. */
+      const isStage = canPublish;
+      const handRaised = !isStage && !!stageSeat?.hand_raised_at;
       if (!isStage) {
         /* Raised-hand fast lane: whoever is near the front of the speaker
            queue may be brought up any moment — they need the live edge,

@@ -128,7 +128,7 @@ export default function Home() {
             .in("status", ["live", "created", "scheduled"])
             .order("created_at", { ascending: false })
             .limit(100),
-          supabase.from("users").select("*", { count: "exact", head: true }),
+          supabase.from("users").select("id", { count: "exact", head: true }),
         ]);
 
         const rooms = roomsData ?? [];

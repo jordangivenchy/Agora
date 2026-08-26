@@ -878,13 +878,13 @@ function buildDebateCard(d, realIndex) {
   const language = d.language || 'EN';
 
   return `
-    <div class="debate-card hc-card" tabindex="0" role="button" aria-label="${d.motion}" data-debate-index="${realIndex}">
+    <div class="debate-card hc-card" tabindex="0" role="button" aria-label="${escHTML(d.motion)}" data-debate-index="${realIndex}">
       <div class="hc-top">
         <span class="hc-badge ${badge.cls}">${badge.html}</span>
         <span class="hc-category">${catLabel}</span>
       </div>
 
-      <div class="hc-motion">"${d.motion}"</div>
+      <div class="hc-motion">"${escHTML(d.motion)}"</div>
 
       ${d.community ? `
       <div class="hc-community" style="display:flex;align-items:center;gap:6px;margin:2px 0 4px;font-size:11px;color:${d.communityColor || '#c9b06a'};">
@@ -894,10 +894,10 @@ function buildDebateCard(d, realIndex) {
 
       <div class="hc-debaters">
         <div class="hc-avatar" style="background:${d.color1};">${d.debater1[0]}</div>
-        <span class="hc-dname">${d.debater1}</span>
+        <span class="hc-dname">${escHTML(d.debater1)}</span>
         <span class="hc-vs">vs</span>
         <div class="hc-avatar" style="background:${d.color2};">${d.debater2[0]}</div>
-        <span class="hc-dname">${d.debater2}</span>
+        <span class="hc-dname">${escHTML(d.debater2)}</span>
       </div>
 
       <div class="hc-meta">
@@ -1101,8 +1101,8 @@ function renderDebateRoom(index) {
     <div class="room-header">
       <div class="room-live-badge"><div class="carousel-live-dot"></div> Live</div>
       <div class="room-header-info">
-        <div class="room-motion">"${d.motion}"</div>
-        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ${d.debater1} vs ${d.debater2}</div>
+        <div class="room-motion">"${escHTML(d.motion)}"</div>
+        <div class="room-sub">${t?.emoji || ''} ${t?.label || d.topicKey} &nbsp;·&nbsp; ${escHTML(d.debater1)} vs ${escHTML(d.debater2)}</div>
       </div>
       <div class="room-viewers-pill">${d.viewers} watching</div>
       <button class="room-close-btn" id="roomCloseBtn" aria-label="Close">${iconSvg('x', 16)}</button>
@@ -1118,12 +1118,12 @@ function renderDebateRoom(index) {
         <div class="room-debater-split">
           <div class="room-debater-side" style="background:${d.color1}18;">
             <div class="room-debater-avatar" style="background:${d.color1};">${d.debater1[0]}</div>
-            <div class="room-debater-name-label">${d.debater1}</div>
+            <div class="room-debater-name-label">${escHTML(d.debater1)}</div>
             <span class="room-stance-badge pro">PRO</span>
           </div>
           <div class="room-debater-side" style="background:${d.color2}18;">
             <div class="room-debater-avatar" style="background:${d.color2};">${d.debater2[0]}</div>
-            <div class="room-debater-name-label">${d.debater2}</div>
+            <div class="room-debater-name-label">${escHTML(d.debater2)}</div>
             <span class="room-stance-badge con">CON</span>
           </div>
           <div class="room-vs-divider">vs</div>
@@ -2040,7 +2040,7 @@ init();
       const cat = t ? t.label : d.topicKey;
       const statusLabel = d.status === 'live' ? '● Live' : d.status === 'queue' ? 'In queue' : 'Scheduled';
       const second = d.debater2 && d.debater2 !== 'Open seat'
-        ? `<div class="debater-avatar" style="background:${d.color2}">${d.debater2.charAt(0).toUpperCase()}</div><span class="debater-name">${d.debater2}</span>`
+        ? `<div class="debater-avatar" style="background:${d.color2}">${escHTML(d.debater2.charAt(0).toUpperCase())}</div><span class="debater-name">${escHTML(d.debater2)}</span>`
         : `<span class="debater-name" style="color:rgba(255,255,255,0.25)">Open seat</span>`;
       return `
       <div class="result-card" style="cursor:pointer" onclick="openDebateModal(${i})" data-category="${cat}" data-status="${d.status}" data-format="${d.format || 'Open'}" data-language="${d.language || 'EN'}">
@@ -2048,10 +2048,10 @@ init();
           <span class="result-status ${d.status}">${statusLabel}</span>
           <span class="result-category">${cat}</span>
         </div>
-        <div class="result-motion">"${d.motion}"</div>
+        <div class="result-motion">"${escHTML(d.motion)}"</div>
         <div class="result-debaters">
           <div class="debater-avatar" style="background:${d.color1}">${(d.debater1 || '?').charAt(0).toUpperCase()}</div>
-          <span class="debater-name">${d.debater1}</span>
+          <span class="debater-name">${escHTML(d.debater1)}</span>
           <span class="vs-badge">vs</span>
           ${second}
         </div>
