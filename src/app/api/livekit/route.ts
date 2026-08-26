@@ -64,9 +64,14 @@ export async function POST(request: NextRequest) {
       name = "Guest";
     }
 
+    /* This read is the access gate. debate_rooms RLS (20260866) only
+       returns a followers/friends room to eligible viewers, so an
+       ineligible user gets null here and is turned away — no separate
+       can_enter_room call needed, and the cookie-scoped client (not admin)
+       is what makes RLS apply. */
     const { data: room } = await supabase
       .from("debate_rooms")
-      .select("host_id, status, scheduled_start, hls_url, is_private, access_mode")
+      .select("host_id, status, scheduled_start, hls_url")
       .eq("id", roomId)
       .maybeSingle();
     if (!room) {
@@ -74,23 +79,6 @@ export async function POST(request: NextRequest) {
     }
     if (room.status === "ended") {
       return NextResponse.json({ error: "room_ended" }, { status: 403 });
-    }
-    /* Followers/friends private rooms: the token is the thing that actually
-       admits you, so the eligibility check lives here, not just in the UI.
-       can_enter_room passes the host, existing participants (code-admitted),
-       and mode-eligible users; code-mode rooms keep link-is-key behavior.
-       access_mode is optional pre-migration, so this is a no-op until then. */
-    if (
-      room.is_private &&
-      (room.access_mode === "followers" || room.access_mode === "friends")
-    ) {
-      const { data: allowed, error: accessErr } = await supabase.rpc("can_enter_room", {
-        p_room: roomId,
-        p_user: user?.id ?? null,
-      });
-      if (accessErr || !allowed) {
-        return NextResponse.json({ error: "room_private" }, { status: 403 });
-      }
     }
     if (
       room.scheduled_start &&

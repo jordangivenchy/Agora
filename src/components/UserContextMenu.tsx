@@ -11,7 +11,6 @@ import {
   type UserMenuApi,
 } from "./userMenuContext";
 import ReportModal, { type ReportTarget } from "./ReportModal";
-import UserProfileModal from "./UserProfileModal";
 import ProfileView from "./ProfileView";
 import { userPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
@@ -72,7 +71,6 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
   const [rel, setRel] = useState<Relationship | null>(null);
   const [targetDisplayName, setTargetDisplayName] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
-  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   /* In-room profile drawer: the debate keeps playing underneath. */
   const [drawerUsername, setDrawerUsername] = useState<string | null>(null);
   useEscapeClose(!!drawerUsername, () => setDrawerUsername(null));
@@ -272,7 +270,15 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
 
       case "copy_link":
         try {
-          await navigator.clipboard.writeText(`${window.location.origin}/?profile=${target.userId}`);
+          /* Some callers (e.g. a live video tile) pass a LiveKit display
+             name rather than a handle. A real handle is [A-Za-z0-9_]; if
+             it isn't one, fall back to the id link, which the homepage
+             resolves to the profile page. */
+          const isHandle = /^[A-Za-z0-9_]{1,30}$/.test(target.username);
+          const link = isHandle
+            ? `${window.location.origin}${userPath(target.username)}`
+            : `${window.location.origin}/?profile=${target.userId}`;
+          await navigator.clipboard.writeText(link);
           showToast("Profile link copied");
         } catch {
           showToast("Could not copy link");
@@ -522,12 +528,6 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
           <style>{`@keyframes ag-drawer-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }`}</style>
         </div>
       )}
-
-      <UserProfileModal
-        userId={profileUserId}
-        onClose={() => setProfileUserId(null)}
-        onOpenProfile={(id) => setProfileUserId(id)}
-      />
 
       {modPanelTarget && (
         <ModerationPanel

@@ -198,6 +198,9 @@ export function notifHref(n: NotifRow): string | null {
       return n.room_id ? roomPath({ id: n.room_id, motion: n.room_motion }) : null;
     case "new_follower":
     case "friend_accepted":
+      /* The standalone profile page (v2). The ?profile= fallback (rows
+         with no username joined) redirects there via the homepage. */
+      if (n.actor_username) return `/users/${encodeURIComponent(n.actor_username)}`;
       return n.actor_id ? `/?profile=${n.actor_id}` : null;
     default:
       return null;

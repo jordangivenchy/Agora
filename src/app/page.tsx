@@ -7,8 +7,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
-import UserProfileModal from "@/components/UserProfileModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
 import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
@@ -92,7 +92,6 @@ export default function Home() {
   const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [exploreHost, setExploreHost] = useState<HTMLElement | null>(null);
-  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{
     motion: string; topic: string; schedule?: boolean;
     communityId?: string; communityName?: string;
@@ -257,11 +256,30 @@ export default function Home() {
       }
   }, [supabase]);
 
-  // Deep link support: /?profile=<userId> (from "Copy profile link") opens
-  // that user's profile on load.
+  /* Profile links always land on the standalone page — the quick-look
+     modal is retired. Ids (events, legacy links) resolve to a username
+     first; unresolvable ids are silently dropped. */
+  const goToProfileById = useCallback(
+    (id: string) => {
+      supabase
+        .from("users")
+        .select("username")
+        .eq("id", id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.username) window.location.href = userPath(data.username);
+        });
+    },
+    [supabase]
+  );
+
+  // Deep link support: /?profile=<userId> (old "Copy profile link" URLs and
+  // pre-migration notification emails). The quick-look modal is gone —
+  // resolve the id to a username and land on the real profile page.
   useEffect(() => {
     const p = new URLSearchParams(window.location.search).get("profile");
-    if (p) setProfileUserId(p);
+    if (p) goToProfileById(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* Never let a slow or unreachable backend hold the UI hostage. Supabase's
@@ -548,23 +566,14 @@ export default function Home() {
     const onProfile = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (typeof detail === "string" && detail) {
-        // Someone else: quick-look modal.
-        setProfileUserId(detail);
+        // Someone else: their full profile page.
+        goToProfileById(detail);
         return;
       }
-      // Own profile (nav avatar → Profile): go straight to the full page.
+      // Own profile (nav avatar → Profile): same destination.
       const w = window as unknown as { __AGORA_DATA__?: { user?: { id?: string } } };
       const myId = w.__AGORA_DATA__?.user?.id;
-      if (!myId) return;
-      supabase
-        .from("users")
-        .select("username")
-        .eq("id", myId)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.username) window.location.href = `/@${encodeURIComponent(data.username)}`;
-          else setProfileUserId(myId);
-        });
+      if (myId) goToProfileById(myId);
     };
     const onTab = (e: Event) => {
       const tab = (e as CustomEvent).detail;
@@ -686,11 +695,6 @@ export default function Home() {
         initialSchedule={createPrefill?.schedule}
         communityId={createPrefill?.communityId}
         communityName={createPrefill?.communityName}
-      />
-      <UserProfileModal
-        userId={profileUserId}
-        onClose={() => setProfileUserId(null)}
-        onOpenProfile={(id) => setProfileUserId(id)}
       />
     </>
   );

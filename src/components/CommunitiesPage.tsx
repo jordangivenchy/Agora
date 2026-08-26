@@ -145,9 +145,10 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+/* Solid pill blue — same as the queue Join button (#2f7fe0). */
 const btnBlue: React.CSSProperties = {
-  background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
-  color: "#4a9eff", borderRadius: 9, fontFamily: "inherit", cursor: "pointer",
+  background: "#2f7fe0", border: "none",
+  color: "#fff", borderRadius: 9, fontFamily: "inherit", cursor: "pointer",
 };
 
 const btnGhost: React.CSSProperties = {
@@ -1554,7 +1555,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       <button
                         onClick={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                         disabled={busy || !replyText.trim()}
-                        className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0"
+                        className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-default"
                         style={{ ...btnBlue, borderRadius: 10, height: 40 }}
                       >
                         Reply
@@ -1659,7 +1660,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           <button
             onClick={() => { if (requireAuth()) setCreatingCommunity((v) => !v); }}
             className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-full border-none ml-auto"
-            style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
+            style={{ background: "#ffb700", color: "#1a0e00" }}
           >
             + New community
           </button>
@@ -1702,7 +1703,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             <button
               onClick={createCommunity}
               disabled={!newCommunityName.trim()}
-              className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+              className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
               style={btnBlue}
             >
               Create
@@ -2216,7 +2217,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     <button
                       onClick={() => submitComment(null, commentText, commentImage, commentGifUrl)}
                       disabled={busy || !commentText.trim()}
-                      className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0"
+                      className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-default"
                       style={{ ...btnBlue, height: 40 }}
                     >
                       Comment
@@ -2611,7 +2612,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                               </label>
                             )}
                             <button onClick={saveSettings} disabled={busy}
-                              className="cursor-pointer text-[11.5px] px-3.5 py-1.5 rounded-lg ml-auto" style={btnBlue}>
+                              className="cursor-pointer text-[11.5px] px-3.5 py-1.5 rounded-lg ml-auto disabled:opacity-50 disabled:cursor-default" style={btnBlue}>
                               Save changes
                             </button>
                           </div>
@@ -2663,7 +2664,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                               ))}
                             </span>
                             <button onClick={createTag} disabled={!newTagName.trim()}
-                              className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg" style={btnBlue}>
+                              className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-default" style={btnBlue}>
                               Add
                             </button>
                           </div>
@@ -2723,8 +2724,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         return communities.find((c) => c.joined && c.favorite)?.id ?? communities.find((c) => c.joined)?.id ?? communities[0]?.id ?? "";
                       })());
                     }}
-                    className="cursor-pointer text-[12px] px-4 py-1.5 rounded-full ml-auto"
-                    style={{ ...btnBlue, borderRadius: 999 }}
+                    className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-full ml-auto"
+                    style={{ background: "#2f7fe0", border: "none", color: "#fff", borderRadius: 999, fontFamily: "inherit" }}
                   >
                     + New post
                   </button>
@@ -2831,14 +2832,14 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       <button
                         onClick={submitPost}
                         disabled={busy || !newTitle.trim() || (selected === "all" && !composeCommunity)}
-                        className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                        className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
                         style={btnBlue}
                       >
                         {busy ? "Posting…" : "Post"}
                       </button>
                       <button
                         onClick={() => { setComposing(false); setNewTagId(""); pickImage(null); }}
-                        className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                        className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
                         style={btnGhost}
                       >
                         Cancel
@@ -2940,14 +2941,14 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <button
                     onClick={submitRepost}
                     disabled={busy || !repostCommunity}
-                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
                     style={btnBlue}
                   >
                     {busy ? "Reposting…" : "Repost"}
                   </button>
                   <button
                     onClick={() => setRepostFor(null)}
-                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg"
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
                     style={btnGhost}
                   >
                     Cancel

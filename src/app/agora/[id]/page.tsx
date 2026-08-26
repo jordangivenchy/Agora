@@ -95,6 +95,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [participants, setParticipants] = useState<StageParticipant[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loaded, setLoaded] = useState(false);
+  /* The room row came back empty under RLS — either it doesn't exist or
+     this visitor isn't allowed into a followers/friends room. get_room_gate
+     (below) tells the two apart and drives the denial screen. */
+  const [roomUnreadable, setRoomUnreadable] = useState(false);
+  const [deniedGate, setDeniedGate] = useState<
+    { motion: string; host: string | null; mode: string | null } | null
+  >(null);
   /* Status the room had when this visitor first loaded it — 'ended' here
      means they arrived after the close and should get the replay. */
   const [firstStatus, setFirstStatus] = useState<string | null>(null);
@@ -232,9 +239,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           .is("left_at", null),
       ]);
       if (!roomData) {
-        router.replace("/");
+        /* Don't redirect yet: an empty row can mean "denied into a
+           followers/friends room", which deserves the gate screen. The
+           get_room_gate effect resolves gone-vs-denied. */
+        setRoomUnreadable(true);
         return;
       }
+      setRoomUnreadable(false);
       setRoom(roomData);
       setFirstStatus((prev) => prev ?? roomData.status);
       if (partData) setParticipants(partData as StageParticipant[]);
@@ -445,40 +456,42 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   }, [opensAtMs]);
   const gated = opensAtMs !== null && nowTs < opensAtMs && myRole !== "host" && !broadcast;
 
-  /* ── Private-room access modes (20260865) ──────────────────────────
-     Followers/friends rooms admit only eligible visitors; the server is
-     the authority (seat-insert RLS + the token route), this check just
-     picks the right screen. Code-mode private rooms keep today's rule:
-     holding the link is holding the key. */
-  const accessRestricted =
-    !!room && room.is_private &&
-    (room.access_mode === "followers" || room.access_mode === "friends");
-  const [accessAllowed, setAccessAllowed] = useState<boolean | null>(null);
+  /* ── Private-room access gate (20260866) ──────────────────────────
+     RLS is the authority now: followers/friends rooms are readable only
+     to eligible visitors, so if `room` loaded at all, we're in. When it
+     came back empty (roomUnreadable), get_room_gate says whether the room
+     is simply gone (→ home) or exists but off-limits (→ denial screen).
+     Ineligible visitors therefore never receive the room row, so no room
+     UI can flash and no participant data leaks client-side. */
   useEffect(() => {
-    if (!room) return;
-    if (!accessRestricted || (currentUser && currentUser.id === room.host_id)) {
-      setAccessAllowed(true);
-      return;
-    }
+    if (!loaded || !roomUnreadable || deniedGate) return;
     let stale = false;
-    supabase
-      .rpc("can_enter_room", { p_room: roomId })
-      .then(({ data, error }) => {
-        /* Fail open on transport errors — RLS still holds the door. */
-        if (!stale) setAccessAllowed(error ? true : !!data);
-      });
+    supabase.rpc("get_room_gate", { p_room: roomId }).then(({ data, error }) => {
+      if (stale) return;
+      const g = Array.isArray(data) ? data[0] : data;
+      if (error || !g || !g.room_exists) {
+        router.replace("/");
+        return;
+      }
+      if (g.allowed) {
+        /* Readable per the gate but the direct fetch missed it — a
+           transient race (e.g. a follow that just landed). Retry once. */
+        setRoomUnreadable(false);
+        fetchAll();
+        return;
+      }
+      setDeniedGate({ motion: g.motion, host: g.host_username, mode: g.access_mode });
+    });
     return () => {
       stale = true;
     };
-  }, [room, accessRestricted, currentUser, roomId, supabase]);
-  const accessDenied = accessRestricted && accessAllowed === false;
-  const accessOk = !accessRestricted || accessAllowed === true;
+  }, [loaded, roomUnreadable, deniedGate, roomId, supabase, router, fetchAll]);
 
   /* ── Seat heartbeat ────────────────────────────────────────────────
      touch_seat stamps our participant row's last_seen_at; ghost seats
      are swept server-side after 5 minutes of silence. */
   const heartbeatOn =
-    !!currentUser && !!room && room.status !== "ended" && !gated && !broadcast && accessOk;
+    !!currentUser && !!room && room.status !== "ended" && !gated && !broadcast;
   useEffect(() => {
     if (!heartbeatOn) return;
     const beat = () => supabase.rpc("touch_seat", { p_room: roomId }).then(undefined, () => {});
@@ -501,7 +514,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     userId: currentUser?.id ?? null,
     username: myUsername,
     canPublish: onStage(myRole),
-    ready: loaded && !!room && !gated && accessOk,
+    ready: loaded && !!room && !gated,
     /* Big tiles deserve the high simulcast layer: the close-up 3D
        vantage as before, multi-speaker always (its featured tiles are
        large), and gallery when tiles are few enough to render big.
@@ -833,7 +846,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     if (seatAttemptedRef.current) return;
     if (!loaded || !currentUser || !room || room.status === "ended" || gated) return;
-    if (!accessOk) return; // don't mark attempted — retry once access resolves
     if (myParticipation) {
       seatAttemptedRef.current = true;
       return;
@@ -862,7 +874,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         /* seating is cosmetic — the room still works unlisted */
       }
     })();
-  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll, gated, accessOk]);
+  }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll, gated]);
 
   /* Leaving vacates the seat (best effort — a closed tab can't stamp out). */
   const vacateSeat = useCallback(() => {
@@ -1032,23 +1044,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const topic = TOPICS.find((t) => t.key === room?.topic_key);
   const audienceCount = Math.max(room?.viewer_count ?? 0, audience.length);
 
-  if (!loaded || !room) {
-    return (
-      <div className="ag-root ag-loading">
-        <div className="ag-spinner" />
-        <span>Entering the Agora…</span>
-      </div>
-    );
-  }
-
-  if ((arrivedEnded || showReplay) && !broadcast) {
-    return <DebateReplay roomId={roomId} initialRoom={room} />;
-  }
-
-  if (accessDenied) {
-    const hostRow = participants.find((pp) => pp.user_id === room.host_id);
-    const hostName = hostRow?.user ? displayName(hostRow.user) : null;
-    const who = hostName ? `@${hostRow?.user?.username ?? hostName}` : "the host";
+  if (deniedGate) {
+    const who = deniedGate.host ? `@${deniedGate.host}` : "the host";
     return (
       <div
         className="ag-root ag-loading"
@@ -1058,10 +1055,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           PRIVATE ROOM
         </p>
         <h1 className="m-0 mt-2 text-[22px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, maxWidth: 640 }}>
-          {room.motion}
+          {deniedGate.motion}
         </h1>
         <p className="m-0 mt-3 text-[13px]" style={{ color: "#c0c0c8", maxWidth: 480, lineHeight: 1.6 }}>
-          {room.access_mode === "friends"
+          {deniedGate.mode === "friends"
             ? `This room is open to ${who}'s friends only.`
             : `This room is open to people who follow ${who}.`}
           {!currentUser && " Sign in if that's you."}
@@ -1087,6 +1084,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         </button>
       </div>
     );
+  }
+
+  if (!loaded || !room) {
+    return (
+      <div className="ag-root ag-loading">
+        <div className="ag-spinner" />
+        <span>{roomUnreadable ? "Checking access…" : "Entering the Agora…"}</span>
+      </div>
+    );
+  }
+
+  if ((arrivedEnded || showReplay) && !broadcast) {
+    return <DebateReplay roomId={roomId} initialRoom={room} />;
   }
 
   if (gated && opensAtMs !== null) {

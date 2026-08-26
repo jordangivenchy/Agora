@@ -91,6 +91,14 @@ describe("notifHref", () => {
   it("discussion_opened prefers the post", () => {
     expect(notifHref(row({ type: "discussion_opened", post_id: "p", room_id: "r" }))).toBe("/posts/p");
   });
+  it("follows land on the standalone profile page, not the modal", () => {
+    expect(notifHref(row({ type: "new_follower", actor_id: "u1", actor_username: "red" })))
+      .toBe("/users/red");
+    expect(notifHref(row({ type: "friend_accepted", actor_id: "u1", actor_username: "red" })))
+      .toBe("/users/red");
+    // Username missing from the join: fall back to the modal deep link.
+    expect(notifHref(row({ type: "new_follower", actor_id: "u1", actor_username: null }))).toBe("/?profile=u1");
+  });
   it("returns null without a target", () => {
     expect(notifHref(row({ type: "post_comment" }))).toBeNull();
   });
