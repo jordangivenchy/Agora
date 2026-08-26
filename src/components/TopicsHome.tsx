@@ -763,7 +763,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {/* Selected field: queue questions */}
         <div className="flex items-center gap-3 mt-2.5 mb-0.5">
           <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f4d47c", letterSpacing: "0.04em" }}>
-            QUEUE
+            DAILY TOPICS
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
           <span className="text-[11px] whitespace-nowrap inline-flex items-center gap-1.5" style={{ color: "#6b6b74" }}>
@@ -849,9 +849,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                         onClick={() => queueUp(t, "PRO")}
                         disabled={busyId === t.id}
                         className={`queue-join-btn${instant ? " queue-join-btn--instant" : ""}`}
-                        title={instant ? "Someone is waiting — you'll be matched right away" : "Join the queue for this question"}
+                        title={instant ? "Someone is waiting — you'll be matched right away" : "Queue for this question"}
                       >
-                        {busyId === t.id ? "…" : instant ? "Join — match now" : "Join"}
+                        {busyId === t.id ? "…" : instant ? "Queue — match now" : "Queue"}
                       </button>
                     );
                   })()}
