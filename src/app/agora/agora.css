@@ -223,18 +223,23 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin: 14px 18px 0;
-  padding: 12px 18px;
-  /* Same liquid glass as the floating controls, so the header reads as a
-     pane of the same material rather than a different dark panel. The
-     corner-anchored inset highlights in --ag-glass-rim are what carry it
-     at this width — they catch the light at the bar's edges the way the
-     pills catch it at theirs. */
-  background: var(--ag-glass-bg);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  backdrop-filter: blur(18px) saturate(140%);
-  box-shadow: var(--ag-glass-rim);
+  /* Integrated, not boxed: the title floats directly on the night sky
+     under a broadcast-style scrim — a top-down gradient that fades to
+     nothing, so the scene reads as one continuous field with the text
+     resting on it instead of a separate glass card parked on top. The
+     buttons keep their own glass pills for affordance. */
+  margin: 0;
+  padding: 14px 22px 26px;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 5, 9, 0.82) 0%,
+    rgba(4, 5, 9, 0.45) 62%,
+    rgba(4, 5, 9, 0) 100%
+  );
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  box-shadow: none;
   z-index: 5;
 }
 
