@@ -22,6 +22,7 @@ import {
   useState,
 } from "react";
 import { useHlsSource } from "./HlsPlayer";
+import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 
 function fmtTime(s: number): string {
@@ -43,11 +44,17 @@ export interface ReplayPlayerProps {
   errorFallback?: React.ReactNode;
   /** Reports the load-error state up (null = healthy). */
   onError?: (msg: string | null) => void;
+  /** Play only this window of the VOD (clip playback): starts there,
+      pauses at the end, and the seek bar maps just the range. */
+  range?: { start: number; end: number } | null;
+  /** Enable the ✂ control: viewers mark [start, end] at the current
+      position and the range is saved to the clips table for this room. */
+  clipRoomId?: string | null;
   style?: React.CSSProperties;
 }
 
 const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
-  function ReplayPlayer({ src, poster, onTimeUpdate, onSeeking, errorFallback, onError, style }, fwdRef) {
+  function ReplayPlayer({ src, poster, onTimeUpdate, onSeeking, errorFallback, onError, range, clipRoomId, style }, fwdRef) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const wrapRef = useRef<HTMLDivElement | null>(null);
     const barRef = useRef<HTMLDivElement | null>(null);
@@ -66,6 +73,59 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
     const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const draggingRef = useRef(false);
 
+    /* Range playback (clips): all bar math happens inside the window. */
+    const rStart = range ? Math.max(0, range.start) : 0;
+    const rEnd = range && range.end > range.start ? range.end : null;
+    const eDur = rEnd !== null ? rEnd - rStart : dur;
+
+    /* ✂ clip authoring */
+    const [clipStart, setClipStart] = useState<number | null>(null);
+    const [clipNote, setClipNote] = useState<string | null>(null);
+    const [clipBusy, setClipBusy] = useState(false);
+    const markClip = useCallback(async () => {
+      const v = videoRef.current;
+      if (!v || !clipRoomId || clipBusy) return;
+      if (clipStart === null) {
+        setClipStart(v.currentTime);
+        setClipNote(null);
+        return;
+      }
+      const start = Math.min(clipStart, v.currentTime);
+      const end = Math.max(clipStart, v.currentTime);
+      if (end - start < 3) {
+        setClipNote("Clips need at least 3 seconds — keep playing, then press ✂ again.");
+        return;
+      }
+      setClipBusy(true);
+      try {
+        const supabase = createClient();
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) {
+          window.location.href = "/login";
+          return;
+        }
+        const title = window.prompt("Title for your clip:", "");
+        if (title === null) { setClipBusy(false); return; }
+        const { error } = await supabase.from("clips").insert({
+          uploader_id: auth.user.id,
+          title: title.trim() || "Clip",
+          room_id: clipRoomId,
+          start_seconds: Math.floor(start),
+          end_seconds: Math.ceil(end),
+          duration_seconds: Math.max(1, Math.round(end - start)),
+        });
+        if (error) throw error;
+        setClipStart(null);
+        setClipNote("Clip saved — it's on Trending ✓");
+        setTimeout(() => setClipNote(null), 3000);
+      } catch (e) {
+        console.warn("clip save failed", e);
+        setClipNote("Couldn't save the clip — try again.");
+      } finally {
+        setClipBusy(false);
+      }
+    }, [clipRoomId, clipBusy, clipStart]);
+
     /* Controls linger 2.6s after the last activity while playing. */
     const poke = useCallback(() => {
       setChrome(true);
@@ -80,17 +140,22 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
     const toggle = useCallback(() => {
       const v = videoRef.current;
       if (!v) return;
-      if (v.paused) v.play().catch(() => {});
-      else v.pause();
+      if (v.paused) {
+        // replaying a finished clip restarts at the range start
+        if (rEnd !== null && v.currentTime >= rEnd - 0.1) v.currentTime = rStart;
+        v.play().catch(() => {});
+      } else v.pause();
       poke();
-    }, [poke]);
+    }, [poke, rStart, rEnd]);
 
     const seekBy = useCallback((delta: number) => {
       const v = videoRef.current;
       if (!v) return;
-      v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + delta));
+      const lo = rStart;
+      const hi = rEnd ?? (v.duration || 0);
+      v.currentTime = Math.max(lo, Math.min(hi, v.currentTime + delta));
       poke();
-    }, [poke]);
+    }, [poke, rStart, rEnd]);
 
     const toggleFs = useCallback(() => {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -110,9 +175,10 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
       if (!bar || !v || !v.duration) return;
       const r = bar.getBoundingClientRect();
       const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-      v.currentTime = pct * v.duration;
+      const span = rEnd !== null ? rEnd - rStart : v.duration;
+      v.currentTime = rStart + pct * span;
       setTime(v.currentTime);
-    }, []);
+    }, [rStart, rEnd]);
     const onBarPointerDown = useCallback((e: React.PointerEvent) => {
       draggingRef.current = true;
       seekToClientX(e.clientX);
@@ -141,7 +207,8 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
       return <>{errorFallback ?? null}</>;
     }
 
-    const pct = dur > 0 ? (time / dur) * 100 : 0;
+    const shownTime = Math.max(0, time - rStart);
+    const pct = eDur > 0 ? Math.min(100, (shownTime / eDur) * 100) : 0;
     const btn: React.CSSProperties = {
       background: "transparent", border: "none", color: "#f0f0f2",
       cursor: "pointer", padding: 4, display: "inline-flex", alignItems: "center",
@@ -177,8 +244,19 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
           onPlay={() => { setPlaying(true); poke(); }}
           onPause={() => { setPlaying(false); setChrome(true); }}
           onEnded={() => { setPlaying(false); setChrome(true); }}
-          onTimeUpdate={(e) => { setTime(e.currentTarget.currentTime); onTimeUpdate?.(e.currentTarget.currentTime); }}
-          onDurationChange={(e) => setDur(e.currentTarget.duration)}
+          onTimeUpdate={(e) => {
+            const v = e.currentTarget;
+            // clip playback stops at the range's end
+            if (rEnd !== null && v.currentTime >= rEnd && !v.paused) v.pause();
+            setTime(v.currentTime);
+            onTimeUpdate?.(v.currentTime);
+          }}
+          onDurationChange={(e) => {
+            const v = e.currentTarget;
+            setDur(v.duration);
+            // clip playback opens at the range's start
+            if (rStart > 0 && v.currentTime < rStart) v.currentTime = rStart;
+          }}
           onSeeking={onSeeking}
           onVolumeChange={(e) => { setMuted(e.currentTarget.muted); setVol(e.currentTarget.volume); }}
           style={{ display: "block", width: "100%", height: fs ? "100%" : undefined, aspectRatio: fs ? undefined : "16 / 9", objectFit: "contain" }}
@@ -218,8 +296,8 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
             role="slider"
             aria-label="Seek"
             aria-valuemin={0}
-            aria-valuemax={Math.floor(dur)}
-            aria-valuenow={Math.floor(time)}
+            aria-valuemax={Math.floor(eDur)}
+            aria-valuenow={Math.floor(shownTime)}
             style={{ padding: "6px 0", cursor: "pointer" }}
           >
             <div style={{ position: "relative", height: 4, borderRadius: 2, background: "rgba(255,255,255,0.22)" }}>
@@ -248,9 +326,37 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
               style={{ width: 68, accentColor: GOLD, cursor: "pointer" }}
             />
             <span style={{ fontSize: 11.5, color: "#d9d9df", fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap" }}>
-              {fmtTime(time)} <span style={{ color: "#8b8b94" }}>/ {fmtTime(dur)}</span>
+              {fmtTime(shownTime)} <span style={{ color: "#8b8b94" }}>/ {fmtTime(eDur)}</span>
             </span>
             <span style={{ flex: 1 }} />
+            {clipNote && (
+              <span style={{ fontSize: 11, color: "#f4d47c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>
+                {clipNote}
+              </span>
+            )}
+            {clipRoomId && clipStart !== null && !clipNote && (
+              <span style={{ fontSize: 11, color: "#f4d47c", whiteSpace: "nowrap" }}>
+                Clipping from {fmtTime(Math.max(0, clipStart - rStart))} — press ✂ to end
+                <button
+                  onClick={() => setClipStart(null)}
+                  aria-label="Cancel clip"
+                  style={{ ...btn, padding: "0 4px", color: "#8b8b94", fontSize: 11 }}
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+            {clipRoomId && (
+              <button
+                onClick={markClip}
+                disabled={clipBusy}
+                aria-label={clipStart === null ? "Start a clip here" : "End the clip here"}
+                title={clipStart === null ? "Clip: mark the start here" : "Clip: mark the end here"}
+                style={{ ...btn, color: clipStart !== null ? "#f4d47c" : btn.color }}
+              >
+                <Icon name="scissors" size={16} />
+              </button>
+            )}
             <button onClick={toggleFs} aria-label={fs ? "Exit fullscreen" : "Fullscreen"} style={btn}>
               <Icon name={fs ? "minimize" : "maximize"} size={16} />
             </button>

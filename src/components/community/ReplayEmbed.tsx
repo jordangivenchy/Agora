@@ -10,7 +10,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import ReplayPlayer from "@/components/agora/ReplayPlayer";
-import { Icon } from "@/components/icons";
 
 export default function ReplayEmbed({ postId }: { postId: string }) {
   const [supabase] = useState(() => createClient());
@@ -35,16 +34,13 @@ export default function ReplayEmbed({ postId }: { postId: string }) {
   if (!rec) return null;
   return (
     <div className="mt-2">
-      {/* If the playlist can't load (still finalizing, pruned) the player
-          renders nothing and the pointer link below carries the thread. */}
-      <ReplayPlayer src={rec.url} style={{ border: "0.5px solid #2e2e38", maxHeight: 480 }} />
-      <a
-        href={`/agora/${rec.roomId}`}
-        className="inline-flex items-center gap-1.5 mt-1.5 text-[11px] no-underline"
-        style={{ color: "#8b8b94" }}
-      >
-        Open the full replay — transcript, click-to-seek <Icon name="arrow-up-right" size={11} />
-      </a>
+      {/* Just the video — no caption, no link (the thread IS the replay's
+          home). Viewers can cut clips straight from the chrome's ✂. */}
+      <ReplayPlayer
+        src={rec.url}
+        clipRoomId={rec.roomId}
+        style={{ border: "0.5px solid #2e2e38", maxHeight: 480 }}
+      />
     </div>
   );
 }

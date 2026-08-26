@@ -1892,3 +1892,25 @@ html.reduce-motion .nav-sparkle {
   background: #e5b04a;
   box-shadow: 0 3px 20px rgba(217, 162, 56, 0.45);
 }
+
+/* ═══ Hover-rail width (2026-08-26) ═════════════════════════════════
+   Unlayered on purpose: routes that pull mvp-home.css through
+   @layer mvp-home (profile) would otherwise resolve the base 230px
+   above instead of the rail. The registered property makes the value
+   itself animate, so every surface keyed to it resizes in sync.
+   Applies only where the home sidebar exists. */
+@property --sidebar-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 240px;
+}
+@media (min-width: 901px) {
+  :root:has(#sidebar) {
+    --sidebar-width: 64px;
+    transition: --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  :root:has(#sidebar:hover),
+  :root:has(#sidebar :focus-visible) {
+    --sidebar-width: 240px;
+  }
+}

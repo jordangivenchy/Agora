@@ -22,6 +22,15 @@ export function roomPath(room: { id: string; motion?: string | null }): string {
   return slug ? `/agora/${slug}-${short}` : `/agora/${short}`;
 }
 
+/** Dedicated replay surface — same slug scheme, none of the live-room
+    machinery loads. Ended rooms at /agora/<id> still render the replay
+    there, so old links keep working. */
+export function replayPath(room: { id: string; motion?: string | null }): string {
+  const slug = roomSlug(room.motion);
+  const short = room.id.slice(0, 8);
+  return slug ? `/replays/${slug}-${short}` : `/replays/${short}`;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Route param → full uuid, or an 8-char id prefix to resolve server-side. */

@@ -493,7 +493,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
         {/* Selected field: popular rooms */}
         <div className="flex items-center gap-3 mb-0.5">
-          <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#9cc4f0", letterSpacing: "0.04em" }}>
+          <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#3e7dff", letterSpacing: "0.04em" }}>
             POPULAR ROOMS
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -640,7 +640,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {selScheduled.length > 0 ? (
           <>
             <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-              <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+              <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#8b5cf6", letterSpacing: "0.04em" }}>
                 SCHEDULED
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -747,7 +747,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-0.5">
-              <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#c9a6f0", letterSpacing: "0.04em" }}>
+              <span className="text-[13px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#8b5cf6", letterSpacing: "0.04em" }}>
                 SCHEDULED
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />

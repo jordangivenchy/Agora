@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import { roomPath, userPath } from "@/lib/urls";
+import { replayPath, roomPath, userPath } from "@/lib/urls";
 import { pathFor } from "@/lib/routes";
 import { displayName } from "@/lib/names";
 import { TOPICS } from "@/types/database";
@@ -448,10 +448,47 @@ export default function DebateReplay({
     }
   };
 
+  /* ── More replays: the screen shouldn't be a dead end ──────────────
+     Recent recorded discussions, this room's field first. */
+  type MoreReplay = {
+    id: string;
+    motion: string;
+    topic_key: string | null;
+    thumbnail_url: string | null;
+    ended_at: string | null;
+    host: { username: string; display_name: string | null; avatar_url: string | null } | null;
+  };
+  const [more, setMore] = useState<MoreReplay[]>([]);
+  const selfId = room?.id ?? null;
+  const topicKey = room?.topic_key ?? null;
+  useEffect(() => {
+    if (!selfId) return;
+    let alive = true;
+    supabase
+      .from("debate_rooms")
+      .select("id, motion, topic_key, thumbnail_url, ended_at, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+      .eq("status", "ended")
+      .eq("is_private", false)
+      .not("recording_url", "is", null)
+      .neq("id", selfId)
+      .order("ended_at", { ascending: false })
+      .limit(12)
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        const rows = (data as unknown as MoreReplay[]).slice();
+        // stable sort: same-field replays first, recency preserved within
+        rows.sort((a, b) => Number(b.topic_key === topicKey) - Number(a.topic_key === topicKey));
+        setMore(rows.slice(0, 6));
+      });
+    return () => { alive = false; };
+  }, [selfId, topicKey, supabase]);
+
   if (!loaded) {
+    /* Own spinner classes — the standalone /replays route doesn't load
+       agora.css, so the loading state can't lean on ag-* styles. */
     return (
-      <div className="ag-root ag-loading">
-        <div className="ag-spinner" />
+      <div className="dr-loading-page">
+        <div className="dr-spinner" />
         <span>Opening the replay…</span>
       </div>
     );
@@ -553,6 +590,7 @@ export default function DebateReplay({
                 <ReplayPlayer
                   ref={videoRef}
                   src={recordingUrl}
+                  clipRoomId={room.id}
                   poster={room.thumbnail_url ?? room.host?.avatar_url ?? undefined}
                   onTimeUpdate={setCurrentTime}
                   onSeeking={() => setUserScrolled(false)}
@@ -595,6 +633,7 @@ export default function DebateReplay({
                 </label>
               )}
             </div>
+            <div className="dr-panel-body">
             <div
               className="dr-transcript"
               ref={transcriptRef}
@@ -638,6 +677,7 @@ export default function DebateReplay({
                   </div>
                 );
               })}
+            </div>
             </div>
           </aside>
         </div>
@@ -703,6 +743,38 @@ export default function DebateReplay({
             </div>
           )}
         </section>
+
+        {more.length > 0 && (
+          <section className="dr-section">
+            <div className="dr-section-head">
+              <div>
+                <h2 className="dr-section-title">More replays</h2>
+                <p className="dr-section-sub">Recent recorded discussions to watch next</p>
+              </div>
+            </div>
+            <div className="dr-more-grid">
+              {more.map((m) => (
+                <a key={m.id} className="dr-more-card" href={replayPath(m)}>
+                  <div className="dr-more-thumb">
+                    {m.thumbnail_url || m.host?.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={(m.thumbnail_url || m.host?.avatar_url)!} alt="" />
+                    ) : (
+                      <span className="dr-more-thumb-fallback">
+                        <Icon name="play" size={18} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="dr-more-motion">{m.motion}</div>
+                  <div className="dr-more-meta">
+                    {m.host ? displayName(m.host) : ""}
+                    {m.ended_at ? ` · ${timeAgo(m.ended_at)}` : ""}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
       {toast && (
         <div className="dr-toast" role="status">

@@ -140,12 +140,28 @@
   align-items: stretch;
 }
 /* Two-column layout: the transcript panel is exactly as tall as the
-   video — height 0 keeps its content from driving the row height (the
-   16:9 player sets it), min-height stretches it back to the row, and
-   the list scrolls inside. */
+   player column. The scrollable list absolutely fills a flex body, so
+   it contributes no intrinsic height — the row is sized by the player
+   alone and the panel stretches to match. (A height:0/min-height:100%
+   variant collapsed the panel entirely in auto-sized rows.) */
+.dr-panel-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
 @media (min-width: 961px) {
-  .dr-panel { height: 0; min-height: 100%; }
-  .dr-transcript { max-height: none; flex: 1; }
+  .dr-panel { align-self: stretch; }
+  .dr-panel-body .dr-transcript {
+    position: absolute;
+    inset: 0;
+    max-height: none;
+  }
+  /* Empty state centers in the panel instead of hugging the top. */
+  .dr-panel-body .dr-transcript:has(.dr-empty) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 @media (max-width: 960px) {
   .dr-grid { grid-template-columns: minmax(0, 1fr); }
@@ -416,3 +432,72 @@
 }
 .dr-comment-composer textarea:focus { border-color: #4a5568; }
 .dr-comment-composer textarea::placeholder { color: #6b6b74; }
+
+/* ── Standalone-route loading state (no agora.css on /replays) ── */
+.dr-loading-page {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #8b8b94;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+}
+.dr-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-top-color: #e2b96b;
+  animation: dr-spin 0.9s linear infinite;
+}
+@keyframes dr-spin { to { transform: rotate(360deg); } }
+
+/* ── "More replays" recommendation rail ── */
+.dr-more-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding-top: 12px; /* .dr-section already carries side padding */
+}
+.dr-more-card {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.dr-more-thumb {
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #14141c, #1d1d28);
+  border: 0.5px solid #2c2c34;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a4a54;
+}
+.dr-more-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+}
+.dr-more-motion {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: #e5e5ec;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dr-more-card:hover .dr-more-motion { color: #fff; }
+.dr-more-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #8b8b94;
+}

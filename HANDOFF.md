@@ -1,106 +1,162 @@
 # AgoraSphere — Context Handoff
 
-_Last updated: 2026-08-23. Covers the 08-22→08-23 marathon (71 commits on
-top of the 08-22 handoff): CI + Preview env, icon system, TipTap editor,
-standalone URLs, Your Feed, replays/VOD, global search, notifications v2,
-email notifications, DM rework, room lifecycle, call layouts, HLS audience
-overflow. Everything below is LIVE in production unless marked otherwise._
+_Last updated: 2026-08-26. Covers 08-25→08-26 (queues become the fast
+lane, "debate"→"discussion" site-wide, VOD system: replay route + custom
+player + comments + clips, recorder A/V fix, hover-rail sidebar, solid
+pill design pass). Everything below is LIVE in production unless marked
+otherwise — EXCEPT the 08-26 afternoon stack, committed in this same
+push. Older digests' details have been folded into the archive sections._
 
-## ⚡ 08-23 session digest (read this first)
+## ⚡ 08-25→08-26 session digest (read this first)
 
-**Migrations applied to the live DB this session (files match live):**
-20260847_profile_text_hygiene · 20260848_dm_media · 20260849_home_feed ·
-20260851_debate_recordings · 20260852_notifications_v2 ·
-20260853_global_search · 20260854_email_notifications ·
-20260855_room_lifecycle. Live DB now matches files through **20260855**.
+**REPO MOVED: `/Users/jordanjaca/Agora`** (fresh clone). macOS TCC
+revoked Downloads access mid-session on 08-26; the old
+`~/Downloads/Agora-main` copy is orphaned — delete it. Full `.env.local`
+was copied over (public keys + LiveKit pair + NewsData; service-role
+still absent). Git identity is configured repo-local.
 
-**Process/infra**
-- **CI live**: `.github/workflows/ci.yml` (tsc → vitest → next build) on every
-  push/PR; repo vars NEXT_PUBLIC_SUPABASE_URL/ANON_KEY. Reports, doesn't block.
-- **Vercel Preview env fixed** (Supabase vars added) — branch deploys build.
-- Stray Vercel project `agora` still hooked to the repo and failing on every
-  push (noise); Jordan should delete it in the dashboard.
-- `/api/health` gained a live **AI probe** (`ai.reachable` pings Gemini).
+**Migrations applied to the live DB (files match live through 20260864):**
+20260856_stanceless_queue · 20260857_topic_rotation · 20260858_vod_settings
+· 20260859_no_live_notif_for_duels · 20260860_presence_queue_status ·
+20260861_dedebate_db_copy · 20260862_duel_lifecycle ·
+20260863_duel_ends_on_leave · 20260864_clip_ranges. Plus live data ops:
+communities renamed (Debates→Replays `…deba`, Debate Club→Discussion
+Club), ~110 queue questions seeded, all recordings wiped 08-25 evening
+(R2 segment files still orphaned in the bucket — purge from the
+Cloudflare dashboard), a host-gone presence backstop folded into
+end_hostless_rooms, and SQL-function user-visible copy de-debated in
+place.
 
-**Product surface (all deployed)**
-- **Icons**: `src/components/icons.tsx` (~130 Lucide-style paths, one map →
-  `<Icon>` JSX + `iconSvg()` strings). Functional emoji swept app-wide.
-- **Community composers**: TipTap rich editor (`community/RichEditor.tsx`) —
-  live formatting, list continuation, tables, spoiler, @mention dropdown;
-  stores markdown; renderer = react-markdown (`community/RichText.tsx`).
-  Image/GIF/emoji live in the editor toolbar.
-- **Standalone URLs** (rewrites → `/`): /feed /trending /news /explore
-  /communities /communities/<slug> /posts/<id>[#comment-<cid>]
-  /messages[/<username>] /search?q= — in-app nav pushes history; legacy
-  ?nav/?post/?dm redirect. `src/lib/routes.ts` is the single source.
-- **Your Feed** (`/feed`, signed-in landing): get_home_feed RPC (live rail,
-  scheduled w/ reminder bells, posts via shared PostCard, filters
-  All/Following/Communities/Popular, reasons). People *tab was removed* —
-  lookup lives in search; suggestions remain in feed/welcome/search.
-- **Replays**: HLS egress persists `recording_url` (R2 `<room>/index.m3u8`);
-  ended rooms at /agora/<id> render DebateReplay (VOD player, click-to-seek
-  transcript, lazily-created discussion post in the room's community or the
-  system **Debates** community `…deba`). Recording is **on by default**:
-  host client auto-starts HLS when live+connected (idempotent).
-- **HLS audience overflow**: audience ≥ HLS_AUDIENCE_THRESHOLD (env, def 15)
-  → new viewers get `{mode:"hls"}` from /api/livekit and watch the broadcast
-  surface (~7-10s behind; 2s segments); stage roles always WebRTC; raise-hand
-  promotion reconnects WebRTC. Reactions from HLS viewers render only
-  locally (data-channel) — known follow-up.
-- **Call layouts**: Stage/Gallery/Multi-speaker segmented control in the
-  room control bar (`community` of `.ag-layout-*`, CallLayouts.tsx), per-viewer,
-  `g` cycles. Layouts live in the stage's slot (speaker view settled);
-  audience view is always the open bowl + dock. Beware the historical trap:
-  the first cut disabled the vantage toggle via BOTH a prop and a CSS rule
-  (`.ag-root--flat .ag-switch-view`) — both are removed now.
-- **Search**: tsvector+trigram, search_all/search_suggest; navbar panel
-  drops from the search box (suggestions + instant results + tabs), Enter
-  pins to /search. Navbar pill is flat (no liquid glass), truly centered.
-- **Notifications v2**: replies/comments/upvote milestones/reposts/
-  followed_scheduled/followed_live/replay_ready/discussion_opened via DB
-  triggers with 10-min coalescing; per-type prefs (Settings) + bell rewrite
-  + /notifications page; minute cron pushes via /api/cron/notifications.
-- **Email**: per-type email prefs (defaults: social-important on),
-  batched sends (1/user/10min), weekly digest (Sat 15:00 UTC cron →
-  /api/cron/digest), HMAC one-click unsubscribe (/api/email/unsubscribe).
-  Tested live 08-23 (Jordan/Alan/Josh received).
-- **DMs**: two-pane dock, conversation search, images/GIF/emoji
-  (direct_messages.image_url), Photo/GIF thread previews.
-- **Room lifecycle**: pagehide beacon (/api/rooms/leave), LiveKit webhook
-  (/api/webhook/livekit — **must be configured in LiveKit Cloud dashboard,
-  NOT DONE YET**), host 90s grace (host_left_at), minute cron ends hostless/
-  abandoned live rooms. Zombie-room cleanup habit obsolete.
-- **Profiles**: text normalization + 52-term blocklist (client+server),
-  banner placeholder (owner-only, hover pencil/?), one-row actions
-  (Following·Message·⋯ with mod Verify inside ⋯), identity chips + real
-  links on every row, empty states with CTAs, reminder bells on Scheduled.
-- **Create room**: trimmed to real features (topic/category/language/
-  schedule/thumbnail/private). Stoa variants, curricula, time limits,
-  PRO/CON pickers removed (10/10 seats passed under the hood).
-- **Mic permission**: pre-prompt card (Allow/Not now 7-day snooze) on home
-  + inline in the room; blocked state shows browser-specific recovery.
-  Wake word listens for on-stage members on /agora (was /rooms-only) and
-  tolerates mishearings (Aurora/Angora/'a gora').
+**Queues are the product's fast lane (all deployed)**
+- **Stanceless matching**: queue_for_topic pairs the oldest fresh waiter
+  regardless of side; seats assigned invisibly (Pro/Con is GONE from all
+  UI — counts say "N waiting to talk", News daily poll is
+  Agree/Disagree). Dead components deleted (VotingPanel, QueuePanel,
+  DebatesPage, JoinPrivateRoomModal).
+- **Topic rotation**: ~125-question pool, 6/category/day via
+  date-seeded hash in get_debate_topics (reshuffles midnight UTC, no
+  cron); queued topics never rotate out from under waiters; countdown
+  chip in the QUEUE header. Growing the pool = plain inserts.
+- **Duels** (queue matches, detected by pro_size/con_size 1/1): locked
+  to the two-pane speaker gallery (vantage/layout toggles hidden, `g`
+  disabled — EXCEPT screen shares, which pin near-fullscreen); NO host
+  powers (HostControls hidden, no host-leave confirm); no followed_live
+  notification blast; hidden from Popular Rooms + category counts; room
+  ends the moment EITHER debater leaves (DB trigger on left_at — covers
+  beacon/webhook/ghost-sweep paths); the 90s hostless reaper skips them.
+- **Match-stranding fix**: getting matched writes matched_room_id, so a
+  board refresh could flip am_queued off and tear down the poll before
+  it delivered the room; any un-initiated dequeue now runs a final
+  check_topic_match and jumps straight in.
+- **Raised-hand fast lane**: HLS-overflow viewers who raise a hand get a
+  real-time WebRTC seat (cap HLS_HAND_FAST_LANE_CAP, default 25, queue
+  order; lowering returns the seat; beyond-cap clients re-check as the
+  line moves).
 
-**Watchouts discovered this session**
-- The homepage CSS reset still eats Tailwind spacing in portaled components
-  (bit NotificationsBell; fixed with inline styles — prefer inline spacing
-  in anything portaled into the MVP shell).
-- backdrop-filter on cards creates stacking contexts (bit the community
-  composer dropdowns and the profile banner/avatar) — lift z-index or
-  position consciously.
-- PostgREST schema cache may lag DDL — `notify pgrst, 'reload schema'`
-  fixed DM sends after adding image_url.
-- The embedded browser pane reports document.hidden/vw=0 to JS; trust
-  screenshots + real clicks, not getBoundingClientRect, when driving it.
+**VOD system (all deployed except where noted)**
+- **Recorder A/V fix (critical)**: the egress compositor's connect path
+  returned before track handlers were registered → recordings had one
+  camera and NO audio. Handlers now wire before either connect path.
+  VERIFY with a fresh two-person recording — also: the 08-26 "dad" test
+  room says 12 min recorded but its VOD is 25s; if that recurs
+  post-fix, egress is dying early (next bug).
+- **/replays/<motion-slug>-<short8>** — dedicated replay route
+  (replayPath in lib/urls): DebateReplay directly, no 3D/LiveKit bundle.
+  /agora/<id> for ended rooms still works. Trending ended tiles + the
+  community embed link there.
+- **ReplayPlayer** (agora/ReplayPlayer.tsx) — custom chrome shared by
+  replay page / community embed / Trending shorts: gold drag-seek,
+  volume, fullscreen, keyboard (space ←→ m f), auto-hiding controls, no
+  download/PiP/rate. Supports `range` (clip playback) and `clipRoomId`
+  (the ✂).
+- **Clips**: ✂ in the player marks [start,end] → clips row
+  (start_seconds/end_seconds over the room recording — no video
+  processing). Trending Shorts plays ranges via ReplayPlayer. Uploaded
+  clips unchanged.
+- **Replay page**: YouTube-style inline comments under the VOD (same
+  community_comments thread as the discussion post; first comment
+  lazily creates it), "More replays" recommendation rail (same field
+  first), transcript panel exactly the player's height (absolute-fill
+  body — the height:0/min-height trick collapses in auto rows), and
+  transcript sync corrected via the playlist's EXT-X-PROGRAM-DATE-TIME
+  (offsets were from the egress REQUEST stamp; highlights led audio by
+  compositor spin-up).
+- **Community embed** (community/ReplayEmbed.tsx): replay threads embed
+  the player inline (reverse lookup via discussion_post_id); the "watch
+  the replay at /agora/…" body sentence is gone (DB rows nulled +
+  ensure_debate_discussion patched).
+- **VOD settings**: user_settings.record_debates toggle + 5 GB
+  allowance (users.recording_storage_limit_mb — THE subscription
+  lever), size estimated at 578 KB/s, stamped by trigger; egress
+  start_hls quietly refuses when off/full; Settings → "Recordings &
+  storage" shows a usage meter. Trending: ended rooms only get tiles
+  when a VOD exists; tiles use thumbnail → host avatar → gradient.
 
-**Still open (pre-launch list, in order)**: signed-in QA pass (3 founders,
-1 hour each); mobile pass (<768px untested); moderation queue + blocklist on
-posts/comments/DMs; rate limits on follows/DMs; ToS+privacy pages & data-
-platform consent default; LiveKit webhook config (above); GoTrue password
-hook; secrets rotation (R2/Twitch/NewsData); CRON_SECRET + PostHog; OG tags
-for /posts //agora replays; beta-gate exit plan; content seeding; LiveKit
-spend alert (default recording + overflow both bill egress minutes ~$1/hr/room).
+**Rooms & presence**
+- Room topbar is a broadcast-style scrim integrated into the scene (no
+  glass card). Self-view is mirrored in EVERY surface (stage, layouts,
+  dock) — screens never mirrored. Flat layouts clear the 3D scene's
+  stage panels + medallion (no ghost mini-cards). Lantern ring is a
+  true 36° mirror-symmetric ring (lanternRing.test.ts pins it).
+- Presence has an "in queue" state (user_presence.queued via
+  touch_presence(p_room, p_queued) — OLD single-arg signature DROPPED;
+  friends list shows In a room / In queue / Online / Offline).
+- Host-gone backstop: end_hostless_rooms stamps host_left_at itself
+  when a live room's host has no presence heartbeat for 2+ min (beacon
+  missed / crash); pg_cron 'room-lifecycle' runs it every minute — the
+  Vercel CRON_SECRET is NOT needed for lifecycle (still needed for the
+  maintenance/digest routes).
+
+**"Debate" is retired site-wide** — ~100 UI strings, email + push copy,
+SQL-generated copy (people-suggestion reasons, error messages), FORMATS
+label, meta tags, communities renamed. Identifiers/tables/CSS keep the
+old names on purpose. Fictional seed handles (SocraticDebates…) kept.
+
+**Design pass (all deployed or in this push)**
+- Solid pill button system everywhere: queue Join (solid #2f7fe0 /
+  gold instant), News cards, replay Discussion, Explore cards, create
+  modal chips, legacy modal. Explore FILTER pills: translucent idle +
+  solid active (deliberate).
+- **Hover-rail sidebar**: rests 64px icon rail, expands to 240px on
+  hover/keyboard; --sidebar-width is a REGISTERED TRANSITIONED custom
+  property (unlayered in globals.css — it must beat the layered
+  mvp-home copy on the profile route), so the whole layout resizes with
+  it. Active tab = warm fill + amber icon in a mirrored rounded box
+  (46px, 9px each side); the gold indicator bar is retired. Uses
+  :focus-visible not :focus-within (clicks were pinning it open).
+  <900px drawer untouched.
+- POPULAR ROOMS header = exact logo blue #3e7dff (sampled from the
+  wordmark), SCHEDULED = violet #8b5cf6, section headers 13px. Room
+  title scrim, avatar menu near-black #0e0e12, News page scales with
+  the window (inline container spacing — MVP reset eats Tailwind
+  px-8/max-w-[…]), hero "Read at ⟨outlet⟩" pill never wraps (short
+  label + font autoshrink), navbar search inner-box CSS conflict fixed,
+  AS favicon/icon/apple-icon cut from the real wordmark glyphs.
+
+**Watchouts discovered (add to the permanent list)**
+- **Turbopack served STALE compiled globals.css across restarts** —
+  `rm -rf .next` is the only fix; suspect it whenever an appended CSS
+  rule "doesn't apply".
+- Unlayered globals.css declarations beat everything from mvp-home.css
+  on routes that import it via @layer (profile) — put cross-route
+  tokens in globals.css, unlayered.
+- :focus-within on hover-UI pins open after clicks; use :focus-visible.
+- get_people_suggestions-style user-visible strings live in SQL —
+  copy sweeps must include pg_proc definitions.
+- clips INSERT is client-side RLS; verify policy allows uploader_id =
+  auth.uid() rows without video_url (worked in testing).
+
+**Still open (pre-launch list, in order)**: LiveKit webhook config
+(dashboard → /api/webhook/livekit — NOW THE TOP ITEM: instant
+host-leave detection); verify recording length bug (above); founders'
+signed-in QA (queue→duel→record→replay→clip loop); mobile pass;
+moderation queue + blocklist on posts/comments/DMs; rate limits;
+ToS/privacy + consent default; GoTrue password hook; secrets rotation
+(R2 — also purge orphaned segments — Twitch, NewsData); CRON_SECRET +
+PostHog; OG tags for /posts and /replays; beta-gate exit plan; content
+seeding beyond queue questions; LiveKit spend alert. Subscription
+shape agreed in principle: storage/retention/1080p/restream/seats
+bundle ~$8-10/mo; storage allowance already enforced.
 
 ## What this is
 
@@ -308,7 +364,10 @@ Turbopack serves stale/broken modules, `rm -rf .next` and restart.
 
 ## Access notes (this machine)
 
-Git + `gh` as `jordangivenchy`; Vercel via `npx vercel` (redeploy is
+**Repo lives at `/Users/jordanjaca/Agora`** (since 08-26 — the old
+`~/Downloads/Agora-main` is orphaned after a macOS TCC lockout; delete
+it). Git + `gh` as `jordangivenchy` (repo-local identity set to
+jordanjaca06@gmail.com); Vercel via `npx vercel` (redeploy is
 permission-blocked for Claude — Jordan clicks Redeploy; `vercel env pull`
 redacts sensitive values). Supabase MCP applies migrations. Branches:
 `main` = production; `jordan/dev` is kept in sync with `main` (force-

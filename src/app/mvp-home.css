@@ -331,7 +331,9 @@ body {
   right: 0;
   width: 230px;
   border-radius: 14px;
-  background: #141419;
+  /* Same near-black as the pill/card surfaces (rowCard #0b0b0d family)
+     instead of the lighter grey it used to carry. */
+  background: #0e0e12;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   padding: 6px;
@@ -6113,3 +6115,63 @@ body { background: transparent; }
 /* Explore results are React RoomCard blocks now: the wrapper spans the
    legacy grid so the squares flow in rows. */
 #epResultsGrid > .flex { grid-column: 1 / -1; }
+
+/* ═══ Hover rail (2026-08-26) ═══════════════════════════════════════
+   Desktop sidebar rests as a 64px icon rail and expands to 240px on
+   hover/keyboard focus. --sidebar-width is a registered, TRANSITIONED
+   length: the sidebar and every surface keyed to the variable (hero,
+   panels, main column) resize together, so the expansion reads as the
+   page being resized, not a panel floating over it. Labels are clipped
+   by the rail and revealed by the widening (icons never shift); the
+   friends card and footer fade in with it. Below 900px the off-canvas
+   drawer behavior is untouched. */
+@media (min-width: 901px) {
+  .sidebar {
+    width: var(--sidebar-width) !important;
+    overflow: hidden;
+  }
+  .sidebar-nav { min-width: 224px; } /* rows keep expanded geometry while clipped */
+  .nav-label {
+    opacity: 0;
+    transform: translateX(-6px);
+    white-space: nowrap;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+  .sidebar:hover .nav-label,
+  .sidebar:has(:focus-visible) .nav-label {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.05s;
+  }
+  .sidebar-bottom-zone {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+  }
+  .sidebar:hover .sidebar-bottom-zone,
+  .sidebar:has(:focus-visible) .sidebar-bottom-zone {
+    opacity: 1;
+    pointer-events: auto;
+    transition-delay: 0.06s;
+  }
+}
+
+/* ── No indicator bar (2026-08-26): the active tab reads through its
+   warm fill and amber icon/label alone — the gold pill on the left
+   edge is retired. ── */
+.sidebar-link.active::before { content: none !important; display: none !important; }
+
+/* ── Collapsed rail: the active/hover box hugs the icon ──
+   Rows cap at icon width (10px either side of the 26px icon chip) so
+   the highlight is a rounded box mirrored left/right instead of a
+   strip sliced off by the rail's edge; it widens with the expansion. */
+@media (min-width: 901px) {
+  .sidebar-link {
+    max-width: 208px;
+    border-radius: 10px !important;
+    transition: max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s ease, color 0.18s ease !important;
+  }
+  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-link {
+    max-width: 46px;
+  }
+}

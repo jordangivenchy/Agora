@@ -12,6 +12,8 @@ import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedClip } from "@/lib/seed-content";
 import { displayName } from "@/lib/names";
+import { replayPath } from "@/lib/urls";
+import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
 
 interface Props {
@@ -24,6 +26,9 @@ type Clip = SeedClip & {
   uploaderId?: string | null;
   roomId?: string | null;
   isSeed?: boolean;
+  /** Range clips: a window over the room's VOD instead of an upload. */
+  range?: { start: number; end: number } | null;
+  roomRecordingUrl?: string | null;
 };
 
 type GridRoom = {
@@ -94,7 +99,7 @@ export default function TrendingPage({ open, onClose }: Props) {
         .limit(12),
       supabase
         .from("clips")
-        .select("id, title, duration_seconds, video_url, thumb_gradient, view_count, uploader_id, room_id, uploader:users!clips_uploader_id_fkey(username, display_name)")
+        .select("id, title, duration_seconds, video_url, thumb_gradient, view_count, uploader_id, room_id, start_seconds, end_seconds, uploader:users!clips_uploader_id_fkey(username, display_name), room:debate_rooms(recording_url)")
         .order("created_at", { ascending: false })
         .limit(12),
     ]);
@@ -108,8 +113,17 @@ export default function TrendingPage({ open, onClose }: Props) {
     if (clipRows) {
       setDbClips(
         clipRows.map((c, i) => {
-          const uploader = (c as unknown as { uploader?: { username: string } }).uploader;
+          const row = c as unknown as {
+            uploader?: { username: string };
+            room?: { recording_url: string | null } | { recording_url: string | null }[] | null;
+            start_seconds: number | null;
+            end_seconds: number | null;
+          };
+          const uploader = row.uploader;
           const name = uploader?.username ?? "speaker";
+          const roomRec = Array.isArray(row.room) ? row.room[0]?.recording_url : row.room?.recording_url;
+          const hasRange =
+            row.start_seconds !== null && row.end_seconds !== null && row.end_seconds > row.start_seconds;
           return {
             id: c.id,
             title: c.title,
@@ -125,6 +139,8 @@ export default function TrendingPage({ open, onClose }: Props) {
             videoUrl: c.video_url,
             uploaderId: c.uploader_id,
             roomId: c.room_id,
+            range: hasRange ? { start: row.start_seconds!, end: row.end_seconds! } : null,
+            roomRecordingUrl: roomRec ?? null,
           } as Clip;
         })
       );
@@ -250,7 +266,7 @@ export default function TrendingPage({ open, onClose }: Props) {
               className="relative flex flex-col justify-between p-4 shrink-0 overflow-hidden"
               style={{ width: 330, height: 586, borderRadius: 18, border: "0.5px solid #3a3a44", background: activeShort.gradient }}
             >
-              {activeShort.videoUrl && (
+              {activeShort.videoUrl ? (
                 <video
                   src={activeShort.videoUrl}
                   controls
@@ -258,13 +274,22 @@ export default function TrendingPage({ open, onClose }: Props) {
                   className="absolute inset-0 w-full h-full"
                   style={{ objectFit: "cover", zIndex: 0 }}
                 />
-              )}
+              ) : activeShort.range && activeShort.roomRecordingUrl ? (
+                /* Range clip: a window cut from the room's VOD. */
+                <div className="absolute inset-0" style={{ zIndex: 0 }}>
+                  <ReplayPlayer
+                    src={activeShort.roomRecordingUrl}
+                    range={activeShort.range}
+                    style={{ height: "100%", borderRadius: 0 }}
+                  />
+                </div>
+              ) : null}
               <div className="flex justify-end" style={{ position: "relative", zIndex: 1 }}>
                 <span style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec", fontSize: 11, padding: "3px 10px", borderRadius: 99 }}>
                   {activeShort.duration}
                 </span>
               </div>
-              {!activeShort.videoUrl && (
+              {!activeShort.videoUrl && !(activeShort.range && activeShort.roomRecordingUrl) && (
                 <div className="text-center">
                   <span
                     className="inline-flex items-center justify-center"
@@ -500,7 +525,13 @@ export default function TrendingPage({ open, onClose }: Props) {
             ) : (
               <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                 {rooms.map((r, i) => (
-                  <a key={r.id} href={`/agora/${r.id}`} className="no-underline">
+                  <a
+                    key={r.id}
+                    /* Ended tiles open the dedicated replay surface —
+                       no live-room machinery between click and video. */
+                    href={r.status === "ended" ? replayPath(r) : `/agora/${r.id}`}
+                    className="no-underline"
+                  >
                     <div
                       className="relative mb-2 overflow-hidden"
                       style={{ aspectRatio: "16/9", borderRadius: 12, background: GRID_GRADIENTS[i % GRID_GRADIENTS.length], border: "0.5px solid #3a3a44" }}
