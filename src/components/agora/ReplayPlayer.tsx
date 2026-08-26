@@ -22,8 +22,8 @@ import {
   useState,
 } from "react";
 import { useHlsSource } from "./HlsPlayer";
-import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
+import ClipEditor from "./ClipEditor";
 
 function fmtTime(s: number): string {
   if (!Number.isFinite(s) || s < 0) return "0:00";
@@ -78,53 +78,16 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
     const rEnd = range && range.end > range.start ? range.end : null;
     const eDur = rEnd !== null ? rEnd - rStart : dur;
 
-    /* ✂ clip authoring */
-    const [clipStart, setClipStart] = useState<number | null>(null);
-    const [clipNote, setClipNote] = useState<string | null>(null);
-    const [clipBusy, setClipBusy] = useState(false);
-    const markClip = useCallback(async () => {
+    /* ✂ opens the Twitch-style editor over the video: the last ~30s are
+       pre-selected and the viewer trims with drag handles while the
+       selection loops. */
+    const [editorAt, setEditorAt] = useState<number | null>(null);
+    const openClipEditor = useCallback(() => {
       const v = videoRef.current;
-      if (!v || !clipRoomId || clipBusy) return;
-      if (clipStart === null) {
-        setClipStart(v.currentTime);
-        setClipNote(null);
-        return;
-      }
-      const start = Math.min(clipStart, v.currentTime);
-      const end = Math.max(clipStart, v.currentTime);
-      if (end - start < 3) {
-        setClipNote("Clips need at least 3 seconds — keep playing, then press ✂ again.");
-        return;
-      }
-      setClipBusy(true);
-      try {
-        const supabase = createClient();
-        const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) {
-          window.location.href = "/login";
-          return;
-        }
-        const title = window.prompt("Title for your clip:", "");
-        if (title === null) { setClipBusy(false); return; }
-        const { error } = await supabase.from("clips").insert({
-          uploader_id: auth.user.id,
-          title: title.trim() || "Clip",
-          room_id: clipRoomId,
-          start_seconds: Math.floor(start),
-          end_seconds: Math.ceil(end),
-          duration_seconds: Math.max(1, Math.round(end - start)),
-        });
-        if (error) throw error;
-        setClipStart(null);
-        setClipNote("Clip saved — it's on Trending ✓");
-        setTimeout(() => setClipNote(null), 3000);
-      } catch (e) {
-        console.warn("clip save failed", e);
-        setClipNote("Couldn't save the clip — try again.");
-      } finally {
-        setClipBusy(false);
-      }
-    }, [clipRoomId, clipBusy, clipStart]);
+      if (!v || !clipRoomId) return;
+      v.pause();
+      setEditorAt(v.currentTime);
+    }, [clipRoomId]);
 
     /* Controls linger 2.6s after the last activity while playing. */
     const poke = useCallback(() => {
@@ -221,6 +184,11 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
         onPointerMove={poke}
         onPointerDown={poke}
         onKeyDown={(e) => {
+          if (editorAt !== null) {
+            // typing a clip title must not drive the player
+            if (e.key === "Escape") setEditorAt(null);
+            return;
+          }
           if (e.key === " " || e.key === "k") { e.preventDefault(); toggle(); }
           else if (e.key === "ArrowLeft") { e.preventDefault(); seekBy(-5); }
           else if (e.key === "ArrowRight") { e.preventDefault(); seekBy(5); }
@@ -263,7 +231,7 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
         />
 
         {/* Big center play affordance while paused */}
-        {!playing && (
+        {!playing && editorAt === null && (
           <button
             onClick={toggle}
             aria-label="Play"
@@ -285,7 +253,8 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
             position: "absolute", left: 0, right: 0, bottom: 0,
             padding: "26px 12px 8px",
             background: "linear-gradient(transparent, rgba(5,5,8,0.88))",
-            opacity: chrome ? 1 : 0, pointerEvents: chrome ? "auto" : "none",
+            opacity: chrome && editorAt === null ? 1 : 0,
+            pointerEvents: chrome && editorAt === null ? "auto" : "none",
             transition: "opacity 0.25s ease",
           }}
         >
@@ -329,30 +298,12 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
               {fmtTime(shownTime)} <span style={{ color: "#8b8b94" }}>/ {fmtTime(eDur)}</span>
             </span>
             <span style={{ flex: 1 }} />
-            {clipNote && (
-              <span style={{ fontSize: 11, color: "#f4d47c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>
-                {clipNote}
-              </span>
-            )}
-            {clipRoomId && clipStart !== null && !clipNote && (
-              <span style={{ fontSize: 11, color: "#f4d47c", whiteSpace: "nowrap" }}>
-                Clipping from {fmtTime(Math.max(0, clipStart - rStart))} — press ✂ to end
-                <button
-                  onClick={() => setClipStart(null)}
-                  aria-label="Cancel clip"
-                  style={{ ...btn, padding: "0 4px", color: "#8b8b94", fontSize: 11 }}
-                >
-                  ✕
-                </button>
-              </span>
-            )}
             {clipRoomId && (
               <button
-                onClick={markClip}
-                disabled={clipBusy}
-                aria-label={clipStart === null ? "Start a clip here" : "End the clip here"}
-                title={clipStart === null ? "Clip: mark the start here" : "Clip: mark the end here"}
-                style={{ ...btn, color: clipStart !== null ? "#f4d47c" : btn.color }}
+                onClick={openClipEditor}
+                aria-label="Clip this moment"
+                title="Clip this moment"
+                style={btn}
               >
                 <Icon name="scissors" size={16} />
               </button>
@@ -362,6 +313,16 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
             </button>
           </div>
         </div>
+
+        {clipRoomId && editorAt !== null && (
+          <ClipEditor
+            videoRef={videoRef}
+            duration={dur}
+            captureAt={editorAt}
+            roomId={clipRoomId}
+            onClose={() => setEditorAt(null)}
+          />
+        )}
       </div>
     );
   }
