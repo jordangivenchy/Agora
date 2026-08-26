@@ -873,18 +873,18 @@ export default function ProfileView({
                 className="cursor-pointer bg-transparent border-none p-0"
                 style={{ color: "#c9c9d2", fontSize: 13.5, fontFamily: "inherit" }}
               >
-                <strong style={{ color: "#f5f5f0" }}>{profile.follower_count}</strong> followers
+                <strong style={{ color: "#f5f5f0" }}>{profile.follower_count}</strong> Followers
               </button>
               <button
                 onClick={() => setListMode("following")}
                 className="cursor-pointer bg-transparent border-none p-0"
                 style={{ color: "#c9c9d2", fontSize: 13.5, fontFamily: "inherit" }}
               >
-                <strong style={{ color: "#f5f5f0" }}>{profile.following_count}</strong> following
+                <strong style={{ color: "#f5f5f0" }}>{profile.following_count}</strong> Following
               </button>
               {typeof profile.karma === "number" && (
                 <span style={{ color: "#c9c9d2", fontSize: 13.5 }}>
-                  <strong style={{ color: "#f5f5f0" }}>{profile.karma}</strong> karma
+                  <strong style={{ color: "#f5f5f0" }}>{profile.karma}</strong> Goatedness
                 </span>
               )}
               {profile.is_friend && (
