@@ -12,6 +12,7 @@ import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import type { SeedClip } from "@/lib/seed-content";
 import { displayName } from "@/lib/names";
+import UserAvatar from "@/components/UserAvatar";
 
 interface Props {
   open: boolean;
@@ -31,7 +32,9 @@ type GridRoom = {
   viewer_count: number;
   status: string;
   created_at: string;
-  host?: { username: string; display_name?: string | null } | null;
+  thumbnail_url?: string | null;
+  recording_url?: string | null;
+  host?: { username: string; display_name?: string | null; avatar_url?: string | null } | null;
 };
 
 const CHIP_FILTERS = ["All", "Politics", "Economics", "Science & Tech", "Philosophy", "Culture"];
@@ -81,9 +84,12 @@ export default function TrendingPage({ open, onClose }: Props) {
     const [{ data: roomRows }, { data: clipRows }] = await Promise.all([
       supabase
         .from("debate_rooms")
-        .select("id, motion, viewer_count, status, created_at, host:users!debate_rooms_host_id_fkey(username, display_name)")
+        .select("id, motion, viewer_count, status, created_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
         .in("status", ["live", "created", "ended"])
         .eq("is_private", false)
+        /* Ended rooms are only worth a tile when the replay exists —
+           an unrecorded ended room is a dead end dressed as a video. */
+        .or("status.neq.ended,recording_url.not.is.null")
         .order("created_at", { ascending: false })
         .limit(12),
       supabase
@@ -496,9 +502,21 @@ export default function TrendingPage({ open, onClose }: Props) {
                 {rooms.map((r, i) => (
                   <a key={r.id} href={`/agora/${r.id}`} className="no-underline">
                     <div
-                      className="relative mb-2"
+                      className="relative mb-2 overflow-hidden"
                       style={{ aspectRatio: "16/9", borderRadius: 12, background: GRID_GRADIENTS[i % GRID_GRADIENTS.length], border: "0.5px solid #3a3a44" }}
                     >
+                      {/* Host-picked thumbnail, else the host's profile
+                          picture fills the tile; the gradient stays as
+                          the fallback for hosts with neither. */}
+                      {(r.thumbnail_url || r.host?.avatar_url) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={(r.thumbnail_url || r.host?.avatar_url)!}
+                          alt=""
+                          className="absolute inset-0"
+                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+                        />
+                      )}
                       {r.status === "live" ? (
                         <span className="absolute top-2 left-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full" style={{ background: "#e24b4a", color: "#fcebeb" }}>
                           ● LIVE
@@ -517,12 +535,11 @@ export default function TrendingPage({ open, onClose }: Props) {
                       </span>
                     </div>
                     <div className="flex gap-2.5">
-                      <span
-                        className="flex items-center justify-center shrink-0"
-                        style={{ width: 32, height: 32, borderRadius: "50%", background: "#00b894", color: "#04342c", fontSize: 12, fontWeight: 500 }}
-                      >
-                        {(displayName(r.host) || "?").charAt(0).toUpperCase()}
-                      </span>
+                      <UserAvatar
+                        size={32}
+                        username={r.host?.username}
+                        avatarUrl={r.host?.avatar_url}
+                      />
                       <div>
                         <p className="text-[13px] m-0" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{r.motion}</p>
                         <p className="text-[11px] mt-0.5 m-0" style={{ color: "#8b8b94" }}>

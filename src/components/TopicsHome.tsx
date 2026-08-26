@@ -201,6 +201,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         .from("debate_rooms")
         .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url), community:communities!community_id(id, name, color), participants:debate_participants(role, stance, left_at, user:users(id, username, display_name, avatar_url))")
         .in("status", ["live", "created", "scheduled"])
+        /* Queue-matched duels (1/1 seats) are spontaneous pairings, not
+           browsable shows — keep them off the Popular Rooms strip. */
+        .or("pro_size.neq.1,con_size.neq.1")
         .order("created_at", { ascending: false })
         .limit(80),
     ]);

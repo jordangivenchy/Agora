@@ -822,13 +822,12 @@ function PillSelect({
         fontSize: "12px",
         fontWeight: 500,
         fontFamily: "'DM Sans', sans-serif",
+        /* Solid fills — no translucency, matching the site's pill system. */
         background: active
           ? activeColor || "var(--accent-purple)"
-          : "rgba(255,255,255,0.04)",
-        border: active
-          ? `1px solid ${activeColor || "var(--accent-purple)"}44`
-          : "1px solid rgba(255,255,255,0.08)",
-        color: active ? "white" : "var(--text-muted)",
+          : "#2a2a32",
+        border: "none",
+        color: active ? "white" : "#c9c9d2",
       }}
     >
       {label}

@@ -289,7 +289,10 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="max-w-[1280px] mx-auto px-8 py-5">
+      {/* Inline spacing on purpose: this renders inside the MVP shell,
+          whose CSS reset out-cascades Tailwind spacing utilities (and
+          arbitrary ones like max-w-[1280px] silently fail there). */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 32px 40px", boxSizing: "border-box" }}>
         <div className="flex items-center gap-3.5 mb-4">
           <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
           <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>

@@ -35,6 +35,7 @@ import EmojiPicker from "./EmojiPicker";
 import CommunityPicker from "./community/CommunityPicker";
 import RichText from "./community/RichText";
 import PostCard, { RoleBadge, TagChip, VoteBox, timeAgo, type PostRow } from "./community/PostCard";
+import ReplayEmbed from "./community/ReplayEmbed";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 
 interface Props {
@@ -2162,6 +2163,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         <RichText text={openPost.body} />
                       </div>
                     )}
+                    {/* Replay threads get the VOD player inline — the
+                        component no-ops for every ordinary post. */}
+                    <ReplayEmbed postId={openPost.id} />
                     {openPost.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={openPost.image_url} alt="" className="mt-2 rounded-xl"

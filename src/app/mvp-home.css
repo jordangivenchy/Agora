@@ -4043,31 +4043,33 @@ body { background: transparent; }
   display: flex; gap: 10px;
 }
 
+/* Solid pill language, matching the buttons across the site. */
 .modal-btn-cancel {
-  flex: 1; padding: 12px; border-radius: 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.45);
-  font-size: 13px; font-family: 'DM Sans', sans-serif;
-  cursor: pointer; transition: background 0.15s;
+  flex: 1; padding: 12px; border-radius: 999px;
+  background: #2a2a32;
+  border: none;
+  color: #e5e5ec;
+  font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: background 0.15s ease, transform 0.1s ease;
 }
-.modal-btn-cancel:hover { background: rgba(255,255,255,0.09); }
+.modal-btn-cancel:hover { background: #34343e; }
+.modal-btn-cancel:active { transform: scale(0.98); }
 
 .modal-btn-primary {
-  flex: 2; padding: 12px; border-radius: 12px;
-  background: linear-gradient(135deg, #e65c00, #FFB700);
-  border: 1px solid rgba(255,183,0,0.3);
-  color: #1a0800; font-size: 13px; font-weight: 600;
+  flex: 2; padding: 12px; border-radius: 999px;
+  background: #d9a238;
+  border: none;
+  color: #2b1a02; font-size: 13px; font-weight: 600;
   font-family: 'DM Sans', sans-serif;
-  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  cursor: pointer; transition: background 0.15s ease, transform 0.1s ease;
 }
-.modal-btn-primary:hover  { opacity: 0.92; }
+.modal-btn-primary:hover  { background: #e5b04a; }
 .modal-btn-primary:active { transform: scale(0.98); }
 .modal-btn-primary.blue {
-  background: linear-gradient(135deg, #1565C0, #1E88E5);
-  border-color: rgba(100,181,246,0.3);
+  background: #2f7fe0;
   color: white;
 }
+.modal-btn-primary.blue:hover { background: #3c8ceb; }
 
 /* Back button */
 .back-btn {
@@ -4467,17 +4469,19 @@ body { background: transparent; }
 
 .explore-filter-pills { display: flex; flex-wrap: wrap; gap: 5px; }
 
+/* Unselected pills stay translucent (quiet filters); the ACTIVE pill is
+   a solid fill, matching the site's button language. */
 .explore-pill {
-  padding: 5px 13px; border-radius: 999px;
-  font-size: 12px; font-family: 'DM Sans', sans-serif;
+  padding: 6px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.03);
   color: rgba(255,255,255,0.42); cursor: pointer;
-  transition: all 0.13s ease; white-space: nowrap; user-select: none;
+  transition: background 0.13s ease, color 0.13s ease; white-space: nowrap; user-select: none;
 }
 .explore-pill:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.72); }
-.explore-pill.active { background: rgba(25,118,210,0.14); border-color: rgba(25,118,210,0.55); color: #90CAF9; }
-.explore-pill.live-pill.active { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: #f87171; }
+.explore-pill.active { background: #2f7fe0; border-color: #2f7fe0; color: #fff; font-weight: 600; }
+.explore-pill.live-pill.active { background: #e05a5a; border-color: #e05a5a; color: #fff; }
 
 .explore-filter-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 10px 0; }
 
@@ -4583,18 +4587,20 @@ body { background: transparent; }
 
 .explore-card-actions { display: flex; gap: 7px; }
 
+/* Solid pill language, matching the queue board / News / replay buttons. */
 .explore-card-btn {
-  flex: 1; padding: 7px; border-radius: 8px;
-  font-size: 11px; font-family: 'DM Sans', sans-serif;
+  flex: 1; padding: 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   cursor: pointer; text-align: center;
-  transition: all 0.13s ease; border: 1px solid;
+  transition: background 0.15s ease, transform 0.1s ease; border: none;
 }
-.explore-card-btn.watch { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
-.explore-card-btn.watch:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
-.explore-card-btn.join  { background: rgba(25,118,210,0.12); border-color: rgba(25,118,210,0.45); color: #64B5F6; }
-.explore-card-btn.join:hover { background: rgba(25,118,210,0.2); }
-.explore-card-btn.queue-btn { background: rgba(255,183,0,0.08); border-color: rgba(255,183,0,0.3); color: #FFB700; }
-.explore-card-btn.queue-btn:hover { background: rgba(255,183,0,0.14); }
+.explore-card-btn:active { transform: scale(0.97); }
+.explore-card-btn.watch { background: #2a2a32; color: #e5e5ec; }
+.explore-card-btn.watch:hover { background: #34343e; }
+.explore-card-btn.join  { background: #2f7fe0; color: #fff; }
+.explore-card-btn.join:hover { background: #3c8ceb; }
+.explore-card-btn.queue-btn { background: #d9a238; color: #2b1a02; }
+.explore-card-btn.queue-btn:hover { background: #e5b04a; }
 
 .explore-empty {
   grid-column: 1 / -1; text-align: center;

@@ -19,7 +19,7 @@ import { displayName } from "@/lib/names";
 import { TOPICS } from "@/types/database";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
-import { useHlsSource } from "./HlsPlayer";
+import ReplayPlayer from "./ReplayPlayer";
 import "./debate-replay.css";
 
 type Person = {
@@ -223,7 +223,9 @@ export default function DebateReplay({
   const transcriptRef = useRef<HTMLDivElement | null>(null);
 
   const recordingUrl = room?.recording_url ?? null;
-  const { error: playerError } = useHlsSource(videoRef, recordingUrl, { live: false, autoplay: false });
+  /* Load errors surface from the shared ReplayPlayer (which owns the
+     HLS attach); seeking from the transcript is gated on them. */
+  const [playerError, setPlayerError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -253,10 +255,10 @@ export default function DebateReplay({
           p_limit: 60,
           p_offset: 0,
         });
+        /* Full thread inline, newest first — YouTube-style under the VOD. */
         const list = ((cs as Comment[] | null) ?? [])
           .slice()
-          .sort((a, b) => b.created_at.localeCompare(a.created_at))
-          .slice(0, 3);
+          .sort((a, b) => b.created_at.localeCompare(a.created_at));
         setComments(list);
       } else {
         setComments([]);
@@ -355,6 +357,61 @@ export default function DebateReplay({
       return;
     }
     router.push(pathFor.post(data as string));
+  };
+
+  /* ── Inline comments (YouTube-style, under the VOD) ────────────────
+     Same thread as the community post: comments written here land in
+     community_comments on the room's discussion post, lazily creating
+     the post on the first comment. Top-level only — replies and voting
+     live in the full thread. */
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentBusy, setCommentBusy] = useState(false);
+  const submitReplayComment = async () => {
+    if (!room || commentBusy) return;
+    const text = commentDraft.trim();
+    if (!text) return;
+    if (!signedIn) {
+      router.push(`/login?next=${encodeURIComponent(roomPath({ id: room.id, motion: room.motion }))}`);
+      return;
+    }
+    setCommentBusy(true);
+    try {
+      let postId = room.discussion_post_id;
+      if (!postId) {
+        const { data, error } = await supabase.rpc("ensure_debate_discussion", { p_room: room.id });
+        if (error || !data) throw error ?? new Error("no post");
+        postId = data as string;
+        setRoom((r) => (r ? { ...r, discussion_post_id: postId } : r));
+      }
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("not signed in");
+      const { error: insErr } = await supabase.from("community_comments").insert({
+        post_id: postId,
+        parent_id: null,
+        author_id: auth.user.id,
+        body: text,
+      });
+      if (insErr) throw insErr;
+      setCommentDraft("");
+      setRoom((r) => (r ? { ...r, discussion_comment_count: r.discussion_comment_count + 1 } : r));
+      const { data: cs } = await supabase.rpc("get_post_comments", {
+        p_post: postId,
+        p_limit: 60,
+        p_offset: 0,
+      });
+      setComments(
+        ((cs as Comment[] | null) ?? []).slice().sort((a, b) => b.created_at.localeCompare(a.created_at))
+      );
+    } catch (e) {
+      console.error("replay comment failed", e);
+      setToast(
+        e instanceof Error && /rate_limited/.test(e.message)
+          ? "Slow down — you're commenting too quickly."
+          : "Couldn't post the comment — try again."
+      );
+    } finally {
+      setCommentBusy(false);
+    }
   };
 
   if (!loaded) {
@@ -459,20 +516,20 @@ export default function DebateReplay({
           <div className="dr-player" style={posterStyle}>
             {recorded ? (
               <>
-                <video
+                <ReplayPlayer
                   ref={videoRef}
-                  controls
-                  playsInline
-                  preload="metadata"
+                  src={recordingUrl}
                   poster={room.thumbnail_url ?? room.host?.avatar_url ?? undefined}
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                  onTimeUpdate={setCurrentTime}
                   onSeeking={() => setUserScrolled(false)}
+                  onError={setPlayerError}
+                  errorFallback={
+                    <div className="dr-player-error">
+                      This recording couldn&apos;t be loaded. It may still be finalizing — try again in a minute.
+                    </div>
+                  }
+                  style={{ height: "100%", borderRadius: 0 }}
                 />
-                {playerError && (
-                  <div className="dr-player-error">
-                    {playerError} The recording may still be finalizing — try again in a minute.
-                  </div>
-                )}
               </>
             ) : (
               <div className="dr-player-empty">
@@ -560,18 +617,36 @@ export default function DebateReplay({
                   ? room.discussion_comment_count === 1
                     ? "1 comment"
                     : `${room.discussion_comment_count} comments`
-                  : "Nobody has weighed in yet — start the thread."}
+                  : "Nobody has weighed in yet — be the first."}
               </p>
             </div>
-            <button className="dr-btn primary" onClick={openDiscussion} disabled={discussBusy}>
+            <button className="dr-btn" onClick={openDiscussion} disabled={discussBusy}>
               <Icon name="megaphone" size={13} />
-              {discussBusy
-                ? "Opening…"
-                : room.discussion_post_id
-                  ? `Discuss (${room.discussion_comment_count})`
-                  : "Join the discussion"}
+              {discussBusy ? "Opening…" : "Open full thread"}
             </button>
           </div>
+
+          {/* Composer — comments land in the room's community thread. */}
+          <div className="dr-comment-composer">
+            <textarea
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitReplayComment();
+              }}
+              placeholder={signedIn ? "Add a comment… (⌘↩ to post)" : "Sign in to comment"}
+              rows={2}
+              maxLength={4000}
+            />
+            <button
+              className="dr-btn primary"
+              onClick={submitReplayComment}
+              disabled={commentBusy || !commentDraft.trim()}
+            >
+              {commentBusy ? "Posting…" : "Comment"}
+            </button>
+          </div>
+
           {comments.length > 0 && (
             <div className="dr-comments">
               {comments.map((c) => (
