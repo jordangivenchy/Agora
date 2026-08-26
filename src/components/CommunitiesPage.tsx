@@ -19,8 +19,9 @@
    Guests can read public boards; any interaction routes to /login. */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { useUserMenu } from "./userMenuContext";
 import UserAvatar from "./UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -63,6 +64,7 @@ type Community = {
   bookmarks: Bookmark[];    // mod-curated sidebar links (Community Bookmarks)
   my_role: string | null;   // 'owner' | 'moderator' | 'member' | null
   requested: boolean;       // pending join request (private boards)
+  blocked: boolean;         // you blocked this board (hidden from browse + feed)
 };
 
 type Tag = { id: string; community_id: string; name: string; color: string };
@@ -253,6 +255,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   /* Rail filter + per-community notification mutes (mine). */
   const [railQuery, setRailQuery] = useState("");
   const [myMutes, setMyMutes] = useState<Set<string>>(new Set());
+  const [myBlocks, setMyBlocks] = useState<Set<string>>(new Set());
+  /* The board ⋯ overflow menu — its anchor coords (fixed-positioned so it
+     escapes the header card's overflow:hidden), or null when closed. */
+  const [boardMenuAt, setBoardMenuAt] = useState<{ top: number; left: number } | null>(null);
 
   // Post detail
   const [openPost, setOpenPost] = useState<Post | null>(null);
@@ -334,7 +340,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
-    const [commRes, tagRes, reqRes, muteRes] = await Promise.all([
+    const [commRes, tagRes, reqRes, muteRes, blockRes] = await Promise.all([
       supabase
         .from("communities")
         .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, bookmarks, community_members(user_id, role, favorite)"),
@@ -345,8 +351,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       uid
         ? supabase.from("community_mutes").select("community_id").eq("user_id", uid)
         : Promise.resolve({ data: [] as { community_id: string }[] }),
+      uid
+        ? supabase.from("community_blocks").select("community_id").eq("user_id", uid)
+        : Promise.resolve({ data: [] as { community_id: string }[] }),
     ]);
     setMyMutes(new Set(((muteRes.data ?? []) as { community_id: string }[]).map((m) => m.community_id)));
+    const blockedIds = new Set(((blockRes.data ?? []) as { community_id: string }[]).map((b) => b.community_id));
+    setMyBlocks(blockedIds);
     const myRequests = new Set(
       ((reqRes.data ?? []) as { community_id: string }[]).map((r) => r.community_id)
     );
@@ -371,6 +382,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           bookmarks: safeBookmarks(c.bookmarks),
           my_role: mine?.role ?? null,
           requested: myRequests.has(c.id),
+          blocked: blockedIds.has(c.id),
         };
       })
     );
@@ -690,6 +702,14 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedCommunity?.id, selectedCommunity?.my_role]);
+
+  /* The aggregate "All" feed drops posts from communities you've blocked;
+     a single board's own view (selected !== "all") is shown in full so you
+     can reach it to unblock. */
+  const visiblePosts = useMemo(
+    () => (selected === "all" ? posts.filter((p) => !myBlocks.has(p.community_id)) : posts),
+    [posts, myBlocks, selected]
+  );
 
   /* Deep link from the discovery search / share links / the bell: open a
      specific post. The event arrives right after the Communities nav click,
@@ -1183,6 +1203,34 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       setError("Couldn't update notifications — try again.");
     }
   }, [supabase, requireAuth, userId, myMutes]);
+
+  /* Block / unblock a community. Blocking leaves the board and hides it
+     from browse + feed (server-side in set_community_block); a follow-up
+     loadCommunities refreshes joined/blocked flags. */
+  const toggleBlock = useCallback(async (c: Community) => {
+    if (!requireAuth()) return;
+    const next = !c.blocked;
+    if (next && c.my_role === "owner") {
+      setError("You own this community — you can't block it.");
+      return;
+    }
+    setMyBlocks((s) => {
+      const n = new Set(s);
+      if (next) n.add(c.id); else n.delete(c.id);
+      return n;
+    });
+    const { error: err } = await supabase.rpc("set_community_block", { p_community: c.id, p_blocked: next });
+    if (err) {
+      setMyBlocks((s) => {
+        const n = new Set(s);
+        if (next) n.delete(c.id); else n.add(c.id);
+        return n;
+      });
+      setError(err.message.includes("owner_cannot_block") ? "You own this community — you can't block it." : "Couldn't update — try again.");
+      return;
+    }
+    loadCommunities();
+  }, [supabase, requireAuth, loadCommunities]);
 
   /* Mods pin/unpin posts; pinned posts lead their board's feed. */
   const togglePostPin = useCallback(async (post: Post) => {
@@ -1871,9 +1919,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               const q = railQuery.trim().toLowerCase();
               const match = (c: Community) => !q || c.name.toLowerCase().includes(q);
               const joined = communities
-                .filter((c) => c.joined && match(c))
+                .filter((c) => c.joined && !c.blocked && match(c))
                 .sort((a, b) => Number(b.favorite) - Number(a.favorite));
-              const discover = communities.filter((c) => !c.joined && match(c));
+              const discover = communities.filter((c) => !c.joined && !c.blocked && match(c));
               const row = (c: Community) => (
                 <div
                   key={c.id}
@@ -2351,9 +2399,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     </div>
                     <div className="px-5 pb-5">
                     {/* Identity row: avatar flush left straddling the banner
-                        edge, name beside it; actions float on the right in
-                        the strip just under the banner, clear of the card
-                        border. */}
+                        edge, name beside it; actions (incl. the ⋯ menu)
+                        float on the right just under the banner. */}
                     <div className="flex items-start gap-4 flex-wrap">
                       <span
                         className="group relative flex items-center justify-center shrink-0"
@@ -2458,6 +2505,83 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           >
                             {modOpen ? "Close mod tools" : <><Icon name="shield" size={13} /> Mod tools{joinRequests.length ? ` ()` : ""}</>}
                           </button>
+                        )}
+                        {/* ⋯ community options — copy link / mute / leave / block */}
+                        <button
+                          onClick={(e) => {
+                            const r = e.currentTarget.getBoundingClientRect();
+                            /* Right-align the 226px-wide menu to the button,
+                               clamped to the viewport — computed from left so
+                               it doesn't depend on window.innerWidth. */
+                            setBoardMenuAt((o) => (o ? null : { top: r.bottom + 6, left: Math.max(8, r.right - 226) }));
+                          }}
+                          title="Community options"
+                          aria-label="Community options"
+                          className="cursor-pointer flex items-center justify-center"
+                          style={{
+                            background: "transparent", border: "none", padding: 4,
+                            color: boardMenuAt ? "#eeeef5" : "rgba(238,238,245,0.62)",
+                            transition: "color 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = "#eeeef5"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = boardMenuAt ? "#eeeef5" : "rgba(238,238,245,0.62)"; }}
+                        >
+                          <Icon name="more-horizontal" size={20} />
+                        </button>
+                        {boardMenuAt && typeof document !== "undefined" && createPortal(
+                          (() => {
+                            const c = selectedCommunity;
+                            const isOwner = c.my_role === "owner";
+                            const item = (icon: IconName, label: string, onClick: () => void, danger?: boolean) => (
+                              <button
+                                key={label}
+                                onClick={() => { setBoardMenuAt(null); onClick(); }}
+                                className="w-full flex items-center gap-2.5 cursor-pointer text-left"
+                                style={{
+                                  padding: "9px 11px", borderRadius: 8, background: "transparent",
+                                  border: "none", color: danger ? "#f08a8a" : "rgba(238,238,245,0.92)",
+                                  fontFamily: "'DM Sans', sans-serif", fontSize: 12.5,
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                              >
+                                <Icon name={icon} size={14} /> {label}
+                              </button>
+                            );
+                            return (
+                              <>
+                                <div className="fixed inset-0" style={{ zIndex: 998 }} onClick={() => setBoardMenuAt(null)} />
+                                <div
+                                  className="fixed flex flex-col"
+                                  style={{
+                                    top: boardMenuAt.top, left: boardMenuAt.left, minWidth: 214, zIndex: 999,
+                                    background: "rgba(18,18,22,0.98)", backdropFilter: "blur(20px)",
+                                    WebkitBackdropFilter: "blur(20px)",
+                                    border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: 12,
+                                    boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
+                                  }}
+                                >
+                                  {item("link", "Copy link", () => {
+                                    const url = `${window.location.origin}${pathFor.community(communitySlug(c, communities))}`;
+                                    navigator.clipboard.writeText(url).catch(() => {});
+                                  })}
+                                  {c.joined && item(
+                                    myMutes.has(c.id) ? "bell" : "bell-off",
+                                    myMutes.has(c.id) ? "Unmute notifications" : "Mute notifications",
+                                    () => toggleMute(c.id),
+                                  )}
+                                  {c.joined && !isOwner && item("log-out", "Leave community", () => toggleJoin(c), true)}
+                                  {!isOwner && item(
+                                    "ban",
+                                    c.blocked ? "Unblock community" : "Block community",
+                                    () => toggleBlock(c),
+                                    !c.blocked,
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })(),
+                          document.body,
                         )}
                       </span>
                       </span>
@@ -2855,7 +2979,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.32)" }}>Loading…</p>
                 )}
 
-                {!loadingPosts && posts.length === 0 && (
+                {!loadingPosts && visiblePosts.length === 0 && (
                   <div className="p-8 text-center" style={card}>
                     <p className="m-0 mb-1 text-[13px]" style={{ color: "#eeeef5" }}>
                       {selectedCommunity ? `No posts in ${selectedCommunity.name} yet` : "No posts yet"}
@@ -2866,7 +2990,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   </div>
                 )}
 
-                {posts.map((p) => (
+                {visiblePosts.map((p) => (
                   <PostCard
                     key={p.id}
                     post={p}
