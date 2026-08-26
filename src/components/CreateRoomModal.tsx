@@ -89,6 +89,12 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   const [createdInvite, setCreatedInvite] = useState<{ code: string; roomId: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // "Have an invite code?" — join someone else's private room by code.
+  const [joinMode, setJoinMode] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinErr, setJoinErr] = useState<string | null>(null);
+
   // Reset every field when the modal closes so reopening is always a fresh
   // form. We intentionally key this off `open` rather than doing it in
   // onClose so parent-side dismissal (e.g. clicking the backdrop) also resets.
@@ -110,6 +116,10 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       setError("");
       setCreatedInvite(null);
       setCopied(false);
+      setJoinMode(false);
+      setJoinCode("");
+      setJoinErr(null);
+      setJoinBusy(false);
       setLoading(false);
     }
   }, [open, navigating]);
@@ -260,6 +270,132 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     }
   }
 
+  async function handleJoinByCode() {
+    const code = joinCode.trim().toUpperCase();
+    if (code.length < 6 || joinBusy) return;
+    setJoinBusy(true);
+    setJoinErr(null);
+    const { data: { user: me } } = await supabase.auth.getUser();
+    if (!me) {
+      setJoinBusy(false);
+      setJoinErr("Sign in to use an invite code.");
+      return;
+    }
+    const { data, error: rpcErr } = await supabase.rpc("join_private_room", {
+      p_code: code,
+      p_role: "spectator",
+    });
+    setJoinBusy(false);
+    if (rpcErr) {
+      const msg = rpcErr.message || "";
+      setJoinErr(
+        msg.includes("invalid_or_expired") ? "That code doesn't match a live room."
+        : msg.includes("not_authenticated") ? "Sign in to use an invite code."
+        : msg.includes("banned_from_room") ? "You've been removed from that room."
+        : "Couldn't join with that code — try again.");
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row?.room_id) {
+      setJoinErr("That code doesn't match a live room.");
+      return;
+    }
+    onClose();
+    router.push(`/agora/${row.room_id}`);
+  }
+
+  /* ──────────────────────────────────────────────────────────
+     JOIN BY CODE: someone else's private room
+     ────────────────────────────────────────────────────────── */
+  if (joinMode) {
+    return (
+      <div
+        className="fixed inset-0 z-[500] flex items-center justify-center p-5"
+        style={{ background: "rgba(0,0,0,0.82)", backdropFilter: "blur(6px)", animation: "modalIn 0.2s ease" }}
+        onClick={(e) => { if (e.target === e.currentTarget) setJoinMode(false); }}
+      >
+        <div
+          className="w-full"
+          style={{
+            maxWidth: "400px",
+            background: "rgba(18,18,21,0.95)",
+            backdropFilter: "blur(24px)",
+            border: "1px solid var(--border)",
+            borderRadius: "20px",
+            boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
+            padding: "28px 28px 24px",
+            animation: "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: "20px",
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              color: "var(--text-primary)",
+              marginBottom: "6px",
+            }}
+          >
+            Join a private room
+          </h2>
+          <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "18px", lineHeight: 1.5 }}>
+            Enter the 6-character invite code the host shared with you.
+          </p>
+          <input
+            value={joinCode}
+            onChange={(e) => { setJoinCode(e.target.value); setJoinErr(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleJoinByCode(); }}
+            placeholder="ABC123"
+            maxLength={6}
+            autoFocus
+            autoCapitalize="characters"
+            spellCheck={false}
+            className="outline-none w-full text-center uppercase"
+            style={{
+              padding: "13px 12px",
+              background: "rgba(226,185,107,0.06)",
+              border: `1px solid ${joinErr ? "rgba(239,68,68,0.5)" : "rgba(226,185,107,0.35)"}`,
+              borderRadius: "14px",
+              color: "#f5f5f0",
+              fontFamily: "'DM Mono', monospace",
+              fontSize: "24px",
+              fontWeight: 700,
+              letterSpacing: "0.3em",
+            }}
+          />
+          {joinErr && (
+            <p style={{ marginTop: "10px", fontSize: "12px", color: "#fca5a5" }}>{joinErr}</p>
+          )}
+          <div className="flex items-center justify-between" style={{ marginTop: "18px" }}>
+            <button
+              onClick={() => setJoinMode(false)}
+              className="cursor-pointer"
+              style={{
+                background: "transparent", border: "none", color: "var(--text-muted)",
+                fontFamily: "'DM Sans', sans-serif", fontSize: "13px", padding: "9px 4px",
+              }}
+            >
+              ← Back
+            </button>
+            <button
+              onClick={handleJoinByCode}
+              disabled={joinBusy || joinCode.trim().length < 6}
+              className="cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: "#d9a238", border: "none", color: "#2b1a02",
+                fontFamily: "'DM Sans', sans-serif", fontSize: "13.5px", fontWeight: 600,
+                padding: "10px 26px", borderRadius: "100px",
+              }}
+            >
+              {joinBusy ? "Joining…" : "Join room"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ──────────────────────────────────────────────────────────
      POST-CREATE: invite-code screen for private rooms
      ────────────────────────────────────────────────────────── */
@@ -303,7 +439,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               ? "Your followers can enter straight from the room link — share this code with anyone else you want to let in."
               : accessMode === "friends"
                 ? "Your friends can enter straight from the room link — share this code with anyone else you want to let in."
-                : "Share this code with the people you want to invite. They can enter it from the “Join Private” button next to Create."}
+                : "Share this code with the people you want to invite. They can enter it via “Have an invite code?” in the Create menu, or right on the room's door screen."}
           </p>
 
           <div
@@ -788,9 +924,25 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
 
             {/* Footer */}
             <div
-              className="flex items-center justify-end pt-4"
+              className="flex items-center justify-between pt-4"
               style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
             >
+              <button
+                onClick={() => setJoinMode(true)}
+                className="cursor-pointer"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: "12.5px",
+                  padding: "9px 4px",
+                  textDecoration: "underline",
+                  textUnderlineOffset: "3px",
+                }}
+              >
+                Have an invite code?
+              </button>
               <button
                 onClick={handleCreate}
                 disabled={loading || !motion.trim()}

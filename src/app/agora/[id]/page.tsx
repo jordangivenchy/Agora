@@ -102,6 +102,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [deniedGate, setDeniedGate] = useState<
     { motion: string; host: string | null; mode: string | null } | null
   >(null);
+  /* Invite-code entry on the denial screen — the code is the key, and on
+     success join_private_room seats us, so a refetch walks straight in. */
+  const [gateCode, setGateCode] = useState("");
+  const [gateCodeBusy, setGateCodeBusy] = useState(false);
+  const [gateCodeErr, setGateCodeErr] = useState<string | null>(null);
   /* Status the room had when this visitor first loaded it — 'ended' here
      means they arrived after the close and should get the replay. */
   const [firstStatus, setFirstStatus] = useState<string | null>(null);
@@ -1046,6 +1051,39 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   if (deniedGate) {
     const who = deniedGate.host ? `@${deniedGate.host}` : "the host";
+    const submitGateCode = async () => {
+      const code = gateCode.trim().toUpperCase();
+      if (!code || gateCodeBusy) return;
+      setGateCodeBusy(true);
+      setGateCodeErr(null);
+      const { data, error } = await supabase.rpc("join_private_room", {
+        p_code: code,
+        p_role: "spectator",
+      });
+      setGateCodeBusy(false);
+      if (error) {
+        const msg = error.message || "";
+        setGateCodeErr(
+          msg.includes("invalid_or_expired") ? "That code doesn't match a live room."
+          : msg.includes("banned_from_room") ? "You've been removed from this room."
+          : "Couldn't join with that code — try again.");
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      const joined: string | undefined = row?.room_id;
+      if (!joined) {
+        setGateCodeErr("That code doesn't match a live room.");
+        return;
+      }
+      if (joined === roomId) {
+        /* Seated — the room row is readable now; walk in. */
+        setDeniedGate(null);
+        setRoomUnreadable(false);
+        fetchAll();
+      } else {
+        router.push(`/agora/${joined}`);
+      }
+    };
     return (
       <div
         className="ag-root ag-loading"
@@ -1063,9 +1101,60 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             : `This room is open to people who follow ${who}.`}
           {!currentUser && " Sign in if that's you."}
         </p>
-        <p className="m-0 mt-1.5 text-[12px]" style={{ color: "#8b8b94" }}>
-          Have an invite code? Enter it from the Create menu on the home page.
-        </p>
+        {currentUser ? (
+          <div className="mt-5 flex flex-col items-center" style={{ gap: 8 }}>
+            <span className="text-[12px]" style={{ color: "#8b8b94" }}>
+              Have an invite code?
+            </span>
+            <div className="flex items-center" style={{ gap: 8 }}>
+              <input
+                value={gateCode}
+                onChange={(e) => { setGateCode(e.target.value); setGateCodeErr(null); }}
+                onKeyDown={(e) => { if (e.key === "Enter") submitGateCode(); }}
+                placeholder="ABC123"
+                maxLength={6}
+                autoCapitalize="characters"
+                spellCheck={false}
+                className="outline-none text-center uppercase"
+                style={{
+                  width: 130,
+                  padding: "9px 10px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: `1px solid ${gateCodeErr ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.14)"}`,
+                  borderRadius: 10,
+                  color: "#f5f5f0",
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 15,
+                  letterSpacing: "0.18em",
+                }}
+              />
+              <button
+                onClick={submitGateCode}
+                disabled={gateCodeBusy || gateCode.trim().length < 6}
+                className="cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                style={{
+                  background: "#d9a238",
+                  border: "none",
+                  color: "#2b1a02",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  padding: "9px 18px",
+                  borderRadius: 100,
+                }}
+              >
+                {gateCodeBusy ? "Joining…" : "Enter"}
+              </button>
+            </div>
+            {gateCodeErr && (
+              <span className="text-[12px]" style={{ color: "#fca5a5" }}>{gateCodeErr}</span>
+            )}
+          </div>
+        ) : (
+          <p className="m-0 mt-1.5 text-[12px]" style={{ color: "#8b8b94" }}>
+            Have an invite code? Sign in to use it.
+          </p>
+        )}
         <button
           onClick={() => router.push("/")}
           className="mt-5 cursor-pointer"
