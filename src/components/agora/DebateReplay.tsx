@@ -199,6 +199,40 @@ async function loadFallback(supabase: Client, roomId: string): Promise<{ room: R
   };
 }
 
+/* The replay page's own shape, painted instantly while the recording and
+   transcript load — replaces the old centered spinner so there's no
+   blocking "loading" screen. Shared by the /replays route (prefix
+   resolution) and DebateReplay's own initial load. */
+export function ReplaySkeleton() {
+  return (
+    <div className="dr-root">
+      <div className="dr-wrap">
+        {/* Thin control row (back · tag · share) — mirrors dr-topbar. */}
+        <div className="dr-skel-topbar">
+          <div className="dr-skel-line dr-skel-back" />
+          <div className="dr-skel-line dr-skel-tag" />
+          <span style={{ flex: 1 }} />
+          <div className="dr-skel-line dr-skel-share" />
+        </div>
+        {/* Head placeholder (title · meta · people) — mirrors dr-head so
+            the player below doesn't jump when the real content loads. */}
+        <div className="dr-skel-head">
+          <div className="dr-skel-line dr-skel-motion" />
+          <div className="dr-skel-line dr-skel-metaline" />
+          <div className="dr-skel-people">
+            <div className="dr-skel-line dr-skel-chip" />
+            <div className="dr-skel-line dr-skel-chip" />
+          </div>
+        </div>
+        <div className="dr-grid">
+          <div className="dr-skel-player" />
+          <div className="dr-skel-block dr-skel-panel" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DebateReplay({
   roomId,
   initialRoom,
@@ -484,14 +518,7 @@ export default function DebateReplay({
   }, [selfId, topicKey, supabase]);
 
   if (!loaded) {
-    /* Own spinner classes — the standalone /replays route doesn't load
-       agora.css, so the loading state can't lean on ag-* styles. */
-    return (
-      <div className="dr-loading-page">
-        <div className="dr-spinner" />
-        <span>Opening the replay…</span>
-      </div>
-    );
+    return <ReplaySkeleton />;
   }
 
   if (!room) {

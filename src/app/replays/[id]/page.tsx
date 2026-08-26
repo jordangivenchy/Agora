@@ -9,7 +9,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import DebateReplay from "@/components/agora/DebateReplay";
+import DebateReplay, { ReplaySkeleton } from "@/components/agora/DebateReplay";
 import { parseRoomParam } from "@/lib/urls";
 
 export default function ReplayPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,12 +32,7 @@ export default function ReplayPage({ params }: { params: Promise<{ id: string }>
   }, [parsed, supabase, router]);
 
   if (!roomId) {
-    return (
-      <div className="dr-loading-page">
-        <div className="dr-spinner" />
-        <span>Opening the replay…</span>
-      </div>
-    );
+    return <ReplaySkeleton />;
   }
   return <DebateReplay roomId={roomId} />;
 }

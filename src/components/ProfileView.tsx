@@ -560,7 +560,15 @@ export default function ProfileView({
   const isUpcoming = (d: DebateRow) =>
     d.status !== "live" && d.status !== "ended" &&
     !!d.scheduled_start && new Date(d.scheduled_start).getTime() > Date.now();
-  const pastAndLive = useMemo(() => debates?.filter((d) => !isUpcoming(d)) ?? null, [debates]);
+  /* The Discussions grid shows only recorded discussions — ended rooms
+     with a replay to open. Live rooms are excluded even though egress
+     stamps recording_url at broadcast start (the live-now chip surfaces
+     an active room); unrecorded ended rooms and scheduled rooms are out
+     too (Scheduled keeps its own tab). */
+  const recordedDiscussions = useMemo(
+    () => debates?.filter((d) => d.status === "ended" && !!d.recording_url) ?? null,
+    [debates]
+  );
   const upcoming = useMemo(
     () =>
       debates
@@ -628,7 +636,7 @@ export default function ProfileView({
 
   const counts = useMemo(
     () => ({
-      debates: pastAndLive?.length ?? null,
+      debates: recordedDiscussions?.length ?? null,
       scheduled: upcoming?.length ?? null,
       posts: ownPosts?.length ?? null,
       reposts: reposts?.length ?? null,
@@ -636,7 +644,7 @@ export default function ProfileView({
       communities: myCommunities?.length ?? null,
       shorts: clips?.length ?? null,
     }),
-    [pastAndLive, upcoming, ownPosts, reposts, comments, myCommunities, clips]
+    [recordedDiscussions, upcoming, ownPosts, reposts, comments, myCommunities, clips]
   );
 
   const socialLinks = useMemo(() => safeSocialLinks(profile?.social_links), [profile]);
@@ -1211,18 +1219,18 @@ export default function ProfileView({
         {/* ── Debates ── */}
         {tab === "debates" && (
           <div className="flex flex-col gap-2.5">
-            {pastAndLive === null ? (
+            {recordedDiscussions === null ? (
               <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
-            ) : pastAndLive.length === 0 ? (
+            ) : recordedDiscussions.length === 0 ? (
               emptyState(
                 "mic",
-                isSelf ? "No discussions yet" : `${first} hasn't joined a discussion yet`,
-                isSelf ? "Host or join a live discussion and your history builds here." : "Their live and past discussions will show up here.",
+                isSelf ? "No recorded discussions yet" : `${first} has no recorded discussions`,
+                isSelf ? "Recorded discussions become replays here — turn on recording in Settings before you host." : "Their recorded discussions will show up here as replays.",
                 isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
               )
             ) : (
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
-                {pastAndLive.map((d) => {
+                {recordedDiscussions.map((d) => {
                   const topic = TOPICS.find((t) => t.key === d.topic_key);
                   const live = d.status === "live";
                   const hasReplay = !live && !!d.recording_url;

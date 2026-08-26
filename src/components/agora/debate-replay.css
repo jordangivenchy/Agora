@@ -455,6 +455,39 @@
 }
 @keyframes dr-spin { to { transform: rotate(360deg); } }
 
+/* ── Instant skeleton (no blocking "loading" screen) ──
+   The replay page paints its own shape immediately — topbar, a black
+   16:9 player, and a transcript column — so opening a replay reads as
+   the page already here with the video filling in, not a load gate. */
+.dr-skel-line,
+.dr-skel-block {
+  background: linear-gradient(100deg, rgba(255,255,255,0.04) 30%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 70%);
+  background-size: 200% 100%;
+  animation: dr-shimmer 1.3s ease-in-out infinite;
+  border-radius: 8px;
+}
+.dr-skel-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.dr-skel-back { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; }
+.dr-skel-tag { width: 74px; height: 16px; }
+.dr-skel-share { width: 86px; height: 34px; border-radius: 999px; }
+/* Heights tuned so the head block ≈ the real dr-head (~122px) for a
+   single-line title, keeping the player from jumping when content loads.
+   (Long, wrapping titles still add a line — unavoidable without the text.) */
+.dr-skel-head { margin-bottom: 20px; }
+.dr-skel-motion { height: 38px; width: min(65%, 460px); margin-bottom: 12px; }
+.dr-skel-metaline { height: 22px; width: min(45%, 300px); margin-bottom: 14px; }
+.dr-skel-people { display: flex; gap: 8px; }
+.dr-skel-chip { width: 112px; height: 34px; border-radius: 999px; }
+.dr-skel-player {
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  border: 0.5px solid #2c2c34;
+  background: #000;
+}
+.dr-skel-panel { border-radius: 14px; min-height: 240px; }
+@media (max-width: 960px) { .dr-skel-panel { display: none; } }
+@keyframes dr-shimmer { to { background-position: -200% 0; } }
+
 /* ── "More replays" recommendation rail ── */
 .dr-more-grid {
   display: grid;
