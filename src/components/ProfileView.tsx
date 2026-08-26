@@ -14,7 +14,7 @@ import { slugify } from "@/lib/communityUrls";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
-import { roomPath, userPath } from "@/lib/urls";
+import { roomPath, replayPath, userPath } from "@/lib/urls";
 import UserAvatar from "@/components/UserAvatar";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Icon, type IconName } from "@/components/icons";
@@ -57,6 +57,8 @@ type DebateRow = {
   created_at: string;
   scheduled_start: string | null;
   viewer_count: number | null;
+  thumbnail_url?: string | null;
+  recording_url?: string | null;
   role: string;
   /** For rooms this user debated in (not hosted): who hosted them. */
   host_username?: string | null;
@@ -297,12 +299,12 @@ export default function ProfileView({
       const [{ data: parts }, { data: hosted }] = await Promise.all([
         supabase
           .from("debate_participants")
-          .select("role, room:debate_rooms(id, motion, topic_key, status, created_at, scheduled_start, viewer_count, host_id)")
+          .select("role, room:debate_rooms(id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, host_id)")
           .eq("user_id", uid)
           .eq("role", "debater"),
         supabase
           .from("debate_rooms")
-          .select("id, motion, topic_key, status, created_at, scheduled_start, viewer_count")
+          .select("id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url")
           .eq("host_id", uid)
           .order("created_at", { ascending: false })
           .limit(40),
@@ -1219,49 +1221,96 @@ export default function ProfileView({
                 isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
               )
             ) : (
-              pastAndLive.map((d) => {
-                const topic = TOPICS.find((t) => t.key === d.topic_key);
-                const live = d.status === "live";
-                const inner = (
-                  <>
-                    <div className="flex-1 min-w-[220px]">
-                      <p className="m-0 mb-1.5 flex items-center gap-1.5">
-                        {d.role === "host" || !d.host_username
-                          ? identity(profile)
-                          : identity({ id: d.host_id, username: d.host_username, display_name: d.host_display_name, avatar_url: d.host_avatar_url })}
-                        <span style={{ color: "#6b6b74", fontSize: 11 }}>· host</span>
-                      </p>
-                      <p className="m-0" style={{ fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
-                        <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>
-                          {d.motion || "Untitled discussion"}
-                        </a>
-                      </p>
-                      <p className="m-0 mt-1" style={{ color: "#8b8b94", fontSize: 11.5 }}>
-                        {live ? (
-                          <span style={{ color: "#e05a5a", fontWeight: 700 }}>● LIVE · </span>
-                        ) : (
-                          `${timeAgo(d.created_at)} ago · `
-                        )}
-                        {d.role === "host" ? "hosted" : "spoke"}
-                        {topic ? ` · ${topic.label}` : ""}
-                      </p>
-                    </div>
-                    <span
-                      className="inline-flex items-center gap-1"
-                      style={{ color: live ? "#e05a5a" : "#8b8b94", fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}
+              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
+                {pastAndLive.map((d) => {
+                  const topic = TOPICS.find((t) => t.key === d.topic_key);
+                  const live = d.status === "live";
+                  const hasReplay = !live && !!d.recording_url;
+                  const hostAvatar =
+                    d.role === "host" || !d.host_username ? profile?.avatar_url : d.host_avatar_url;
+                  const hostName =
+                    d.role === "host" || !d.host_username
+                      ? displayName(profile)
+                      : (d.host_display_name || d.host_username);
+                  /* Live rooms open the amphitheater; ended rooms with a
+                     recording open the dedicated replay; the rest fall back
+                     to the room URL (which renders its own ended state). */
+                  const href = live
+                    ? roomPath({ id: d.id, motion: d.motion })
+                    : hasReplay
+                      ? replayPath({ id: d.id, motion: d.motion })
+                      : roomPath({ id: d.id, motion: d.motion });
+                  return (
+                    <a
+                      key={d.id}
+                      href={href}
+                      className="no-underline flex flex-col"
+                      style={{
+                        borderRadius: 14,
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        background: "rgba(255,255,255,0.02)",
+                        overflow: "hidden",
+                      }}
                     >
-                      <Icon name="play" size={12} /> {live ? "Watch live" : "Replay"}
-                    </span>
-                  </>
-                );
-                /* Live rooms open the amphitheater; ended ones open the
-                   replay (recording + transcript + discussion) at the same URL. */
-                return (
-                  <div key={d.id} className="row-card px-4 py-3 flex items-center gap-3 flex-wrap" style={card}>
-                    {inner}
-                  </div>
-                );
-              })
+                      {/* Thumbnail: art → host avatar → topic gradient */}
+                      <div
+                        style={{
+                          position: "relative",
+                          aspectRatio: "16 / 9",
+                          background: topic?.color
+                            ? `linear-gradient(150deg, ${topic.color}44, #101018)`
+                            : "linear-gradient(150deg,#23233a,#101018)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {d.thumbnail_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={d.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <UserAvatar size={52} username={hostName} avatarUrl={hostAvatar ?? null} seed={d.host_id ?? d.id} />
+                        )}
+                        {/* Status badge */}
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{
+                            position: "absolute", top: 8, left: 8,
+                            padding: "3px 8px", borderRadius: 100,
+                            background: live ? "rgba(224,90,90,0.92)" : "rgba(10,10,14,0.78)",
+                            color: live ? "#fff" : "#e2e2e8",
+                            fontSize: 10.5, fontWeight: 700, letterSpacing: "0.02em",
+                            backdropFilter: "blur(4px)",
+                          }}
+                        >
+                          {live ? "● LIVE" : (<><Icon name="play" size={10} style={{ fill: "currentColor" }} /> {hasReplay ? "Replay" : "Ended"}</>)}
+                        </span>
+                      </div>
+                      {/* Body */}
+                      <div className="flex flex-col" style={{ padding: "10px 12px 12px", gap: 5 }}>
+                        <p
+                          className="m-0"
+                          style={{
+                            fontSize: 13.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700,
+                            color: "#f5f5f0", lineHeight: 1.3,
+                            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+                          }}
+                        >
+                          {d.motion || "Untitled discussion"}
+                        </p>
+                        <p className="m-0" style={{ color: "#8b8b94", fontSize: 11 }}>
+                          {d.role === "host" ? "hosted" : `spoke · ${hostName}`}
+                          {topic ? ` · ${topic.label}` : ""}
+                        </p>
+                        <p className="m-0" style={{ color: "#6b6b74", fontSize: 10.5 }}>
+                          {live ? `${d.viewer_count ?? 0} watching` : `${timeAgo(d.created_at)} ago`}
+                        </p>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
