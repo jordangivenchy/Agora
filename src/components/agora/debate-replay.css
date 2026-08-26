@@ -136,7 +136,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
   gap: 18px;
-  align-items: start;
+  /* Stretch so the transcript panel can match the player's height. */
+  align-items: stretch;
+}
+/* Two-column layout: the transcript panel is exactly as tall as the
+   video — height 0 keeps its content from driving the row height (the
+   16:9 player sets it), min-height stretches it back to the row, and
+   the list scrolls inside. */
+@media (min-width: 961px) {
+  .dr-panel { height: 0; min-height: 100%; }
+  .dr-transcript { max-height: none; flex: 1; }
 }
 @media (max-width: 960px) {
   .dr-grid { grid-template-columns: minmax(0, 1fr); }

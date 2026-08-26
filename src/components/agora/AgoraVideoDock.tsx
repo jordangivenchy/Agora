@@ -23,6 +23,8 @@ function Tile({ tile }: { tile: DockTile }) {
     const el = (tile.track as Track).attach() as HTMLVideoElement;
     el.muted = true; // audio plays through the call layer, not the tiles
     el.playsInline = true;
+    /* Self-view is mirrored everywhere, matching the stage and layouts. */
+    el.style.transform = tile.local && tile.source !== "screen" ? "scaleX(-1)" : "";
     host.appendChild(el);
     return () => {
       tile.track.detach(el);

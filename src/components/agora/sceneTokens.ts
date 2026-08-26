@@ -104,3 +104,9 @@ export const SCREEN = {
   z: 8.4,
   spreadX: 8.1,
 } as const;
+
+/* Lantern ring around the stage: 10 fixtures, one every 36°, a complete
+   uniform circle at a single radius. Generated (never hand-listed) and
+   unit-tested for uniformity — hand-tuned lists drifted off-axis twice
+   and read as unevenly placed lights from the audience seats. */
+export const LANTERN_ANGLES: readonly number[] = Array.from({ length: 10 }, (_, i) => i * 36);

@@ -286,17 +286,51 @@ export default function DebateReplay({
     return () => clearTimeout(t);
   }, [toast]);
 
+  /* ── Transcript↔video sync correction ─────────────────────────────
+     Line offsets are measured from recording_started_at, which is
+     stamped when the egress is REQUESTED — but the compositor's first
+     frame lands several seconds later, so raw offsets run ahead of the
+     audio. The playlist's EXT-X-PROGRAM-DATE-TIME carries the true
+     first-frame wall clock; the difference shifts every match, seek and
+     printed timestamp. Missing tag → delta 0 (old behavior). */
+  const [syncDelta, setSyncDelta] = useState(0);
+  useEffect(() => {
+    const startedAt = room?.recording_started_at;
+    if (!recordingUrl || !startedAt) { setSyncDelta(0); return; }
+    let alive = true;
+    fetch(recordingUrl)
+      .then((r) => (r.ok ? r.text() : null))
+      .then((txt) => {
+        if (!alive || !txt) return;
+        const m = txt.match(/#EXT-X-PROGRAM-DATE-TIME:([^\r\n]+)/);
+        if (!m) return;
+        const trueStart = Date.parse(m[1]);
+        const stamped = Date.parse(startedAt);
+        if (Number.isFinite(trueStart) && Number.isFinite(stamped)) {
+          const d = (trueStart - stamped) / 1000;
+          if (d > 0 && d < 120) setSyncDelta(d);
+        }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [recordingUrl, room?.recording_started_at]);
+  /** A line's position in the VIDEO's own timeline. */
+  const videoOffset = useCallback(
+    (sec: number) => Math.max(0, sec - syncDelta),
+    [syncDelta]
+  );
+
   /* Follow playback: the line whose offset most recently passed is current. */
   const seekable = lines.some((l) => l.offset_seconds !== null);
   const currentId = useMemo(() => {
     if (!seekable || !recordingUrl) return null;
     let found: string | null = null;
     for (const l of lines) {
-      if (l.offset_seconds !== null && l.offset_seconds <= currentTime + 0.5) found = l.id;
-      else if (l.offset_seconds !== null && l.offset_seconds > currentTime) break;
+      if (l.offset_seconds !== null && videoOffset(l.offset_seconds) <= currentTime + 0.5) found = l.id;
+      else if (l.offset_seconds !== null && videoOffset(l.offset_seconds) > currentTime) break;
     }
     return found;
-  }, [lines, currentTime, seekable, recordingUrl]);
+  }, [lines, currentTime, seekable, recordingUrl, videoOffset]);
 
   const [userScrolled, setUserScrolled] = useState(false);
   useEffect(() => {
@@ -322,7 +356,7 @@ export default function DebateReplay({
   const seekTo = (sec: number) => {
     const v = videoRef.current;
     if (!v) return;
-    v.currentTime = Math.max(0, sec - 1);
+    v.currentTime = Math.max(0, videoOffset(sec) - 1);
     v.play().catch(() => {});
     setUserScrolled(false);
   };
@@ -598,7 +632,7 @@ export default function DebateReplay({
                     </div>
                     <span className="dr-line-time">
                       {l.offset_seconds !== null
-                        ? fmtClock(l.offset_seconds)
+                        ? fmtClock(videoOffset(l.offset_seconds))
                         : new Date(l.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                     </span>
                   </div>

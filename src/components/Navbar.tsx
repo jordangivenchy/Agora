@@ -475,6 +475,32 @@ export default function Navbar({
                     View profile
                   </button>
                   <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      window.location.href = "/settings";
+                    }}
+                    className="w-full text-left flex items-center gap-2.5 cursor-pointer transition-all"
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "10px",
+                      color: "var(--text-muted)",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      background: "none",
+                      border: "none",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+                      e.currentTarget.style.color = "var(--text-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "none";
+                      e.currentTarget.style.color = "var(--text-muted)";
+                    }}
+                  >
+                    Settings
+                  </button>
+                  <button
                     onClick={signOut}
                     className="w-full text-left flex items-center gap-2.5 cursor-pointer transition-all"
                     style={{

@@ -1213,16 +1213,20 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         <Amphitheater
         performanceMode={broadcast}
           roomId={roomId}
-          proSpeakers={proSpeakers}
-          conSpeakers={conSpeakers}
-          stageStrip={paneStrip}
+          /* Flat layouts (gallery / multi) carry every picture themselves —
+             the scene's 3D speaker panels and mic medallion would peek
+             around the tile band as duplicate mini-cards, so they clear
+             the stage while a flat layout is up. */
+          proSpeakers={view === "speaker" && layout !== "stage" ? [] : proSpeakers}
+          conSpeakers={view === "speaker" && layout !== "stage" ? [] : conSpeakers}
+          stageStrip={view === "speaker" && layout !== "stage" ? [] : paneStrip}
           audience={audience}
           viewerCount={room.viewer_count ?? 0}
           view={view}
           onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
           onViewSettled={() => setViewSettled(true)}
           speakerQueue={speakerQueue}
-          micHolder={micHolder}
+          micHolder={view === "speaker" && layout !== "stage" ? null : micHolder}
           micLive={!!(room.mic_user_id && call.speakingIds.has(room.mic_user_id))}
         />
 

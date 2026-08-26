@@ -42,6 +42,10 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         <span class="avatar-initial">J</span>
       </button>
       <div class="avatar-dropdown" id="profileDropdown" role="menu">
+        <div class="avatar-menu-head" id="avatarMenuHead" style="display:none">
+          <span class="avatar-menu-head-name" id="avatarMenuName"></span>
+          <span class="avatar-menu-head-sub" id="avatarMenuSub"></span>
+        </div>
         <a class="avatar-menu-item" href="#profile" role="menuitem">
           <span class="avatar-menu-icon">${iconSvg("user", 14)}</span>Profile
         </a>

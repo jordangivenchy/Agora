@@ -215,18 +215,23 @@ export default function Home() {
         setSignedIn(!!user);
         let profileName: string | null = null;
         let profileAvatar: string | null = null;
+        let profileUsername: string | null = null;
         if (user) {
           const { data: me } = await supabase
             .from("users")
             .select("username, display_name, avatar_url")
             .eq("id", user.id)
             .maybeSingle();
-          if (me) { profileName = displayName(me) || null; profileAvatar = me.avatar_url ?? null; }
+          if (me) {
+            profileName = displayName(me) || null;
+            profileAvatar = me.avatar_url ?? null;
+            profileUsername = me.username ?? null;
+          }
         }
         const liveRooms = rooms.filter((r) => r.status === "live");
         const data = {
           debates,
-          user: user ? { id: user.id, name: profileName ?? user.user_metadata?.name ?? user.email ?? "U", avatarUrl: profileAvatar } : null,
+          user: user ? { id: user.id, name: profileName ?? user.user_metadata?.name ?? user.email ?? "U", username: profileUsername, avatarUrl: profileAvatar } : null,
           stats: {
             activeRooms: rooms.length,
             members: memberCount ?? 0,

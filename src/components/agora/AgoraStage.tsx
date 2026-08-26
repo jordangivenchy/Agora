@@ -93,6 +93,9 @@ function Surface({ tile }: { tile: VideoTile }) {
     el.muted = true; // audio is the call layer's job, not the picture's
     el.playsInline = true;
     el.style.objectFit = tile.source === "screen" ? "contain" : "cover";
+    /* Self-view is mirrored everywhere (matching the flat layouts) —
+       an un-mirrored reflection of yourself reads as "inverted". */
+    el.style.transform = tile.local && tile.source !== "screen" ? "scaleX(-1)" : "";
     host.appendChild(el);
     return () => {
       tile.track.detach(el);

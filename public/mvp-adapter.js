@@ -142,6 +142,15 @@
     if (signupBtn) signupBtn.style.display = 'none';
     var initial = document.querySelector('.avatar-initial');
     if (initial) initial.textContent = (D0.user.name || 'U').charAt(0).toUpperCase();
+    /* Identity header at the top of the avatar menu. */
+    var menuHead = document.getElementById('avatarMenuHead');
+    if (menuHead) {
+      menuHead.style.display = '';
+      var headName = document.getElementById('avatarMenuName');
+      var headSub = document.getElementById('avatarMenuSub');
+      if (headName) headName.textContent = D0.user.name || 'You';
+      if (headSub) headSub.textContent = D0.user.username ? '@' + D0.user.username : '';
+    }
     /* Real profile photo when there is one; the initial stays as fallback. */
     if (D0.user.avatarUrl && initial) {
       var img = document.createElement('img');

@@ -21,7 +21,7 @@ import {
   renderedCount,
   slotPosition,
 } from "./queueLayout";
-import { GROUND, SCREEN, SKY, STAGE_LIGHT, STARS, STONE } from "./sceneTokens";
+import { GROUND, LANTERN_ANGLES, SCREEN, SKY, STAGE_LIGHT, STARS, STONE } from "./sceneTokens";
 
 export interface SeatedPerson {
   id: string;
@@ -533,7 +533,10 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
      fixtures every ~36° with the arc over the queue corridor left
      dark so the processional path stays legible. ── */
   const lights: THREE.PointLight[] = [];
-  const lanternAngles = [8, 44, 80, 116, 152, 188, 224, 332];
+  /* A complete, perfectly uniform ring — see LANTERN_ANGLES in
+     sceneTokens (generated and unit-tested; hand-tuned lists drifted
+     off-axis twice and read as unevenly placed lights). */
+  const lanternAngles = LANTERN_ANGLES;
   const postGeo = new THREE.BoxGeometry(0.09, 0.52, 0.09);
   const capGeo = new THREE.BoxGeometry(0.2, 0.06, 0.2);
   const flameGeo = new THREE.BoxGeometry(0.12, 0.15, 0.12);
