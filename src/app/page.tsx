@@ -256,6 +256,21 @@ export default function Home() {
       }
   }, [supabase]);
 
+  /* Every path into the create modal goes through here: signed-out
+     visitors are sent to /login instead of a modal they can't submit. */
+  const openCreate = useCallback(
+    async (prefill: {
+      motion: string; topic: string; schedule?: boolean;
+      communityId?: string; communityName?: string;
+    } | null) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) { window.location.href = "/login"; return; }
+      setCreatePrefill(prefill);
+      setShowCreate(true);
+    },
+    [supabase]
+  );
+
   /* Profile links always land on the standalone page — the quick-look
      modal is retired. Ids (events, legacy links) resolve to a username
      first; unresolvable ids are silently dropped. */
@@ -562,7 +577,7 @@ export default function Home() {
   }, [activeTab, navSearch]);
 
   useEffect(() => {
-    const onCreate = () => { setCreatePrefill(null); setShowCreate(true); };
+    const onCreate = () => { openCreate(null); };
     const onProfile = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (typeof detail === "string" && detail) {
@@ -603,8 +618,7 @@ export default function Home() {
         params.delete("create");
         const q = params.toString();
         window.history.replaceState(null, "", window.location.pathname + (q ? `?${q}` : ""));
-        setCreatePrefill({ motion: "", topic: "", schedule: c === "schedule" });
-        setShowCreate(true);
+        openCreate({ motion: "", topic: "", schedule: c === "schedule" });
       }
     }
     window.addEventListener("agora:profile", onProfile);
@@ -616,7 +630,7 @@ export default function Home() {
       window.removeEventListener("agora:tab", onTab);
       window.removeEventListener("agora:logout", onLogout);
     };
-  }, [supabase, onSidebarNavigate]);
+  }, [supabase, onSidebarNavigate, openCreate, goToProfileById]);
 
   return (
     <>
@@ -662,12 +676,7 @@ export default function Home() {
       <HomeSidebar activeId={activeTab === "search" ? null : (activeTab ?? mvpPage)} onNavigate={onSidebarNavigate} />
       <TopicsHome
         container={fieldsHost}
-        onCreateLobby={async (topic, schedule) => {
-          const { data: auth } = await supabase.auth.getUser();
-          if (!auth?.user) { window.location.href = "/login"; return; }
-          setCreatePrefill({ motion: "", topic, schedule });
-          setShowCreate(true);
-        }}
+        onCreateLobby={(topic, schedule) => openCreate({ motion: "", topic, schedule })}
       />
       <CommunitiesPage
         open={activeTab === "communities"}
@@ -675,17 +684,13 @@ export default function Home() {
         onStartDiscussion={(communityId, communityName) => {
           // Starts live by default — "Schedule for later" stays available
           // inside the modal for members who want a future slot.
-          setCreatePrefill({ motion: "", topic: "", communityId, communityName });
-          setShowCreate(true);
+          openCreate({ motion: "", topic: "", communityId, communityName });
         }}
       />
       <NewsPage
         open={activeTab === "news"}
         onClose={() => setActiveTab(null)}
-        onStartDebate={(motion, topic) => {
-          setCreatePrefill({ motion, topic });
-          setShowCreate(true);
-        }}
+        onStartDebate={(motion, topic) => openCreate({ motion, topic })}
       />
       <CreateRoomModal
         open={showCreate}
