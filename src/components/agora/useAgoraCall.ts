@@ -219,9 +219,58 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
 
     (async () => {
       try {
+        /* Track/data handlers are wired BEFORE either connect path. The
+           egress compositor used to skip these entirely (its branch
+           connected and returned early), so the recorder never attached
+           audio elements and only showed whichever video tracks happened
+           to be subscribed at the moment of its single refresh — i.e.
+           recordings with one missing camera and NO audio. */
+        room
+          .on(RoomEvent.TrackSubscribed, (track, publication) => {
+            /* Audience members render video on the distant holo screens or
+               small dock tiles — the 360p simulcast layer is all they can
+               see. On-stage participants (and the recorder, which runs
+               with highQuality) keep full quality. */
+            if (!canPublish && track.kind === Track.Kind.Video) {
+              (publication as RemoteTrackPublication).setVideoQuality(
+                hqRef.current ? VideoQuality.HIGH : VideoQuality.MEDIUM
+              );
+            }
+            attachAudio(track);
+            refreshTiles();
+          })
+          .on(RoomEvent.TrackUnsubscribed, (track) => {
+            track.detach().forEach((el) => el.remove());
+            refreshTiles();
+          })
+          .on(RoomEvent.LocalTrackPublished, refreshTiles)
+          .on(RoomEvent.LocalTrackUnpublished, refreshTiles)
+          .on(RoomEvent.TrackMuted, refreshTiles)
+          .on(RoomEvent.TrackUnmuted, refreshTiles)
+          .on(RoomEvent.ParticipantDisconnected, refreshTiles)
+          .on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+            setSpeakingIds(new Set(speakers.map((s) => s.identity)));
+          })
+          .on(RoomEvent.DataReceived, (payload) => {
+            try {
+              const msg = JSON.parse(new TextDecoder().decode(payload)) as DataMsg;
+              if (msg.t === "reaction" && typeof msg.e === "string") {
+                pushReaction(msg.e.slice(0, 8), String(msg.u ?? "").slice(0, 40));
+              }
+            } catch {
+              /* forwarded garbage — ignore */
+            }
+          })
+          .on(RoomEvent.ConnectionStateChanged, (s) => {
+            setConnected(s === ConnectionState.Connected);
+          });
+
         if (external) {
           await room.connect(external.serverUrl, external.token);
-          if (cancelled) return;
+          if (cancelled) {
+            room.disconnect();
+            return;
+          }
           setConnected(true);
           refreshTiles();
           setAudioBlocked(!room.canPlaybackAudio);
@@ -256,45 +305,6 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
         const { token } = body;
         if (!token) return;
         setHlsMode(null);
-
-        room
-          .on(RoomEvent.TrackSubscribed, (track, publication) => {
-            /* Audience members render video on the distant holo screens or
-               small dock tiles — the 360p simulcast layer is all they can
-               see. On-stage participants keep full quality. */
-            if (!canPublish && track.kind === Track.Kind.Video) {
-              (publication as RemoteTrackPublication).setVideoQuality(
-                hqRef.current ? VideoQuality.HIGH : VideoQuality.MEDIUM
-              );
-            }
-            attachAudio(track);
-            refreshTiles();
-          })
-          .on(RoomEvent.TrackUnsubscribed, (track) => {
-            track.detach().forEach((el) => el.remove());
-            refreshTiles();
-          })
-          .on(RoomEvent.LocalTrackPublished, refreshTiles)
-          .on(RoomEvent.LocalTrackUnpublished, refreshTiles)
-          .on(RoomEvent.TrackMuted, refreshTiles)
-          .on(RoomEvent.TrackUnmuted, refreshTiles)
-          .on(RoomEvent.ParticipantDisconnected, refreshTiles)
-          .on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-            setSpeakingIds(new Set(speakers.map((s) => s.identity)));
-          })
-          .on(RoomEvent.DataReceived, (payload) => {
-            try {
-              const msg = JSON.parse(new TextDecoder().decode(payload)) as DataMsg;
-              if (msg.t === "reaction" && typeof msg.e === "string") {
-                pushReaction(msg.e.slice(0, 8), String(msg.u ?? "").slice(0, 40));
-              }
-            } catch {
-              /* forwarded garbage — ignore */
-            }
-          })
-          .on(RoomEvent.ConnectionStateChanged, (s) => {
-            setConnected(s === ConnectionState.Connected);
-          });
 
         await room.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL!, token);
         if (cancelled) {

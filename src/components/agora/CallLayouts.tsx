@@ -414,13 +414,22 @@ export function CallMultiSpeaker({
 
   if (tiles.length === 0) return <EmptyState />;
 
+  /* A PINNED screen share takes the stage alone, near-fullscreen —
+     everyone's cameras drop to the filmstrip. (An unpinned share still
+     cohabits the featured row with the speakers.) */
+  const soloScreen = pinnedTile && pinnedTile.source === "screen" ? pinnedTile : null;
+
   const featuredTiles: LayoutTile[] = [];
-  if (screens[0]) featuredTiles.push(screens[0]);
-  if (pinnedTile && !featuredTiles.some((t) => t.key === pinnedTile.key)) featuredTiles.push(pinnedTile);
-  for (const id of featured) {
-    if (featuredTiles.length >= FEATURED_MAX) break;
-    const cam = cameras.find((c) => c.identity === id);
-    if (cam && !featuredTiles.some((t) => t.key === cam.key)) featuredTiles.push(cam);
+  if (soloScreen) {
+    featuredTiles.push(soloScreen);
+  } else {
+    if (screens[0]) featuredTiles.push(screens[0]);
+    if (pinnedTile && !featuredTiles.some((t) => t.key === pinnedTile.key)) featuredTiles.push(pinnedTile);
+    for (const id of featured) {
+      if (featuredTiles.length >= FEATURED_MAX) break;
+      const cam = cameras.find((c) => c.identity === id);
+      if (cam && !featuredTiles.some((t) => t.key === cam.key)) featuredTiles.push(cam);
+    }
   }
   const featuredKeys = new Set(featuredTiles.map((t) => t.key));
   const strip = tiles
@@ -428,7 +437,7 @@ export function CallMultiSpeaker({
     .sort((a, b) => joinIndex(a.key) - joinIndex(b.key));
 
   return (
-    <div className="ag-lmulti">
+    <div className={`ag-lmulti${soloScreen ? " ag-lmulti--screen-solo" : ""}`}>
       <div className="ag-lmulti-featured" data-n={featuredTiles.length}>
         {featuredTiles.map((t) => (
           <CallTile

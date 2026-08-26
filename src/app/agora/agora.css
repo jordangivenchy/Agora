@@ -3069,3 +3069,12 @@
   color: #e05a5a;
 }
 .ag-cast-tag-muted svg { width: 11px; height: 11px; display: block; }
+
+/* ── Pinned screen share: near-fullscreen ──
+   Solo mode lifts the 720px featured cap: the share fills almost the
+   whole stage surface (bounded only by viewport height so the strip
+   and control bar stay reachable). */
+.ag-lmulti--screen-solo .ag-lmulti-featured .ag-lt {
+  width: min(97%, calc((100vh - 230px) * 1.7778));
+  max-width: none;
+}

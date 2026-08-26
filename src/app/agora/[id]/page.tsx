@@ -181,6 +181,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     setView("speaker");
     setLayout("gallery");
   }, [duel]);
+  /* Unpinning the near-fullscreen screen share in a duel snaps back to
+     the two-pane gallery instead of stranding the pair in multi view. */
+  useEffect(() => {
+    if (duel && layout === "multi" && !layoutPin) setLayout("gallery");
+  }, [duel, layout, layoutPin]);
   /* The DOM stage holds back until the camera glide lands on the current
      vantage — fading panes in mid-flight read as riding the camera. */
   const [viewSettled, setViewSettled] = useState(false);
@@ -1092,7 +1097,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             onClick={() => {
               /* The stage lives and dies with its host: hosts confirm the
                  close; everyone else just walks out. */
-              if (isHostRole(myRole) && room.status !== "ended") setLeavePrompt(true);
+              if (isHostRole(myRole) && !duel && room.status !== "ended") setLeavePrompt(true);
               else {
                 vacateSeat();
                 router.push("/");
@@ -1222,7 +1227,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         />
 
         {/* ── Host controls (hosts and co-hosts only) ── */}
-        {currentUser && isHostRole(myRole) && (
+        {/* Duels have no host: the "host" seat is just whoever waited
+            longer — nobody gets power over their opponent. */}
+        {currentUser && isHostRole(myRole) && !duel && (
           <HostControls
             room={room}
             participants={participants}
@@ -1405,7 +1412,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   tiles={layoutTiles}
                   speaking={call.speakingIds}
                   onPin={(key) => {
-                    if (duel) return; // two panes, nothing to pin into
+                    /* Duels stay in the two-pane gallery — EXCEPT a
+                       screen share, which pins near-fullscreen. */
+                    if (duel && !key.endsWith(":screen")) return;
                     setLayoutPin(key);
                     pickLayout("multi");
                   }}
@@ -1901,7 +1910,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             className="ag-ctl ag-ctl--leave"
             title="Leave the room"
             onClick={() => {
-              if (isHostRole(myRole)) {
+              if (isHostRole(myRole) && !duel) {
                 setLeavePrompt(true);
               } else {
                 vacateSeat();

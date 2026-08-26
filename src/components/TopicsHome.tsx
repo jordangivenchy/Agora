@@ -240,16 +240,33 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   }, [load, supabase]);
 
   /* While queued anywhere: poll for a match; also refresh counts so the
-     board feels alive. */
+     board feels alive.
+
+     Match-vs-refresh race: getting matched WRITES matched_room_id on
+     our queue row, so a board refresh that lands between the match and
+     our next poll reports am_queued=false — anyQueued flips, this
+     effect tears down, and without the catch-up below the winner is
+     stranded on the board ("removed from the queue") while their room
+     sits waiting. Any transition out of the queued state we didn't
+     initiate does one last check_topic_match to collect the room. */
+  const wasQueuedRef = useRef(false);
   useEffect(() => {
     if (!anyQueued || !userId) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      if (wasQueuedRef.current && userId) {
+        wasQueuedRef.current = false;
+        supabase.rpc("check_topic_match").then(({ data }) => {
+          if (data) window.location.href = `/agora/${data}`;
+        });
+      }
       return;
     }
+    wasQueuedRef.current = true;
     pollRef.current = setInterval(async () => {
       const { data: roomId } = await supabase.rpc("check_topic_match");
       if (roomId) {
         if (pollRef.current) clearInterval(pollRef.current);
+        wasQueuedRef.current = false;
         window.location.href = `/agora/${roomId}`;
         return;
       }
@@ -287,6 +304,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   }, [supabase, userId]);
 
   const leaveQueue = useCallback(async (t: TopicRow) => {
+    wasQueuedRef.current = false; // deliberate exit — no catch-up check
     setBusyId(t.id);
     await supabase.rpc("leave_topic_queue", { p_topic: t.id });
     setBusyId(null);
