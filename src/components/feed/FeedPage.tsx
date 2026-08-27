@@ -325,7 +325,7 @@ export default function FeedPage({ open, onClose }: Props) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <UserAvatar size={66} radius={0} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
+              <UserAvatar size={116} radius={0} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
             )}
             <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.22)" }}>
               <span style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(10,10,14,0.72)", border: "0.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
