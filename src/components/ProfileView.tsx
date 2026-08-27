@@ -6,7 +6,7 @@
 
    Header (avatar, name + verified badge, bio, joined date, follow/message),
    social stats with follower/following lists, then tabbed content: debates,
-   scheduled, posts, shorts. Moderators see a verify toggle. */
+   scheduled, posts. Moderators see a verify toggle. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pathFor } from "@/lib/routes";
@@ -89,14 +89,6 @@ type PostRow = {
   orig_author_display_name: string | null;
 };
 
-type ClipRow = {
-  id: string;
-  title: string | null;
-  thumb_gradient: string | null;
-  video_url: string | null;
-  view_count: number | null;
-  duration_seconds: number | null;
-};
 
 /* Rows from get_user_comments(p_author, p_limit, p_offset) — newest
    first, privacy pre-filtered server-side. */
@@ -122,7 +114,7 @@ type CommunityRow = {
   member_count: number;
 };
 
-type Tab = "debates" | "scheduled" | "posts" | "reposts" | "comments" | "communities" | "shorts";
+type Tab = "debates" | "scheduled" | "posts" | "reposts" | "comments" | "communities";
 
 const COMMENTS_PAGE = 30;
 
@@ -220,7 +212,6 @@ export default function ProfileView({
   const [tab, setTab] = useState<Tab>("debates");
   const [debates, setDebates] = useState<DebateRow[] | null>(null);
   const [posts, setPosts] = useState<PostRow[] | null>(null);
-  const [clips, setClips] = useState<ClipRow[] | null>(null);
   const [listMode, setListMode] = useState<null | "followers" | "following">(null);
   const [editOpen, setEditOpen] = useState(false);
   const [shared, setShared] = useState(false);
@@ -358,14 +349,6 @@ export default function ProfileView({
         p_author: uid,
       });
       setPosts((postRows ?? []) as unknown as PostRow[]);
-
-      const { data: clipRows } = await supabase
-        .from("clips")
-        .select("id, title, thumb_gradient, video_url, view_count, duration_seconds")
-        .eq("uploader_id", uid)
-        .order("created_at", { ascending: false })
-        .limit(30);
-      setClips((clipRows ?? []) as ClipRow[]);
     })();
   }, [uid, supabase]);
 
@@ -642,9 +625,8 @@ export default function ProfileView({
       reposts: reposts?.length ?? null,
       comments: comments?.length ?? null,
       communities: myCommunities?.length ?? null,
-      shorts: clips?.length ?? null,
     }),
-    [recordedDiscussions, upcoming, ownPosts, reposts, comments, myCommunities, clips]
+    [recordedDiscussions, upcoming, ownPosts, reposts, comments, myCommunities]
   );
 
   const socialLinks = useMemo(() => safeSocialLinks(profile?.social_links), [profile]);
@@ -1134,7 +1116,6 @@ export default function ProfileView({
           {tabBtn("reposts", "Reposts", counts.reposts)}
           {tabBtn("comments", "Comments", counts.comments)}
           {tabBtn("communities", "Communities", counts.communities)}
-          {tabBtn("shorts", "Shorts", counts.shorts)}
         </div>
 
         {/* ── Communities ── */}
@@ -1571,46 +1552,6 @@ export default function ProfileView({
           </div>
         )}
 
-        {/* ── Shorts ── */}
-        {tab === "shorts" && (
-          <div>
-            {clips === null ? (
-              <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
-            ) : clips.length === 0 ? (
-              emptyState(
-                "play",
-                isSelf ? "No shorts yet" : `${first} has no shorts`,
-                "Clips from recorded discussions will land here.",
-              )
-            ) : (
-              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-                {clips.map((c) => (
-                  <a
-                    key={c.id}
-                    href={c.video_url ?? "#"}
-                    target={c.video_url ? "_blank" : undefined}
-                    rel="noreferrer"
-                    className="no-underline flex flex-col justify-end p-3"
-                    style={{
-                      aspectRatio: "9 / 14",
-                      borderRadius: 14,
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      background: c.thumb_gradient || "linear-gradient(160deg,#23233a,#101018)",
-                    }}
-                  >
-                    <p className="m-0" style={{ color: "white", fontSize: 12.5, fontWeight: 600, textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
-                      {c.title || "Untitled short"}
-                    </p>
-                    <p className="m-0 mt-0.5" style={{ color: "rgba(255,255,255,0.75)", fontSize: 10.5 }}>
-                      {c.view_count ?? 0} views
-                      {c.duration_seconds ? ` · ${c.duration_seconds}s` : ""}
-                    </p>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       {profile && (

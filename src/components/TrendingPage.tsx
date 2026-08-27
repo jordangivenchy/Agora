@@ -1,10 +1,9 @@
 "use client";
 
 /* Trending tab — desktop-YouTube-style feed. The video grid is real rooms
-   (live first, then recent past debates). The Shorts shelf mixes uploaded
-   clips from the `clips` table with seeded examples; Upload clip stores
-   video in the `clips` storage bucket and ties it to the uploader's
-   profile. Every control routes somewhere real. */
+   (live first, then recent past debates). The Shorts shelf is hidden for
+   now (its player + clip machinery remain dormant below, ready to re-add);
+   clips still exist and have their own /clips pages. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -454,57 +453,6 @@ export default function TrendingPage({ open, onClose }: Props) {
           </div>
         ) : (
           <>
-            <div className="p-4 mb-5" style={{ ...card, background: "rgba(18,18,24,0.6)" }}>
-              <div className="flex items-center gap-2.5 mb-3">
-                <span className="inline-flex items-center justify-center" style={{ width: 24, height: 24, borderRadius: 7, background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", fontSize: 12 }}><Icon name="play" size={12} style={{ fill: "currentColor" }} /></span>
-                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0" }}>Shorts</span>
-                <span className="text-[11px]" style={{ color: "#8b8b94" }}>the best 60 seconds of every discussion</span>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  className="cursor-pointer text-[11px] font-medium px-3.5 py-1 rounded-full border-none ml-auto"
-                  style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", opacity: uploading ? 0.6 : 1 }}
-                >
-                  {uploading ? "Uploading…" : "⇪ Upload clip"}
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
-                />
-              </div>
-              {uploadMsg && (
-                <p className="m-0 mb-2 text-[11px]" style={{ color: uploadMsg.includes("✓") ? "#97c459" : "#f4d47c" }}>{uploadMsg}</p>
-              )}
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {shorts.length === 0 && (
-                  <p className="m-0 py-6 text-[11px]" style={{ color: "#8b8b94" }}>
-                    No clips yet — record a discussion and clip your best moment.
-                  </p>
-                )}
-                {shorts.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setActiveShort(s)}
-                    className="flex flex-col justify-between p-2.5 shrink-0 cursor-pointer text-left"
-                    style={{ width: 132, height: 224, borderRadius: 12, border: "0.5px solid #3a3a44", background: s.gradient }}
-                  >
-                    <span className="self-end text-[9px] px-2 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec" }}>
-                      {s.duration}
-                    </span>
-                    <span>
-                      <span className="block text-[11px] mb-1" style={{ color: "#f5f5f0", lineHeight: 1.3 }}>{s.title}</span>
-                      <span className="block text-[10px]" style={{ color: "#c0c0c8" }}>
-                        {s.videoUrl ? `@${s.uploader.name}` : <><Icon name="heart" size={10} /> {fmt(s.hearts + (hearted[s.id] ? 1 : 0))}</>}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Video grid — real rooms */}
             {rooms.length === 0 ? (
               <div className="p-4 text-center" style={card}>
