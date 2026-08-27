@@ -396,10 +396,13 @@ export default function SettingsPage() {
     setPwBusy(true);
     setPwMsg(null);
     // Re-authenticate with the current password before allowing the change.
-    const { error: reauthErr } = await supabase.auth.signInWithPassword({
-      email: authUser.email, password: curPw,
-    });
-    if (reauthErr) {
+    // Server-side so the check passes the 2FA password-verification hook.
+    const reauthRes = await fetch("/api/auth/reauth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: curPw }),
+    }).catch(() => null);
+    if (!reauthRes?.ok) {
       setPwBusy(false);
       setPwMsg({ kind: "err", text: "Current password is incorrect." });
       return;
