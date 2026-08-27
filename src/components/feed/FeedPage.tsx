@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { pathFor } from "@/lib/routes";
-import { roomPath } from "@/lib/urls";
+import { roomPath, replayPath } from "@/lib/urls";
 import { TOPICS } from "@/types/database";
 import RoomCard, { type RoomCardRoom } from "@/components/RoomCard";
 import UserAvatar from "@/components/UserAvatar";
@@ -59,7 +59,7 @@ type CommentPayload = {
 type FeedPost = PostRow & { author_avatar_url?: string | null; community_color?: string | null };
 
 type FeedItem =
-  | { kind: "live" | "scheduled"; item_id: string; score: number; created_at: string; reason: string; payload: RoomPayload }
+  | { kind: "live" | "scheduled" | "replay"; item_id: string; score: number; created_at: string; reason: string; payload: RoomPayload }
   | { kind: "post" | "repost"; item_id: string; score: number; created_at: string; reason: string; payload: FeedPost }
   | { kind: "comment"; item_id: string; score: number; created_at: string; reason: string; payload: CommentPayload };
 
@@ -304,6 +304,54 @@ export default function FeedPage({ open, onClose }: Props) {
           >
             <Icon name="bell" size={15} />
           </button>
+        </div>
+      );
+    }
+    if (it.kind === "replay") {
+      const r = it.payload;
+      const topic = TOPICS.find((t) => t.key === r.topic_key);
+      return (
+        <div
+          key={it.item_id}
+          role="link"
+          tabIndex={0}
+          onClick={() => { window.location.href = replayPath(r); }}
+          onKeyDown={(e) => { if (e.key === "Enter") window.location.href = replayPath(r); }}
+          className="p-3 mb-3 flex gap-3 items-center cursor-pointer"
+          style={card}
+        >
+          <div style={{ position: "relative", width: 116, height: 66, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b" }}>
+            {r.thumbnail_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <UserAvatar size={66} radius={0} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
+            )}
+            <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.22)" }}>
+              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(10,10,14,0.72)", border: "0.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon name="play" size={13} style={{ fill: "#fff", marginLeft: 2 }} />
+              </span>
+            </span>
+            <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(47,127,224,0.92)", color: "#fff", fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", padding: "2px 6px", borderRadius: 5 }}>REPLAY</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <Reason text={it.reason} />
+            <p className="m-0 text-[10.5px] flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)" }}>
+              {r.host && authorChip(r.host.id, r.host.username, r.host.display_name ?? null, r.host.avatar_url)}
+              {r.community && <><span>·</span><span style={{ color: "#e2b96b" }}>{r.community.name}</span></>}
+            </p>
+            <p className="m-0 mt-1 text-[14px] font-medium" style={{ color: "#eeeef5", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {r.motion}
+            </p>
+            <p className="m-0 mt-1 text-[11px] flex items-center gap-2 flex-wrap">
+              <span style={{ color: "#4a9eff", fontWeight: 600 }}>▶ Watch replay</span>
+              {topic && (
+                <span className="rounded-full" style={{ fontSize: 9.5, padding: "1px 7px", background: `${topic.color}22`, border: `0.5px solid ${topic.color}66`, color: topic.color, fontWeight: 600 }}>
+                  {topic.label}
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       );
     }
