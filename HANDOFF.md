@@ -1,13 +1,146 @@
 # AgoraSphere — Context Handoff
 
-_Last updated: 2026-08-26. Covers 08-25→08-26 (queues become the fast
-lane, "debate"→"discussion" site-wide, VOD system: replay route + custom
-player + comments + clips, recorder A/V fix, hover-rail sidebar, solid
-pill design pass). Everything below is LIVE in production unless marked
-otherwise — EXCEPT the 08-26 afternoon stack, committed in this same
-push. Older digests' details have been folded into the archive sections._
+_Last updated: 2026-08-27. Covers 08-26→08-27 (private-room access modes +
+their security foundation, a security audit that closed live privilege-
+escalation / PII / XSS / stage-hijack holes, Twitch-style clip editor +
+/clips pages, community ⋯ menu with Block, feed replays, karma→Goatedness,
+QUEUE→Daily Topics + ~730-topic seed, Shorts hidden, TTS overlay fix).
+Everything below is LIVE in production unless marked otherwise. Older
+digests' details are folded into the archive sections._
 
-## ⚡ 08-25→08-26 session digest (read this first)
+## ⚡ 08-26→08-27 session digest (read this first)
+
+**Migrations applied to the live DB this session: 20260865 → 20260874**
+(files match live). 20260865_private_room_access_modes ·
+20260866_private_room_access_enforcement · 20260867_community_blocks ·
+20260868_lock_down_users_grants · 20260869_gate_room_content_and_rosters ·
+20260870_pin_function_search_path · 20260871_home_feed_replays ·
+20260872_seed_topics_batch · 20260873_seed_topics_batch2 ·
+20260874_daily_topics_show_12. All verified against the live DB with
+role-simulation queries. New npm dep: **mux.js** (client-side HLS→MP4).
+
+**🔒 SECURITY AUDIT — three live criticals closed (all deployed).** A
+multi-agent audit found the live DB diverged dangerously from the
+migration files (same class as the earlier debate_rooms world-readable
+bug):
+- **Privilege escalation (CRITICAL, fixed 20260868):** anon/authenticated
+  held the Supabase-default `GRANT ALL` on public.users, and the UPDATE
+  RLS policy checked only `auth.uid()=id`, never columns — so any signed-in
+  user could `PATCH` their own row to `is_moderator=true` (also verified,
+  suspended_until=null, recording_storage_limit_mb). Revoked ALL client
+  writes to users (legit writes go through definer RPCs / the signup
+  trigger / admin client).
+- **Email PII leak (CRITICAL, fixed 20260868):** same grant exposed
+  users.email to anon. SELECT now restricted to display columns only
+  (id, username, display_name, avatar_url, bio, banner_url, social_links,
+  verified, is_moderator, created_at, username_changed_at).
+- **Stored XSS → account takeover (CRITICAL, fixed):** public/mvp-home.js
+  rendered room motion + display names UNESCAPED in the home cards / room
+  modal / discovery. Every sink now runs through escHTML(). No CSP exists
+  yet — adding one is the remaining defense-in-depth item.
+- **Stage hijack (HIGH, fixed):** /api/livekit minted canPublish from the
+  client-supplied `role`. Publish rights are now derived server-side from
+  the actual debate_participants seat.
+- **Private content world-readable (MEDIUM, fixed 20260869):**
+  room_messages / debate_utterances / agora_interjections and
+  community_members were `USING(true)`; now gated by can_enter_room /
+  community_visible. 10 functions got search_path pinned (20260870).
+- Advisor note: the 195 "security definer executable" and 12
+  "rls_enabled_no_policy" lints are BY DESIGN (locked tables, controlled
+  RPCs) — not risks. Leaked-password protection + the GoTrue 2FA hook are
+  still OFF (dashboard toggles; see open list).
+
+**Private rooms get access modes (20260865/20260866, deployed).**
+debate_rooms.access_mode ∈ {code, followers, friends}; can_enter_room()
+is the one predicate used at every layer. 20260866 is the real
+foundation: debate_rooms + debate_participants SELECT are now gated by
+can_enter_room (they were world-readable), which transitively gates the
+replay (get_debate_replay reads as caller) and the LiveKit token route.
+get_room_gate() powers the denial screen; egress refuses HLS for f/f
+rooms. Create modal has a "Who can enter" pill row; the invite code
+works in every mode as the escape hatch and now has a real front door
+again (denial-screen code input + "Have an invite code?" in the Create
+modal — the old JoinPrivateRoomModal/Navbar.tsx were orphaned; Navbar.tsx
+deleted). **0 followers/friends rooms exist yet**, so the earlier
+bypass window was never triggered.
+
+**Clipping overhaul (deployed).** ✂ on a replay opens **ClipEditor** — a
+Twitch-style trim panel (last ~30s pre-selected, drag in/out handles,
+live-looping preview, inline title). Clips get their own **/clips/<id>**
+page with Share (copy link), **Download** (client-side HLS→MP4 via
+lib/clipDownload + mux.js — snaps to segment boundaries; uploaded clips
+save directly), and **Post to community**. ClipEmbed renders any
+/clips/<uuid> link in a post body inline. NOTE: download only works on
+the real agorasphere.net origin — R2 CORS blocks localhost.
+
+**Feed replays (20260871, deployed).** get_home_feed gained a 'replay'
+kind: ended rooms with a recording join the ranked stream (paginated by
+ended_at; live/scheduled stay page-1-only), scored by affinity+recency.
+FeedPage renders them as a horizontal card (thumbnail + REPLAY badge +
+"Watch replay" → /replays). Feed needs a signed-in session to view.
+
+**Community ⋯ options menu (20260867, deployed).** Three-dots at the far
+RIGHT of a board title (portal-rendered — the header card's
+overflow:hidden + backdrop-filter would clip a normal dropdown): Copy
+link, Mute/Unmute, Leave, Block/Unblock. Block = community_blocks table
++ set_community_block RPC (leaves the board, cancels join request, hides
+it from browse + the aggregate feed; direct visit still works so you can
+unblock). Owners can't block their own.
+
+**Copy / naming / content**
+- **karma → "Goatedness"** (display only; DB column stays `karma`).
+  Profile stats capitalized: Followers · Following · Goatedness.
+- **QUEUE section → "DAILY TOPICS"**; the per-question Join buttons say
+  **"Queue"** / "Queue — match now".
+- **Daily Topics pool seeded to ~605 active** (migrations 20260872 +
+  20260873, idempotent): politics/economics/foreign-policy/science-tech/
+  culture/**philosophy (0→populated)**/sports. get_debate_topics now
+  shows **12 per category/day** (20260874, was 6). One orphan row has
+  topic_key='ethics' (invalid category — surfaces nowhere; reassign to
+  philosophy sometime).
+
+**Smaller UI**
+- Profile column centers in the space beside the collapsed rail; the
+  sidebar active pill is mirrored (keyed to --sidebar-width). POPULAR
+  ROOMS header + MessagesDock accents + Communities buttons unified on
+  the queue-pill blue #2f7fe0 (New community button = hero-pill yellow
+  #ffb700); solid disabled states added.
+- Profile **Discussions** is a thumbnail GRID (replay tiles), filtered
+  to **recorded discussions only**; the replay loading gate ("Entering
+  the Agora…" / "Opening the replay…") is replaced by an instant
+  layout **ReplaySkeleton** (no jump).
+- **Shorts hidden** (profile tab + Trending shelf removed; the Trending
+  short-player machinery stays dormant, clips untouched).
+- All profile links now go to the standalone /users/<username> page —
+  **UserProfileModal deleted**; ?profile=<id> and the agora:profile event
+  resolve to it. The **Create** button routes signed-out users to /login.
+- **TTS overlay fix** (src/lib/voice/tts.ts): a scoped unhandledrejection
+  guard swallows the ML-runtime's floating rejections during model load
+  (they were tripping Next's dev error overlay even though TTS falls back
+  to the OS voice); WebGPU→WASM device fallback added. Dev-only; benign.
+
+**Still open (pre-launch, in rough priority)**
+1. **Enable the GoTrue password-verification hook** (Supabase → Auth →
+   Hooks → public.hook_password_verification) — until on, a 2FA user's
+   password alone can mint a session via the direct auth endpoint.
+2. **Enable leaked-password protection** (Auth settings — one click).
+3. **Add a Content-Security-Policy** (defense-in-depth behind the XSS
+   escaping — next.config has no headers, no middleware).
+4. **Rate limiting** on auth + write endpoints; **moderation queue /
+   blocklist** on posts/comments/DMs — neither exists.
+5. **Rotate secrets** (R2 token pair, Twitch key, NewsData key).
+6. LiveKit webhook still unconfigured; recording-length bug still
+   unverified (both carried from last session).
+7. Founders' signed-in QA: private-room access loop (create friends-only
+   → non-friend hits gate → friend enters → invite code admits an
+   outsider), clip happy-path (cut → download on prod → post), feed
+   replay cards, community Block/Leave/Mute.
+8. Low: 3 extensions in public schema; the 'ethics' orphan topic.
+
+---
+
+
+## 08-25→08-26 session digest (prior session)
 
 **REPO MOVED: `/Users/jordanjaca/Agora`** (fresh clone). macOS TCC
 revoked Downloads access mid-session on 08-26; the old
