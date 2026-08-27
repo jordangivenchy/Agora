@@ -344,7 +344,7 @@ export default function FeedPage({ open, onClose }: Props) {
               {r.motion}
             </p>
             <p className="m-0 mt-1 text-[11px] flex items-center gap-2 flex-wrap">
-              <span style={{ color: "#4a9eff", fontWeight: 600 }}>▶ Watch replay</span>
+              <span style={{ color: "#4a9eff", fontWeight: 600 }}>▶ Watch discussion</span>
               {topic && (
                 <span className="rounded-full" style={{ fontSize: 9.5, padding: "1px 7px", background: `${topic.color}22`, border: `0.5px solid ${topic.color}66`, color: topic.color, fontWeight: 600 }}>
                   {topic.label}
