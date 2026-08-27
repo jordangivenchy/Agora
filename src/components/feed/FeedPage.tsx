@@ -320,7 +320,7 @@ export default function FeedPage({ open, onClose }: Props) {
           className="p-3 mb-3 flex gap-3 items-center cursor-pointer"
           style={card}
         >
-          <div style={{ position: "relative", width: 116, height: 66, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b" }}>
+          <div style={{ position: "relative", width: 116, height: 66, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {r.thumbnail_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -332,7 +332,6 @@ export default function FeedPage({ open, onClose }: Props) {
                 <Icon name="play" size={13} style={{ fill: "#fff", marginLeft: 2 }} />
               </span>
             </span>
-            <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(47,127,224,0.92)", color: "#fff", fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", padding: "2px 6px", borderRadius: 5 }}>DISCUSSION</span>
           </div>
           <div className="flex-1 min-w-0">
             <Reason text={it.reason} />
