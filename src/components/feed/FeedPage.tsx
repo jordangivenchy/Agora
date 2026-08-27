@@ -318,7 +318,7 @@ export default function FeedPage({ open, onClose }: Props) {
           onClick={() => { window.location.href = replayPath(r); }}
           onKeyDown={(e) => { if (e.key === "Enter") window.location.href = replayPath(r); }}
           className="p-3 mb-3 flex gap-3 items-center cursor-pointer"
-          style={card}
+          style={{ ...card, padding: 12 }}
         >
           <div style={{ position: "relative", width: 116, height: 66, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {r.thumbnail_url ? (
