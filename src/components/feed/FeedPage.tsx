@@ -332,7 +332,7 @@ export default function FeedPage({ open, onClose }: Props) {
                 <Icon name="play" size={13} style={{ fill: "#fff", marginLeft: 2 }} />
               </span>
             </span>
-            <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(47,127,224,0.92)", color: "#fff", fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", padding: "2px 6px", borderRadius: 5 }}>REPLAY</span>
+            <span style={{ position: "absolute", top: 6, left: 6, background: "rgba(47,127,224,0.92)", color: "#fff", fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", padding: "2px 6px", borderRadius: 5 }}>DISCUSSION</span>
           </div>
           <div className="flex-1 min-w-0">
             <Reason text={it.reason} />

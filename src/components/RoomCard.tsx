@@ -79,7 +79,7 @@ export default function RoomCard({ room: r, size = 168 }: { room: RoomCardRoom; 
           <span style={badge("#ef4444")}>LIVE</span>
         ) : r.status === "ended" ? (
           <span style={badge(r.recording_url ? "rgba(74,158,255,0.92)" : "rgba(60,60,70,0.92)")}>
-            {r.recording_url ? "REPLAY" : "ENDED"}
+            {r.recording_url ? "DISCUSSION" : "ENDED"}
           </span>
         ) : scheduled ? (
           <span style={badge("rgba(139,92,246,0.85)")}>SCHEDULED</span>
