@@ -55,20 +55,59 @@ function supportsKokoro(): boolean {
   return typeof WebAssembly === "object";
 }
 
+/* onnxruntime-web / transformers.js occasionally emit a FLOATING rejected
+   promise while probing execution providers (e.g. a WebGPU op that must
+   fall back to CPU). We don't own that promise, so our try/catch can't
+   see it — it surfaces as an unhandled rejection (Next's dev error
+   overlay, or a prod error reporter). This installs a narrowly-scoped
+   guard, active only while a model load is in flight, that swallows just
+   those library rejections and lets everything else through. */
+function withOnnxRejectionsSuppressed<T>(run: () => Promise<T>): Promise<T> {
+  if (typeof window === "undefined") return run();
+  const isLibNoise = (reason: unknown): boolean => {
+    const s = String((reason as { message?: string })?.message ?? reason ?? "").toLowerCase();
+    return /onnxruntime|execution provider|inferencesession|transformers|kokoro|wasm|webgpu/.test(s);
+  };
+  const onReject = (e: PromiseRejectionEvent) => {
+    if (isLibNoise(e.reason)) {
+      e.preventDefault();
+      console.warn("[voice] suppressed ML-runtime rejection during load:", e.reason);
+    }
+  };
+  window.addEventListener("unhandledrejection", onReject);
+  return run().finally(() => {
+    // Keep the guard a moment longer for late-arriving rejections.
+    setTimeout(() => window.removeEventListener("unhandledrejection", onReject), 4000);
+  });
+}
+
 async function loadKokoro(): Promise<KokoroLike | null> {
   if (!supportsKokoro()) return null;
-  try {
-    const { KokoroTTS } = await import("kokoro-js");
-    const hasWebGPU = "gpu" in navigator;
-    const tts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
-      dtype: hasWebGPU ? "fp32" : "q8",
-      device: hasWebGPU ? "webgpu" : "wasm",
-    });
-    return tts as unknown as KokoroLike;
-  } catch (err) {
-    console.warn("[voice] Kokoro unavailable, staying on browser TTS:", err);
+  return withOnnxRejectionsSuppressed(async () => {
+    let KokoroTTS: { from_pretrained: (id: string, opts: object) => Promise<unknown> };
+    try {
+      ({ KokoroTTS } = await import("kokoro-js"));
+    } catch (err) {
+      console.warn("[voice] kokoro-js failed to load, staying on browser TTS:", err);
+      return null;
+    }
+    // Try the fast path (WebGPU) first when available, then fall back to
+    // WASM before giving up — a WebGPU hiccup shouldn't drop Kokoro.
+    const attempts: Array<{ dtype: string; device: string }> =
+      "gpu" in navigator
+        ? [{ dtype: "fp32", device: "webgpu" }, { dtype: "q8", device: "wasm" }]
+        : [{ dtype: "q8", device: "wasm" }];
+    for (const opt of attempts) {
+      try {
+        const tts = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", opt);
+        return tts as unknown as KokoroLike;
+      } catch (err) {
+        console.warn(`[voice] Kokoro ${opt.device} load failed:`, err);
+      }
+    }
+    console.warn("[voice] Kokoro unavailable, staying on browser TTS");
     return null;
-  }
+  });
 }
 
 /** Begin downloading/compiling the model. Safe to call repeatedly. */
