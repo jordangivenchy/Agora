@@ -335,12 +335,12 @@ export default function FeedPage({ open, onClose }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <Reason text={it.reason} />
-            <p className="m-0 text-[10.5px] flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)" }}>
+            <p className="m-0 text-[14px] font-medium" style={{ color: "#eeeef5", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {r.motion}
+            </p>
+            <p className="m-0 mt-1 text-[10.5px] flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)" }}>
               {r.host && authorChip(r.host.id, r.host.username, r.host.display_name ?? null, r.host.avatar_url)}
               {r.community && <><span>·</span><span style={{ color: "#e2b96b" }}>{r.community.name}</span></>}
-            </p>
-            <p className="m-0 mt-1 text-[14px] font-medium" style={{ color: "#eeeef5", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-              {r.motion}
             </p>
             <p className="m-0 mt-1 text-[11px] flex items-center gap-2 flex-wrap">
               <span style={{ color: "#4a9eff", fontWeight: 600 }}>▶ Watch discussion</span>
