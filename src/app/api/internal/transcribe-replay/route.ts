@@ -64,6 +64,31 @@ async function fetchChunkAac(segments: HlsSegment[]): Promise<Uint8Array> {
   return out;
 }
 
+const FALLBACK_MODEL = "gemini-2.0-flash";
+
+/* 503/429 mean the model is momentarily out of capacity — wait and
+   retry, then try the pinned fallback model before giving up. */
+async function transcribeChunkResilient(
+  aac: Uint8Array,
+  apiKey: string,
+  model: string
+): Promise<{ lines: Array<{ t: number; text: string }>; model: string }> {
+  let lastErr: unknown;
+  for (const m of model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL]) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return { lines: await transcribeChunk(aac, apiKey, m), model: m };
+      } catch (e) {
+        lastErr = e;
+        const msg = String(e instanceof Error ? e.message : e);
+        if (!/gemini_(503|429)/.test(msg)) break; // non-capacity error: next model
+        await new Promise((r) => setTimeout(r, 8000 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function transcribeChunk(
   aac: Uint8Array,
   apiKey: string,
@@ -218,11 +243,13 @@ export async function POST(request: NextRequest) {
 
     const chunks = chunkSegments(playlist.segments, CHUNK_SECONDS);
     const lines: PolishedLine[] = [];
+    let usedModel = model;
     for (const chunk of chunks) {
       const chunkOffset = chunk[0].offset;
       const aac = await fetchChunkAac(chunk);
       if (aac.length < 1000) continue; // silent/empty chunk
-      const raw = await transcribeChunk(aac, apiKey, model);
+      const { lines: raw, model: m } = await transcribeChunkResilient(aac, apiKey, model);
+      usedModel = m;
       for (const l of raw) {
         const videoT = chunkOffset + l.t;
         /* Store offsets in the recording_started_at frame — the same one
@@ -254,7 +281,7 @@ export async function POST(request: NextRequest) {
       .from("replay_transcripts")
       .update({
         status: "done",
-        model,
+        model: usedModel,
         error: null,
         lines: lines as unknown as object,
         updated_at: new Date().toISOString(),
