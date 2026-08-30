@@ -10,6 +10,7 @@ const BETA_EXEMPT = [
   "/api/beta",
   "/api/webhook",
   "/api/cron",
+  "/api/internal", // pg_net webhooks (room-ended, transcribe-replay) — Bearer-authed
   "/api/email", // one-click unsubscribe links land logged-out
   "/api/health", // integration status booleans only — needed for machine checks
 
