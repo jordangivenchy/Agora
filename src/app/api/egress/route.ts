@@ -102,11 +102,12 @@ export async function POST(request: NextRequest) {
       if (room.status !== "live") {
         return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
       }
-      /* Followers/friends rooms must not broadcast: the HLS playlist sits
-         on a public bucket at a room-id-derived URL, so any link-holder
-         could watch it, bypassing the access gate. These rooms are small
-         by nature (no overflow), so skipping HLS costs nothing. */
-      if (room.is_private && (room.access_mode === "followers" || room.access_mode === "friends")) {
+      /* Followers/friends/community rooms must not broadcast: the HLS
+         playlist sits on a public bucket at a room-id-derived URL, so any
+         link-holder could watch it, bypassing the access gate. These
+         rooms are small by nature (no overflow), so skipping HLS costs
+         nothing. */
+      if (room.is_private && ["followers", "friends", "community"].includes(room.access_mode)) {
         return NextResponse.json({ error: "private_no_broadcast" }, { status: 409 });
       }
       /* VOD gating: recording is a host choice (Settings → Recordings),
