@@ -89,7 +89,7 @@ async function transcribeChunk(
             ],
           },
         ],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 },
+        generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 65536 },
       }),
     }
   );
@@ -102,7 +102,18 @@ async function transcribeChunk(
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error("gemini_bad_json");
+    /* Long chunks can truncate mid-array — salvage every complete
+       element rather than losing the whole chunk. */
+    const cut = text.lastIndexOf("}");
+    if (cut > 0) {
+      try {
+        parsed = JSON.parse(text.slice(0, cut + 1).replace(/,\s*$/, "") + "]");
+      } catch {
+        throw new Error("gemini_bad_json");
+      }
+    } else {
+      throw new Error("gemini_bad_json");
+    }
   }
   if (!Array.isArray(parsed)) return [];
   return parsed
