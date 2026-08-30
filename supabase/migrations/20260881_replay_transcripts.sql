@@ -54,9 +54,10 @@ begin
     left join public.replay_transcripts t on t.room_id = dr.id
     where dr.status = 'ended'
       and dr.recording_url is not null
-      and dr.recording_ended_at is not null
-      and dr.recording_ended_at < now() - interval '2 minutes'
-      and dr.recording_ended_at > now() - interval '30 days'
+      -- recording_ended_at is missing on rooms whose egress leaked
+      -- (pre-20260879); the room's own end time is a safe stand-in.
+      and coalesce(dr.recording_ended_at, dr.ended_at) < now() - interval '2 minutes'
+      and coalesce(dr.recording_ended_at, dr.ended_at) > now() - interval '30 days'
       and (
         t.room_id is null
         or (t.status in ('queued', 'failed') and t.attempts < 3 and t.updated_at < now() - interval '10 minutes')
