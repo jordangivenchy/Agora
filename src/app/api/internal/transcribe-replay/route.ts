@@ -64,7 +64,7 @@ async function fetchChunkAac(segments: HlsSegment[]): Promise<Uint8Array> {
   return out;
 }
 
-const FALLBACK_MODEL = "gemini-2.0-flash";
+const FALLBACK_MODEL = "gemini-2.5-flash";
 
 /* 503/429 mean the model is momentarily out of capacity — wait and
    retry, then try the pinned fallback model before giving up. */
