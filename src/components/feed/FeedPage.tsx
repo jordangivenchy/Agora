@@ -22,6 +22,7 @@ import RoomCard, { type RoomCardRoom } from "@/components/RoomCard";
 import UserAvatar from "@/components/UserAvatar";
 import PostCard, { RepostEmbed, authorLabel, timeAgo, type PostRow } from "@/components/community/PostCard";
 import PeopleSuggestions from "@/components/people/PeopleSuggestions";
+import FeedRail from "@/components/feed/FeedRail";
 import { useUserMenu } from "@/components/userMenuContext";
 
 interface Props {
@@ -317,15 +318,15 @@ export default function FeedPage({ open, onClose }: Props) {
           tabIndex={0}
           onClick={() => { window.location.href = replayPath(r); }}
           onKeyDown={(e) => { if (e.key === "Enter") window.location.href = replayPath(r); }}
-          className="p-3 mb-3 flex gap-3 items-center cursor-pointer"
-          style={{ ...card, padding: 12 }}
+          className="p-3 mb-3 flex gap-4 items-center cursor-pointer"
+          style={{ ...card, padding: 18 }}
         >
-          <div style={{ position: "relative", width: 116, height: 66, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "relative", width: 208, height: 117, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {r.thumbnail_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <UserAvatar size={116} radius={0} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
+              <UserAvatar size={208} radius={0} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
             )}
             <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.22)" }}>
               <span style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(10,10,14,0.72)", border: "0.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -335,7 +336,7 @@ export default function FeedPage({ open, onClose }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <Reason text={it.reason} />
-            <p className="m-0 text-[14px] font-medium" style={{ color: "#eeeef5", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            <p className="m-0 text-[15.5px] font-medium" style={{ color: "#eeeef5", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
               {r.motion}
             </p>
             <p className="m-0 mt-1 text-[10.5px] flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)" }}>
@@ -405,7 +406,7 @@ export default function FeedPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="max-w-[860px] mx-auto px-6 py-5">
+      <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
         <div className="flex items-center gap-4 mb-5 flex-wrap">
           <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
             Your feed
@@ -443,15 +444,17 @@ export default function FeedPage({ open, onClose }: Props) {
         )}
 
         {userId && (
-          <>
+          <div className="flex gap-5 items-start">
+          <div className="flex-1 min-w-0">
             {error && (
               <p className="text-[12px] px-4 py-3 mb-3 rounded-xl" style={{ background: "rgba(226,120,120,0.08)", border: "0.5px solid rgba(226,120,120,0.3)", color: "#f09595" }}>
                 {error}
               </p>
             )}
 
+            {/* Small screens only — on lg+ the rail's Live block covers this. */}
             {live.length > 0 && (
-              <section className="mb-5">
+              <section className="mb-5 lg:hidden">
                 <p className="m-0 mb-2 text-[12px] font-semibold inline-flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.7)" }}>
                   <span style={{ color: "#ef4444" }}>●</span> Live now
                 </p>
@@ -521,7 +524,9 @@ export default function FeedPage({ open, onClose }: Props) {
                 {loadingMore ? "Loading…" : "Load more"}
               </button>
             )}
-          </>
+          </div>
+          <FeedRail userId={userId} />
+          </div>
         )}
       </div>
     </div>

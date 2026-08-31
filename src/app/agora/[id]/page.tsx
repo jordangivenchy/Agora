@@ -27,6 +27,7 @@ import { CallGallery, CallMultiSpeaker, type LayoutTile } from "@/components/ago
 import HostControls from "@/components/agora/HostControls";
 import HlsPlayer, { HlsBroadcastSurface } from "@/components/agora/HlsPlayer";
 import DebateReplay from "@/components/agora/DebateReplay";
+import SiteChrome from "@/components/SiteChrome";
 import { roomPath } from "@/lib/urls";
 import InvitePrompt from "@/components/agora/InvitePrompt";
 import ReportModal, { type ReportTarget } from "@/components/ReportModal";
@@ -100,7 +101,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      (below) tells the two apart and drives the denial screen. */
   const [roomUnreadable, setRoomUnreadable] = useState(false);
   const [deniedGate, setDeniedGate] = useState<
-    { motion: string; host: string | null; mode: string | null } | null
+    { motion: string; host: string | null; mode: string | null; communityName: string | null } | null
   >(null);
   /* Invite-code entry on the denial screen — the code is the key, and on
      success join_private_room seats us, so a refetch walks straight in. */
@@ -485,7 +486,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         fetchAll();
         return;
       }
-      setDeniedGate({ motion: g.motion, host: g.host_username, mode: g.access_mode });
+      setDeniedGate({ motion: g.motion, host: g.host_username, mode: g.access_mode, communityName: g.community_name ?? null });
     });
     return () => {
       stale = true;
@@ -1098,7 +1099,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         <p className="m-0 mt-3 text-[13px]" style={{ color: "#c0c0c8", maxWidth: 480, lineHeight: 1.6 }}>
           {deniedGate.mode === "friends"
             ? `This room is open to ${who}'s friends only.`
-            : `This room is open to people who follow ${who}.`}
+            : deniedGate.mode === "followers"
+              ? `This room is open to people who follow ${who}.`
+              : deniedGate.mode === "community"
+                ? `This room is for members of ${deniedGate.communityName ?? "its community"} — join the board to enter.`
+                : "This room is invite-only — enter the code to join."}
           {!currentUser && " Sign in if that's you."}
         </p>
         {currentUser ? (
@@ -1185,7 +1190,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   }
 
   if ((arrivedEnded || showReplay) && !broadcast) {
-    return <DebateReplay roomId={roomId} initialRoom={room} />;
+    // Ended rooms get the shared chrome (navbar + sidebar) like the
+    // /replays route; the live amphitheater below stays chrome-free.
+    return (
+      <SiteChrome>
+        <div className="replay-beside-sidebar">
+          <DebateReplay roomId={roomId} initialRoom={room} />
+        </div>
+      </SiteChrome>
+    );
   }
 
   if (gated && opensAtMs !== null) {
@@ -1468,7 +1481,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             <p>
               The host closed the stage.
               {room.recording_url
-                ? " The replay will be available shortly — the recording finalizes a few seconds after the stream stops."
+                ? " The recording will be available shortly — it finalizes a few seconds after the stream stops."
                 : " The transcript and discussion are open now."}
             </p>
             <div className="ag-ended-actions">
@@ -1480,7 +1493,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   setShowReplay(true);
                 }}
               >
-                {room.recording_url ? "Open the replay" : "Transcript & discussion"}
+                {room.recording_url ? "Watch the discussion" : "Transcript & discussion"}
               </button>
               <button
                 className="ag-invite-decline"

@@ -7,6 +7,7 @@ import type { IconName } from "@/components/icons";
 import { pathFor } from "@/lib/routes";
 import { roomPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
+import { slugify } from "@/lib/communityUrls";
 
 export type NotifRow = {
   id: string;
@@ -37,6 +38,7 @@ export const DEBATE_TYPES = new Set([
 ]);
 export const POST_TYPES = new Set([
   "community_post", "post_comment", "post_reply", "post_upvotes", "comment_upvotes", "repost",
+  "join_request", "join_approved",
 ]);
 export const MENTION_TYPES = new Set(["mention", "new_follower", "friend_accepted"]);
 
@@ -66,6 +68,8 @@ export function notifIcon(type: string): IconName {
     case "community_post": return "pencil";
     case "community_debate": return "landmark";
     case "mention": return "at-sign";
+    case "join_request": return "user-plus";
+    case "join_approved": return "check";
     default: return "bell";
   }
 }
@@ -156,6 +160,10 @@ export function notifText(n: NotifRow, now: Date = new Date()): string {
       const m = metaMilestone(n);
       return `Your comment on ${post} hit ${m ?? "a new"} upvotes`;
     }
+    case "join_request":
+      return `${actorPhrase(n)} applied to join ${(n.meta?.community_name as string | undefined) ?? "your community"}`;
+    case "join_approved":
+      return `You're in — your application to ${(n.meta?.community_name as string | undefined) ?? "the community"} was approved`;
     default:
       return "New activity";
   }
@@ -202,6 +210,11 @@ export function notifHref(n: NotifRow): string | null {
          with no username joined) redirects there via the homepage. */
       if (n.actor_username) return `/users/${encodeURIComponent(n.actor_username)}`;
       return n.actor_id ? `/?profile=${n.actor_id}` : null;
+    case "join_request":
+    case "join_approved": {
+      const name = n.meta?.community_name as string | undefined;
+      return name ? pathFor.community(slugify(name)) : null;
+    }
     default:
       return null;
   }
@@ -242,6 +255,8 @@ export const PREF_GROUPS: PrefGroup[] = [
       { type: "post_upvotes", label: "Post milestones", sub: "When a post hits 5, 25 or 100 upvotes" },
       { type: "comment_upvotes", label: "Comment milestones", sub: "When a comment hits 5 or 25 upvotes" },
       { type: "repost", label: "Reposts", sub: "When someone shares your post to another community" },
+      { type: "join_request", label: "Applications", sub: "When someone applies to a board you moderate" },
+      { type: "join_approved", label: "Application approved", sub: "When a board you applied to lets you in" },
     ],
   },
   {

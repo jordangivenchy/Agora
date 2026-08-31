@@ -362,6 +362,10 @@ function newsSlideHTML(c, i, total) {
         </div>
         ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
         ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read at ${escHTML((c.sources && c.sources[0] && c.sources[0].name) || 'source')} ↗</button>` : ''}
+        <button class="carousel-watch-btn carousel-queue-btn${(window.__agoraHeroQueue || {})[c.headline] === 'queued' ? ' queued' : ''}"
+          data-headline="${escHTML(c.headline)}" data-category="${escHTML(c.category || '')}" data-url="${escHTML(c.url || '')}">
+          ${(window.__agoraHeroQueue || {})[c.headline] === 'queued' ? 'In queue — tap to leave' : 'Queue a discussion'}
+        </button>
       </div>
     </div>`;
 }
@@ -468,7 +472,37 @@ function renderCarousel() {
       }
     });
   });
+
+  // "Queue a discussion" — React (page.tsx) owns the RPC + match polling;
+  // the hero just raises the event and paints whatever state comes back.
+  track.querySelectorAll('.carousel-queue-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (btn.dataset.busy) return;
+      window.dispatchEvent(new CustomEvent('agora:queue-headline', {
+        detail: { headline: btn.dataset.headline, category: btn.dataset.category, url: btn.dataset.url },
+      }));
+    });
+  });
 }
+
+// Queue-state paint: a global map survives the 30s carousel re-renders
+// (newsSlideHTML reads it for the initial label).
+window.__agoraHeroQueue = window.__agoraHeroQueue || {};
+window.addEventListener('agora:hero-queue-state', (e) => {
+  const d = e.detail || {};
+  if (!d.headline) return;
+  window.__agoraHeroQueue[d.headline] = d.state;
+  document.querySelectorAll('.carousel-queue-btn').forEach(btn => {
+    if (btn.dataset.headline !== d.headline) return;
+    delete btn.dataset.busy;
+    btn.classList.toggle('queued', d.state === 'queued');
+    if (d.state === 'busy') { btn.dataset.busy = '1'; btn.textContent = '…'; }
+    else if (d.state === 'queued') btn.textContent = 'In queue — tap to leave';
+    else if (d.state === 'error') btn.textContent = d.message || 'Couldn’t queue — try again';
+    else btn.textContent = 'Queue a discussion';
+  });
+});
 
 let carouselSnapTimer = null;
 let carouselSnapPending = false;

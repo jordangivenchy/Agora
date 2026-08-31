@@ -46,6 +46,6 @@ export function digestIntro(d: DigestData): string {
 export function replaysLine(n: number): string | null {
   if (n <= 0) return null;
   return n === 1
-    ? "1 discussion from someone you follow was recorded this week — the replay is waiting."
-    : `${n} discussions from people you follow were recorded this week — the replays are waiting.`;
+    ? "1 discussion from someone you follow was recorded this week — the recording is waiting."
+    : `${n} discussions from people you follow were recorded this week — the recordings are waiting.`;
 }

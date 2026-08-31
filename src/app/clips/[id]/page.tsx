@@ -10,6 +10,7 @@ import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import ReplayPlayer from "@/components/agora/ReplayPlayer";
+import SiteChrome from "@/components/SiteChrome";
 import UserAvatar from "@/components/UserAvatar";
 import { Icon } from "@/components/icons";
 import { displayName } from "@/lib/names";
@@ -158,10 +159,9 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   const author = clip?.uploader ? displayName(clip.uploader) : null;
 
   return (
-    <main style={{ minHeight: "100vh", background: "#0a0a0e", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
-        <a href="/" style={{ fontSize: 12.5, color: "#8b8b94", textDecoration: "none" }}>← Back to the Agora</a>
-
+    <SiteChrome>
+    <main className="replay-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "10px 20px 60px" }}>
         <h1 style={{ margin: "14px 0 4px", fontSize: 24, fontWeight: 700, color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.01em" }}>
           {clip ? clip.title || "Clip" : " "}
         </h1>
@@ -245,6 +245,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
         )}
       </div>
     </main>
+    </SiteChrome>
   );
 }
 

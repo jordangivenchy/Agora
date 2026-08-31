@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
           url,
         });
       } else {
-        payloads.set(r.user_id, { title: "Your replay is ready", body: `${motion} — watch it back.`, url });
+        payloads.set(r.user_id, { title: "Your recording is ready", body: `${motion} — watch it back.`, url });
       }
     }
 

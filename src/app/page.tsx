@@ -15,7 +15,7 @@ import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
 import NotificationsBell from "@/components/NotificationsBell";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
-import NewsPage from "@/components/NewsPage";
+import NewsPage, { topicFor } from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
 import SearchPage, { type SearchKeyHandler } from "@/components/search/SearchPage";
 import useNavbarSearch from "@/components/search/useNavbarSearch";
@@ -631,6 +631,57 @@ export default function Home() {
       window.removeEventListener("agora:logout", onLogout);
     };
   }, [supabase, onSidebarNavigate, openCreate, goToProfileById]);
+
+  /* Hero "Queue a discussion": the vanilla carousel raises
+     agora:queue-headline; this owns the RPC + the match poll and answers
+     with agora:hero-queue-state so the button can paint itself. Same
+     queue_for_headline / check_topic_match flow as the News panel. */
+  useEffect(() => {
+    const topicByHeadline = new Map<string, string>();
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    const stopPoll = () => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
+    const ensurePoll = () => {
+      if (pollTimer || topicByHeadline.size === 0) return;
+      pollTimer = setInterval(async () => {
+        const { data: roomId } = await supabase.rpc("check_topic_match");
+        if (roomId) { stopPoll(); window.location.href = `/agora/${roomId}`; }
+      }, 2500);
+    };
+    const emit = (headline: string, state: string, message?: string) =>
+      window.dispatchEvent(new CustomEvent("agora:hero-queue-state", { detail: { headline, state, message } }));
+
+    const onQueueHeadline = async (e: Event) => {
+      const d = (e as CustomEvent).detail as { headline?: string; category?: string; url?: string } | undefined;
+      const headline = d?.headline;
+      if (!headline) return;
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) { window.location.href = "/login"; return; }
+
+      const existing = topicByHeadline.get(headline);
+      emit(headline, "busy");
+      if (existing) {
+        await supabase.rpc("leave_topic_queue", { p_topic: existing });
+        topicByHeadline.delete(headline);
+        if (topicByHeadline.size === 0) stopPoll();
+        emit(headline, "idle");
+        return;
+      }
+      const { data, error } = await supabase.rpc("queue_for_headline", {
+        p_question: headline,
+        p_topic_key: topicFor(d?.category || null),
+        p_stance: "PRO",
+        p_source_url: d?.url || null,
+      });
+      if (error) { emit(headline, "error", error.message.replace(/^[a-z_]+:\s*/, "")); return; }
+      const res = data as { status?: string; room_id?: string; topic_id?: string } | null;
+      if (res?.status === "matched" && res.room_id) { window.location.href = `/agora/${res.room_id}`; return; }
+      if (res?.topic_id) { topicByHeadline.set(headline, res.topic_id); emit(headline, "queued"); ensurePoll(); }
+      else emit(headline, "idle");
+    };
+
+    window.addEventListener("agora:queue-headline", onQueueHeadline);
+    return () => { window.removeEventListener("agora:queue-headline", onQueueHeadline); stopPoll(); };
+  }, [supabase]);
 
   return (
     <>

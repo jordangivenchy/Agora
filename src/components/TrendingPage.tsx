@@ -220,7 +220,7 @@ export default function TrendingPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="max-w-[1200px] mx-auto px-6 py-5">
+      <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
         <div className="flex items-center gap-4 mb-5">
           {activeShort && (
             <button

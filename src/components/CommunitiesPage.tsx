@@ -56,6 +56,7 @@ type Community = {
   description: string | null;
   rules: string | null;
   is_private: boolean;
+  application_prompt: string | null; // mod-written questions applicants must answer
   banner_url: string | null;
   avatar_url: string | null;
   members: number;
@@ -91,6 +92,7 @@ type Comment = {
 type JoinRequest = {
   user_id: string;
   created_at: string;
+  message: string | null;
   user: { username: string; display_name: string | null; avatar_url: string | null } | null;
 };
 
@@ -175,9 +177,9 @@ const pillGold: React.CSSProperties = {
 };
 const pillBlue: React.CSSProperties = {
   ...pillBase,
-  background: "rgba(74,158,255,0.14)",
-  border: "1px solid rgba(74,158,255,0.4)", color: "#9ccafd",
-  boxShadow: "0 3px 10px rgba(74,158,255,0.1)",
+  background: "#2f7fe0",
+  border: "none", color: "#fff",
+  boxShadow: "0 3px 10px rgba(47,127,224,0.25)",
 };
 const pillGreen: React.CSSProperties = {
   ...pillBase,
@@ -304,6 +306,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [repostFor, setRepostFor] = useState<Post | null>(null);
   const [repostCommunity, setRepostCommunity] = useState<string>("");
+
+  // Application to a private board — the message dialog.
+  const [applyFor, setApplyFor] = useState<Community | null>(null);
+  const [applyMessage, setApplyMessage] = useState("");
+  const [applyBusy, setApplyBusy] = useState(false);
   const [repostComment, setRepostComment] = useState("");
 
   // Comment images (one active composer at a time: root box or open reply)
@@ -326,6 +333,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [draftBookmarks, setDraftBookmarks] = useState("");
   const [openBookmarkGroup, setOpenBookmarkGroup] = useState<string | null>(null);
   const [draftPrivate, setDraftPrivate] = useState(false);
+  const [draftAppPrompt, setDraftAppPrompt] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
 
@@ -343,7 +351,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const [commRes, tagRes, reqRes, muteRes, blockRes] = await Promise.all([
       supabase
         .from("communities")
-        .select("id, name, kind, color, description, rules, is_private, banner_url, avatar_url, bookmarks, community_members(user_id, role, favorite)"),
+        .select("id, name, kind, color, description, rules, is_private, application_prompt, banner_url, avatar_url, bookmarks, community_members(user_id, role, favorite)"),
       supabase.from("community_tags").select("id, community_id, name, color"),
       uid
         ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid)
@@ -374,6 +382,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           description: c.description ?? null,
           rules: c.rules ?? null,
           is_private: !!c.is_private,
+          application_prompt: c.application_prompt ?? null,
           banner_url: c.banner_url ?? null,
           avatar_url: c.avatar_url ?? null,
           members: members.length,
@@ -650,7 +659,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     if (isMod) {
       const { data: reqs } = await supabase
         .from("community_join_requests")
-        .select("user_id, created_at, user:users!user_id(username, display_name, avatar_url)")
+        .select("user_id, created_at, message, user:users!user_id(username, display_name, avatar_url)")
         .eq("community_id", communityId);
       setJoinRequests((reqs ?? []) as unknown as JoinRequest[]);
     } else {
@@ -699,6 +708,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       setDraftRules(selectedCommunity.rules ?? "");
       setDraftBookmarks(formatBookmarks(selectedCommunity.bookmarks));
       setDraftPrivate(selectedCommunity.is_private);
+      setDraftAppPrompt(selectedCommunity.application_prompt ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedCommunity?.id, selectedCommunity?.my_role]);
@@ -1036,8 +1046,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         await supabase.from("community_join_requests").delete()
           .eq("community_id", c.id).eq("user_id", userId!);
       } else {
-        const { error: err } = await supabase.rpc("request_to_join", { p_community: c.id });
-        if (err) { setError(err.message); return; }
+        /* Application flow: the dialog collects an optional message and
+           submits request_to_join itself. */
+        setApplyFor(c);
+        setApplyMessage("");
+        return;
       }
     } else {
       await supabase.from("community_members").insert({ community_id: c.id, user_id: userId });
@@ -1120,6 +1133,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       p_description: draftDescription.trim() || "",
       p_rules: draftRules.trim() || "",
       p_is_private: selectedCommunity.my_role === "owner" ? draftPrivate : null,
+      p_application_prompt: draftAppPrompt.trim() || "",
     });
     if (!err) {
       const { error: bmErr } = await supabase.rpc("set_community_bookmarks", {
@@ -1131,7 +1145,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     setBusy(false);
     if (err) { setError(err.message); return; }
     loadCommunities();
-  }, [supabase, selectedCommunity, draftDescription, draftRules, draftBookmarks, draftPrivate, loadCommunities]);
+  }, [supabase, selectedCommunity, draftDescription, draftRules, draftBookmarks, draftPrivate, draftAppPrompt, loadCommunities]);
 
   /* Branding: banner (wide) and avatar (square-cropped) upload to the
      post-images bucket, then the guarded settings RPC stores the URL.
@@ -1667,7 +1681,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         background: "rgba(6,6,8,0.45)",
       }}
     >
-      <div className="max-w-[1200px] mx-auto px-6 py-5">
+      <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
@@ -1701,7 +1715,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#eeeef5", lineHeight: 1 }}>
               Communities
             </span>
-            <span style={{ display: "block", width: 28, height: 2, background: "#e2b96b", borderRadius: 2 }} />
           </span>
           <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.45)", paddingBottom: 2 }}>
             Boards for your school, team, or topic
@@ -1963,19 +1976,22 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       <Icon name="bookmark" size={14} style={{ fill: c.favorite ? "currentColor" : "none" }} />
                     </button>
                   )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleJoin(c); }}
-                    className="cursor-pointer text-[10px] px-2 py-1 rounded-md shrink-0"
-                    style={
-                      c.joined
-                        ? { background: "transparent", border: "0.5px solid rgba(0,184,148,0.4)", color: "#00b894", fontFamily: "inherit" }
-                        : c.requested
+                  {/* Membership needs no badge here — boards you've joined
+                      simply lose the Join button (leave via the board's
+                      own controls). */}
+                  {!c.joined && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleJoin(c); }}
+                      className="cursor-pointer text-[10px] px-2 py-1 rounded-md shrink-0"
+                      style={
+                        c.requested
                           ? { background: "transparent", border: "0.5px solid rgba(226,185,107,0.35)", color: "#e2b96b", fontFamily: "inherit" }
                           : { ...btnBlue, borderRadius: 6 }
-                    }
-                  >
-                    {c.joined ? "✓" : c.requested ? "Pending" : c.is_private ? "Request" : "Join"}
-                  </button>
+                      }
+                    >
+                      {c.requested ? "Pending" : c.is_private ? "Request" : "Join"}
+                    </button>
+                  )}
                 </div>
               );
               const sectionTitle = (label: string) => (
@@ -2343,7 +2359,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               /* ── feed ── */
               <div>
                 {/* community header — Reddit-style banner card */}
-                {selectedCommunity && (
+                {selectedCommunity && (<>
                   <div className="mb-3 overflow-hidden" style={card}>
                     {/* banner: custom image when set, else the community color.
                         Mods get a pencil (and ✕ when a custom image is set)
@@ -2484,19 +2500,17 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                             <Icon name="mic" size={13} /> Start a discussion
                           </button>
                         )}
-                        <button
-                          onClick={() => toggleJoin(selectedCommunity)}
-                          onMouseEnter={liftIn} onMouseLeave={liftOut}
-                          style={
-                            selectedCommunity.joined
-                              ? pillGreen
-                              : selectedCommunity.requested
-                                ? pillAmber
-                                : pillBlue
-                          }
-                        >
-                          {selectedCommunity.joined ? "✓ Joined" : selectedCommunity.requested ? "Pending" : selectedCommunity.is_private ? "Request to join" : "Join"}
-                        </button>
+                        {/* Members see no badge in the header — Leave lives in
+                            the ⋯ menu; the pill only exists to get you in. */}
+                        {!selectedCommunity.joined && (
+                          <button
+                            onClick={() => toggleJoin(selectedCommunity)}
+                            onMouseEnter={liftIn} onMouseLeave={liftOut}
+                            style={selectedCommunity.requested ? pillAmber : pillBlue}
+                          >
+                            {selectedCommunity.requested ? "Pending" : selectedCommunity.is_private ? "Request to join" : "Join"}
+                          </button>
+                        )}
                         {isMod && (
                           <button
                             onClick={() => setModOpen((v) => !v)}
@@ -2587,12 +2601,17 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </span>
                     </div>
 
-                    {/* mod panel — tidy sub-panels; banner & picture edit
-                        via the hover pencils on the header itself */}
+                    </div>
+                  </div>
+
+                    {/* mod panel — floats on the page itself (not inside the
+                        frosted header card) so the starfield shows through;
+                        each sub-panel carries its own dark translucent
+                        surface, deliberately unblurred. */}
                     {modOpen && isMod && (() => {
                       const panel: React.CSSProperties = {
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.06)",
+                        background: "rgba(10,10,13,0.55)",
+                        border: "1px solid rgba(255,255,255,0.08)",
                         borderRadius: 12,
                         padding: "12px 14px",
                       };
@@ -2627,7 +2646,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       const modsList = membersList.filter((m) => m.role === "owner" || m.role === "moderator");
                       const plainMembers = membersList.filter((m) => m.role === "member");
                       return (
-                      <div className="mt-4 pt-4 grid gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+                      <div className="mb-3 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
                         {/* moderators + activity */}
                         <div style={panel}>
                           {panelLabel("MODERATORS")}
@@ -2676,27 +2695,39 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         <BansPanel supabase={supabase} communityId={selectedCommunity.id} refreshKey={modRefresh} />
                         <ModLogPanel supabase={supabase} communityId={selectedCommunity.id} refreshKey={modRefresh} />
 
-                        {/* join requests */}
+                        {/* applications */}
                         {selectedCommunity.is_private && (
                           <div style={panel}>
-                            {panelLabel(`JOIN REQUESTS${joinRequests.length ? ` · ${joinRequests.length}` : ""}`)}
+                            {panelLabel(`APPLICATIONS${joinRequests.length ? ` · ${joinRequests.length}` : ""}`)}
                             {joinRequests.length === 0 ? (
-                              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No pending requests.</p>
-                            ) : joinRequests.map((r) => personRow(r.user_id, r.user, (
-                              <>
-                                <span className="text-[10px] shrink-0" style={{ color: "rgba(238,238,245,0.32)" }}>{timeAgo(r.created_at)}</span>
-                                <button onClick={() => handleRequest(r.user_id, true)}
-                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
-                                  style={{ background: "transparent", border: "0.5px solid rgba(0,184,148,0.4)", color: "#00b894", fontFamily: "inherit" }}>
-                                  Approve
-                                </button>
-                                <button onClick={() => handleRequest(r.user_id, false)}
-                                  className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
-                                  style={{ background: "transparent", border: "0.5px solid rgba(232,64,64,0.35)", color: "#e88", fontFamily: "inherit" }}>
-                                  Deny
-                                </button>
-                              </>
-                            )))}
+                              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No pending applications.</p>
+                            ) : joinRequests.map((r) => (
+                              <div key={r.user_id} className="py-1">
+                                {personRow(r.user_id, r.user, (
+                                  <>
+                                    <span className="text-[10px] shrink-0" style={{ color: "rgba(238,238,245,0.32)" }}>{timeAgo(r.created_at)}</span>
+                                    <button onClick={() => handleRequest(r.user_id, true)}
+                                      className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
+                                      style={{ background: "transparent", border: "0.5px solid rgba(0,184,148,0.4)", color: "#00b894", fontFamily: "inherit" }}>
+                                      Approve
+                                    </button>
+                                    <button onClick={() => handleRequest(r.user_id, false)}
+                                      className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
+                                      style={{ background: "transparent", border: "0.5px solid rgba(232,64,64,0.35)", color: "#e88", fontFamily: "inherit" }}>
+                                      Deny
+                                    </button>
+                                  </>
+                                ))}
+                                {r.message && (
+                                  <p className="m-0 mb-1 text-[11.5px]" style={{
+                                    color: "rgba(238,238,245,0.6)", fontStyle: "italic", lineHeight: 1.45,
+                                    paddingLeft: 34, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                                  }}>
+                                    &ldquo;{r.message}&rdquo;
+                                  </p>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
 
@@ -2727,6 +2758,21 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.38)" }}>
                             Bookmarks: <code>Label | URL</code> per line; a line starting with <code>##</code> begins a dropdown group.
                           </p>
+                          {(draftPrivate || selectedCommunity.is_private) && (
+                            <>
+                              <textarea
+                                className="w-full mt-2.5"
+                                style={{ ...inputStyle, minHeight: 56, resize: "vertical" }}
+                                maxLength={1000}
+                                placeholder={"Application questions — what should applicants tell you?\ne.g. What school are you from? Why do you want to join?"}
+                                value={draftAppPrompt}
+                                onChange={(e) => setDraftAppPrompt(e.target.value)}
+                              />
+                              <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.38)" }}>
+                                Shown to everyone who applies; when set, an application must answer it. Leave empty for a plain optional message.
+                              </p>
+                            </>
+                          )}
                           <div className="flex items-center gap-3 mt-2.5 flex-wrap">
                             {isOwner && (
                               <label className="flex items-center gap-1.5 text-[12px] cursor-pointer" style={{ color: "rgba(238,238,245,0.65)" }}>
@@ -2799,9 +2845,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </div>
                       );
                     })()}
-                    </div>
-                  </div>
-                )}
+                </>)}
 
                 {/* locked-out notice for private boards */}
                 {lockedOut ? (
@@ -3024,6 +3068,75 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       </div>
 
       {/* repost picker */}
+      {/* Application dialog — a private board is join-by-approval, so the
+          request carries a short optional pitch for the mods. */}
+      {applyFor && (
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)", zIndex: 80 }}
+          onClick={() => setApplyFor(null)}
+        >
+          <div
+            className="p-5 w-full mx-4"
+            style={{ ...card, maxWidth: 420, background: "rgba(14,14,17,0.97)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="m-0 mb-1 flex items-center gap-2 text-[15px] font-semibold" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif" }}>
+              <Icon name="lock" size={14} /> Apply to join {applyFor.name}
+            </p>
+            <p className="m-0 mb-3 text-[11.5px]" style={{ color: "rgba(238,238,245,0.5)" }}>
+              {applyFor.application_prompt
+                ? "A moderator reviews every application — answer their questions below."
+                : "A moderator reviews every application. A line about why you want in helps."}
+            </p>
+            {applyFor.application_prompt && (
+              <p className="m-0 mb-2 text-[12.5px]" style={{
+                color: "#e2b96b", lineHeight: 1.5, whiteSpace: "pre-wrap",
+                padding: "8px 10px", background: "rgba(226,185,107,0.07)",
+                border: "0.5px solid rgba(226,185,107,0.25)", borderRadius: 10,
+              }}>
+                {applyFor.application_prompt}
+              </p>
+            )}
+            <textarea
+              value={applyMessage}
+              onChange={(e) => setApplyMessage(e.target.value)}
+              maxLength={500}
+              placeholder={applyFor.application_prompt ? "Your answer…" : "Why do you want to join? (optional)"}
+              style={{ ...inputStyle, minHeight: 72, resize: "vertical", marginBottom: 12 }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  if (applyBusy) return;
+                  setApplyBusy(true);
+                  const { error: err } = await supabase.rpc("request_to_join", {
+                    p_community: applyFor.id,
+                    p_message: applyMessage.trim() || null,
+                  });
+                  setApplyBusy(false);
+                  if (err) { setError(err.message.replace(/^[a-z_]+:\s*/, "")); return; }
+                  setApplyFor(null);
+                  loadCommunities();
+                }}
+                disabled={applyBusy || (!!applyFor.application_prompt && !applyMessage.trim())}
+                className="cursor-pointer text-[12.5px] font-semibold px-4 py-2 disabled:opacity-50"
+                style={btnBlue}
+              >
+                {applyBusy ? "Sending…" : "Send application"}
+              </button>
+              <button
+                onClick={() => setApplyFor(null)}
+                className="cursor-pointer text-[12.5px] px-4 py-2"
+                style={btnGhost}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {repostFor && (
         <div
           className="fixed inset-0 flex items-center justify-center"

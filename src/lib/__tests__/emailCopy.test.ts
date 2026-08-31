@@ -68,9 +68,9 @@ describe("digest copy", () => {
       origin: "https://x.test", unsubUrl: "https://x.test/u",
     });
     expect(subject).toBe(DIGEST_SUBJECT);
-    for (const needle of ["Unread (4)", "Upcoming from people you follow", "Top posts this week", "12 upvotes", "3 comments", "1 new follower this week", "Live replays you missed"]) {
+    for (const needle of ["Unread (4)", "Upcoming from people you follow", "Top posts this week", "12 upvotes", "3 comments", "1 new follower this week", "Discussions you missed"]) {
       expect(html).toContain(needle);
-      expect(text.toLowerCase()).toContain(needle.split(" (")[0].toLowerCase().replace("live replays you missed", "replay is waiting"));
+      expect(text.toLowerCase()).toContain(needle.split(" (")[0].toLowerCase().replace("discussions you missed", "recording is waiting"));
     }
   });
 });

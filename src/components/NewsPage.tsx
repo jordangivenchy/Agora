@@ -41,7 +41,7 @@ type Story = {
 };
 
 /* NewsData categories → our topic keys (world desk → Foreign Policy). */
-function topicFor(category: string | null | undefined): string {
+export function topicFor(category: string | null | undefined): string {
   switch (category) {
     case "politics": return "politics-law";
     case "business": return "economics";

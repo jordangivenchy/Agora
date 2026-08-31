@@ -20,7 +20,6 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { Icon, type IconName } from "@/components/icons";
 import FollowListModal from "@/components/FollowListModal";
 import Wordmark from "@/components/Wordmark";
-import dynamic from "next/dynamic";
 import EditProfileModal from "@/components/EditProfileModal";
 import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -179,10 +178,6 @@ const card: React.CSSProperties = {
   borderRadius: 14,
 };
 
-/* The homepage's sidebar, loaded only on the standalone route (never the
-   in-room drawer) so mvp-home.css — imported inside it — stays off the
-   room page. */
-const HomeSidebar = dynamic(() => import("@/components/HomeSidebar"), { ssr: false });
 
 function timeAgo(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -684,28 +679,9 @@ export default function ProfileView({
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      {!embedded && (
-        <div className="flex items-center justify-between px-6 py-4">
-          <a href="/" className="no-underline">
-            <Wordmark size={20} />
-          </a>
-          <a href="/" style={{ color: "#8b8b94", fontSize: 13, textDecoration: "none" }}>
-            ← Back to the Agora
-          </a>
-        </div>
-      )}
-
-      {/* The homepage's glass sidebar on the standalone route; the
-          drawer inside a room stays sidebar-free. Hidden under lg so
-          phones keep the single column. */}
-      {!embedded && (
-        <div className="hidden lg:block">
-          <HomeSidebar
-            activeId={null}
-            onNavigate={(id) => router.push(pathFor.section(id))}
-          />
-        </div>
-      )}
+      {/* The wordmark/search header + glass sidebar now come from
+          SiteChrome on the /users route; the in-room drawer stays
+          chrome-free. */}
 
       <main
         className={
@@ -713,6 +689,9 @@ export default function ProfileView({
             ? "max-w-[860px] mx-auto px-6 pb-16"
             : "max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar"
         }
+        /* Breathing room between the fixed navbar and the banner card on
+           the standalone route (inline — the mvp reset eats pt- utilities). */
+        style={{ paddingTop: embedded ? 0 : 28 }}
       >
         {/* ── Banner. With a photo: everyone sees it. Without one: only the
                owner sees a dark grey placeholder with a hover "?" that opens
@@ -776,6 +755,8 @@ export default function ProfileView({
           className="p-6 flex gap-5 flex-wrap items-start"
           style={{
             ...card,
+            /* Tighter top pad pulls the name up toward the banner edge. */
+            paddingTop: 14,
             /* Above the (positioned) banner so the overlapping avatar paints on top. */
             position: "relative",
             zIndex: 1,
@@ -906,7 +887,9 @@ export default function ProfileView({
               buttons settle level with the stats row. */}
           <div className="flex flex-col items-end justify-between gap-3 shrink-0 relative self-stretch" ref={menuRef}>
             {socialLinks.length > 0 && (
-              <div className="flex items-center gap-1.5">
+              /* +4px rides the icon row down so its center sits on the
+                 name's cap line rather than the h1 box top. */
+              <div className="flex items-center gap-1.5" style={{ marginTop: 4 }}>
                 {socialLinks.map((url) => (
                   <a
                     key={url}
@@ -1206,7 +1189,7 @@ export default function ProfileView({
               emptyState(
                 "mic",
                 isSelf ? "No recorded discussions yet" : `${first} has no recorded discussions`,
-                isSelf ? "Recorded discussions become replays here — turn on recording in Settings before you host." : "Their recorded discussions will show up here as replays.",
+                isSelf ? "Recorded discussions are saved here — turn on recording in Settings before you host." : "Their recorded discussions will show up here.",
                 isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
               )
             ) : (
@@ -1273,7 +1256,7 @@ export default function ProfileView({
                             backdropFilter: "blur(4px)",
                           }}
                         >
-                          {live ? "● LIVE" : (<><Icon name="play" size={10} style={{ fill: "currentColor" }} /> {hasReplay ? "Replay" : "Ended"}</>)}
+                          {live ? "● LIVE" : (<><Icon name="play" size={10} style={{ fill: "currentColor" }} /> {hasReplay ? "Watch" : "Ended"}</>)}
                         </span>
                       </div>
                       {/* Body */}

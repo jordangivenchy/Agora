@@ -123,15 +123,15 @@ export function passwordChangedEmail(): { subject: string; html: string } {
 export function debateReplayReadyEmail(motion: string, replayUrl: string): { subject: string; html: string } {
   const safe = motion.replace(/</g, "&lt;");
   return {
-    subject: `Your replay is ready: ${motion}`,
+    subject: `Your recording is ready: ${motion}`,
     html: brandedEmail(
-      "Your discussion replay is ready",
+      "Your recorded discussion is ready",
       `<p style="font-size:15px;"><strong>&ldquo;${safe}&rdquo;</strong></p>
        <p>The recording has been finalized. Watch it back, read the transcript, and keep the conversation going in the discussion thread.</p>
        <p style="margin-top:20px;">
          <a href="${replayUrl}" style="display:inline-block;background:#4a9eff;color:#ffffff;
             padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600;">
-           Watch the replay →
+           Watch the discussion →
          </a>
        </p>`
     ),
@@ -231,7 +231,7 @@ export function weeklyDigestEmail(opts: {
   }
   const replays = replaysLine(d.replaysMissed);
   if (replays) {
-    parts.push(sectionHtml("Live replays you missed", `<p style="margin:0;">${esc(replays)} <a href="${esc(origin)}/" style="color:#4a9eff;text-decoration:none;">Browse replays →</a></p>`));
+    parts.push(sectionHtml("Discussions you missed", `<p style="margin:0;">${esc(replays)} <a href="${esc(origin)}/" style="color:#4a9eff;text-decoration:none;">Browse discussions →</a></p>`));
     textParts.push("", replays);
   }
 

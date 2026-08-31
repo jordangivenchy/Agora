@@ -1,8 +1,10 @@
-/* Declare the mvp-home layer BEFORE tailwind's layers: earliest-declared
-   layer loses conflicts, so the homepage stylesheet (when a route pulls
-   it in via profile-sidebar.css) can't out-cascade Tailwind utilities —
-   its universal *{margin:0;padding:0} reset was zeroing them. */
-@layer mvp-home;
+/* Pin the full layer order so mvp-home sits BETWEEN Tailwind's base
+   (preflight) and its utilities: the homepage stylesheet (when a route
+   pulls it in via home-sidebar.css) styles shared chrome like the navbar
+   — those rules must beat the preflight resets — while its own universal
+   *{margin:0;padding:0} reset still loses to Tailwind utilities (the
+   original reason it was layered at all). */
+@layer theme, base, mvp-home, components, utilities;
 @import "tailwindcss";
 
 :root {
@@ -1643,6 +1645,31 @@ html.reduce-motion .nav-sparkle {
           max(24px, (100vw - var(--sidebar-width, 220px) - 1100px) / 2)
       )
       16px !important;
+  }
+}
+
+/* SiteChrome routes: the content sits directly on the page ground —
+   no solid panel layer between it and the black backdrop, so the fixed
+   bar and the page read as one surface. */
+.site-chrome .dr-root {
+  background: transparent;
+}
+/* The navbar melts into that ground too: no fill, no hairline, the
+   starfield shows straight through behind the logo/search/profile row.
+   (The homepage keeps its own solid blurred bar.) */
+.site-chrome .nav {
+  background: transparent;
+  border-bottom: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Replay route: shift the replay content out from under the homepage
+   glass sidebar. Same --sidebar-width tracking as the profile route;
+   below lg the sidebar is hidden and no offset applies. */
+@media (min-width: 1024px) {
+  .replay-beside-sidebar {
+    padding-left: calc(var(--sidebar-width, 220px) + 16px);
   }
 }
 

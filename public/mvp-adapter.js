@@ -40,6 +40,7 @@
         return {
           kind: 'news',
           headline: s.headline,
+          category: s.category || null,
           url: s.url,
           sources: s.sources || [],
           imageUrl: s.imageUrl || null,

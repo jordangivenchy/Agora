@@ -81,10 +81,13 @@ body {
   top: 0; left: 0; right: 0;
   height: var(--nav-height);
   background: var(--bg-primary);
-  border-bottom: 1px solid var(--border);
+  /* No hairline under the bar — it sits flush on the page ground. */
+  border-bottom: none;
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  /* 12px top pad drops the row ~6px so it centers between the page top
+     and the carousel (which starts 12px below the bar). */
+  padding: 12px 20px 0;
   z-index: 100;
   gap: 16px;
 }
@@ -1445,7 +1448,8 @@ a.carousel-watch-btn { text-decoration: none; }
 .carousel-arrow.left:hover { transform: translateY(-50%) translateX(-2px); }
 .carousel-arrow.right:hover { transform: translateY(-50%) translateX(2px); }
 .carousel-arrow.left { left: 12px; }
-.carousel-arrow.right { right: 12px; }
+/* Hugs the slide's right edge — clear of the info panel's content. */
+.carousel-arrow.right { right: 2px; }
 
 .carousel-dots {
   display: flex;
@@ -3159,7 +3163,12 @@ a.carousel-watch-btn { text-decoration: none; }
 .nav-search.agora-search-shell input::placeholder{color:rgba(255,255,255,.45)}
 .nav-search.agora-search-shell.has-query input{padding-left:1.75rem}
 .nav-search.agora-search-shell .search-active-indicator{left:18px}
-.nav-search.agora-search-shell .nav-search-btn{position:relative;right:auto;top:auto;transform:none;flex-shrink:0;margin-right:2px}
+/* margin-right 0: the pill's own end padding leaves ~5px, matching the
+   button's 5px vertical inset so it nests concentrically in the rounded
+   end (unequal insets read as "off-center"). */
+/* top -1px is optical: the button's inset top highlight + bottom drop
+   shadow make a mathematically centered button read low-heavy. */
+.nav-search.agora-search-shell .nav-search-btn{position:relative;right:auto;top:-1px;transform:none;flex-shrink:0;margin-right:0}
 
 /* ─── STAR BUTTON TRAVEL LIGHT ─── */
 #navSearchWrap {
@@ -3169,7 +3178,7 @@ a.carousel-watch-btn { text-decoration: none; }
      width so translateX(-50%) stays integral. */
   position: absolute;
   left: 50%;
-  top: 5px;
+  top: 11px;
   height: 52px !important;
   box-sizing: border-box;
   transform: translateX(-50%);
@@ -3195,7 +3204,6 @@ body { background: transparent; }
 .nav {
   background: #000000;
   backdrop-filter: blur(22px);
-  border-bottom-color: rgba(255,255,255,.06);
   /* position:fixed already set above — do not override */
   z-index: 100;
 }
@@ -6014,6 +6022,24 @@ body { background: transparent; }
 /* One line always — a wrapped pill reads as a double-decker blob. The
    label is "Read at ⟨outlet⟩" (short form) so it fits the 250px column. */
 .carousel-item.news .carousel-news-btn { margin-top: 8px; align-self: flex-start; font-size: 13px; padding: 10px 16px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; text-align: center; line-height: 1.3; }
+
+/* "Queue a discussion" — the solid queue-pill blue used by the Daily
+   Topics Join buttons; darkens once you're in line. */
+.carousel-item.news .carousel-queue-btn {
+  margin-top: 8px;
+  align-self: flex-start;
+  font-size: 13px;
+  padding: 10px 16px;
+  white-space: nowrap;
+  max-width: 100%;
+  line-height: 1.3;
+  background: #2f7fe0;
+  border: 1px solid transparent;
+  color: #fff;
+  font-weight: 600;
+}
+.carousel-item.news .carousel-queue-btn:hover { background: #3d8bea; }
+.carousel-item.news .carousel-queue-btn.queued { background: #1d4f8c; }
 @media (max-width: 900px) {
   .carousel-item.news .carousel-panel.carousel-news-card { display: none; }
   .carousel-item.news .carousel-bg,

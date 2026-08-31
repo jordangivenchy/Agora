@@ -6,6 +6,7 @@
 
 import { use } from "react";
 import ProfileView from "@/components/ProfileView";
+import SiteChrome from "@/components/SiteChrome";
 
 export default function UserProfilePage({
   params,
@@ -13,5 +14,9 @@ export default function UserProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = use(params);
-  return <ProfileView username={username} />;
+  return (
+    <SiteChrome>
+      <ProfileView username={username} />
+    </SiteChrome>
+  );
 }

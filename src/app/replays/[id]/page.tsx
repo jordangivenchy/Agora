@@ -10,6 +10,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import DebateReplay, { ReplaySkeleton } from "@/components/agora/DebateReplay";
+import SiteChrome from "@/components/SiteChrome";
 import { parseRoomParam } from "@/lib/urls";
 
 export default function ReplayPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,8 +32,11 @@ export default function ReplayPage({ params }: { params: Promise<{ id: string }>
     return () => { alive = false; };
   }, [parsed, supabase, router]);
 
-  if (!roomId) {
-    return <ReplaySkeleton />;
-  }
-  return <DebateReplay roomId={roomId} />;
+  return (
+    <SiteChrome>
+      <div className="replay-beside-sidebar">
+        {roomId ? <DebateReplay roomId={roomId} /> : <ReplaySkeleton />}
+      </div>
+    </SiteChrome>
+  );
 }

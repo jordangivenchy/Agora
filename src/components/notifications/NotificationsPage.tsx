@@ -7,11 +7,10 @@
    (wordmark header + the homepage glass sidebar on lg+). */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import { pathFor } from "@/lib/routes";
+import SiteChrome from "@/components/SiteChrome";
 import { Icon } from "@/components/icons";
 import Wordmark from "@/components/Wordmark";
 import UserAvatar from "@/components/UserAvatar";
@@ -19,10 +18,6 @@ import {
   actorLabel, matchesFilter, notifDetail, notifHref, notifIcon, notifText, timeAgo,
   type NotifFilter, type NotifRow,
 } from "@/lib/notifications";
-
-/* mvp-home.css is imported inside the sidebar; keep it client-only so the
-   route stays free of it on the server. */
-const HomeSidebar = dynamic(() => import("@/components/HomeSidebar"), { ssr: false });
 
 const PAGE = 30;
 
@@ -159,17 +154,8 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-primary, #0a0a0c)", fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="flex items-center justify-between px-6 py-4">
-        <Link href="/" className="no-underline"><Wordmark size={20} /></Link>
-        <Link href="/" style={{ color: "#8b8b94", fontSize: 13, textDecoration: "none" }}>← Back to the Agora</Link>
-      </div>
-
-      <div className="hidden lg:block">
-        <HomeSidebar activeId={null} onNavigate={(id) => router.push(pathFor.section(id))} />
-      </div>
-
-      <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar">
+    <SiteChrome>
+      <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
           <div>
             <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
@@ -322,6 +308,6 @@ export default function NotificationsPage() {
           </div>
         )}
       </main>
-    </div>
+    </SiteChrome>
   );
 }

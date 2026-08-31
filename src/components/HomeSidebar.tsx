@@ -39,20 +39,10 @@ interface NavItem {
   icon: ReactElement;
 }
 
+/* Ordered "yours" (Home · Feed · Communities) over "discover"
+   (Trending · News · Explore): the landing page leads, the personal
+   destinations follow, and search-adjacent Explore closes the list. */
 const NAV: NavItem[] = [
-  {
-    id: "feed",
-    label: "Feed",
-    sparkles: [
-      ["0.2s", "4.1s", "26%", "36%", "5px"],
-      ["1.0s", "3.8s", "60%", "66%", "-4px"],
-      ["1.8s", "4.5s", "82%", "28%", "4px"],
-      ["2.6s", "3.7s", "42%", "80%", "-3px"],
-    ],
-    icon: (
-      <Icon name="sparkles" size={15} />
-    ),
-  },
   {
     id: "home",
     label: "Home",
@@ -69,30 +59,16 @@ const NAV: NavItem[] = [
     ),
   },
   {
-    id: "trending",
-    label: "Trending",
+    id: "feed",
+    label: "Feed",
     sparkles: [
-      ["0.3s", "4.2s", "28%", "42%", "5px"],
-      ["1.1s", "3.6s", "68%", "60%", "-5px"],
-      ["1.9s", "4.5s", "84%", "25%", "4px"],
-      ["2.7s", "3.8s", "45%", "82%", "-4px"],
+      ["0.2s", "4.1s", "26%", "36%", "5px"],
+      ["1.0s", "3.8s", "60%", "66%", "-4px"],
+      ["1.8s", "4.5s", "82%", "28%", "4px"],
+      ["2.6s", "3.7s", "42%", "80%", "-3px"],
     ],
     icon: (
-      <Icon name="flame" size={15} />
-    ),
-  },
-  {
-    id: "explore",
-    label: "Explore",
-    page: "explore",
-    sparkles: [
-      ["0.5s", "4.3s", "18%", "55%", "-5px"],
-      ["1.3s", "3.8s", "62%", "35%", "6px"],
-      ["2.1s", "4.6s", "85%", "68%", "-4px"],
-      ["2.9s", "3.5s", "38%", "22%", "5px"],
-    ],
-    icon: (
-      <Icon name="compass" size={15} />
+      <Icon name="sparkles" size={15} />
     ),
   },
   {
@@ -108,6 +84,19 @@ const NAV: NavItem[] = [
     ),
   },
   {
+    id: "trending",
+    label: "Trending",
+    sparkles: [
+      ["0.3s", "4.2s", "28%", "42%", "5px"],
+      ["1.1s", "3.6s", "68%", "60%", "-5px"],
+      ["1.9s", "4.5s", "84%", "25%", "4px"],
+      ["2.7s", "3.8s", "45%", "82%", "-4px"],
+    ],
+    icon: (
+      <Icon name="flame" size={15} />
+    ),
+  },
+  {
     id: "news",
     label: "News",
     sparkles: [
@@ -117,6 +106,20 @@ const NAV: NavItem[] = [
     ],
     icon: (
       <Icon name="newspaper" size={16} />
+    ),
+  },
+  {
+    id: "explore",
+    label: "Explore",
+    page: "explore",
+    sparkles: [
+      ["0.5s", "4.3s", "18%", "55%", "-5px"],
+      ["1.3s", "3.8s", "62%", "35%", "6px"],
+      ["2.1s", "4.6s", "85%", "68%", "-4px"],
+      ["2.9s", "3.5s", "38%", "22%", "5px"],
+    ],
+    icon: (
+      <Icon name="compass" size={15} />
     ),
   },
 ];

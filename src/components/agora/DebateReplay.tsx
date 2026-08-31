@@ -267,19 +267,44 @@ export default function DebateReplay({
         .getUser()
         .then(({ data }) => setSignedIn(!!data.user))
         .catch(() => setSignedIn(false));
-      const [{ data: replay, error: rErr }, { data: tx }] = await Promise.all([
+      const [{ data: replay, error: rErr }, { data: tx }, { data: polishedRow }] = await Promise.all([
         supabase.rpc("get_debate_replay", { p_room: roomId }),
         supabase.rpc("get_debate_transcript", { p_room: roomId, p_limit: 2000 }),
+        supabase.from("replay_transcripts").select("status, lines").eq("room_id", roomId).maybeSingle(),
       ]);
       let r = (replay as ReplayRoom | null) ?? null;
       let txLines = (tx as Line[] | null) ?? [];
+      /* The post-run Gemini transcript (full coverage, punctuation,
+         speaker attribution aligned from the live utterances) replaces
+         the patchy live Web-Speech lines whenever it exists. Offsets are
+         in the same recording_started_at frame, so the syncDelta math
+         below applies unchanged. */
+      const polished = polishedRow as {
+        status: string;
+        lines: Array<{
+          offset_seconds: number; text: string; user_id: string | null;
+          username: string | null; display_name: string | null; avatar_url: string | null;
+        }> | null;
+      } | null;
+      if (polished?.status === "done" && Array.isArray(polished.lines) && polished.lines.length > 0) {
+        txLines = polished.lines.map((pl, i) => ({
+          id: `pt-${i}`,
+          user_id: pl.user_id,
+          username: pl.username ?? "speaker",
+          display_name: pl.display_name ?? (pl.username ? null : "Speaker"),
+          avatar_url: pl.avatar_url,
+          content: pl.text,
+          created_at: "",
+          offset_seconds: pl.offset_seconds,
+        }));
+      }
       if (rErr || !r) {
         /* Migration drift (20260851 not applied yet): assemble the header
            from the base tables so an ended room still opens. */
         if (rErr) console.warn("get_debate_replay unavailable, falling back", rErr.message);
         const fb = await loadFallback(supabase, roomId);
         r = fb.room;
-        if (!tx) txLines = fb.lines;
+        if (!tx && !(polished?.status === "done" && polished.lines?.length)) txLines = fb.lines;
       }
       setRoom(r);
       setLines(txLines.filter((l) => l && l.content));
@@ -319,6 +344,19 @@ export default function DebateReplay({
     const t = setTimeout(() => setToast(null), 2200);
     return () => clearTimeout(t);
   }, [toast]);
+
+  /* Replay views are raw counts — every watch increments, repeats and
+     signed-out viewers included. Bumped once per page load (ref-guarded
+     against StrictMode double-effects); the RPC returns the new total. */
+  const [replayViews, setReplayViews] = useState<number | null>(null);
+  const viewBumpedRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || !room?.recording_url || room.status !== "ended" || viewBumpedRef.current) return;
+    viewBumpedRef.current = true;
+    supabase.rpc("bump_replay_view", { p_room: room.id }).then(({ data }) => {
+      if (typeof data === "number") setReplayViews(data);
+    });
+  }, [loaded, room, supabase]);
 
   /* ── Transcript↔video sync correction ─────────────────────────────
      Line offsets are measured from recording_started_at, which is
@@ -400,7 +438,7 @@ export default function DebateReplay({
     const url = `${window.location.origin}${roomPath({ id: room.id, motion: room.motion })}`;
     try {
       await navigator.clipboard.writeText(url);
-      setToast("Replay link copied");
+      setToast("Discussion link copied");
     } catch {
       setToast(url);
     }
@@ -555,14 +593,11 @@ export default function DebateReplay({
     <div className="dr-root">
       <div className="dr-wrap">
         <div className="dr-topbar">
-          <button className="dr-back" onClick={() => router.push("/")} title="Back to home">
-            ←
-          </button>
           <span className="dr-tag">
-            <span className="dr-tag-dot" /> {recorded ? "Replay" : "Ended discussion"}
+            <span className="dr-tag-dot" /> {recorded ? "Recorded discussion" : "Ended discussion"}
           </span>
           <span className="dr-spacer" />
-          <button className="dr-btn" onClick={share} title="Copy the replay link">
+          <button className="dr-btn" onClick={share} title="Copy the discussion link">
             <Icon name="share" size={13} /> Share
           </button>
         </div>
@@ -584,10 +619,13 @@ export default function DebateReplay({
               </span>
             )}
             {!recorded && durationLabel && <span>Lasted {durationLabel}</span>}
-            {!!room.viewer_count && (
+            {!!replayViews && (
               <span>
-                <Icon name="eye" size={12} /> {room.viewer_count} watched
+                <Icon name="eye" size={12} /> {replayViews} view{replayViews === 1 ? "" : "s"}
               </span>
+            )}
+            {!!room.viewer_count && (
+              <span>{room.viewer_count} watched live</span>
             )}
           </div>
           <div className="dr-people">
@@ -712,14 +750,15 @@ export default function DebateReplay({
         <section className="dr-section">
           <div className="dr-section-head">
             <div>
-              <h2 className="dr-section-title">Discussion</h2>
-              <p className="dr-section-sub">
-                {room.discussion_post_id
-                  ? room.discussion_comment_count === 1
-                    ? "1 comment"
-                    : `${room.discussion_comment_count} comments`
-                  : "Nobody has weighed in yet — be the first."}
-              </p>
+              <h2 className="dr-section-title">
+                Discussion
+                {room.discussion_comment_count > 0 && (
+                  <span className="dr-count-chip">{room.discussion_comment_count}</span>
+                )}
+              </h2>
+              {room.discussion_comment_count === 0 && (
+                <p className="dr-section-sub">Nobody has weighed in yet — be the first.</p>
+              )}
             </div>
             <button className="dr-btn" onClick={openDiscussion} disabled={discussBusy}>
               <Icon name="megaphone" size={13} />
@@ -756,7 +795,7 @@ export default function DebateReplay({
                     username={c.author_username}
                     avatarUrl={null}
                     seed={c.author_id ?? c.author_username}
-                    size={28}
+                    size={32}
                   />
                   <div>
                     <div className="dr-comment-meta">
@@ -775,7 +814,7 @@ export default function DebateReplay({
           <section className="dr-section">
             <div className="dr-section-head">
               <div>
-                <h2 className="dr-section-title">More replays</h2>
+                <h2 className="dr-section-title">More discussions</h2>
                 <p className="dr-section-sub">Recent recorded discussions to watch next</p>
               </div>
             </div>

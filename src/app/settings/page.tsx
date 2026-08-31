@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { validateNewPassword } from "@/lib/passwordPolicy";
 import EditProfileModal from "@/components/EditProfileModal";
+import SiteChrome from "@/components/SiteChrome";
 import DataAndCoachPanel from "@/components/DataAndCoachPanel";
 import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
@@ -773,13 +774,13 @@ export default function SettingsPage() {
           <>
             <SectionCard
               title="Discussion recordings (VODs)"
-              sub="Recordings power replays of your ended discussions and let big audiences watch over the broadcast stream."
+              sub="Recordings let people rewatch your ended discussions and let big audiences watch over the broadcast stream."
             >
               <Toggle
                 on={settings.record_debates}
                 onChange={(v) => saveToggle("record_debates", v)}
                 label="Record discussions I host"
-                sub="Turning this off means no replay exists afterward, and very large audiences can't overflow to the broadcast view"
+                sub="Turning this off means no recording exists afterward, and very large audiences can't overflow to the broadcast view"
               />
             </SectionCard>
             <SectionCard title="Storage" sub="Recordings of discussions you host count against your space.">
@@ -1027,7 +1028,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary, #0a0a0c)", fontFamily: "'DM Sans', sans-serif" }}>
+    <SiteChrome>
+    <div className="replay-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="mx-auto px-4 py-6" style={{ maxWidth: 980 }}>
 
         {/* header */}
@@ -1124,5 +1126,6 @@ export default function SettingsPage() {
         />
       )}
     </div>
+    </SiteChrome>
   );
 }

@@ -69,7 +69,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   const [isPrivate, setIsPrivate] = useState(false);
   const [allowSpectators, setAllowSpectators] = useState(false);
   // Who can enter a private room without the invite code.
-  const [accessMode, setAccessMode] = useState<"code" | "followers" | "friends">("code");
+  const [accessMode, setAccessMode] = useState<"code" | "followers" | "friends" | "community">("code");
 
   // Scheduling
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -196,7 +196,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         p_time_limit_seconds: null,
         p_scheduled_start:    scheduledIso,
         p_community:          communityId ?? null,
-        p_access_mode:        isPrivate ? accessMode : "code",
+        p_access_mode:        isPrivate ? (accessMode === "community" && !communityId ? "code" : accessMode) : "code",
       });
 
       if (rpcError) {
@@ -893,6 +893,14 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                         onClick={() => setAccessMode("friends")}
                         activeColor="#2f7fe0"
                       />
+                      {communityId && (
+                        <PillSelect
+                          label={`${communityName ?? "Board"} members`}
+                          active={accessMode === "community"}
+                          onClick={() => setAccessMode("community")}
+                          activeColor="#2f7fe0"
+                        />
+                      )}
                     </div>
                   </div>
                   {accessMode === "code" && (
@@ -914,6 +922,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                       ? "Hidden from listings and search. Anyone who follows you can enter directly; your invite code also works for anyone else."
                       : accessMode === "friends"
                         ? "Hidden from listings and search. Only friends (people you follow back) can enter directly; your invite code also works for anyone else."
+                      : accessMode === "community"
+                        ? `Hidden from listings and search. Only members of ${communityName ?? "the community"} can enter directly; your invite code also works for anyone else.`
                         : allowSpectators
                           ? "Room will appear in public listings tagged “Private”. Visitors join as spectators only; speakers must use the invite code."
                           : "Room is completely hidden from all listings and search. Only people with the invite code can enter."}
