@@ -5493,9 +5493,10 @@ body { background: transparent; }
 
 /* ── Shell ───────────────────────────────────────────────────────── */
 .sidebar {
+  /* Translucent, deliberately unblurred — the starfield shows through. */
   background:
     linear-gradient(180deg, rgba(255,255,255,0.012) 0%, rgba(255,255,255,0) 42%),
-    #0a0a0b !important;
+    rgba(10,10,12,0.55) !important;
   border: 1px solid rgba(255,255,255,0.07) !important;
   border-radius: 18px !important;
   box-shadow:
