@@ -5539,13 +5539,13 @@ body { background: transparent; }
   transform: none !important;
 }
 
-/* Active = just the gold icon: no border, no fill — the row stays as
-   quiet as its neighbors; the amber icon (and a full-bright label)
-   marks the tab. (`border: none` must stay declared here: it beats the
-   legacy 3px #FFA200 border-left declared earlier by source order.) */
+/* Active = gold icon + gold label: no border, no fill — the row stays
+   as quiet as its neighbors and only its color marks the tab.
+   (`border: none` must stay declared here: it beats the legacy
+   3px #FFA200 border-left declared earlier by source order.) */
 .sidebar-link.active {
   background: transparent !important;
-  color: rgba(238,238,245,0.92) !important;
+  color: #e2b96b !important;
   border: none !important;
   box-shadow: none !important;
 }
