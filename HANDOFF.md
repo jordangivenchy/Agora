@@ -1,14 +1,199 @@
 # AgoraSphere — Context Handoff
 
-_Last updated: 2026-08-27. Covers 08-26→08-27 (private-room access modes +
-their security foundation, a security audit that closed live privilege-
-escalation / PII / XSS / stage-hijack holes, Twitch-style clip editor +
-/clips pages, community ⋯ menu with Block, feed replays, karma→Goatedness,
-QUEUE→Daily Topics + ~730-topic seed, Shorts hidden, TTS overlay fix).
-Everything below is LIVE in production unless marked otherwise. Older
-digests' details are folded into the archive sections._
+_Last updated: 2026-08-31. Covers 08-29→08-31 (2FA actually enforced via
+the Custom Access Token hook, an agent QA pass that found + fixed two
+live bugs incl. invite codes broken for everyone, recording-cost
+controls, a post-run Gemini transcription pipeline, real view counts,
+community applications + community-locked rooms, and site chrome
+everywhere: navbar/sidebar/starfield on every page). Everything below is
+LIVE in production unless marked otherwise. Older digests' details are
+folded into the archive sections._
 
-## ⚡ 08-26→08-27 session digest (read this first)
+## ⚡ 08-29→08-31 session digest (read this first)
+
+**Migrations applied to the live DB this session: 20260875 → 20260885**
+(files match live; every one verified with role-simulation queries in
+ROLLED-BACK transactions — the `DO $$ ... RAISE EXCEPTION 'TEST_RESULTS'`
+pattern, results ride out in the error message and nothing persists).
+
+**🔐 2FA is now actually enforced (hook LIVE in the dashboard).** The
+planned Password Verification Attempt hook turned out to be
+**Team-plan-only** — never callable on our plan. Replacement
+(20260875): `hook_custom_access_token` (Custom Access Token hook, Free
+plan, ENABLED by Jordan in Supabase → Auth → Hooks) refuses to mint a
+token for a `password`-grant sign-in when the account is 2FA-enrolled,
+unless the short-lived two_factor_gate is open. Every other
+authentication_method (token_refresh, magiclink/otp — the post-verify
+mint — oauth, recovery) passes through; fails OPEN on unexpected errors.
+Settings → change-password re-auth moved to `/api/auth/reauth` (gated
+server-side check) since a client `signInWithPassword` would now be
+rejected for 2FA users. **Section-1 QA (sign-in / enroll / code flow /
+password change) still not walked by a human.**
+
+**🧪 Agent QA pass over the launch checklist** (artifact:
+https://claude.ai/code/artifact/92b1404a-6fd3-43a6-a3b5-f87cc749e9af —
+checkable page, state saves per browser). DB-verifiable sections ran via
+role-simulation agents; human halves (2FA, clips, 2-person recording,
+mobile) remain. Results: private-room RLS/gating/replay-privacy PASS;
+feed replays 4/4 PASS; topics/queue/duel plumbing PASS. Two REAL bugs
+found and fixed:
+- **join_private_room was broken for EVERYONE** (42702 `room_id is
+  ambiguous` — the `returns table` OUT param vs unqualified column;
+  shipped broken since 20260421). Fixed 20260878 with
+  `#variable_conflict use_column`. Every invite-code join now works.
+- **Blocked communities still appeared in the home feed** — 20260867
+  promised exclusion but no layer implemented it. Fixed 20260876
+  (blocked_comms CTE in get_home_feed's rooms/posts/comments).
+
+**📼 Recording-cost controls (the "we pay for dead air" fixes).**
+- **Egress stops the moment a room ends by ANY path** (20260879):
+  trigger on debate_rooms live→ended → pg_net POST →
+  `/api/internal/room-ended` (Bearer reminder_webhook_secret), which
+  stops all active egresses + stamps hls_url/recording_ended_at.
+  ⚠️ This exposed that the **beta gate was 307-ing ALL machine webhooks**
+  — `/api/internal` is now in BETA_EXEMPT (src/proxy.ts). Any new
+  machine endpoint must be added there too.
+- **Host-gone grace 90s → 45s** (20260877). Clean host leave ends the
+  room in ~45–105s.
+- **Idle-room reaper** (20260880, on the every-minute room-lifecycle
+  cron): live rooms with a flowing transcript but no utterance AND no
+  chat for 20 min end as inactive (armed only after ≥1 utterance, so
+  transcription-off rooms can't be false-killed); any recording past
+  the 3-hour hard cap ends regardless. AFK-with-tab-open is now bounded.
+
+**📝 Post-run replay transcription (Gemini, no ffmpeg, DEPLOYED +
+backfilled).** Live Web-Speech transcripts are Chrome-only/gappy; now a
+`replay-transcripts` pg_cron (every 2 min) enqueues ended recorded rooms
+to `/api/internal/transcribe-replay`: parses the VOD playlist, extracts
+raw AAC from the MPEG-TS segments with a minimal demuxer
+(src/lib/replayTranscribe.ts — verified byte-exact against a prod
+segment), transcribes ~9-min chunks via the existing GEMINI_API_KEY
+(json prompt, 503/429 retries with backoff, fallback pinned
+**gemini-2.5-flash** — `gemini-2.0-flash` 404s on this key), aligns
+speaker attribution from live utterances (same recording_started_at
+frame + PDT syncDelta as the player), stores to `replay_transcripts`
+(RLS: readable iff room enterable; 75-min cap, 3 attempts). The replay
+page prefers it when present. All 4 existing recordings backfilled
+(the transcription pipeline is also what caught the beta-gate webhook
+bug).
+
+**👁 Views actually counted (20260885; per product decision: unique live
+viewers, non-unique replay views).** viewer_count previously had NO
+writer on the amphitheater route — everything showed 0. Now:
+`touch_presence` records each signed-in user once per live room
+(locked `room_viewers` table) and bumps viewer_count on first sight;
+`bump_replay_view(p_room)` (+1 per watch, anon included, gated by
+can_enter_room) feeds new `debate_rooms.replay_views`; the replay page
+shows "N views" + "N watched live". Feed/popular ranking inputs are now
+real. Historical rooms stay 0. HLS-overflow lurkers still uncounted (no
+presence row).
+
+**🏛 Community applications (20260883 + 20260884).** Private boards are
+now application-based: Request opens a dialog with an optional ≤500-char
+message; mods can set `communities.application_prompt` (≤1000 chars,
+settings textarea, shown highlighted in the dialog) and then an answer
+is REQUIRED (server-enforced, `application_required`). Mod panel section
+is now APPLICATIONS with the message quoted per applicant. Two new
+notification types — `join_request` (all mods, coalesced per board) and
+`join_approved` (applicant; denial silent) — registered EVERYWHERE
+(CHECK constraint, notification_types(), notifIcon/notifText/notifHref,
+POST_TYPES filter, PREF_GROUPS toggles, OS_BODY; in-app only, no
+email/push default). request_to_join is backward-compatible (p_message
+defaults null).
+
+**🚪 Community-locked rooms + code-room privacy fix (20260882).**
+- New `access_mode='community'`: private room only that board's members
+  enter (create_room requires the creator to be a community mod for
+  community rooms already); Create modal shows a "⟨Board⟩ members" pill
+  when creating from a board; denial screen says "join the board"; HLS
+  refused like followers/friends; invite code still the escape hatch.
+- **Code-room hole closed**: can_enter_room used to return TRUE for
+  everyone on code rooms — a fully-hidden code room (and its replay) was
+  readable with just the link. Now code rooms admit non-participants
+  only when `allow_spectators` is on (the documented "listed,
+  spectate-only" behavior, anon included); hidden ones are
+  host/participants-only; the denial screen's code input redeems entry.
+
+**🎨 Site chrome + UI (one big client push, commit 17f3bb8).**
+- **SiteChrome** (src/components/SiteChrome.tsx): the REAL home navbar
+  (same ids/classes so mvp-home.css styles it: logo, centered search
+  pill with Create inside, messages, bell, avatar dropdown with real
+  auth state) + glass sidebar + **Starfield** (src/components/
+  Starfield.tsx, ported from mvp-home.js) on every standalone route:
+  /replays, /clips, /users, /notifications, /settings, and ended
+  /agora rooms. Live amphitheater + auth flows stay bare. Navbar is
+  transparent with no hairline on chrome routes (home keeps solid
+  black); nav row sits centered between page top and carousel; Create
+  button optically nested (equal insets + 1px optical lift).
+- **⚠️ CASCADE LAYER ORDER CHANGED** (globals.css line 1):
+  `@layer theme, base, mvp-home, components, utilities;` — mvp-home now
+  BEATS Tailwind preflight (needed for shared chrome) but still LOSES to
+  utilities (preserving the original reset containment). Remember:
+  stale-CSS symptoms after layer/CSS edits still mean `rm -rf .next`.
+- Sidebar: reordered **Home · Feed · Communities · Trending · News ·
+  Explore**; active tab is now a **gold 1px border** (no fill); the rail
+  itself is translucent (rgba(10,10,12,0.55), unblurred) over the stars.
+- **Feed**: 1440px wide; replay cards enlarged (208×117 thumbs, title
+  above host line, no badge, "Watch discussion"); NEW right rail
+  (src/components/feed/FeedRail.tsx, 310px sticky lg+, styled exactly
+  like the Communities rail): Live now (60s refresh) · Who to follow
+  (get_people_suggestions) · Queue a conversation (3 most-waited Daily
+  Topics, stanceless queue + match poll) · Upcoming (your reminders).
+  In-column live shelf is lg:hidden (rail covers it).
+- **Communities**: 1440px; solid Join pills; joined-state badges REMOVED
+  (rail ✓ and header "✓ Joined" both gone — membership = no Join button;
+  Leave lives in ⋯); mod-tools grid moved OUT of the frosted header card
+  onto the starfield (panels rgba(10,10,13,0.55) unblurred); gold title
+  underline removed.
+- **Replay screen**: back arrow removed (navbar logo is the way out);
+  Discussion section restyled (YouTube-style unboxed thread, count chip,
+  blue focus-ring composer); "More discussions" rail; glassy sections.
+- **Language sweep: "replay" is gone from user-facing copy** (tags,
+  toasts, emails, push, profile pill "Watch", settings copy — emailCopy
+  tests updated). /replays URLs + identifiers unchanged.
+- **Hero**: news slides have a solid-blue **Queue a discussion** pill
+  (queue_for_headline via `agora:queue-headline` event → React handler in
+  page.tsx owns RPC + match poll, `agora:hero-queue-state` paints the
+  vanilla button, state survives 30s re-renders); next arrow at the
+  slide edge (right: 2px); trending 1440px; profile header tightened
+  (banner→name gap, social icons on the cap line, 28px page top pad).
+
+**Watchouts discovered this session**
+- Beta gate 307s webhooks: EVERY machine endpoint needs a BETA_EXEMPT
+  entry (src/proxy.ts) — cost us silent egress-stop + transcription
+  failures (405 in net._http_response).
+- Debug pg_net webhooks via `select * from net._http_response order by
+  created desc` — status codes of recent hook POSTs.
+- `gemini-2.0-flash` is 404 on this key; pin `gemini-2.5-flash` as
+  fallback. `gemini-flash-latest` 503s under load — retries required.
+- The Browser pane, when hidden, reports innerWidth 0 and pauses
+  requestAnimationFrame — canvas animations (starfield) can't be
+  verified headless; self-heal on visibility is built in.
+- plpgsql `returns table(col)` + unqualified `where col =` = 42702;
+  use `#variable_conflict use_column` (precedent: 20260853, 20260878).
+- The QA launch checklist artifact stays at the URL above.
+
+**Still open (pre-launch, in rough priority)**
+1. **Founders' QA section 1 (2FA)** — the hook is LIVE but no human has
+   walked sign-in/enroll/change-password since. Do this first.
+2. **Leaked-password protection** (Auth settings — may also be
+   plan-gated like the password hook; Jordan to check).
+3. **CSP** (defense-in-depth; next.config has no headers).
+4. **Rate limiting** on auth+write endpoints; **moderation queue /
+   blocklist** — still nothing.
+5. **Secrets rotation** (R2 pair, Twitch, NewsData).
+6. LiveKit webhook config (would make silent-crash room-end instant);
+   recording-length bug likely fixed by the egress-stop trigger but
+   verify with the section-6 recording QA.
+7. Remaining human QA: clips happy path (prod), 2-person recording,
+   private-room UI loop (now incl. community mode + applications),
+   feed rail + transcript quality check, mobile pass.
+8. Low: 'ethics' orphan topic; CRON_SECRET; PostHog; Trending tiles
+   still show their own ENDED badge + 0-view counts on old rooms.
+
+---
+
+## 08-26→08-27 session digest (prior session)
 
 **Migrations applied to the live DB this session: 20260865 → 20260874**
 (files match live). 20260865_private_room_access_modes ·
