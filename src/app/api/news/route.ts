@@ -125,7 +125,9 @@ function upgradeImage(url: string | null): string | null {
   try {
     const u = new URL(url);
     if (u.hostname === "ichef.bbci.co.uk") {
-      u.pathname = u.pathname.replace(/\/standard\/\d+\//, "/standard/1024/");
+      // 2048 keeps the ~900-CSS-px hero sharp on 2x displays (iChef
+      // serves standard/{...2048,2560}; 2048 ≈ 170KB).
+      u.pathname = u.pathname.replace(/\/standard\/\d+\//, "/standard/2048/");
       return u.toString();
     }
     // Guardian (i.guim.co.uk) URLs are signed (&s=…) — any parameter
