@@ -71,12 +71,21 @@ function ingest(row: Row) {
   });
 }
 
-function beat() {
+async function beat() {
   if (!selfId) return;
   const id = selfId;
   const room = selfRoom;
   const queued = selfQueued;
   const supabase = createClient();
+  // The cached selfId can outlive the session (sign-out in another tab,
+  // a tick racing the SIGNED_OUT callback, a dropped refresh), and
+  // touch_presence is authenticated-only — so confirm a live session and
+  // stop the heartbeat when it's gone; ensurePresence re-arms on sign-in.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+    return;
+  }
   supabase.rpc("touch_presence", { p_room: room, p_queued: queued }).then(() => {
     // Reflect our own write immediately — don't wait for the next poll.
     ingest({ user_id: id, room_id: room, queued, last_seen_at: new Date().toISOString() });

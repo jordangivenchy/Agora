@@ -208,14 +208,16 @@ export default function SettingsPage() {
 
       const [profRes, setRes, blockRes] = await Promise.all([
         supabase.from("users")
-          .select("id, username, display_name, avatar_url, bio, email, username_changed_at, created_at, is_moderator")
+          .select("id, username, display_name, avatar_url, bio, username_changed_at, created_at, is_moderator")
           .eq("id", user.id).maybeSingle(),
         supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("user_blocks").select("blocked_id").eq("blocker_id", user.id),
       ]);
 
       if (profRes.error || !profRes.data) throw new Error(profRes.error?.message || "Profile not found");
-      setProfile(profRes.data as ProfileRow);
+      // users.email is not client-readable (column grants); the auth user is
+      // the authoritative source for the account email anyway.
+      setProfile({ ...(profRes.data as Omit<ProfileRow, "email">), email: user.email ?? "" });
 
       if (setRes.data) {
         const r = setRes.data as SettingsRow & Record<string, unknown>;
