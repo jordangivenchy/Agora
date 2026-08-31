@@ -1831,6 +1831,15 @@ html.reduce-motion .nav-sparkle {
   .friends-ui-overlay .friends-ui-row { animation: none !important; }
 }
 
+/* Navbar notification bell: solid hero-yellow on hover (matches the
+   sidebar active tab / news pill). !important beats the inline styles. */
+.notif-bell-btn { transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; }
+.notif-bell-btn:hover {
+  background: #ffb700 !important;
+  border-color: #ffb700 !important;
+  color: #1a0e00 !important;
+}
+
 /* Profile banner: pencil only on hover / keyboard focus. */
 .profile-banner .profile-banner-edit { opacity: 0; transition: opacity 0.15s ease; }
 .profile-banner:hover .profile-banner-edit,

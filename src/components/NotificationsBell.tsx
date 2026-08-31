@@ -234,7 +234,7 @@ export default function NotificationsBell({ container }: Props) {
       <button
         onClick={toggle}
         aria-label={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
-        className="cursor-pointer flex items-center justify-center"
+        className="notif-bell-btn cursor-pointer flex items-center justify-center"
         style={{
           width: 36,
           height: 36,
