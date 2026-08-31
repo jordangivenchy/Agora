@@ -4738,14 +4738,12 @@ body { background: transparent; }
   box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
 }
 
+/* Active = a gold BORDER, not a gold fill (mirrors home-sidebar.css). */
 .sidebar-link.active {
-  border-color: rgba(226,185,107,0.35) !important;
-  background: rgba(226,185,107,0.10) !important;
+  border-color: rgba(226,185,107,0.65) !important;
+  background: rgba(255,255,255,0.04) !important;
   color: #fff !important;
-  box-shadow:
-    0 8px 32px rgba(0,0,0,0.2),
-    inset 0 1px 0 rgba(255,255,255,0.14),
-    0 0 0 1px rgba(226,185,107,0.22) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2) !important;
   transform: none !important;
 }
 
@@ -5540,14 +5538,13 @@ body { background: transparent; }
   transform: none !important;
 }
 
+/* Active = a gold BORDER, not a gold fill: the outline marks the tab
+   while the surface stays as quiet as its neighbors. (border shorthand
+   also clears the legacy 3px #FFA200 border-left declared earlier.) */
 .sidebar-link.active {
-  background: rgba(226,185,107,0.10) !important;
+  background: rgba(255,255,255,0.04) !important;
   color: #f4e4c1 !important;
-  /* Clears the legacy 3px #FFA200 border-left, which is declared at this
-     same specificity earlier in the file and would otherwise stack with
-     the indicator pill below. */
-  border: none !important;
-  border-left: 0 !important;
+  border: 1px solid rgba(226,185,107,0.65) !important;
   box-shadow: none !important;
 }
 
