@@ -771,11 +771,11 @@ export default function ProfileView({
             className="inline-block shrink-0"
             style={
               profile.banner_url
-                ? { marginTop: -52, borderRadius: "50%", border: "4px solid #101016", background: "#101016", lineHeight: 0 }
+                ? { marginTop: -66, borderRadius: "50%", border: "4px solid #101016", background: "#101016", lineHeight: 0 }
                 : { lineHeight: 0 }
             }
           >
-            <UserAvatar size={92} username={profile.username} avatarUrl={profile.avatar_url} seed={profile.id} />
+            <UserAvatar size={120} username={profile.username} avatarUrl={profile.avatar_url} seed={profile.id} />
           </span>
           <div className="flex-1 min-w-[240px]">
             <div className="flex items-center gap-2 flex-wrap">
