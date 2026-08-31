@@ -5539,13 +5539,13 @@ body { background: transparent; }
   transform: none !important;
 }
 
-/* Active = gold icon + gold label: no border, no fill — the row stays
-   as quiet as its neighbors and only its color marks the tab.
-   (`border: none` must stay declared here: it beats the legacy
-   3px #FFA200 border-left declared earlier by source order.) */
+/* Active = a solid hero-yellow block (same #ffb700 as the news
+   "Read at" pill), dark icon + label on top. (`border: none` must stay
+   declared here: it beats the legacy 3px #FFA200 border-left declared
+   earlier by source order.) */
 .sidebar-link.active {
-  background: transparent !important;
-  color: #e2b96b !important;
+  background: #ffb700 !important;
+  color: #1a0e00 !important;
   border: none !important;
   box-shadow: none !important;
 }
@@ -5606,7 +5606,7 @@ body { background: transparent; }
   opacity: 0.85 !important;
   transition: opacity 0.14s ease, color 0.14s ease !important;
 }
-.sidebar-link.active .nav-icon-wrap { color: #e2b96b !important; opacity: 1 !important; }
+.sidebar-link.active .nav-icon-wrap { color: inherit !important; opacity: 1 !important; }
 .sidebar-link:hover .nav-icon-wrap { opacity: 1 !important; }
 .nav-label { font-weight: inherit !important; letter-spacing: -0.005em !important; }
 
