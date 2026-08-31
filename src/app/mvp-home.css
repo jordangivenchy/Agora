@@ -5602,6 +5602,10 @@ body { background: transparent; }
   background: none !important;
   border: none !important;
   border-radius: 0 !important;
+  /* The legacy icon chip (declared earlier) also carries a drop shadow
+     and an active brightness() — kill both or the icon keeps a bevel. */
+  box-shadow: none !important;
+  filter: none !important;
   color: inherit !important;
   opacity: 0.85 !important;
   transition: opacity 0.14s ease, color 0.14s ease !important;
