@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import { roomPath, replayPath, userPath } from "@/lib/urls";
 import UserAvatar from "@/components/UserAvatar";
+import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { Icon, type IconName } from "@/components/icons";
 import FollowListModal from "@/components/FollowListModal";
@@ -693,6 +694,9 @@ export default function ProfileView({
            the standalone route (inline — the mvp reset eats pt- utilities). */
         style={{ paddingTop: embedded ? 0 : 28 }}
       >
+       {/* Standalone: profile column + the feed's right rail (lg+). */}
+       <div className={embedded ? undefined : "flex gap-6 items-start"}>
+        <div className={embedded ? undefined : "flex-1 min-w-0"}>
         {/* ── Banner. With a photo: everyone sees it. Without one: only the
                owner sees a dark grey placeholder with a hover "?" that opens
                Edit Profile; visitors get the plain header. ── */}
@@ -1534,7 +1538,9 @@ export default function ProfileView({
             )}
           </div>
         )}
-
+        </div>
+        {!embedded && <FeedRail userId={viewerId} />}
+       </div>
       </main>
 
       {profile && (

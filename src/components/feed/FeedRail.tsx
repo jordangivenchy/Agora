@@ -62,7 +62,9 @@ const quietRow: React.CSSProperties = {
   border: "0.5px solid rgba(255,255,255,0.07)",
 };
 
-export default function FeedRail({ userId }: { userId: string }) {
+/* userId null = signed-out viewer (public profile pages): the reminders
+   query is skipped and the auth-only sections simply stay empty. */
+export default function FeedRail({ userId }: { userId: string | null }) {
   const [supabase] = useState(() => createClient());
   const [live, setLive] = useState<LiveRoom[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
@@ -111,7 +113,7 @@ export default function FeedRail({ userId }: { userId: string }) {
       setQueued(new Set(rows.filter((r) => r.am_queued).map((r) => r.id)));
     });
 
-    supabase
+    if (userId) supabase
       .from("room_reminders")
       .select("room:debate_rooms(id, motion, scheduled_start, status)")
       .eq("user_id", userId)
