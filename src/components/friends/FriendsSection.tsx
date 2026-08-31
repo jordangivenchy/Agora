@@ -9,7 +9,7 @@
    first, per-friend actions (message, favorite, join room), an "Add back"
    strip for people who follow you, and a user search to add new friends. */
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
@@ -33,13 +33,40 @@ export default function FriendsSection({ container, sidebar }: Props) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [followsMe, setFollowsMe] = useState<FriendRow[]>([]);
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<number | null>(null);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
   const presence = useSyncExternalStore(subscribePresence, getPresenceSnapshot, () => getPresenceSnapshot());
 
-  useEscapeClose(open, () => setOpen(false));
+  /* Close plays the overlay's exit animation, then unmounts. */
+  const close = useCallback(() => {
+    if (closeTimer.current !== null) return;
+    setClosing(true);
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      setOpen(false);
+      setClosing(false);
+    }, 170);
+  }, []);
+  const openOverlay = useCallback(() => {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setClosing(false);
+    setOpen(true);
+  }, []);
+  useEffect(
+    () => () => {
+      if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    },
+    []
+  );
+
+  useEscapeClose(open, close);
 
   const load = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
@@ -144,7 +171,8 @@ export default function FriendsSection({ container, sidebar }: Props) {
             friendCount={friends.length}
             query={query}
             onQueryChange={setQuery}
-            onClose={() => setOpen(false)}
+            onClose={close}
+            closing={closing}
             online={onlineRows}
             offline={offlineRows}
             addBack={searching ? [] : followsMe.map((f) => toRow(f, false))}
@@ -163,7 +191,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
 
   return (
     <>
-      {createPortal(<FriendsCard friends={sorted} onlineCount={onlineCount} onOpen={() => setOpen(true)} />, container)}
+      {createPortal(<FriendsCard friends={sorted} onlineCount={onlineCount} onOpen={openOverlay} />, container)}
       {overlay}
     </>
   );

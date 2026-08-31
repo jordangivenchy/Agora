@@ -1783,12 +1783,45 @@ html.reduce-motion .nav-sparkle {
 .row-card .row-inner-link { position: relative; z-index: 1; }
 
 /* Sidebar Friends (src/components/friends/FriendsPanel.tsx) — hover states
-   only; everything else is inline. */
+   and the overlay's enter/exit animations; everything else is inline. */
 .friends-ui-card:hover { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.16) !important; }
 .friends-ui-row:hover { background: rgba(255,255,255,0.06); }
 .friends-ui-iconbtn:hover { background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.2) !important; }
 .friends-ui-pill:hover:not(:disabled) { filter: brightness(1.08); }
 .friends-ui-name:hover { text-decoration: underline !important; }
+
+@keyframes friendsOverlayIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.965); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes friendsOverlayOut {
+  to { opacity: 0; transform: translateY(10px) scale(0.975); }
+}
+@keyframes friendsRowIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: none; }
+}
+.friends-ui-overlay {
+  animation: friendsOverlayIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 50% 88%; /* grows up out of the Friends card below */
+  will-change: transform, opacity;
+}
+.friends-ui-overlay-closing { animation: friendsOverlayOut 0.16s ease-in both; }
+/* Rows (and section labels between them) cascade in behind the panel. */
+.friends-ui-overlay .friends-ui-row { animation: friendsRowIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.friends-ui-overlay .friends-ui-row:nth-child(2)  { animation-delay: 0.025s; }
+.friends-ui-overlay .friends-ui-row:nth-child(3)  { animation-delay: 0.05s; }
+.friends-ui-overlay .friends-ui-row:nth-child(4)  { animation-delay: 0.075s; }
+.friends-ui-overlay .friends-ui-row:nth-child(5)  { animation-delay: 0.1s; }
+.friends-ui-overlay .friends-ui-row:nth-child(6)  { animation-delay: 0.12s; }
+.friends-ui-overlay .friends-ui-row:nth-child(7)  { animation-delay: 0.14s; }
+.friends-ui-overlay .friends-ui-row:nth-child(8)  { animation-delay: 0.16s; }
+.friends-ui-overlay .friends-ui-row:nth-child(n+9) { animation-delay: 0.175s; }
+.friends-ui-overlay-closing .friends-ui-row { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .friends-ui-overlay,
+  .friends-ui-overlay .friends-ui-row { animation: none !important; }
+}
 
 /* Profile banner: pencil only on hover / keyboard focus. */
 .profile-banner .profile-banner-edit { opacity: 0; transition: opacity 0.15s ease; }

@@ -30,7 +30,10 @@ export interface FriendRowModel {
 }
 
 export const FRIENDS_UI = {
-  panelBg: "rgba(10,12,18,0.97)",
+  /* Glassy: the sidebar shows through, washed out by the backdrop blur. */
+  panelBg: "rgba(10,12,18,0.58)",
+  /* Solid stand-in where a translucent ring would look broken (dot ring). */
+  panelBgSolid: "#10131b",
   border: "1px solid rgba(255,255,255,0.10)",
   text: "#f5f5f0",
   secondary: "#8b8b94",
@@ -183,6 +186,8 @@ export interface FriendsOverlayProps {
   onAdd: (u: FriendUser) => void;
   onJoin: (roomId: string) => void;
   onMore: (at: { x: number; y: number }, u: FriendUser) => void;
+  /** True while the exit animation plays; the parent unmounts after it. */
+  closing?: boolean;
   /** position: "absolute" inset 0 by default; scratch pages can override. */
   style?: CSSProperties;
 }
@@ -269,7 +274,7 @@ export function FriendRow({
               height: 10,
               borderRadius: "50%",
               background: FRIENDS_UI.green,
-              boxShadow: `0 0 0 2px ${FRIENDS_UI.panelBg}`,
+              boxShadow: `0 0 0 2px ${FRIENDS_UI.panelBgSolid}`,
             }}
           />
         )}
@@ -373,12 +378,14 @@ export function FriendsOverlay(p: FriendsOverlayProps) {
     <div
       role="dialog"
       aria-label="Friends"
+      className={`friends-ui-overlay${p.closing ? " friends-ui-overlay-closing" : ""}`}
       style={{
         position: "absolute",
         inset: 0,
         background: FRIENDS_UI.panelBg,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
+        backdropFilter: "blur(20px) saturate(1.15)",
+        WebkitBackdropFilter: "blur(20px) saturate(1.15)",
+        border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: 14,
         zIndex: 200,
         display: "flex",
