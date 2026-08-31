@@ -5508,9 +5508,7 @@ body { background: transparent; }
 }
 
 .sidebar-scroll-area { padding: 0 !important; }
-/* Rows run flush edge-to-edge: no side insets on the nav — the row's
-   own inner padding (below) keeps the icons where they were. */
-.sidebar-nav { padding: 4px 0 !important; gap: 1px !important; }
+.sidebar-nav { padding: 4px 8px 4px !important; gap: 1px !important; }
 
 /* ── Nav rows: flat, no per-item card ────────────────────────────── */
 .sidebar-link {
@@ -5518,7 +5516,7 @@ body { background: transparent; }
   padding: 0 !important;
   border: none !important;
   border-left: none !important;
-  border-radius: 0 !important;
+  border-radius: 10px !important;
   background: transparent !important;
   color: rgba(238,238,245,0.56) !important;
   font-size: 13.5px !important;
@@ -5590,9 +5588,7 @@ body { background: transparent; }
 
 /* ── Row internals ───────────────────────────────────────────────── */
 .nav-inner {
-  /* 20px = the old 8px nav side padding + 12px inner padding, so the
-     icon column doesn't move now that rows are full-bleed. */
-  padding: 0 20px !important;
+  padding: 0 12px !important;
   gap: 11px !important;
   height: 100% !important;
 }
@@ -6190,17 +6186,17 @@ body { background: transparent; }
    edge is retired. ── */
 .sidebar-link.active::before { content: none !important; display: none !important; }
 
-/* ── Collapsed rail: rows are flush, full-bleed bands ──
-   The old icon-hugging box is retired: rows span the rail's full inner
-   width in every state, so the active/hover highlight is a strip flush
-   with the rail edges. The rail clips them at its rounded corners. */
+/* ── Collapsed rail: the active/hover box hugs the icon ──
+   Rows cap at icon width (10px either side of the 26px icon chip) so
+   the highlight is a rounded box mirrored left/right instead of a
+   strip sliced off by the rail's edge; it widens with the expansion. */
 @media (min-width: 901px) {
   .sidebar-link {
-    max-width: none !important;
-    border-radius: 0 !important;
+    /* Track the rail so the box keeps the same 9px inset on BOTH sides
+       in every state: 18px = 2×8px nav padding + 2×1px sidebar border.
+       (A fixed 208px cap left the expanded pill 9px left / 23px right.) */
+    max-width: calc(var(--sidebar-width, 240px) - 18px);
+    border-radius: 10px !important;
     transition: background 0.18s ease, color 0.18s ease !important;
-  }
-  .sidebar {
-    overflow: hidden !important;
   }
 }
