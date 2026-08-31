@@ -1790,6 +1790,14 @@ html.reduce-motion .nav-sparkle {
 .friends-ui-pill:hover:not(:disabled) { filter: brightness(1.08); }
 .friends-ui-name:hover { text-decoration: underline !important; }
 
+/* While the Friends overlay is up, the sidebar's own content fades out so
+   the unblurred panel looks straight onto the rail glass + starfield. */
+.sidebar > :not(.friends-ui-overlay) { transition: opacity 0.18s ease; }
+.sidebar.friends-overlay-open > :not(.friends-ui-overlay) {
+  opacity: 0;
+  pointer-events: none;
+}
+
 @keyframes friendsOverlayIn {
   from { opacity: 0; transform: translateY(14px) scale(0.965); }
   to   { opacity: 1; transform: translateY(0) scale(1); }

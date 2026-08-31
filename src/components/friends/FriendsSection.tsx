@@ -68,6 +68,15 @@ export default function FriendsSection({ container, sidebar }: Props) {
 
   useEscapeClose(open, close);
 
+  /* While the overlay is up, the sidebar's own content steps aside so the
+     panel looks straight onto the rail glass + starfield; it fades back in
+     as the exit animation plays. */
+  useEffect(() => {
+    if (!sidebar) return;
+    sidebar.classList.toggle("friends-overlay-open", open && !closing);
+    return () => sidebar.classList.remove("friends-overlay-open");
+  }, [sidebar, open, closing]);
+
   const load = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth?.user?.id ?? null;

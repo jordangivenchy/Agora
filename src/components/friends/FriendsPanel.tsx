@@ -30,8 +30,11 @@ export interface FriendRowModel {
 }
 
 export const FRIENDS_UI = {
-  /* Glassy: the sidebar shows through, washed out by the backdrop blur. */
-  panelBg: "rgba(10,12,18,0.58)",
+  /* A light unblurred tint over the rail's own glass: the starfield stays
+     visible through the panel (blur would smear the stars away). The
+     sidebar content beneath fades out while the overlay is open —
+     `.friends-overlay-open` in globals.css. */
+  panelBg: "rgba(9,10,14,0.35)",
   /* Solid stand-in where a translucent ring would look broken (dot ring). */
   panelBgSolid: "#10131b",
   border: "1px solid rgba(255,255,255,0.10)",
@@ -146,19 +149,19 @@ export function FriendsCard({
             <span
               key={f.id}
               style={{
-                width: 22,
-                height: 22,
+                width: 26,
+                height: 26,
                 borderRadius: "50%",
                 overflow: "hidden",
                 background: "#1c2430",
                 boxShadow: "0 0 0 1.5px #0f1117",
-                marginLeft: i === 0 ? 0 : -8,
+                marginLeft: i === 0 ? 0 : -9,
                 position: "relative",
                 zIndex: 3 - i,
                 display: "block",
               }}
             >
-              <UserAvatar size={22} username={f.username} avatarUrl={f.avatar_url} seed={f.id} />
+              <UserAvatar size={26} username={f.username} avatarUrl={f.avatar_url} seed={f.id} />
             </span>
           ))}
         </span>
@@ -260,18 +263,18 @@ export function FriendRow({
         fontFamily: FRIENDS_UI.body,
       }}
     >
-      <a href={href} style={{ position: "relative", flexShrink: 0, display: "block", width: 36, height: 36 }}>
-        <span style={{ display: "block", width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: "#1c2430" }}>
-          <UserAvatar size={36} username={user.username} avatarUrl={user.avatar_url} seed={user.id} />
+      <a href={href} style={{ position: "relative", flexShrink: 0, display: "block", width: 44, height: 44 }}>
+        <span style={{ display: "block", width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "#1c2430" }}>
+          <UserAvatar size={44} username={user.username} avatarUrl={user.avatar_url} seed={user.id} />
         </span>
         {online && (
           <span
             style={{
               position: "absolute",
-              right: -1,
-              bottom: -1,
-              width: 10,
-              height: 10,
+              right: 0,
+              bottom: 0,
+              width: 11,
+              height: 11,
               borderRadius: "50%",
               background: FRIENDS_UI.green,
               boxShadow: `0 0 0 2px ${FRIENDS_UI.panelBgSolid}`,
@@ -383,10 +386,7 @@ export function FriendsOverlay(p: FriendsOverlayProps) {
         position: "absolute",
         inset: 0,
         background: FRIENDS_UI.panelBg,
-        backdropFilter: "blur(20px) saturate(1.15)",
-        WebkitBackdropFilter: "blur(20px) saturate(1.15)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 14,
+        borderRadius: 18,
         zIndex: 200,
         display: "flex",
         flexDirection: "column",
