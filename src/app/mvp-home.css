@@ -6205,3 +6205,33 @@ body { background: transparent; }
     transition: background 0.18s ease, color 0.18s ease !important;
   }
 }
+
+/* ═══ Phones (<640px) ═══════════════════════════════════════════════
+   Kick-style mobile shell: a compact top bar, the rail hidden (a bottom
+   tab bar — HomeSidebar's .mobile-tabbar, styled in globals.css — takes
+   over navigation), single-column content with no rail offset. Kept at
+   the END of this file so it beats every earlier rule by source order
+   on both the unlayered homepage and the layered chrome routes. */
+@media (max-width: 639px) {
+  html .sidebar { display: none !important; }
+
+  /* Top bar: mark + auth/avatar only; the search pill is desktop-only
+     for now (Explore covers search on phones). */
+  html .nav { padding: 8px 12px 0 !important; gap: 10px !important; }
+  html .nav-logo img { height: 20px !important; }
+  html .nav-search { display: none !important; }
+  html .nav-auth { gap: 8px !important; }
+  html .nav-auth .btn-ghost,
+  html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }
+
+  /* Content column: no rail, tight gutters, room for the tab bar. */
+  html .main {
+    margin-left: 0 !important;
+    padding: 8px 12px calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Hero title sized for portrait. */
+  html .carousel-motion,
+  html .carousel-item.news .carousel-motion { font-size: 19px !important; line-height: 1.2 !important; }
+  html .carousel-section { margin-bottom: 12px; }
+}

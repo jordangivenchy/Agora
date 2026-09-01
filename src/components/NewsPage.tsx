@@ -293,9 +293,9 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
           whose CSS reset out-cascades Tailwind spacing utilities (and
           arbitrary ones like max-w-[1280px] silently fail there). */}
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 32px 40px", boxSizing: "border-box" }}>
-        <div className="flex items-center gap-3.5 mb-4">
+        <div className="flex items-center gap-3.5 mb-4 news-head">
           <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
-          <span className="text-[12px]" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
+          <span className="text-[12px] news-sub" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
           <span className="text-[12px] ml-auto whitespace-nowrap" style={{ color: "#8b8b94" }}>
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </span>
@@ -384,7 +384,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             {majors.length > 0 && (
               <>
                 <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MAJOR STORIES</p>
-                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))" }}>
                   {majors.map((st) => (
                     <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
                       <div style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}>

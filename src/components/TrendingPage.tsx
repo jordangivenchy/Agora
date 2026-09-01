@@ -221,7 +221,7 @@ export default function TrendingPage({ open, onClose }: Props) {
       }}
     >
       <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
-        <div className="flex items-center gap-4 mb-5">
+        <div className="flex items-center gap-4 mb-5 trend-head">
           {activeShort && (
             <button
               onClick={() => setActiveShort(null)}
@@ -236,7 +236,7 @@ export default function TrendingPage({ open, onClose }: Props) {
               <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
                 Trending
               </span>
-              <div className="flex gap-2 flex-1 flex-wrap">
+              <div className="flex gap-2 flex-1 flex-wrap trend-chips">
                 {CHIP_FILTERS.map((c) => (
                   <button
                     key={c}
@@ -471,7 +471,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                 </button>
               </div>
             ) : (
-              <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+              <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))" }}>
                 {rooms.map((r, i) => (
                   <a
                     key={r.id}

@@ -1096,7 +1096,7 @@ export default function ProfileView({
         </section>
 
         {/* ── Tabs ── */}
-        <div className="flex items-center gap-1.5 mt-5 mb-4 flex-wrap">
+        <div className="flex items-center gap-1.5 mt-5 mb-4 flex-wrap profile-tabs">
           {tabBtn("debates", "Discussions", counts.debates)}
           {tabBtn("scheduled", "Scheduled", counts.scheduled)}
           {tabBtn("posts", "Posts", counts.posts)}

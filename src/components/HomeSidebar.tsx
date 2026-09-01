@@ -189,6 +189,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
   }, []);
 
   return (
+    <>
     <aside ref={asideRef} id="sidebar" className={`sidebar${open ? " open" : ""}`}>
       {/* glass edge layers */}
       <div className="sidebar-edge-blur" aria-hidden="true">
@@ -251,5 +252,28 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
 
       {hosts && <FriendsSection container={hosts.friends} sidebar={hosts.aside} />}
     </aside>
+
+    {/* Phones (<640px): the rail is hidden and this Kick-style bottom
+        tab bar is the navigation — same items, same callback. Styled in
+        globals.css (.mobile-tabbar); display:none above the breakpoint. */}
+    <nav className="mobile-tabbar" aria-label="Sections">
+      {NAV.map((item) => (
+        <a
+          key={item.id}
+          className={`mobile-tab${activeId === item.id ? " active" : ""}`}
+          href="#"
+          data-nav-id={item.id}
+          aria-current={activeId === item.id ? "page" : undefined}
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate(item.id);
+          }}
+        >
+          <span className="mobile-tab-icon">{item.icon}</span>
+          <span className="mobile-tab-label">{item.label}</span>
+        </a>
+      ))}
+    </nav>
+    </>
   );
 }
