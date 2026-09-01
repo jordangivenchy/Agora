@@ -140,10 +140,25 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest?.("#hamburger")) setOpen((o) => !o);
+      const t = e.target as HTMLElement;
+      if (t.closest?.("#hamburger")) {
+        setOpen((o) => !o);
+        return;
+      }
+      /* Drawer mode (<900px, where the rail overlays the page): a tap on
+         a nav row or anywhere outside the rail closes it. Harmless on
+         desktop, where `open` has no effect. */
+      setOpen((o) => (o && (!asideRef.current?.contains(t) || !!t.closest?.(".sidebar-link")) ? false : o));
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   /* Spotlight border — same cursor→hue mapping mvp-home.js used, but

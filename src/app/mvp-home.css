@@ -5510,6 +5510,25 @@ body { background: transparent; }
 .sidebar-scroll-area { padding: 0 !important; }
 .sidebar-nav { padding: 4px 8px 4px !important; gap: 1px !important; }
 
+/* ── Off-canvas drawer (<900px) ──
+   The desktop entrance animation above pins transform: translateX(0)
+   through its fill-mode, and animations out-cascade the drawer's plain
+   translateX(-120%) — so the drawer sat permanently open, translucent,
+   over the page. Below 900px: no entrance animation, explicit drawer
+   transforms, and an OPAQUE panel — here it overlays content, not the
+   starfield. */
+@media (max-width: 900px) {
+  .sidebar {
+    animation: none !important;
+    transform: translateX(-120%) !important;
+    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    background: #0e0e12 !important;
+    border-radius: 0 18px 18px 0 !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+  }
+  .sidebar.open { transform: translateX(0) !important; }
+}
+
 /* ── Nav rows: flat, no per-item card ────────────────────────────── */
 .sidebar-link {
   height: 40px !important;
