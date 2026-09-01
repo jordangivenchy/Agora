@@ -33,7 +33,7 @@ import DmThread, {
 } from "./DmThread";
 
 const WIDE_MIN = 760;
-const LIST_WIDTH = 210;
+const LIST_WIDTH = 230;
 
 const panelBase: React.CSSProperties = {
   position: "fixed",
@@ -285,7 +285,7 @@ export default function MessagesDock() {
               borderLeft: active ? `2px solid ${YELLOW}` : "2px solid transparent",
             }}
           >
-            <UserAvatar size={40} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
+            <UserAvatar size={44} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <p
@@ -294,7 +294,7 @@ export default function MessagesDock() {
                     flex: 1,
                     minWidth: 0,
                     color: "#f5f5f0",
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: t.unread > 0 ? 700 : 500,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
@@ -303,13 +303,13 @@ export default function MessagesDock() {
                 >
                   {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
                 </p>
-                <span style={{ color: "#6f6f7a", fontSize: 10.5, flexShrink: 0 }}>{relTime(t.last_at)}</span>
+                <span style={{ color: "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
               </div>
               <p
                 style={{
                   margin: 0,
                   color: t.unread > 0 ? "#c9c9d4" : "#8b8b94",
-                  fontSize: 11.5,
+                  fontSize: 12.5,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -415,7 +415,7 @@ export default function MessagesDock() {
   return (
     <div
       className={`dm-dock-panel${closing ? " dm-dock-closing" : ""}`}
-      style={{ ...panelBase, width: wide ? 600 : 330, height: wide ? 480 : 460 }}
+      style={{ ...panelBase, width: wide ? 660 : 350, height: wide ? 560 : 520 }}
     >
       {showList && (
         <div

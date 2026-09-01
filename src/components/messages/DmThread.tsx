@@ -390,7 +390,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     /* border-box: scrollHeight excludes the 1px borders, so add them back
        or a one-line draft overflows by 2px and grows a scrollbar. Only
        allow scrolling once the draft exceeds the 4-line cap. */
-    const MAX = 4 * 20 + 14 + 2;
+    const MAX = 4 * 22 + 14 + 2;
     ta.style.height = "auto";
     const full = ta.scrollHeight + 2;
     ta.style.height = `${Math.min(full, MAX)}px`;
@@ -594,7 +594,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                 display: "block",
                 color: "#f5f5f0",
                 fontWeight: 600,
-                fontSize: page ? 14.5 : 13,
+                fontSize: page ? 16 : 14,
                 lineHeight: 1.2,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -603,7 +603,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             >
               {displayName(hydratedPeer)}
             </span>
-            <span style={{ display: "block", color: "#8b8b94", fontSize: page ? 11.5 : 11, lineHeight: 1.2 }}>
+            <span style={{ display: "block", color: "#8b8b94", fontSize: page ? 12.5 : 12, lineHeight: 1.2 }}>
               @{peer.username}
             </span>
           </span>
@@ -632,7 +632,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
         }}
       >
         {msgs.length === 0 && (
-          <p style={{ color: "#8b8b94", fontSize: 12, textAlign: "center", marginTop: 24 }}>
+          <p style={{ color: "#8b8b94", fontSize: 13, textAlign: "center", marginTop: 24 }}>
             Say hi to @{peer.username} 👋
           </p>
         )}
@@ -658,7 +658,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   style={{
                     alignSelf: "center",
                     margin: "10px 0 2px",
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: 0.6,
                     textTransform: "uppercase",
@@ -686,8 +686,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
                     background: mine ? YELLOW : "rgba(30,33,42,0.88)",
                     color: mine ? YELLOW_INK : "#f2f2f5",
-                    fontSize: 13,
-                    lineHeight: 1.35,
+                    fontSize: page ? 15 : 14.5,
+                    lineHeight: 1.4,
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
                     minWidth: 0,
@@ -708,7 +708,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                         borderRadius: 6,
                         background: mine ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.06)",
                         cursor: quoted ? "pointer" : "default",
-                        fontSize: 11,
+                        fontSize: 12,
                         lineHeight: 1.3,
                         overflow: "hidden",
                       }}
@@ -740,8 +740,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                         alt={isGif(m.image_url) ? "GIF" : "Photo"}
                         style={{
                           display: "block",
-                          maxWidth: page ? 300 : 220,
-                          maxHeight: page ? 320 : 260,
+                          maxWidth: page ? 420 : 280,
+                          maxHeight: page ? 440 : 320,
                           borderRadius: 9,
                           objectFit: "cover",
                         }}
@@ -785,8 +785,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                             style={{
                               border: "none",
                               background: "none",
-                              fontSize: 15,
-                              lineHeight: "20px",
+                              fontSize: 18,
+                              lineHeight: "24px",
                               cursor: "pointer",
                               padding: "0 3px",
                               borderRadius: 6,
@@ -845,8 +845,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                         gap: 3,
                         padding: "1px 7px",
                         borderRadius: 999,
-                        fontSize: 11,
-                        lineHeight: "16px",
+                        fontSize: 12,
+                        lineHeight: "18px",
                         cursor: "pointer",
                         fontFamily: "inherit",
                         border: g.mine ? `1px solid ${YELLOW}` : "1px solid rgba(255,255,255,0.12)",
@@ -854,14 +854,14 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                         color: "#e6e6ec",
                       }}
                     >
-                      <span style={{ fontSize: 12 }}>{emoji}</span>
+                      <span style={{ fontSize: 14 }}>{emoji}</span>
                       {g.count > 1 && g.count}
                     </button>
                   ))}
                 </div>
               )}
               {m.id === lastMineReadId && (
-                <span style={{ alignSelf: "flex-end", color: "#8b8b94", fontSize: 10.5, marginTop: -3 }}>Seen</span>
+                <span style={{ alignSelf: "flex-end", color: "#8b8b94", fontSize: 11.5, marginTop: -3 }}>Seen</span>
               )}
             </div>
           );
@@ -872,7 +872,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
           retrigger the auto-scroll effect. */}
       <div
         style={{
-          height: peerTyping ? 20 : 0,
+          height: peerTyping ? 22 : 0,
           overflow: "hidden",
           transition: "height 0.15s ease",
           display: "flex",
@@ -894,7 +894,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                 />
               ))}
             </span>
-            <span style={{ color: "#8b8b94", fontSize: 11 }}>@{peer.username} is typing…</span>
+            <span style={{ color: "#8b8b94", fontSize: 12 }}>@{peer.username} is typing…</span>
           </>
         )}
       </div>
@@ -916,7 +916,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               background: "rgba(255,183,0,0.08)",
             }}
           >
-            <div style={{ flex: 1, minWidth: 0, fontSize: 11, lineHeight: 1.3 }}>
+            <div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.3 }}>
               <span style={{ display: "block", color: "#c9c9d4", fontWeight: 700 }}>
                 Replying to {replyTo.sender_id === me ? "yourself" : displayName(hydratedPeer)}
               </span>
@@ -1011,16 +1011,16 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             style={{
               flex: 1,
               minWidth: 0,
-              minHeight: 34,
-              maxHeight: 96,
+              minHeight: 36,
+              maxHeight: 104,
               overflowY: "hidden",
               resize: "none",
               borderRadius: 10,
               border: "1px solid rgba(255,255,255,0.12)",
               background: "rgba(255,255,255,0.05)",
               color: "white",
-              fontSize: 13,
-              lineHeight: "20px",
+              fontSize: 14.5,
+              lineHeight: "22px",
               padding: "7px 12px",
               outline: "none",
               fontFamily: "inherit",

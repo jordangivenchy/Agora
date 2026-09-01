@@ -307,7 +307,7 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
                       flex: 1,
                       minWidth: 0,
                       color: "#f5f5f0",
-                      fontSize: 13.5,
+                      fontSize: 14.5,
                       fontWeight: t.unread > 0 ? 700 : 500,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -316,13 +316,13 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
                   >
                     {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
                   </p>
-                  <span style={{ color: "#6f6f7a", fontSize: 10.5, flexShrink: 0 }}>{relTime(t.last_at)}</span>
+                  <span style={{ color: "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
                 </div>
                 <p
                   style={{
                     margin: 0,
                     color: t.unread > 0 ? "#c9c9d4" : "#8b8b94",
-                    fontSize: 12,
+                    fontSize: 13,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
