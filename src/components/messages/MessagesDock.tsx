@@ -18,7 +18,8 @@
    folder, same as community posts) and GIPHY picks store the CDN URL;
    both land in direct_messages.image_url (migration 20260848). */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import UserAvatar from "../UserAvatar";
@@ -46,6 +47,8 @@ interface Dm {
   content: string;
   image_url: string | null;
   created_at: string;
+  reply_to: string | null;
+  read_at: string | null;
 }
 
 interface Peer {
@@ -55,10 +58,14 @@ interface Peer {
   avatarUrl: string | null;
 }
 
-const DM_SELECT = "id, sender_id, recipient_id, content, image_url, created_at";
+const DM_SELECT = "id, sender_id, recipient_id, content, image_url, created_at, reply_to, read_at";
 const WIDE_MIN = 760;
 const MAX_DM_IMAGE_BYTES = 5 * 1024 * 1024;
 const LIST_WIDTH = 210;
+
+/* Hero accent pair — same as the sidebar active tab / news pill. */
+const YELLOW = "#ffb700";
+const YELLOW_INK = "#1a0e00";
 
 const panelBase: React.CSSProperties = {
   position: "fixed",
@@ -67,11 +74,14 @@ const panelBase: React.CSSProperties = {
   zIndex: 950,
   display: "flex",
   flexDirection: "column",
-  borderRadius: 16,
-  background: "rgba(10,12,18,0.97)",
+  borderRadius: 18,
+  /* Light unblurred tint, like the friends panel: the starfield stays
+     visible through the glass (blur would smear the stars away). Bubbles
+     carry their own near-solid backgrounds so text survives whatever is
+     behind the panel. */
+  background: "rgba(9,10,14,0.45)",
   border: "1px solid rgba(255,255,255,0.1)",
   boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
-  backdropFilter: "blur(18px)",
   overflow: "hidden",
   fontFamily: "'DM Sans', sans-serif",
 };
@@ -123,19 +133,53 @@ export default function MessagesDock() {
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [picker, setPicker] = useState<null | "emoji" | "gif">(null);
+  const [replyTo, setReplyTo] = useState<Dm | null>(null);
+  const [peerTyping, setPeerTyping] = useState(false);
+  const [closing, setClosing] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const peerRef = useRef<Peer | null>(null);
   peerRef.current = peer;
   const wideRef = useRef(false);
+  const typingChanRef = useRef<RealtimeChannel | null>(null);
+  const typingTimerRef = useRef<number | null>(null);
+  const lastTypingSentRef = useRef(0);
+  const closeTimerRef = useRef<number | null>(null);
+
+  /* Close plays the panel's exit animation, then unmounts. */
+  const closeDock = useCallback(() => {
+    if (closeTimerRef.current !== null) return;
+    setClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      setClosing(false);
+      setOpen(false);
+      /* Leave no thread "open" behind the closed dock — the inbox
+         listener would keep auto-marking its messages read, showing the
+         sender a false "Seen" for messages nobody saw. */
+      setPeer(null);
+      peerRef.current = null;
+    }, 150);
+  }, []);
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+    },
+    []
+  );
 
   useEscapeClose(open, () => {
+    if (closing) return; // exit animation already in flight
     if (picker) {
       setPicker(null);
       return;
     }
+    if (replyTo) {
+      setReplyTo(null);
+      return;
+    }
     if (peer && !wide) setPeer(null);
-    else setOpen(false);
+    else closeDock();
   });
 
   /* Layout mode tracks the viewport. */
@@ -208,6 +252,8 @@ export default function MessagesDock() {
       setPeer(p);
       setSendError(null);
       setPicker(null);
+      setReplyTo(null);
+      setPeerTyping(false);
       setMsgs([]);
       loadThread(p);
     },
@@ -216,7 +262,15 @@ export default function MessagesDock() {
 
   /* Open events from anywhere in the app. */
   useEffect(() => {
+    const cancelClosing = () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setClosing(false);
+    };
     const onMessages = async () => {
+      cancelClosing();
       setOpen(true);
       setPeer(null);
       peerRef.current = null;
@@ -236,6 +290,7 @@ export default function MessagesDock() {
     const onDm = (e: Event) => {
       const d = (e as CustomEvent).detail as { userId: string; username: string; avatarUrl?: string | null };
       if (!d?.userId) return;
+      cancelClosing();
       setOpen(true);
       loadThreads();
       selectPeer({ id: d.userId, username: d.username, avatarUrl: d.avatarUrl ?? null });
@@ -248,7 +303,8 @@ export default function MessagesDock() {
     };
   }, [loadThreads, selectPeer]);
 
-  /* Incoming messages in realtime (RLS scopes the stream to my rows). */
+  /* Incoming messages + read receipts in realtime (RLS scopes both
+     streams to my rows). */
   useEffect(() => {
     if (!me) return;
     loadThreads();
@@ -262,9 +318,25 @@ export default function MessagesDock() {
           const p = peerRef.current;
           if (p && m.sender_id === p.id) {
             setMsgs((xs) => (xs.some((x) => x.id === m.id) ? xs : [...xs, m]));
+            setPeerTyping(false); // the message they were typing just landed
             supabase.rpc("mark_dm_read", { p_peer: p.id });
           }
           loadThreads();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "direct_messages", filter: `sender_id=eq.${me}` },
+        (payload) => {
+          /* The peer marked my messages read — light up "Seen". Return
+             the SAME array when nothing changed: receipts from other
+             threads must not re-render (or re-pin) this one. */
+          const m = payload.new as Dm;
+          setMsgs((xs) =>
+            xs.some((x) => x.id === m.id && x.read_at !== m.read_at)
+              ? xs.map((x) => (x.id === m.id ? { ...x, read_at: m.read_at } : x))
+              : xs
+          );
         }
       )
       .subscribe();
@@ -273,9 +345,47 @@ export default function MessagesDock() {
     };
   }, [me, supabase, loadThreads]);
 
+  /* Typing indicator: an ephemeral broadcast channel per conversation
+     pair (deterministic name from the sorted ids — both sides join the
+     same one). Carries no content, only "someone's keys are moving";
+     the flag decays after 3.5s of silence. */
   useEffect(() => {
+    setPeerTyping(false);
+    if (!me || !peer?.id || !open) return;
+    const name = `dm-typing-${[me, peer.id].sort().join("-")}`;
+    const ch = supabase
+      .channel(name, { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if ((payload as { from?: string } | null)?.from !== peerRef.current?.id) return;
+        setPeerTyping(true);
+        if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = window.setTimeout(() => setPeerTyping(false), 3500);
+      })
+      .subscribe();
+    typingChanRef.current = ch;
+    return () => {
+      typingChanRef.current = null;
+      lastTypingSentRef.current = 0; // fresh channel, fresh throttle
+      if (typingTimerRef.current !== null) window.clearTimeout(typingTimerRef.current);
+      supabase.removeChannel(ch);
+    };
+  }, [me, peer?.id, open, supabase]);
+
+  /* Pin-to-bottom. Keyed on the LAST MESSAGE ID, not array identity —
+     read-receipt merges rebuild the array without adding messages and
+     must not yank a reader who scrolled up. Separately: when composer
+     chrome (reply chip, typing strip, image preview) grows while the
+     list is pinned, re-pin after layout so the newest message doesn't
+     slide behind it. */
+  const pinnedRef = useRef(true);
+  const lastMsgId = msgs.length ? msgs[msgs.length - 1].id : null;
+  useEffect(() => {
+    pinnedRef.current = true;
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [msgs]);
+  }, [lastMsgId]);
+  useLayoutEffect(() => {
+    if (pinnedRef.current) listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [replyTo, peerTyping, filePreview]);
 
   /* Auto-grow the composer up to ~4 lines. */
   useEffect(() => {
@@ -292,12 +402,12 @@ export default function MessagesDock() {
   }, [draft, peer]);
 
   const sendMessage = useCallback(
-    async (text: string, imageUrl: string | null) => {
+    async (text: string, imageUrl: string | null, replyToId: string | null = null) => {
       if (!me || !peer) return false;
       setSendError(null);
       const { data, error } = await supabase
         .from("direct_messages")
-        .insert({ sender_id: me, recipient_id: peer.id, content: text, image_url: imageUrl })
+        .insert({ sender_id: me, recipient_id: peer.id, content: text, image_url: imageUrl, reply_to: replyToId })
         .select(DM_SELECT)
         .single();
       if (error) {
@@ -330,14 +440,15 @@ export default function MessagesDock() {
         return;
       }
     }
-    const ok = await sendMessage(text, imageUrl);
+    const ok = await sendMessage(text, imageUrl, replyTo?.id ?? null);
     setSending(false);
     if (ok) {
       setDraft("");
+      setReplyTo(null);
       clearFile();
       taRef.current?.focus();
     }
-  }, [draft, file, me, peer, sending, supabase, sendMessage, clearFile]);
+  }, [draft, file, me, peer, sending, supabase, sendMessage, clearFile, replyTo]);
 
   const pickFile = useCallback(
     (f: File | null) => {
@@ -406,6 +517,16 @@ export default function MessagesDock() {
 
   const canSend = !sending && (draft.trim().length > 0 || !!file);
 
+  /* "Seen" goes under my newest message, and only once the peer has
+     read it (read_at set by their mark_dm_read, streamed back live). */
+  let lastMineReadId: string | null = null;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].sender_id === me) {
+      lastMineReadId = msgs[i].read_at ? msgs[i].id : null;
+      break;
+    }
+  }
+
   /* ── Conversation list ─────────────────────────────────────────── */
   const threadList = (
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
@@ -438,11 +559,11 @@ export default function MessagesDock() {
               padding: wide ? "9px 10px" : "10px 14px",
               cursor: "pointer",
               borderBottom: "1px solid rgba(255,255,255,0.04)",
-              background: active ? "rgba(47,127,224,0.16)" : "transparent",
-              borderLeft: active ? "2px solid #2f7fe0" : "2px solid transparent",
+              background: active ? "rgba(255,183,0,0.12)" : "transparent",
+              borderLeft: active ? `2px solid ${YELLOW}` : "2px solid transparent",
             }}
           >
-            <UserAvatar size={30} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
+            <UserAvatar size={40} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                 <p
@@ -479,8 +600,8 @@ export default function MessagesDock() {
             {t.unread > 0 && (
               <span
                 style={{
-                  background: "#2f7fe0",
-                  color: "white",
+                  background: YELLOW,
+                  color: YELLOW_INK,
                   borderRadius: 999,
                   fontSize: 10.5,
                   fontWeight: 700,
@@ -596,7 +717,7 @@ export default function MessagesDock() {
           style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, textDecoration: "none" }}
           title="View profile"
         >
-          <UserAvatar size={26} username={peer.username} avatarUrl={peer.avatarUrl} seed={peer.id} />
+          <UserAvatar size={32} username={peer.username} avatarUrl={peer.avatarUrl} seed={peer.id} />
           <span style={{ minWidth: 0 }}>
             <span
               style={{
@@ -616,7 +737,7 @@ export default function MessagesDock() {
           </span>
         </a>
         {!wide && (
-          <button onClick={() => setOpen(false)} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
+          <button onClick={closeDock} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
             <Icon name="x" size={14} />
           </button>
         )}
@@ -625,6 +746,10 @@ export default function MessagesDock() {
       {/* Messages */}
       <div
         ref={listRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          pinnedRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+        }}
         style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}
       >
         {msgs.length === 0 && (
@@ -635,43 +760,203 @@ export default function MessagesDock() {
         {msgs.map((m) => {
           const mine = m.sender_id === me;
           const hasText = m.content.trim().length > 0;
+          const quoted = m.reply_to ? msgs.find((x) => x.id === m.reply_to) ?? null : null;
           return (
-            <div
-              key={m.id}
-              style={{
-                alignSelf: mine ? "flex-end" : "flex-start",
-                maxWidth: "80%",
-                padding: m.image_url ? 4 : "7px 11px",
-                borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
-                background: mine ? "#2f7fe0" : "rgba(255,255,255,0.07)",
-                color: "#f2f2f5",
-                fontSize: 13,
-                lineHeight: 1.35,
-                wordBreak: "break-word",
-                whiteSpace: "pre-wrap",
-              }}
-              title={fmtTime(m.created_at)}
-            >
-              {m.image_url && (
-                <a href={m.image_url} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={m.image_url}
-                    alt={isGif(m.image_url) ? "GIF" : "Photo"}
-                    style={{ display: "block", maxWidth: 220, maxHeight: 260, borderRadius: 9, objectFit: "cover" }}
-                  />
-                </a>
+            <div key={m.id} style={{ display: "contents" }}>
+              <div
+                id={`dm-msg-${m.id}`}
+                className="dm-msg-row"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexDirection: mine ? "row-reverse" : "row",
+                  alignSelf: mine ? "flex-end" : "flex-start",
+                  maxWidth: "85%",
+                }}
+              >
+                <div
+                  style={{
+                    padding: m.image_url ? 4 : "7px 11px",
+                    borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
+                    background: mine ? YELLOW : "rgba(30,33,42,0.88)",
+                    color: mine ? YELLOW_INK : "#f2f2f5",
+                    fontSize: 13,
+                    lineHeight: 1.35,
+                    wordBreak: "break-word",
+                    whiteSpace: "pre-wrap",
+                    minWidth: 0,
+                  }}
+                  title={fmtTime(m.created_at)}
+                >
+                  {m.reply_to && (
+                    <div
+                      onClick={() => {
+                        document
+                          .getElementById(`dm-msg-${m.reply_to}`)
+                          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      style={{
+                        margin: m.image_url ? "3px 7px 4px" : "0 0 5px",
+                        padding: "3px 8px",
+                        borderLeft: `2px solid ${mine ? "rgba(0,0,0,0.4)" : YELLOW}`,
+                        borderRadius: 6,
+                        background: mine ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.06)",
+                        cursor: quoted ? "pointer" : "default",
+                        fontSize: 11,
+                        lineHeight: 1.3,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <span style={{ display: "block", fontWeight: 700, opacity: 0.8 }}>
+                        {quoted ? (quoted.sender_id === me ? "You" : displayName(peer)) : "Earlier message"}
+                      </span>
+                      {quoted && (
+                        <span
+                          style={{
+                            display: "block",
+                            opacity: 0.75,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {quoted.content.trim() ||
+                            (quoted.image_url ? (isGif(quoted.image_url) ? "GIF" : "Photo") : "")}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {m.image_url && (
+                    <a href={m.image_url} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={m.image_url}
+                        alt={isGif(m.image_url) ? "GIF" : "Photo"}
+                        style={{ display: "block", maxWidth: 220, maxHeight: 260, borderRadius: 9, objectFit: "cover" }}
+                      />
+                    </a>
+                  )}
+                  {hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
+                </div>
+                <button
+                  className="dm-reply-btn"
+                  onClick={() => {
+                    setReplyTo(m);
+                    taRef.current?.focus();
+                  }}
+                  aria-label="Reply to this message"
+                  title="Reply"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                    background: "none",
+                    color: "rgba(255,255,255,0.45)",
+                    cursor: "pointer",
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon name="text-quote" size={13} />
+                </button>
+              </div>
+              {m.id === lastMineReadId && (
+                <span style={{ alignSelf: "flex-end", color: "#8b8b94", fontSize: 10.5, marginTop: -3 }}>Seen</span>
               )}
-              {hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
             </div>
           );
         })}
+      </div>
+
+      {/* Typing indicator — lives outside the scroller so it doesn't
+          retrigger the auto-scroll effect. */}
+      <div
+        style={{
+          height: peerTyping ? 20 : 0,
+          overflow: "hidden",
+          transition: "height 0.15s ease",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "0 14px",
+          flexShrink: 0,
+        }}
+        aria-live="polite"
+      >
+        {peerTyping && (
+          <>
+            <span style={{ display: "inline-flex", gap: 3 }}>
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="dm-typing-dot"
+                  style={{ width: 4, height: 4, borderRadius: "50%", background: YELLOW, display: "inline-block" }}
+                />
+              ))}
+            </span>
+            <span style={{ color: "#8b8b94", fontSize: 11 }}>@{peer.username} is typing…</span>
+          </>
+        )}
       </div>
 
       {sendError && <p style={{ margin: 0, padding: "6px 12px", color: "#ff9d92", fontSize: 11.5 }}>{sendError}</p>}
 
       {/* Composer */}
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "8px 10px" }}>
+        {replyTo && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 6,
+              padding: "4px 8px",
+              borderLeft: `2px solid ${YELLOW}`,
+              borderRadius: 6,
+              background: "rgba(255,183,0,0.08)",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0, fontSize: 11, lineHeight: 1.3 }}>
+              <span style={{ display: "block", color: "#c9c9d4", fontWeight: 700 }}>
+                Replying to {replyTo.sender_id === me ? "yourself" : displayName(peer)}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  color: "#8b8b94",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {replyTo.content.trim() || (replyTo.image_url ? (isGif(replyTo.image_url) ? "GIF" : "Photo") : "")}
+              </span>
+            </div>
+            <button
+              onClick={() => setReplyTo(null)}
+              aria-label="Cancel reply"
+              style={{
+                width: 20,
+                height: 20,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                background: "none",
+                color: "rgba(255,255,255,0.5)",
+                cursor: "pointer",
+                padding: 0,
+                flexShrink: 0,
+              }}
+            >
+              <Icon name="x" size={11} />
+            </button>
+          </div>
+        )}
         {filePreview && (
           <div style={{ position: "relative", display: "inline-block", marginBottom: 6 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -704,7 +989,21 @@ export default function MessagesDock() {
           <textarea
             ref={taRef}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              /* Throttled "keys are moving" ping for the peer's typing
+                 indicator; carries only my id, never content. */
+              const now = Date.now();
+              if (
+                e.target.value &&
+                now - lastTypingSentRef.current > 2000 &&
+                typingChanRef.current?.state === "joined" &&
+                me
+              ) {
+                lastTypingSentRef.current = now;
+                typingChanRef.current.send({ type: "broadcast", event: "typing", payload: { from: me } });
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -736,7 +1035,7 @@ export default function MessagesDock() {
           <span style={{ position: "relative", display: "inline-flex" }}>
             <button
               onClick={() => setPicker(picker === "emoji" ? null : "emoji")}
-              style={{ ...iconBtn, color: picker === "emoji" ? "#c9c2ff" : iconBtn.color }}
+              style={{ ...iconBtn, color: picker === "emoji" ? YELLOW : iconBtn.color }}
               aria-label="Add emoji"
               title="Emoji"
             >
@@ -769,7 +1068,7 @@ export default function MessagesDock() {
                   fontSize: 11,
                   fontWeight: 700,
                   letterSpacing: "0.04em",
-                  color: picker === "gif" ? "#c9c2ff" : iconBtn.color,
+                  color: picker === "gif" ? YELLOW : iconBtn.color,
                 }}
                 aria-label="Add a GIF"
                 title="GIF"
@@ -780,9 +1079,10 @@ export default function MessagesDock() {
                 <GifPicker
                   placement="above"
                   align="right"
-                  onPick={(u) => {
+                  onPick={async (u) => {
                     setPicker(null);
-                    sendMessage("", u);
+                    const ok = await sendMessage("", u, replyTo?.id ?? null);
+                    if (ok) setReplyTo(null);
                   }}
                   onClose={() => setPicker(null)}
                 />
@@ -795,8 +1095,8 @@ export default function MessagesDock() {
             aria-label="Send"
             style={{
               ...iconBtn,
-              background: canSend ? "#2f7fe0" : "rgba(47,127,224,0.35)",
-              color: "white",
+              background: canSend ? YELLOW : "rgba(255,183,0,0.3)",
+              color: canSend ? YELLOW_INK : "rgba(255,255,255,0.55)",
               cursor: canSend ? "pointer" : "default",
             }}
           >
@@ -810,7 +1110,7 @@ export default function MessagesDock() {
   /* ── Layouts ───────────────────────────────────────────────────── */
   if (wide) {
     return (
-      <div style={{ ...panelBase, width: 600, height: 480 }}>
+      <div className={`dm-dock-panel${closing ? " dm-dock-closing" : ""}`} style={{ ...panelBase, width: 600, height: 480 }}>
         <div
           style={{
             display: "flex",
@@ -831,7 +1131,7 @@ export default function MessagesDock() {
           >
             Messages{totalUnread > 0 ? ` (${totalUnread})` : ""}
           </span>
-          <button onClick={() => setOpen(false)} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
+          <button onClick={closeDock} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
             <Icon name="x" size={14} />
           </button>
         </div>
@@ -862,7 +1162,7 @@ export default function MessagesDock() {
   }
 
   return (
-    <div style={{ ...panelBase, width: 330, height: 460 }}>
+    <div className={`dm-dock-panel${closing ? " dm-dock-closing" : ""}`} style={{ ...panelBase, width: 330, height: 460 }}>
       {peer ? (
         threadPane
       ) : (
@@ -887,7 +1187,7 @@ export default function MessagesDock() {
             >
               Messages{totalUnread > 0 ? ` (${totalUnread})` : ""}
             </span>
-            <button onClick={() => setOpen(false)} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
+            <button onClick={closeDock} style={{ ...iconBtn, marginLeft: "auto" }} aria-label="Close messages">
               <Icon name="x" size={14} />
             </button>
           </div>
