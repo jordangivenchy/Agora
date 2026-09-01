@@ -388,8 +388,9 @@ export default function Home() {
 
   /* ── URL routing ──
      Sections live as state on this page; next.config rewrites
-     /trending, /news, /explore, /communities[/slug], /posts/:id and
-     /messages[/user] to "/" so the browser keeps the pretty path. On
+     /trending, /news, /explore, /communities[/slug] and /posts/:id to
+     "/" so the browser keeps the pretty path. (/messages is a REAL
+     route — src/app/messages — since the dedicated page.) On
      mount and on popstate the path is parsed into state; when state
      changes from in-app navigation, the matching path is pushed.
      Community/post routes are resolved by CommunitiesPage (it owns the
@@ -417,8 +418,8 @@ export default function Home() {
   }, []);
 
   /* Apply a parsed route to state. React panels open immediately (they
-     cover the home shell while it boots); Explore and Messages are
-     MVP/dock driven and wait for `booted`. */
+     cover the home shell while it boots); Explore is MVP driven and the
+     legacy ?dm= redirect waits for `booted`. */
   const appliedSeqRef = useRef(0);
   const lastPushedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -466,36 +467,18 @@ export default function Home() {
         document.dispatchEvent(new CustomEvent("agora:route", { detail: route }));
         done();
         return;
-      case "messages":
-        if (!booted) return;
-        setActiveTab(null);
-        done();
-        if (!route.username) { window.dispatchEvent(new CustomEvent("agora:messages")); return; }
-        (async () => {
-          const { data } = await supabase
-            .from("users").select("id, username, avatar_url").eq("username", route.username).maybeSingle();
-          if (data) {
-            window.dispatchEvent(new CustomEvent("agora:dm", {
-              detail: { userId: data.id, username: data.username, avatarUrl: data.avatar_url },
-            }));
-          }
-        })();
-        return;
       case "dm-user":
+        /* Legacy /?dm=<id> deep link — messages live on a real route
+           now, so resolve the username and hand the browser over. */
         if (!booted) return;
         done();
         (async () => {
           const { data } = await supabase
-            .from("users").select("id, username, avatar_url").eq("id", route.userId).maybeSingle();
-          if (data) {
-            window.history.replaceState(null, "", pathFor.messages(data.username));
-            lastPushedRef.current = window.location.pathname;
-            window.dispatchEvent(new CustomEvent("agora:dm", {
-              detail: { userId: data.id, username: data.username, avatarUrl: data.avatar_url },
-            }));
-          } else {
-            window.history.replaceState(null, "", "/");
-          }
+            .from("users").select("username").eq("id", route.userId).maybeSingle();
+          /* replace(), not assign(): consume the /?dm= history entry so
+             Back skips the redirect hop. */
+          if (data) window.location.replace(pathFor.messages((data as { username: string }).username));
+          else window.history.replaceState(null, "", "/");
         })();
         return;
     }

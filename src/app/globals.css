@@ -1831,6 +1831,25 @@ html.reduce-motion .nav-sparkle {
   .friends-ui-overlay .friends-ui-row { animation: none !important; }
 }
 
+/* /messages page: content beside the glass sidebar, same margin math as
+   the profile route (tracks --sidebar-width; 1440 content scale). */
+.messages-beside-sidebar {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+}
+@media (min-width: 1024px) {
+  .messages-beside-sidebar {
+    margin-inline: calc(
+        var(--sidebar-width, 220px) +
+          max(24px, (100vw - var(--sidebar-width, 220px) - 1440px) / 2)
+      )
+      16px;
+  }
+}
+
 /* DM dock (src/components/messages/MessagesDock.tsx): glass entrance/
    exit, hover-revealed reply buttons, typing dots. */
 @keyframes dmDockIn {

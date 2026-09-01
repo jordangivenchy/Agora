@@ -10,8 +10,8 @@ export type HomeRoute =
   | { kind: "search"; q: string }
   | { kind: "community"; slug: string }
   | { kind: "post"; id: string; commentId: string | null }
-  | { kind: "messages"; username: string | null }
-  /* Legacy /?dm=<userId>: resolved to /messages/<username> in page.tsx. */
+  /* Legacy /?dm=<userId>: resolved to /messages/<username> (a real
+     route since the dedicated messages page) in page.tsx. */
   | { kind: "dm-user"; userId: string };
 
 export const pathFor = {
@@ -33,10 +33,11 @@ export const pathFor = {
   },
 };
 
-/* Rewrites are declared in next.config.ts; keep the two lists in step. */
+/* Rewrites are declared in next.config.ts; keep the two lists in step.
+   (/messages is a REAL route now — not rewritten to the home shell.) */
 export const REWRITTEN_SOURCES = [
   "/feed", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
-  "/posts/:id", "/messages", "/messages/:username", "/search",
+  "/posts/:id", "/search",
 ];
 
 const SECTIONS: HomeSection[] = ["home", "feed", "explore", "trending", "communities", "news", "search"];
@@ -71,9 +72,6 @@ export function parseHomeRoute(
         legacy: false,
       };
     }
-    if (seg[0] === "messages") {
-      return { route: { kind: "messages", username: seg[1] ?? null }, legacy: false };
-    }
     if (seg.length === 1 && seg[0] === "search") {
       return { route: { kind: "search", q: (params.get("q") ?? "").trim() }, legacy: false };
     }
@@ -97,7 +95,6 @@ export function canonicalPath(route: HomeRoute): string | null {
     case "section": return pathFor.section(route.id);
     case "community": return pathFor.community(route.slug);
     case "post": return pathFor.post(route.id, route.commentId);
-    case "messages": return pathFor.messages(route.username);
     case "search": return pathFor.search(route.q);
     case "dm-user": return null;
   }

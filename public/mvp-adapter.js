@@ -181,13 +181,13 @@
     });
   });
 
-  /* Messages button opens the React DM dock. */
+  /* Messages button goes to the dedicated page. */
   var msgWrap = document.getElementById('nav-messages-btn');
   if (msgWrap) {
     msgWrap.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      window.dispatchEvent(new CustomEvent('agora:messages'));
+      go('/messages');
     });
   }
 

@@ -9,8 +9,9 @@ describe("parseHomeRoute", () => {
     expect(parseHomeRoute("/communities/politics-law", "", "").route).toEqual({ kind: "community", slug: "politics-law" });
     expect(parseHomeRoute("/posts/p1", "", "#comment-c1").route).toEqual({ kind: "post", id: "p1", commentId: "c1" });
     expect(parseHomeRoute("/posts/p1", "?comment=c2", "").route).toEqual({ kind: "post", id: "p1", commentId: "c2" });
-    expect(parseHomeRoute("/messages", "", "").route).toEqual({ kind: "messages", username: null });
-    expect(parseHomeRoute("/messages/jordan", "", "").route).toEqual({ kind: "messages", username: "jordan" });
+    /* /messages is a REAL route (src/app/messages) since the dedicated
+       page — the home shell no longer claims it. */
+    expect(parseHomeRoute("/messages", "", "").route).toEqual({ kind: "section", id: "home" });
     expect(parseHomeRoute("/search", "?q=free%20speech", "").route).toEqual({ kind: "search", q: "free speech" });
     expect(parseHomeRoute("/search", "", "").route).toEqual({ kind: "search", q: "" });
   });

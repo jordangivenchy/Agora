@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       "/feed", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
-      "/posts/:id", "/messages", "/messages/:username", "/search",
+      "/posts/:id", "/search",
     ].map((source) => ({ source, destination: "/" }));
   },
 };
