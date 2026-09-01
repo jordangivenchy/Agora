@@ -108,6 +108,30 @@ export interface DmThreadHandle {
   consumeEscape: () => boolean;
 }
 
+interface Reaction {
+  user_id: string;
+  emoji: string;
+}
+
+/* The quick-react strip. Anything longer-tail can come later via the
+   full emoji picker if it's ever missed. */
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+
+/* "Today" / "Yesterday" / "Aug 30" (+year when it isn't this year). */
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOf(now) - startOf(d)) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+  });
+}
+
 interface Props {
   me: string;
   peer: Peer;
@@ -135,6 +159,9 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [picker, setPicker] = useState<null | "emoji" | "gif">(null);
   const [replyTo, setReplyTo] = useState<Dm | null>(null);
+  /* message id whose quick-react strip is open */
+  const [reactFor, setReactFor] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<Map<string, Reaction[]>>(new Map());
   const [peerTyping, setPeerTyping] = useState(false);
   /* The "agora:dm" open path builds a Peer before any thread row exists,
      so the display name may be unknown — hydrated lazily below. */
@@ -153,6 +180,10 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     ref,
     () => ({
       consumeEscape: () => {
+        if (reactFor) {
+          setReactFor(null);
+          return true;
+        }
         if (picker) {
           setPicker(null);
           return true;
@@ -164,7 +195,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
         return false;
       },
     }),
-    [picker, replyTo]
+    [picker, replyTo, reactFor]
   );
 
   /* ── Load on peer change ─────────────────────────────────────────── */
@@ -174,6 +205,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     setSendError(null);
     setPicker(null);
     setReplyTo(null);
+    setReactFor(null);
+    setReactions(new Map());
     setPeerTyping(false);
     setPeerName(peer.display_name);
     const load = async () => {
@@ -184,8 +217,23 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
         .order("created_at", { ascending: true })
         .limit(200);
       if (peerIdRef.current !== id) return; // switched away mid-flight
-      setMsgs((data ?? []) as Dm[]);
+      const rows = (data ?? []) as Dm[];
+      setMsgs(rows);
       supabase.rpc("mark_dm_read", { p_peer: id }).then(onThreadsChanged);
+      if (rows.length) {
+        const { data: rx } = await supabase
+          .from("dm_reactions")
+          .select("message_id, user_id, emoji")
+          .in("message_id", rows.map((r) => r.id));
+        if (peerIdRef.current !== id) return;
+        const map = new Map<string, Reaction[]>();
+        for (const r of (rx ?? []) as (Reaction & { message_id: string })[]) {
+          const list = map.get(r.message_id) ?? [];
+          list.push({ user_id: r.user_id, emoji: r.emoji });
+          map.set(r.message_id, list);
+        }
+        setReactions(map);
+      }
     };
     refetchRef.current = load;
     load();
@@ -231,6 +279,56 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               ? xs.map((x) => (x.id === m.id ? { ...x, read_at: m.read_at } : x))
               : xs
           );
+        }
+      )
+      .on(
+        "postgres_changes",
+        /* Unsend: DELETE events carry only the old primary key and are
+           not RLS-scoped — the filter is our own "is it in this thread". */
+        { event: "DELETE", schema: "public", table: "direct_messages" },
+        (payload) => {
+          const oldId = (payload.old as { id?: string } | null)?.id;
+          if (!oldId) return;
+          setMsgs((xs) => (xs.some((x) => x.id === oldId) ? xs.filter((x) => x.id !== oldId) : xs));
+          setReactions((map) => {
+            if (!map.has(oldId)) return map;
+            const next = new Map(map);
+            next.delete(oldId);
+            return next;
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "dm_reactions" },
+        (payload) => {
+          const r = payload.new as Reaction & { message_id: string };
+          setReactions((map) => {
+            const list = map.get(r.message_id) ?? [];
+            if (list.some((x) => x.user_id === r.user_id && x.emoji === r.emoji)) return map;
+            const next = new Map(map);
+            next.set(r.message_id, [...list, { user_id: r.user_id, emoji: r.emoji }]);
+            return next;
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        /* Composite PK = the DELETE payload carries all three columns. */
+        { event: "DELETE", schema: "public", table: "dm_reactions" },
+        (payload) => {
+          const r = payload.old as Partial<Reaction & { message_id: string }> | null;
+          if (!r?.message_id || !r.user_id || !r.emoji) return;
+          setReactions((map) => {
+            const list = map.get(r.message_id!);
+            if (!list?.some((x) => x.user_id === r.user_id && x.emoji === r.emoji)) return map;
+            const next = new Map(map);
+            next.set(
+              r.message_id!,
+              list.filter((x) => !(x.user_id === r.user_id && x.emoji === r.emoji))
+            );
+            return next;
+          });
         }
       )
       .subscribe((status) => {
@@ -370,6 +468,55 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     [clearFile]
   );
 
+  /* Toggle my reaction — optimistic; the realtime echo is deduped. */
+  const toggleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      setReactFor(null);
+      const had = (reactions.get(messageId) ?? []).some((r) => r.user_id === me && r.emoji === emoji);
+      setReactions((map) => {
+        const list = map.get(messageId) ?? [];
+        const next = new Map(map);
+        next.set(
+          messageId,
+          had
+            ? list.filter((r) => !(r.user_id === me && r.emoji === emoji))
+            : [...list, { user_id: me, emoji }]
+        );
+        return next;
+      });
+      const { error } = had
+        ? await supabase.from("dm_reactions").delete().match({ message_id: messageId, user_id: me, emoji })
+        : await supabase.from("dm_reactions").insert({ message_id: messageId, user_id: me, emoji });
+      if (error) {
+        /* Revert the optimistic flip so a refused write leaves no phantom. */
+        setReactions((map) => {
+          const list = map.get(messageId) ?? [];
+          const next = new Map(map);
+          next.set(
+            messageId,
+            had
+              ? [...list, { user_id: me, emoji }]
+              : list.filter((r) => !(r.user_id === me && r.emoji === emoji))
+          );
+          return next;
+        });
+      }
+    },
+    [me, reactions, supabase]
+  );
+
+  /* Unsend — deletes for both sides (RLS: sender only). */
+  const unsend = useCallback(
+    async (m: Dm) => {
+      if (!window.confirm("Unsend this message? It disappears for both of you.")) return;
+      setMsgs((xs) => xs.filter((x) => x.id !== m.id));
+      setReplyTo((r) => (r?.id === m.id ? null : r));
+      await supabase.from("direct_messages").delete().eq("id", m.id);
+      onThreadsChanged();
+    },
+    [supabase, onThreadsChanged]
+  );
+
   const insertAtCaret = useCallback((s: string) => {
     const ta = taRef.current;
     setDraft((cur) => {
@@ -400,8 +547,24 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   const page = variant === "page";
   const hydratedPeer = { ...peer, display_name: peerName === undefined ? peer.display_name : peerName };
 
+  const hoverBtn: React.CSSProperties = {
+    width: 24,
+    height: 24,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    background: "none",
+    color: "rgba(255,255,255,0.45)",
+    cursor: "pointer",
+    padding: 0,
+    flexShrink: 0,
+  };
+
   return (
-    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
+      {/* Click-away for the quick-react strip. */}
+      {reactFor && <div onClick={() => setReactFor(null)} style={{ position: "absolute", inset: 0, zIndex: 5 }} />}
       {/* Thread header */}
       <div
         style={{
@@ -473,12 +636,38 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             Say hi to @{peer.username} 👋
           </p>
         )}
-        {msgs.map((m) => {
+        {msgs.map((m, i) => {
           const mine = m.sender_id === me;
           const hasText = m.content.trim().length > 0;
           const quoted = m.reply_to ? msgs.find((x) => x.id === m.reply_to) ?? null : null;
+          const newDay = i === 0 || dayLabel(msgs[i - 1].created_at) !== dayLabel(m.created_at);
+          const rxGroups: [string, { count: number; mine: boolean }][] = (() => {
+            const g = new Map<string, { count: number; mine: boolean }>();
+            for (const r of reactions.get(m.id) ?? []) {
+              const e = g.get(r.emoji) ?? { count: 0, mine: false };
+              e.count++;
+              if (r.user_id === me) e.mine = true;
+              g.set(r.emoji, e);
+            }
+            return [...g.entries()];
+          })();
           return (
             <div key={m.id} style={{ display: "contents" }}>
+              {newDay && (
+                <div
+                  style={{
+                    alignSelf: "center",
+                    margin: "10px 0 2px",
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    letterSpacing: 0.6,
+                    textTransform: "uppercase",
+                    color: "#6b6b74",
+                  }}
+                >
+                  {dayLabel(m.created_at)}
+                </div>
+              )}
               <div
                 id={`dm-msg-${m.id}`}
                 className="dm-msg-row"
@@ -561,31 +750,116 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   )}
                   {hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
                 </div>
-                <button
-                  className="dm-reply-btn"
-                  onClick={() => {
-                    setReplyTo(m);
-                    taRef.current?.focus();
-                  }}
-                  aria-label="Reply to this message"
-                  title="Reply"
+                <span style={{ display: "inline-flex", gap: 2, flexShrink: 0 }}>
+                  <span style={{ position: "relative", display: "inline-flex" }}>
+                    <button
+                      className="dm-reply-btn"
+                      onClick={() => setReactFor(reactFor === m.id ? null : m.id)}
+                      aria-label="React to this message"
+                      title="React"
+                      style={hoverBtn}
+                    >
+                      <Icon name="smile" size={13} />
+                    </button>
+                    {reactFor === m.id && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: 27,
+                          [mine ? "right" : "left"]: 0,
+                          display: "flex",
+                          gap: 2,
+                          padding: "4px 6px",
+                          borderRadius: 999,
+                          background: "#15171f",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                          zIndex: 6,
+                        }}
+                      >
+                        {QUICK_REACTIONS.map((e) => (
+                          <button
+                            key={e}
+                            onClick={() => toggleReaction(m.id, e)}
+                            aria-label={`React ${e}`}
+                            style={{
+                              border: "none",
+                              background: "none",
+                              fontSize: 15,
+                              lineHeight: "20px",
+                              cursor: "pointer",
+                              padding: "0 3px",
+                              borderRadius: 6,
+                            }}
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </span>
+                  <button
+                    className="dm-reply-btn"
+                    onClick={() => {
+                      setReplyTo(m);
+                      taRef.current?.focus();
+                    }}
+                    aria-label="Reply to this message"
+                    title="Reply"
+                    style={hoverBtn}
+                  >
+                    <Icon name="text-quote" size={13} />
+                  </button>
+                  {mine && (
+                    <button
+                      className="dm-reply-btn"
+                      onClick={() => unsend(m)}
+                      aria-label="Unsend message"
+                      title="Unsend"
+                      style={{ ...hoverBtn, color: "rgba(255,150,140,0.55)" }}
+                    >
+                      <Icon name="circle-x" size={13} />
+                    </button>
+                  )}
+                </span>
+              </div>
+              {rxGroups.length > 0 && (
+                <div
                   style={{
-                    width: 24,
-                    height: 24,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "none",
-                    background: "none",
-                    color: "rgba(255,255,255,0.45)",
-                    cursor: "pointer",
-                    padding: 0,
-                    flexShrink: 0,
+                    display: "flex",
+                    gap: 4,
+                    flexWrap: "wrap",
+                    alignSelf: mine ? "flex-end" : "flex-start",
+                    maxWidth: "85%",
+                    marginTop: -2,
                   }}
                 >
-                  <Icon name="text-quote" size={13} />
-                </button>
-              </div>
+                  {rxGroups.map(([emoji, g]) => (
+                    <button
+                      key={emoji}
+                      onClick={() => toggleReaction(m.id, emoji)}
+                      aria-label={`${g.mine ? "Remove your" : "Add"} ${emoji} reaction`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        padding: "1px 7px",
+                        borderRadius: 999,
+                        fontSize: 11,
+                        lineHeight: "16px",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        border: g.mine ? `1px solid ${YELLOW}` : "1px solid rgba(255,255,255,0.12)",
+                        background: g.mine ? "rgba(255,183,0,0.15)" : "rgba(255,255,255,0.07)",
+                        color: "#e6e6ec",
+                      }}
+                    >
+                      <span style={{ fontSize: 12 }}>{emoji}</span>
+                      {g.count > 1 && g.count}
+                    </button>
+                  ))}
+                </div>
+              )}
               {m.id === lastMineReadId && (
                 <span style={{ alignSelf: "flex-end", color: "#8b8b94", fontSize: 10.5, marginTop: -3 }}>Seen</span>
               )}

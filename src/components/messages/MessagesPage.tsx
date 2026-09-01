@@ -152,6 +152,15 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
           loadThreads();
         }
       )
+      .on(
+        "postgres_changes",
+        /* Unsend anywhere refreshes previews (DELETE events can't be
+           filtered; get_dm_threads is cheap). */
+        { event: "DELETE", schema: "public", table: "direct_messages" },
+        () => {
+          loadThreads();
+        }
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

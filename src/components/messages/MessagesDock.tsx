@@ -194,6 +194,16 @@ export default function MessagesDock() {
           loadThreads();
         }
       )
+      .on(
+        "postgres_changes",
+        /* Unsend anywhere refreshes previews (DELETE events can't be
+           filtered — old rows carry only the PK — so this over-fires;
+           get_dm_threads is cheap). */
+        { event: "DELETE", schema: "public", table: "direct_messages" },
+        () => {
+          loadThreads();
+        }
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
