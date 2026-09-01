@@ -5529,6 +5529,36 @@ body { background: transparent; }
   .sidebar.open { transform: translateX(0) !important; }
 }
 
+/* ── SiteChrome routes (profile, replays, messages…): drawer under lg ──
+   Their content offsets (profile-beside-sidebar etc.) only kick in at
+   1024px, so the rail has nowhere to sit below that; instead of hiding
+   it (which left those routes with no navigation at all in a
+   non-maximized window) it becomes the same hamburger drawer, at its
+   full expanded width. */
+@media (max-width: 1023px) {
+  .site-chrome .hamburger { display: block; }
+  .site-chrome .sidebar {
+    animation: none !important;
+    /* The rows size themselves from this variable (collapsed = 64px);
+       set it on the drawer itself so they read the expanded width. */
+    --sidebar-width: 240px !important;
+    width: 240px !important;
+    transform: translateX(-120%) !important;
+    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    background: #0e0e12 !important;
+    border-radius: 0 18px 18px 0 !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+  }
+  .site-chrome .sidebar.open { transform: translateX(0) !important; }
+  /* The hover rail (901px+) hides labels/friends/footer until hover;
+     a drawer is always "expanded". */
+  .site-chrome .sidebar .nav-label,
+  .site-chrome .sidebar .sidebar-bottom-zone {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* ── Nav rows: flat, no per-item card ────────────────────────────── */
 .sidebar-link {
   height: 40px !important;

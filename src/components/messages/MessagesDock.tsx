@@ -43,11 +43,15 @@ const panelBase: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   borderRadius: 18,
-  /* Light unblurred tint, like the friends panel: the starfield stays
-     visible through the glass (blur would smear the stars away). Bubbles
-     carry their own near-solid backgrounds so text survives whatever is
-     behind the panel. */
-  background: "rgba(9,10,14,0.45)",
+  /* Frosted, not see-through: unlike the friends panel (which fades the
+     sidebar behind it) or the /messages page (which sits on the empty
+     page ground), the dock floats over whatever the page is showing —
+     feed cards, thumbnails, text — and unblurred translucency turned
+     into text-on-text. The blur washes that into soft color; the tint
+     keeps the list readable. */
+  background: "rgba(10,12,18,0.7)",
+  backdropFilter: "blur(24px) saturate(1.15)",
+  WebkitBackdropFilter: "blur(24px) saturate(1.15)",
   border: "1px solid rgba(255,255,255,0.1)",
   boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
   overflow: "hidden",
