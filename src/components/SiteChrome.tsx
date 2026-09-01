@@ -79,10 +79,6 @@ function SiteNavbar() {
 
   return (
     <nav className="nav">
-      {/* Below lg the sidebar is an off-canvas drawer (mvp-home.css,
-          .site-chrome block); HomeSidebar toggles it by delegated click
-          on this id. */}
-      <button className="hamburger" id="hamburger" type="button" aria-label="Menu">☰</button>
       <a className="nav-logo" href="/" aria-label="AgoraSphere">
         {/* Inline height is the pre-CSS fallback; the stylesheet's
             clamp(...) !important takes over once loaded. */}

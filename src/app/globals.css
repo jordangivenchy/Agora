@@ -1629,9 +1629,9 @@ html.reduce-motion .nav-sparkle {
 }
 
 /* Standalone profile route: content sits beside the homepage glass
-   sidebar (ProfileSidebar). Tracks --sidebar-width so the responsive
-   sidebar breakpoints in mvp-home.css stay authoritative. */
-@media (min-width: 1024px) {
+   sidebar (ProfileSidebar). Tracks --sidebar-width. The rail exists at
+   EVERY width (no drawer mode), so the offset is unconditional. */
+@media all {
   .profile-beside-sidebar {
     /* Fill the space beside the sidebar: profile column (~1050px) plus
        the feed's 310px right rail — the site's full 1440 content scale. */
@@ -1666,8 +1666,8 @@ html.reduce-motion .nav-sparkle {
 
 /* Replay route: shift the replay content out from under the homepage
    glass sidebar. Same --sidebar-width tracking as the profile route;
-   below lg the sidebar is hidden and no offset applies. */
-@media (min-width: 1024px) {
+   the rail exists at every width, so the offset is unconditional. */
+@media all {
   .replay-beside-sidebar {
     padding-left: calc(var(--sidebar-width, 220px) + 16px);
   }
@@ -1840,7 +1840,7 @@ html.reduce-motion .nav-sparkle {
   padding-right: 24px;
   box-sizing: border-box;
 }
-@media (min-width: 1024px) {
+@media all {
   .messages-beside-sidebar {
     margin-inline: calc(
         var(--sidebar-width, 220px) +
@@ -2038,7 +2038,9 @@ html.reduce-motion .nav-sparkle {
   inherits: true;
   initial-value: 240px;
 }
-@media (min-width: 901px) {
+/* `all`: the hover rail is the only sidebar mode at every width — the
+   narrow-viewport drawer/hamburger is retired. */
+@media all {
   :root:has(#sidebar) {
     --sidebar-width: 64px;
     transition: --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);

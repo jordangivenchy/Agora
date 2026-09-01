@@ -3229,10 +3229,9 @@ body { background: transparent; }
 }
 
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-120%); }
-  .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; }
-  .hamburger { display: block; }
+  /* No off-canvas drawer / hamburger at any width: the sidebar is always
+     the hover rail (see the "Hover rail" section), and .main keeps its
+     rail offset. */
   .carousel-panel { display: none; }
   .carousel-viewers { right: 12px; }
   .carousel-lower-third { right: 0; }
@@ -5510,55 +5509,6 @@ body { background: transparent; }
 .sidebar-scroll-area { padding: 0 !important; }
 .sidebar-nav { padding: 4px 8px 4px !important; gap: 1px !important; }
 
-/* ── Off-canvas drawer (<900px) ──
-   The desktop entrance animation above pins transform: translateX(0)
-   through its fill-mode, and animations out-cascade the drawer's plain
-   translateX(-120%) — so the drawer sat permanently open, translucent,
-   over the page. Below 900px: no entrance animation, explicit drawer
-   transforms, and an OPAQUE panel — here it overlays content, not the
-   starfield. */
-@media (max-width: 900px) {
-  .sidebar {
-    animation: none !important;
-    transform: translateX(-120%) !important;
-    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1) !important;
-    background: #0e0e12 !important;
-    border-radius: 0 18px 18px 0 !important;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
-  }
-  .sidebar.open { transform: translateX(0) !important; }
-}
-
-/* ── SiteChrome routes (profile, replays, messages…): drawer under lg ──
-   Their content offsets (profile-beside-sidebar etc.) only kick in at
-   1024px, so the rail has nowhere to sit below that; instead of hiding
-   it (which left those routes with no navigation at all in a
-   non-maximized window) it becomes the same hamburger drawer, at its
-   full expanded width. */
-@media (max-width: 1023px) {
-  .site-chrome .hamburger { display: block; }
-  .site-chrome .sidebar {
-    animation: none !important;
-    /* The rows size themselves from this variable (collapsed = 64px);
-       set it on the drawer itself so they read the expanded width. */
-    --sidebar-width: 240px !important;
-    width: 240px !important;
-    transform: translateX(-120%) !important;
-    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1) !important;
-    background: #0e0e12 !important;
-    border-radius: 0 18px 18px 0 !important;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
-  }
-  .site-chrome .sidebar.open { transform: translateX(0) !important; }
-  /* The hover rail (901px+) hides labels/friends/footer until hover;
-     a drawer is always "expanded". */
-  .site-chrome .sidebar .nav-label,
-  .site-chrome .sidebar .sidebar-bottom-zone {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
-
 /* ── Nav rows: flat, no per-item card ────────────────────────────── */
 .sidebar-link {
   height: 40px !important;
@@ -6203,7 +6153,9 @@ body { background: transparent; }
    by the rail and revealed by the widening (icons never shift); the
    friends card and footer fade in with it. Below 900px the off-canvas
    drawer behavior is untouched. */
-@media (min-width: 901px) {
+/* `all`, not a min-width: the rail is the ONLY sidebar mode — there is
+   no drawer/hamburger fallback at narrow widths (product decision). */
+@media all {
   .sidebar {
     width: var(--sidebar-width) !important;
     overflow: hidden;
@@ -6243,7 +6195,7 @@ body { background: transparent; }
    Rows cap at icon width (10px either side of the 26px icon chip) so
    the highlight is a rounded box mirrored left/right instead of a
    strip sliced off by the rail's edge; it widens with the expansion. */
-@media (min-width: 901px) {
+@media all {
   .sidebar-link {
     /* Track the rail so the box keeps the same 9px inset on BOTH sides
        in every state: 18px = 2×8px nav padding + 2×1px sidebar border.
