@@ -177,6 +177,7 @@
       var href = a.getAttribute('href');
       if (href === '#logout') window.dispatchEvent(new CustomEvent('agora:logout'));
       else if (href === '#settings') go('/settings');
+      else if (href === '#friends') window.dispatchEvent(new CustomEvent('agora:friends'));
       else if (href === '#profile') window.dispatchEvent(new CustomEvent('agora:profile'));
     });
   });

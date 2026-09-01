@@ -2057,8 +2057,44 @@ html.reduce-motion .nav-sparkle {
    beside-sidebar offset follows), the bottom tab bar appears, and the
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
+.mobile-fab { display: none; }
 
 @media (max-width: 639px) {
+  /* Create: a hero-yellow floating action button above the tab bar. */
+  .mobile-fab {
+    display: inline-flex;
+    position: fixed;
+    right: 16px;
+    bottom: calc(56px + 16px + env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    background: #ffb700;
+    color: #1a0e00;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,221,100,0.35);
+    z-index: 121;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Friends overlay mounts on body here (no sidebar to host it): a
+     full-screen, opaque sheet above the page and the tab bar. */
+  .friends-ui-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 300 !important;
+    border-radius: 0 !important;
+    background: #0e0e12 !important;
+  }
+
+  /* /messages: the conversation panel fills the space between the top
+     bar and the tab bar. */
+  .messages-beside-sidebar > div {
+    height: calc(100dvh - var(--nav-height, 60px) - 100px - env(safe-area-inset-bottom)) !important;
+    min-height: 0 !important;
+  }
   :root:has(#sidebar),
   :root:has(#sidebar:hover),
   :root:has(#sidebar :focus-visible) {

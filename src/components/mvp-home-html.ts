@@ -29,6 +29,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
     </button>
   </div>
   <div class="nav-auth">
+    <a class="nav-search-icon" href="/search" aria-label="Search">${iconSvg("search", 17)}</a>
     <button class="btn-ghost">Log in</button>
     <button class="btn-signup">Sign up</button>
     <button class="nav-messages-btn" id="nav-messages-btn" type="button" aria-label="Messages">
@@ -51,6 +52,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
         </a>
         <a class="avatar-menu-item" href="#settings" role="menuitem">
           <span class="avatar-menu-icon">${iconSvg("settings", 14)}</span>Settings
+        </a>
+        <a class="avatar-menu-item" href="#friends" role="menuitem">
+          <span class="avatar-menu-icon">${iconSvg("users", 14)}</span>Friends
         </a>
         <div class="avatar-dropdown-divider"></div>
         <a class="avatar-menu-item avatar-menu-item--danger" href="#logout" role="menuitem">

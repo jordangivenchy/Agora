@@ -274,6 +274,12 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
         </a>
       ))}
     </nav>
+    {/* Phones: the Create button lives inside the (hidden) search pill,
+        so a floating action button carries it; /?create=1 opens the
+        create modal on the home shell. */}
+    <a className="mobile-fab" href="/?create=1" aria-label="Create a discussion">
+      <Icon name="sparkles" size={20} />
+    </a>
     </>
   );
 }

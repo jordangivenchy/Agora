@@ -109,6 +109,16 @@ function SiteNavbar() {
         </button>
       </div>
       <div className="nav-auth">
+        {/* Phones only (CSS): the search pill is hidden there, so search
+            lives behind an icon in the right cluster, Kick-style. */}
+        <a
+          className="nav-search-icon"
+          href="/search"
+          aria-label="Search"
+          onClick={(e) => { e.preventDefault(); router.push(pathFor.search()); }}
+        >
+          <Icon name="search" size={17} />
+        </a>
         {user === null && (
           <>
             <button className="btn-ghost" onClick={() => router.push("/login")}>Log in</button>
@@ -167,6 +177,14 @@ function SiteNavbar() {
                   onClick={(e) => { e.preventDefault(); setMenuOpen(false); router.push("/settings"); }}
                 >
                   <span className="avatar-menu-icon"><Icon name="settings" size={14} /></span>Settings
+                </a>
+                <a
+                  className="avatar-menu-item"
+                  href="#friends"
+                  role="menuitem"
+                  onClick={(e) => { e.preventDefault(); setMenuOpen(false); window.dispatchEvent(new CustomEvent("agora:friends")); }}
+                >
+                  <span className="avatar-menu-icon"><Icon name="users" size={14} /></span>Friends
                 </a>
                 <div className="avatar-dropdown-divider" />
                 <a

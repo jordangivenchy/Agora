@@ -68,6 +68,13 @@ export default function FriendsSection({ container, sidebar }: Props) {
 
   useEscapeClose(open, close);
 
+  /* Phones have no sidebar (and so no Friends card): the avatar menu's
+     "Friends" entry opens the overlay via this event instead. */
+  useEffect(() => {
+    window.addEventListener("agora:friends", openOverlay);
+    return () => window.removeEventListener("agora:friends", openOverlay);
+  }, [openOverlay]);
+
   /* While the overlay is up, the sidebar's own content steps aside so the
      panel looks straight onto the rail glass + starfield; it fades back in
      as the exit animation plays. */
@@ -194,7 +201,9 @@ export default function FriendsSection({ container, sidebar }: Props) {
             }}
             onMore={(at, u) => openUserMenu(at, { userId: u.id, username: u.username })}
           />,
-          sidebar
+          /* Phones: the sidebar is display:none, so the overlay mounts on
+             body as a full-screen sheet (globals.css, <640px). */
+          window.matchMedia("(max-width: 639px)").matches ? document.body : sidebar
         )
       : null;
 
