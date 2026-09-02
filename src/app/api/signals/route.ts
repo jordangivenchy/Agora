@@ -38,6 +38,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, stored: 0, consent: false });
   }
 
+  /* Per-user ceiling: an honest client sends a few hundred signals an
+     hour at most. Past 3000 we accept-and-drop (no retry storm). */
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count: recent } = await admin
+    .from("user_signals")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("created_at", since);
+  if ((recent ?? 0) >= 3000) {
+    return NextResponse.json({ ok: true, stored: 0, throttled: true });
+  }
+
   const rows = sanitizeBatch(signals).map((s) => ({
     user_id: user.id,
     kind: s.kind,

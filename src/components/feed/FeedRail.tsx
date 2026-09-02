@@ -167,7 +167,10 @@ export default function FeedRail({ userId }: { userId: string | null }) {
 
   const follow = useCallback(async (p: Person) => {
     setFollowed((f) => new Set(f).add(p.id));
-    await supabase.rpc("follow_user", { p_target: p.id });
+    const { error } = await supabase.rpc("follow_user", { p_target: p.id });
+    /* The database can refuse (follow rate limit, unverified email —
+       20260890): don't leave the button claiming otherwise. */
+    if (error) setFollowed((f) => { const n = new Set(f); n.delete(p.id); return n; });
   }, [supabase]);
 
   return (

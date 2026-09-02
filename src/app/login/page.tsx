@@ -67,7 +67,7 @@ export default function LoginPage() {
     if (m.includes("already registered")) return "That email already has an account — try signing in.";
     if (m.includes("password should be")) return "Password must be at least 6 characters.";
     if (m.includes("database error saving new user"))
-      return "That username may already be taken — try another.";
+      return "Couldn't create the account — try a different username or email.";
     if (m.includes("rate limit")) return "Too many attempts — wait a minute and try again.";
     if (m.includes("not confirmed")) return "Verify your email first — open the link we sent you, then sign in.";
     return message;

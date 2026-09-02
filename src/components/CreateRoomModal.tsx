@@ -208,7 +208,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         } else if (msg.includes("scheduled_start_too_soon")) {
           setError("Scheduled time must be at least 1 minute from now.");
         } else {
-          setError(msg || "Failed to create room");
+          /* Guard messages arrive as "code: sentence" (20260890) — show the sentence. */
+          setError(msg.replace(/^[a-z_]+:\s*/, "") || "Failed to create room");
         }
         setLoading(false);
         return;
