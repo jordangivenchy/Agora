@@ -2057,27 +2057,6 @@ html.reduce-motion .nav-sparkle {
    beside-sidebar offset follows), the bottom tab bar appears, and the
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
-/* Phone-only input inside the search panel (see the phone block). The
-   homepage stylesheet styles inputs with higher specificity, hence the
-   qualified selector and !important on the box. */
-.search-panel .search-phone-input {
-  display: none;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  height: 44px !important;
-  margin: 0 0 14px !important;
-  padding: 0 14px !important;
-  border-radius: 12px !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  background: rgba(255,255,255,0.06) !important;
-  color: #fff !important;
-  font-family: inherit;
-  outline: none !important;
-  box-shadow: none !important;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.search-panel .search-phone-input:focus { border-color: rgba(74,158,255,0.6) !important; }
 
 @media (max-width: 639px) {
   /* Friends overlay mounts on body here (no sidebar to host it): a
@@ -2368,9 +2347,9 @@ html.reduce-motion .nav-sparkle {
   }
   .rp-clip-panel input { min-width: 0 !important; flex-basis: 100%; }
 
-  /* Search: the panel is anchored to the navbar pill on desktop and the
-     pill is its only input — both hidden on phones. Here the panel is a
-     full-width sheet under the top bar with its own input. */
+  /* Search: on desktop the panel hangs off the navbar pill; on phones it
+     is a full-width sheet under the top bar, where the pill (revealed by
+     mvp-home.css while searching) stays the input. */
   .search-panel {
     top: var(--nav-height, 60px) !important;
     left: 0 !important;
@@ -2385,7 +2364,10 @@ html.reduce-motion .nav-sparkle {
     z-index: 130 !important;
   }
   .search-panel-body { padding: 12px 12px 20px !important; }
-  .search-panel .search-phone-input { display: block !important; }
+  /* The scrim must sit UNDER the sheet or it eats every tap. */
+  .search-panel-scrim { z-index: 129 !important; }
+  /* The navbar box's phone takeover (data-search-open) lives at the end
+     of mvp-home.css — see the note there about layered !important. */
 
   /* Messages */
   .msg-rail-search { height: 40px !important; }

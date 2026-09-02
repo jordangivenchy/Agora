@@ -99,6 +99,20 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
       el.addEventListener("input", onInput);
       el.addEventListener("keydown", onKeyDown);
 
+      /* Phone search icon (.nav-search-icon; desktop hides it). The box
+         is display:none on phones until the wrapper carries
+         data-search-open, so set that first, then focus inside the same
+         tap — the only way iOS raises the keyboard — and open the panel
+         outright rather than waiting on the focus event. */
+      const icon = document.querySelector<HTMLElement>(".nav-search-icon");
+      const onIconClick = (e: MouseEvent) => {
+        e.preventDefault();
+        wrap?.setAttribute("data-search-open", "");
+        el.focus({ preventScroll: true });
+        setOpen(true);
+      };
+      icon?.addEventListener("click", onIconClick);
+
       /* × inside the box: clears the text and closes the panel. */
       let clearBtn: HTMLButtonElement | null = null;
       if (wrap && !wrap.querySelector(".nav-search-clear")) {
@@ -122,6 +136,7 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
         el.removeEventListener("focus", onFocus);
         el.removeEventListener("input", onInput);
         el.removeEventListener("keydown", onKeyDown);
+        icon?.removeEventListener("click", onIconClick);
         clearBtn?.remove();
       };
     };

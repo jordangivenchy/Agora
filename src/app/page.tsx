@@ -24,7 +24,6 @@ import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
 import { parseHomeRoute, canonicalPath, pathFor, sectionTitle, setSectionTitle, type HomeRoute } from "@/lib/routes";
 import "./mvp-home.css";
-import MicPrompt from "@/components/mic/MicPrompt";
 
 const TOPIC_MAP: Record<string, string> = {
   "politics-law": "politics-law",
@@ -693,7 +692,6 @@ export default function Home() {
         </div>
       )}
       <NotificationsBell container={bellHost} />
-      {booted && <MicPrompt placement="corner" />}
       <NewsTicker container={newsHost} />
       <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />

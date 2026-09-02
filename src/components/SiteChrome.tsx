@@ -53,7 +53,7 @@ function SiteNavbar() {
     onKey: (e, v) => searchKeyRef.current?.(e, v) ?? false,
     onCloseRequest: () => closeSearchRef.current(),
   });
-  closeSearchRef.current = navSearch.closePanel;
+  useEffect(() => { closeSearchRef.current = navSearch.closePanel; }, [navSearch.closePanel]);
   /* undefined = still resolving (render neither auth state to avoid a
      Log in flash for signed-in users). */
   const [user, setUser] = useState<NavUser | null | undefined>(undefined);
@@ -127,13 +127,10 @@ function SiteNavbar() {
       </div>
       <div className="nav-auth">
         {/* Phones only (CSS): the search pill is hidden there, so search
-            lives behind an icon in the right cluster, Kick-style. */}
-        <a
-          className="nav-search-icon"
-          href="/search"
-          aria-label="Search"
-          onClick={(e) => { e.preventDefault(); navSearch.openPanel(); }}
-        >
+            lives behind an icon in the right cluster, Kick-style. The
+            search hook binds the tap (reveal box, focus, open panel);
+            the href is the no-JS fallback. */}
+        <a className="nav-search-icon" href="/search" aria-label="Search">
           <Icon name="search" size={17} />
         </a>
         {user === null && (

@@ -6230,6 +6230,31 @@ body { background: transparent; }
     border-radius: 8px;
   }
   html .nav-search { display: none !important; }
+  /* While searching, the real navbar box takes over the top bar (the tap
+     on the icon focuses it synchronously — the only way iOS raises the
+     keyboard) and the mark/auth cluster steps aside. The search hook
+     sets data-search-open on the wrapper while the panel is open. These
+     live here, not in globals.css: this sheet is layered on the
+     homepage, and a layered !important beats an unlayered one. */
+  html .nav-search[data-search-open] {
+    display: flex !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: 1 1 auto;
+    margin: 0;
+    transform: none !important;
+    align-items: center;
+    height: 40px !important;
+    padding: 0 6px 0 0;
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    border-radius: 9999px !important;
+  }
+  html .nav-search[data-search-open] input { height: 38px; }
+  html .nav:has(.nav-search[data-search-open]) .nav-logo,
+  html .nav:has(.nav-search[data-search-open]) .nav-auth { display: none !important; }
+  html .nav-search .create-btn { display: none !important; }
   html .nav-auth { gap: 8px !important; }
   html .nav-search-icon {
     display: inline-flex !important;

@@ -619,23 +619,6 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
         onMouseDown={(e) => { const t = e.target as HTMLElement; if (!t.closest("input,textarea,[contenteditable]")) e.preventDefault(); }}
       >
         <div className="search-panel-body" ref={bodyRef}>
-          {/* Phones only (CSS): the navbar pill — normally the panel's one
-              input — is hidden there, so the panel carries its own. It
-              drives the same navbar value, so the debounce/pin logic is
-              unchanged. */}
-          <input
-            className="search-phone-input"
-            type="search"
-            value={rawQuery}
-            onChange={(e) => setNavQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && rawQuery.trim()) onPin(rawQuery.trim());
-            }}
-            placeholder="Search discussions, posts, people…"
-            aria-label="Search"
-            autoComplete="off"
-            enterKeyHint="search"
-          />
           {!query && (
             <div>
               {recent.length > 0 && (

@@ -182,17 +182,9 @@
     });
   });
 
-  /* Phone search icon: /search is a home-shell route, so open it in
-     place — push the path and let the shell's popstate reader open the
-     panel — instead of reloading the whole page through the rewrite. */
-  var searchIcon = document.querySelector('.nav-search-icon');
-  if (searchIcon) {
-    searchIcon.addEventListener('click', function (e) {
-      e.preventDefault();
-      window.history.pushState(null, '', '/search');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
-  }
+  /* Phone search icon (.nav-search-icon) is handled by the React search
+     hook (useNavbarSearch.ts): it reveals the navbar box, focuses it in
+     the tap and opens the panel in place. */
 
   /* Messages button goes to the dedicated page. */
   var msgWrap = document.getElementById('nav-messages-btn');
