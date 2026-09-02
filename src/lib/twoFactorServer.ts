@@ -49,7 +49,7 @@ export async function verifyPasswordServerSide(
   userId: string | null,
   email: string,
   password: string
-): Promise<{ ok: boolean; accessToken?: string; refreshToken?: string; userId?: string }> {
+): Promise<{ ok: boolean; accessToken?: string; refreshToken?: string; userId?: string; reason?: "email_not_confirmed" }> {
   const admin = createAdminClient();
   if (userId) {
     await admin.from("two_factor_gate").upsert({
@@ -60,6 +60,9 @@ export async function verifyPasswordServerSide(
   try {
     const auth = throwawayAuthClient();
     const { data, error } = await auth.auth.signInWithPassword({ email, password });
+    /* The one failure worth naming: the password was right but the
+       address is unverified — the login page offers to resend the link. */
+    if (error && /not confirmed/i.test(error.message)) return { ok: false, reason: "email_not_confirmed" };
     if (error || !data.session || !data.user) return { ok: false };
     return {
       ok: true,

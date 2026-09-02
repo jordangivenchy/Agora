@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /* Sign-in refused because the address is unverified — offer to resend. */
+  const [unconfirmed, setUnconfirmed] = useState(false);
 
   // 2FA state — the challenge lives server-side; we only hold its id.
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -67,6 +69,7 @@ export default function LoginPage() {
     if (m.includes("database error saving new user"))
       return "That username may already be taken — try another.";
     if (m.includes("rate limit")) return "Too many attempts — wait a minute and try again.";
+    if (m.includes("not confirmed")) return "Verify your email first — open the link we sent you, then sign in.";
     return message;
   }
 
@@ -74,6 +77,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setNotice(null);
+    setUnconfirmed(false);
 
     if (mode === "signup") {
       const clean = username.trim().toLowerCase();
@@ -107,7 +111,7 @@ export default function LoginPage() {
       // session from the password alone — the server checks the password,
       // emails a code, and only /verify sets auth cookies.
       setBusy(true);
-      let json: { error?: string; twoFactor?: boolean; pending?: string } = {};
+      let json: { error?: string; twoFactor?: boolean; pending?: string; unconfirmed?: boolean } = {};
       try {
         const res = await fetch("/api/auth/2fa/login", {
           method: "POST",
@@ -118,6 +122,7 @@ export default function LoginPage() {
         if (!res.ok) {
           setBusy(false);
           setError(json.error ?? "Sign-in failed. Try again.");
+          setUnconfirmed(!!json.unconfirmed);
           return;
         }
       } catch {
@@ -381,6 +386,22 @@ export default function LoginPage() {
               }}
             >
               {error}
+              {unconfirmed && (
+                <button
+                  type="button"
+                  disabled={resendWait > 0 || busy}
+                  onClick={async () => {
+                    const { error: err } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+                    if (err) { setError(friendlyError(err.message)); return; }
+                    setNotice(`Verification link sent to ${email.trim()}. Check your inbox (and spam).`);
+                    setResendWait(30);
+                  }}
+                  className="cursor-pointer disabled:cursor-default disabled:opacity-60"
+                  style={{ display: "block", marginTop: 8, padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#f5f5f0", fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}
+                >
+                  {resendWait > 0 ? `Resend in ${resendWait}s` : "Resend the verification link"}
+                </button>
+              )}
             </div>
           )}
           {notice && (

@@ -73,6 +73,12 @@ export async function POST(request: NextRequest) {
   const { data: userRow } = await admin.from("users").select("id").eq("email", email).maybeSingle();
 
   const check = await verifyPasswordServerSide(userRow?.id ?? null, email, password);
+  if (check.reason === "email_not_confirmed") {
+    return NextResponse.json(
+      { error: "Verify your email first — open the link we sent you, then sign in.", unconfirmed: true },
+      { status: 403 }
+    );
+  }
   if (!check.ok || !check.userId || !check.accessToken || !check.refreshToken) {
     await logSecurityEvent("2fa_login_bad_password", { email }, ip);
     return NextResponse.json({ error: WRONG_CREDENTIALS }, { status: 401 });

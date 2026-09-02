@@ -26,6 +26,20 @@ export const COMMUNITY_KINDS: { key: string; label: string; icon: IconName; hint
 ];
 
 const COLORS = ["#4a9eff", "#ffb700", "#00b894", "#e05a5a", "#9d8fd9", "#d98fb9", "#e0956a", "#64B5F6"];
+
+/* community_creation_status() / the creation trigger (20260889). */
+type CreationStatus = {
+  allowed: boolean;
+  reason: "signed_out" | "email_unverified" | "account_too_new" | "community_limit" | null;
+  count: number;
+  cap: number | null;
+  account_age_hours?: number;
+};
+const GUARD_MESSAGES: Record<string, string> = {
+  email_unverified: "Verify your email address before creating a community.",
+  account_too_new: "New accounts can create communities after their first day.",
+  community_limit: "You've reached the limit of communities one account can create.",
+};
 const NAME_MIN = 3;
 const NAME_MAX = 40;
 const DESC_MAX = 300;
@@ -85,6 +99,12 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  /* What the database will say to an insert right now (20260889):
+     null while loading; allowed, or a reason the sheet explains instead
+     of showing the form. */
+  const [gate, setGate] = useState<CreationStatus | null>(null);
+  const [resent, setResent] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
@@ -94,8 +114,15 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
     if (!open) return;
     setStep(0); setName(""); setKind(COMMUNITY_KINDS[0].key); setDescription("");
     setColor(COLORS[0]); setAvatar(null); setBanner(null); setIsPrivate(false);
-    setPrompt(""); setRules(""); setBusy(false); setError(null);
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+    setPrompt(""); setRules(""); setBusy(false); setError(null); setGate(null); setResent(false);
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+      setUserEmail(data.user?.email ?? null);
+    });
+    supabase.rpc("community_creation_status").then(({ data, error: err }) => {
+      if (err || !data) { setGate({ allowed: true, reason: null, count: 0, cap: null }); return; }
+      setGate(data as CreationStatus);
+    });
     const t = setTimeout(() => nameRef.current?.focus(), 60);
     return () => clearTimeout(t);
   }, [open, supabase]);
@@ -146,7 +173,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
         })
         .select("id, name")
         .single();
-      if (err || !data) throw new Error(err?.message ?? "Couldn't create the community.");
+      if (err || !data) throw new Error(GUARD_MESSAGES[err?.message ?? ""] ?? err?.message ?? "Couldn't create the community.");
       await supabase.from("community_members").insert({ community_id: data.id, user_id: userId, role: "owner" });
       onCreated?.({ id: data.id, name: data.name });
       onClose();
@@ -255,7 +282,42 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
 
         {/* Body */}
         <div className="ccm-body" style={{ padding: "18px 24px 8px", display: "flex", flexDirection: "column", gap: 18 }}>
-          {step === 0 && (
+          {/* Gate: the database would refuse this account right now. */}
+          {gate && !gate.allowed && gate.reason && (
+            <div className="ccm-gate" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "26px 12px 18px" }}>
+              <span style={{ width: 54, height: 54, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "rgba(255,183,0,0.12)", color: "#ffb700", border: "1px solid rgba(255,183,0,0.25)" }}>
+                <Icon name={gate.reason === "email_unverified" ? "mail" : gate.reason === "account_too_new" ? "clock" : "landmark"} size={22} />
+              </span>
+              <p style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#f5f5f0" }}>
+                {gate.reason === "email_unverified" && "Verify your email first"}
+                {gate.reason === "account_too_new" && "Your account is brand new"}
+                {gate.reason === "community_limit" && "You've made the most boards one account can"}
+                {gate.reason === "signed_out" && "Sign in to create a community"}
+              </p>
+              <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(238,238,245,0.55)", maxWidth: 340 }}>
+                {gate.reason === "email_unverified" && <>We sent a link to <span style={{ color: "rgba(238,238,245,0.85)" }}>{userEmail ?? "your inbox"}</span>. Open it, then come back — communities need a verified address.</>}
+                {gate.reason === "account_too_new" && `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few boards and post in the meantime.`}
+                {gate.reason === "community_limit" && `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more boards are coming; for now, grow the ones you have.`}
+                {gate.reason === "signed_out" && "Communities are created from an account."}
+              </p>
+              {gate.reason === "email_unverified" && userEmail && (
+                <button
+                  type="button"
+                  disabled={resent}
+                  onClick={async () => {
+                    const { error: err } = await supabase.auth.resend({ type: "signup", email: userEmail });
+                    if (err) setError(err.message); else setResent(true);
+                  }}
+                  className="cursor-pointer disabled:cursor-default"
+                  style={{ marginTop: 14, fontSize: 13, fontWeight: 700, padding: "9px 16px", borderRadius: 999, background: resent ? "rgba(255,255,255,0.08)" : "#ffb700", border: "none", color: resent ? "#c9c9d2" : "#1a0e00", fontFamily: "inherit" }}
+                >
+                  {resent ? "Sent — check your inbox" : "Resend the link"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {(!gate || gate.allowed) && step === 0 && (
             <>
               <div>
                 <label style={label} htmlFor="ccm-name">Name</label>
@@ -323,7 +385,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
             </>
           )}
 
-          {step === 1 && (
+          {(!gate || gate.allowed) && step === 1 && (
             <>
               {preview}
               <div>
@@ -375,7 +437,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
             </>
           )}
 
-          {step === 2 && (
+          {(!gate || gate.allowed) && step === 2 && (
             <>
               <div>
                 <span style={label}>Who can join</span>
@@ -433,7 +495,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
                   rows={4}
                   style={{ ...field, resize: "vertical", lineHeight: 1.45 }}
                 />
-                <p style={hintStyle}>Pinned in the board's sidebar. You can edit everything later in the board's settings.</p>
+                <p style={hintStyle}>Pinned in the board&rsquo;s sidebar. You can edit everything later in the board&rsquo;s settings.</p>
               </div>
               {preview}
             </>
@@ -448,7 +510,14 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
 
         {/* Footer */}
         <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px" }}>
-          {step > 0 ? (
+          {gate && !gate.allowed ? (
+            <>
+              <span style={{ marginLeft: "auto" }} />
+              <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e8e8ee", fontFamily: "inherit" }}>
+                Close
+              </button>
+            </>
+          ) : step > 0 ? (
             <button type="button" onClick={() => setStep((s) => s - 1)} className="cursor-pointer inline-flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, padding: "9px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e8e8ee", fontFamily: "inherit" }}>
               <Icon name="arrow-left" size={13} /> Back
             </button>
