@@ -99,6 +99,19 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
+/* /messages on phones: the page rises in; inbox ↔ thread slide. */
+@keyframes msgsIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes msgsThreadIn {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes msgsRailIn {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: none; }
+}
 
 /* Utility: hide scrollbar */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -2241,11 +2254,31 @@ html.reduce-motion .nav-sparkle {
     background: #0e0e12 !important;
   }
 
-  /* /messages: the conversation panel fills the space between the top
-     bar and the tab bar. */
-  .messages-beside-sidebar > div {
-    height: calc(100dvh - var(--nav-height, 60px) - 100px - env(safe-area-inset-bottom)) !important;
+  /* /messages: full-bleed between the top bar and the tab bar (the
+     desktop glass card drops its gutters, border and radius), rising in
+     like the sheets. Inbox → thread slides in from the right, back slides
+     the inbox in from the left; with a thread open the tab bar tucks
+     away and the thread takes the whole height (html.msgs-thread-open). */
+  .site-chrome main.messages-beside-sidebar { padding: 0 !important; }
+  .messages-beside-sidebar > .msgs-shell {
+    height: calc(100dvh - var(--nav-height, 60px) - 58px - env(safe-area-inset-bottom)) !important;
     min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: rgba(6,7,12,0.3) !important;
+    animation: msgsIn 260ms cubic-bezier(.2,.7,.2,1) both;
+  }
+  .msgs-thread-open .messages-beside-sidebar > .msgs-shell {
+    height: calc(100dvh - var(--nav-height, 60px)) !important;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .msgs-thread-open .mobile-tabbar { display: none !important; }
+  .msgs-thread-pane { animation: msgsThreadIn 240ms cubic-bezier(.2,.7,.2,1) both; }
+  .msgs-rail-pane { animation: msgsRailIn 220ms cubic-bezier(.2,.7,.2,1) both; }
+  /* Thumb-sized back control in the thread header. */
+  .msgs-thread-pane [aria-label="Back to conversations"] { width: 38px !important; height: 38px !important; margin-left: -6px; }
+  @media (prefers-reduced-motion: reduce) {
+    .messages-beside-sidebar > .msgs-shell, .msgs-thread-pane, .msgs-rail-pane { animation: none; }
   }
   :root:has(#sidebar),
   :root:has(#sidebar:hover),

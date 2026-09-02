@@ -70,6 +70,13 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
     if (!wide) selectPeer(null);
   });
 
+  /* Phones: while a thread is open the tab bar tucks away and the thread
+     takes the full height (globals.css phone block, html.msgs-thread-open). */
+  useEffect(() => {
+    document.documentElement.classList.toggle("msgs-thread-open", !!peer && !wide);
+    return () => document.documentElement.classList.remove("msgs-thread-open");
+  }, [peer, wide]);
+
   /* Boot: load threads, then honor the deep link (or land on the top
      conversation in wide mode, like the dock does). */
   useEffect(() => {
@@ -209,6 +216,7 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
 
   const rail = (
     <div
+      className="msgs-rail-pane"
       style={{
         width: wide ? 340 : "100%",
         flexShrink: 0,
@@ -361,6 +369,7 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
   return (
     <main className="messages-beside-sidebar" style={{ paddingTop: 24, paddingBottom: 20 }}>
       <div
+        className="msgs-shell"
         style={{
           display: "flex",
           height: "calc(100vh - var(--nav-height, 60px) - 60px)",
@@ -375,15 +384,19 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
       >
         {(wide || !peer) && rail}
         {peer ? (
-          <DmThread
-            ref={threadRef}
-            me={me}
-            peer={peer}
-            variant="page"
-            topic="page"
-            onBack={wide ? undefined : () => selectPeer(null)}
-            onThreadsChanged={loadThreads}
-          />
+          /* The wrapper is the phone slide-in surface (globals.css
+             .msgs-thread-pane); it mounts with the thread. */
+          <div className="msgs-thread-pane" style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
+            <DmThread
+              ref={threadRef}
+              me={me}
+              peer={peer}
+              variant="page"
+              topic="page"
+              onBack={wide ? undefined : () => selectPeer(null)}
+              onThreadsChanged={loadThreads}
+            />
+          </div>
         ) : (
           wide && (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
