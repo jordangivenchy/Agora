@@ -2088,8 +2088,8 @@ html.reduce-motion .nav-sparkle {
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(56px + env(safe-area-inset-bottom));
-    padding: 0 4px env(safe-area-inset-bottom);
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding: 0 10px env(safe-area-inset-bottom);
     background: #0e0e12;
     border-top: 1px solid rgba(255,255,255,0.08);
     z-index: 120;
@@ -2098,12 +2098,12 @@ html.reduce-motion .nav-sparkle {
   .mobile-tab {
     flex: 1;
     min-width: 0;
-    height: 56px;
+    height: 58px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
     color: #8b8b94;
     text-decoration: none;
     font-size: 11.5px;

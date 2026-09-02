@@ -34,8 +34,10 @@ type Sparkle = [string, string, string, string, string];
 interface NavItem {
   id: HomeNavId;
   label: string;
-  /** Phone tab-bar label when the full one won't fit six-across. */
+  /** Phone tab-bar label when the full one won't fit. */
   short?: string;
+  /** false = not in the phone tab bar (five tabs read evenly; six cram). */
+  phoneTab?: boolean;
   page?: "home" | "explore";
   sparkles: Sparkle[];
   icon: ReactElement;
@@ -115,6 +117,8 @@ const NAV: NavItem[] = [
     id: "explore",
     label: "Explore",
     page: "explore",
+    /* On phones the top bar's search icon is the way into Explore. */
+    phoneTab: false,
     sparkles: [
       ["0.5s", "4.3s", "18%", "55%", "-5px"],
       ["1.3s", "3.8s", "62%", "35%", "6px"],
@@ -260,7 +264,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
         tab bar is the navigation — same items, same callback. Styled in
         globals.css (.mobile-tabbar); display:none above the breakpoint. */}
     <nav className="mobile-tabbar" aria-label="Sections">
-      {NAV.map((item) => (
+      {NAV.filter((item) => item.phoneTab !== false).map((item) => (
         <a
           key={item.id}
           className={`mobile-tab${activeId === item.id ? " active" : ""}`}
