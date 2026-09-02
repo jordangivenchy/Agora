@@ -75,6 +75,10 @@ export function relTime(iso: string) {
 
 export const DM_SELECT = "id, sender_id, recipient_id, content, image_url, created_at, reply_to, read_at";
 export const MAX_DM_IMAGE_BYTES = 5 * 1024 * 1024;
+/* Unsend (gone for both sides) is allowed this long after sending — the
+   delete policy in 20260888 enforces the same window. After that the
+   only removal is "delete for you". */
+export const UNSEND_WINDOW_MS = 2 * 60 * 1000;
 
 /* Hero accent pair — same as the sidebar active tab / news pill. */
 export const YELLOW = "#ffb700";
@@ -166,6 +170,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   /* The "agora:dm" open path builds a Peer before any thread row exists,
      so the display name may be unknown — hydrated lazily below. */
   const [peerName, setPeerName] = useState<string | null | undefined>(peer.display_name);
+  /* Pending unsend / delete-for-you, awaiting the confirm sheet. */
+  const [confirmAction, setConfirmAction] = useState<{ kind: "unsend" | "delete"; m: Dm } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const peerIdRef = useRef(peer.id);
@@ -180,6 +186,10 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     ref,
     () => ({
       consumeEscape: () => {
+        if (confirmAction) {
+          setConfirmAction(null);
+          return true;
+        }
         if (reactFor) {
           setReactFor(null);
           return true;
@@ -195,7 +205,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
         return false;
       },
     }),
-    [picker, replyTo, reactFor]
+    [picker, replyTo, reactFor, confirmAction]
   );
 
   /* ── Load on peer change ─────────────────────────────────────────── */
@@ -505,17 +515,54 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     [me, reactions, supabase]
   );
 
-  /* Unsend — deletes for both sides (RLS: sender only). */
+  /* Removal. Two kinds, both behind a confirm:
+     - Unsend: gone for both sides, only within UNSEND_WINDOW_MS of sending
+       (the delete policy enforces the same window server-side).
+     - Delete for you: one-way — hides the message from this account only
+       (dm_delete_for_me records you in hidden_for). Any message, any age. */
+  /* A slow clock so the Unsend control disappears when its window closes. */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, []);
+  const canUnsend = useCallback(
+    (m: Dm) => m.sender_id === me && now - new Date(m.created_at).getTime() < UNSEND_WINDOW_MS,
+    [me, now]
+  );
+
   const unsend = useCallback(
     async (m: Dm) => {
-      if (!window.confirm("Unsend this message? It disappears for both of you.")) return;
       setMsgs((xs) => xs.filter((x) => x.id !== m.id));
       setReplyTo((r) => (r?.id === m.id ? null : r));
-      await supabase.from("direct_messages").delete().eq("id", m.id);
+      const { data } = await supabase.from("direct_messages").delete().eq("id", m.id).select("id");
+      if (!data || data.length === 0) {
+        /* The window closed between the tap and the request: put it back. */
+        setMsgs((xs) => (xs.some((x) => x.id === m.id) ? xs : [...xs, m].sort((a, b) => a.created_at.localeCompare(b.created_at))));
+        return;
+      }
       onThreadsChanged();
     },
     [supabase, onThreadsChanged]
   );
+
+  const deleteForMe = useCallback(
+    async (m: Dm) => {
+      setMsgs((xs) => xs.filter((x) => x.id !== m.id));
+      setReplyTo((r) => (r?.id === m.id ? null : r));
+      await supabase.rpc("dm_delete_for_me", { p_id: m.id });
+      onThreadsChanged();
+    },
+    [supabase, onThreadsChanged]
+  );
+
+  const runConfirm = useCallback(() => {
+    if (!confirmAction) return;
+    const { kind, m } = confirmAction;
+    setConfirmAction(null);
+    if (kind === "unsend") void unsend(m);
+    else void deleteForMe(m);
+  }, [confirmAction, unsend, deleteForMe]);
 
   const insertAtCaret = useCallback((s: string) => {
     const ta = taRef.current;
@@ -565,6 +612,68 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Click-away for the quick-react strip. */}
       {reactFor && <div onClick={() => setReactFor(null)} style={{ position: "absolute", inset: 0, zIndex: 5 }} />}
+
+      {/* Confirm sheet for unsend / delete-for-you. */}
+      {confirmAction && (
+        <div
+          className="dm-confirm-scrim"
+          onClick={() => setConfirmAction(null)}
+          role="presentation"
+          style={{
+            position: "absolute", inset: 0, zIndex: 30,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20, background: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="dm-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+            className="dm-confirm"
+            style={{
+              width: "min(340px, 100%)",
+              padding: "18px 18px 14px",
+              borderRadius: 16,
+              background: "#0f1016",
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+            }}
+          >
+            <p id="dm-confirm-title" style={{ margin: 0, color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15 }}>
+              {confirmAction.kind === "unsend" ? "Unsend this message?" : "Delete this message?"}
+            </p>
+            <p style={{ margin: "6px 0 0", color: "#9a9aa4", fontSize: 13, lineHeight: 1.5 }}>
+              {confirmAction.kind === "unsend"
+                ? "It will be removed for both of you."
+                : "It will only be removed for you — the other person keeps it."}
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                style={{
+                  padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#d5d5dc",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={runConfirm}
+                autoFocus
+                style={{
+                  padding: "8px 16px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
+                  background: "#e05a5a", border: "1px solid #e05a5a", color: "#fff",
+                }}
+              >
+                {confirmAction.kind === "unsend" ? "Unsend" : "Delete for you"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Thread header */}
       <div
         style={{
@@ -810,17 +919,26 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   >
                     <Icon name="text-quote" size={13} />
                   </button>
-                  {mine && (
+                  {canUnsend(m) && (
                     <button
                       className="dm-reply-btn"
-                      onClick={() => unsend(m)}
+                      onClick={() => setConfirmAction({ kind: "unsend", m })}
                       aria-label="Unsend message"
-                      title="Unsend"
+                      title="Unsend (for everyone)"
                       style={{ ...hoverBtn, color: "rgba(255,150,140,0.55)" }}
                     >
                       <Icon name="circle-x" size={13} />
                     </button>
                   )}
+                  <button
+                    className="dm-reply-btn"
+                    onClick={() => setConfirmAction({ kind: "delete", m })}
+                    aria-label="Delete message for you"
+                    title="Delete for you"
+                    style={hoverBtn}
+                  >
+                    <Icon name="trash" size={13} />
+                  </button>
                 </span>
               </div>
               {rxGroups.length > 0 && (
