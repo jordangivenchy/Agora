@@ -2435,9 +2435,19 @@ html.reduce-motion .nav-sparkle {
   /* The navbar box's phone takeover (data-search-open) lives at the end
      of mvp-home.css — see the note there about layered !important. */
 
-  /* Daily topics: two columns on desktop, one here — two would leave the
-     question no room beside its Queue button. */
-  .daily-topics-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  /* Daily topics: two columns here too. Each card stacks — question on
+     top, a smaller Queue button beneath — so a column has room. */
+  .daily-topics-grid { gap: 8px !important; }
+  .daily-topics-grid > div {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+  .daily-topics-grid > div > div { min-width: 0 !important; width: 100%; }
+  .daily-topics-grid > div p { font-size: 13px !important; }
+  .daily-topics-grid > div p + p { font-size: 11px !important; }
+  .daily-topics-grid .queue-join-btn { font-size: 11.5px !important; padding: 6px 12px !important; }
 
   /* Messages */
   .msg-rail-search { height: 40px !important; }
