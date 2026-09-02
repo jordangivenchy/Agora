@@ -770,20 +770,26 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             <Icon name="refresh-cw" size={11} /> new topics in {fmtRotate(rotateLeft)}
           </span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 10 }}>
+        {/* Two columns — always two, so the board reads as a grid rather
+            than a stack that occasionally pairs up. Phones collapse to
+            one (globals.css phone block). */}
+        <div className="daily-topics-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
         {selRows.map((t) => {
           const inQueue = t.am_queued;
           return (
             <div
               key={t.id}
-              className="p-3.5 flex items-center gap-3.5 flex-wrap"
+              className="flex items-center gap-3 flex-wrap"
               style={{
                 ...rowCard,
+                /* Inline: the MVP shell's reset zeroes Tailwind padding
+                   on the homepage (it is unlayered; utilities are not). */
+                padding: "10px 14px",
                 border: inQueue ? "0.5px solid rgba(226,185,107,0.45)" : (rowCard.border as string),
               }}
             >
-              <div className="flex-1 min-w-[220px]">
-                <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+              <div className="flex-1 min-w-[180px]">
+                <p className="m-0 text-[13px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, lineHeight: 1.3 }}>
                   {t.question}
                 </p>
                 {inQueue ? (

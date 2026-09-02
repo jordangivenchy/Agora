@@ -2369,6 +2369,10 @@ html.reduce-motion .nav-sparkle {
   /* The navbar box's phone takeover (data-search-open) lives at the end
      of mvp-home.css — see the note there about layered !important. */
 
+  /* Daily topics: two columns on desktop, one here — two would leave the
+     question no room beside its Queue button. */
+  .daily-topics-grid { grid-template-columns: minmax(0, 1fr) !important; }
+
   /* Messages */
   .msg-rail-search { height: 40px !important; }
   .dm-msg-row { max-width: 92% !important; }
