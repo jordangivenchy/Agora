@@ -254,7 +254,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
             className="sidebar-footer"
             style={{ paddingBottom: 12, fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center", margin: 0, paddingTop: 8 }}
           >
-            © 2025 AgoraSphere
+            © 2026 AgoraSphere
           </div>
         </div>
       </div>
