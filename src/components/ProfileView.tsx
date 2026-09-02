@@ -789,6 +789,32 @@ export default function ProfileView({
                 {displayName(profile)}
               </h1>
               {profile.verified && <VerifiedBadge size={20} />}
+              {/* Social links, right of the name. */}
+              {socialLinks.length > 0 && (
+                <span className="inline-flex items-center gap-1.5" style={{ marginLeft: 4 }}>
+                  {socialLinks.map((url) => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      title={socialLabel(url)}
+                      aria-label={socialLabel(url)}
+                      className="inline-flex items-center justify-center no-underline transition-colors"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.05)",
+                        color: "#a9a9b4",
+                      }}
+                    >
+                      {socialIcon(url)}
+                    </a>
+                  ))}
+                </span>
+              )}
               {profile.live_room_id && (
                 <a
                   href={roomPath({ id: profile.live_room_id, motion: profile.live_room_motion ?? null })}
@@ -888,38 +914,9 @@ export default function ProfileView({
             )}
           </div>
 
-          {/* Right column: social icons above the action buttons. */}
-          {/* self-stretch + justify-between: icon row rides the name line,
-              buttons settle level with the stats row. */}
+          {/* Right column: the action buttons (social icons ride the name
+              line, above). */}
           <div className="flex flex-col items-end justify-between gap-3 shrink-0 relative self-stretch" ref={menuRef}>
-            {socialLinks.length > 0 && (
-              /* +4px rides the icon row down so its center sits on the
-                 name's cap line rather than the h1 box top. */
-              <div className="flex items-center gap-1.5" style={{ marginTop: 4 }}>
-                {socialLinks.map((url) => (
-                  <a
-                    key={url}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    title={socialLabel(url)}
-                    aria-label={socialLabel(url)}
-                    className="inline-flex items-center justify-center no-underline transition-colors"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 999,
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.05)",
-                      color: "#a9a9b4",
-                    }}
-                  >
-                    {socialIcon(url)}
-                  </a>
-                ))}
-              </div>
-            )}
-
             {isSelf && (
               <div className="flex items-center gap-2.5">
                 <button
