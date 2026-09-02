@@ -206,6 +206,12 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
   /* Mount/unmount with the enter/leave transition. */
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
+  /* Phones: the sheet is see-through to the starfield, so the page under
+     it is hidden while it is up (globals.css phone block keys off this). */
+  useEffect(() => {
+    document.documentElement.classList.toggle("search-sheet-open", shown);
+    return () => document.documentElement.classList.remove("search-sheet-open");
+  }, [shown]);
   useEffect(() => {
     if (open) {
       setMounted(true);

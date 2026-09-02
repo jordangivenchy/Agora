@@ -256,7 +256,7 @@ export default function SiteChrome({
       {/* .nav is position:fixed (60px), so the page content starts below
           it; relative + z-1 lifts it above the starfield canvas (same
           stacking the homepage's .main uses). */}
-      <div style={{ paddingTop: "var(--nav-height, 60px)", position: "relative", zIndex: 1 }}>
+      <div className="site-chrome-content" style={{ paddingTop: "var(--nav-height, 60px)", position: "relative", zIndex: 1 }}>
         {children}
       </div>
     </div>

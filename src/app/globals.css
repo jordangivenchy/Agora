@@ -2405,10 +2405,11 @@ html.reduce-motion .nav-sparkle {
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    border-top: 1px solid rgba(255,255,255,0.07) !important;
-    /* Opaque: phones have no backdrop blur, and at 97% the page's bright
-       text ghosted through the sheet. */
-    background: #0b0d12 !important;
+    border-top: none !important;
+    /* See-through to the starfield (like the Friends overlay). The page
+       itself is hidden underneath while the sheet is up — see
+       .search-sheet-open below — so nothing ghosts through. */
+    background: rgba(6,7,12,0.3) !important;
     box-shadow: none !important;
     /* Rises a few px as it fades in; desktop's -50% translate is gone. */
     transform: translateY(8px) !important;
@@ -2416,8 +2417,11 @@ html.reduce-motion .nav-sparkle {
   }
   .search-panel.is-open { transform: none !important; }
   .search-panel-body { padding: 16px 16px 24px !important; }
-  /* The scrim must sit UNDER the sheet or it eats every tap. */
-  .search-panel-scrim { z-index: 129 !important; }
+  /* The scrim must sit UNDER the sheet or it eats every tap; with the
+     page hidden it has nothing to dim, so it stays clear (stars intact). */
+  .search-panel-scrim { z-index: 129 !important; background: transparent !important; }
+  .search-sheet-open .main,
+  .search-sheet-open .site-chrome-content { visibility: hidden; }
   /* Result filters scroll sideways in one row instead of wrapping into
      two ragged lines; rows get thumb-sized. */
   .search-tabs { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }

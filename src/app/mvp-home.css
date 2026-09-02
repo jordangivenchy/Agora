@@ -6261,6 +6261,9 @@ body { background: transparent; }
     color: rgba(255,255,255,0.5);
   }
   html .nav-search[data-search-open] input { height: 42px; padding-left: 10px !important; }
+  /* Centre the 44px pill in the 60px bar (the bar's usual 8px top padding
+     is for the mark/avatar row). */
+  html .nav:has(#navSearchWrap[data-search-open]) { padding-top: 0 !important; padding-bottom: 0 !important; }
   html .nav-search[data-search-open] .search-active-indicator { display: none !important; }
   html .nav:has(.nav-search[data-search-open]) .nav-logo,
   html .nav:has(.nav-search[data-search-open]) .nav-auth { display: none !important; }
