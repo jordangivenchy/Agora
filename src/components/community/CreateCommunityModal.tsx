@@ -11,6 +11,7 @@
    the foot of the discussion modal). */
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { Icon, type IconName } from "@/components/icons";
@@ -156,7 +157,10 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
     }
   }, [canCreate, busy, userId, avatar, banner, supabase, trimmed, kind, color, description, rules, isPrivate, prompt, onCreated, onClose]);
 
-  if (!open) return null;
+  /* Portaled to <body>: mounted inside the Communities panel (a fixed
+     layer with its own stacking context) the overlay could never rise
+     above the phone tab bar, whatever its z-index. */
+  if (!open || typeof document === "undefined") return null;
 
   const kindMeta = COMMUNITY_KINDS.find((k) => k.key === kind) ?? COMMUNITY_KINDS[0];
   const initial = (trimmed || "?").charAt(0).toUpperCase();
@@ -197,7 +201,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
 
   const steps = ["Basics", "Look", "Access"];
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[500] flex items-center justify-center p-5 ccm-overlay"
       style={{ background: "rgba(0,0,0,0.78)", backdropFilter: "blur(4px)", animation: "modalIn 0.2s ease" }}
@@ -222,7 +226,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between" style={{ padding: "20px 24px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center justify-between ccm-head" style={{ padding: "20px 24px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div>
             <h2 id="ccm-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#f5f5f0" }}>
               Create a community
@@ -250,7 +254,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
         </div>
 
         {/* Body */}
-        <div style={{ padding: "18px 24px 8px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="ccm-body" style={{ padding: "18px 24px 8px", display: "flex", flexDirection: "column", gap: 18 }}>
           {step === 0 && (
             <>
               <div>
@@ -443,7 +447,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2" style={{ padding: "12px 24px 20px" }}>
+        <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px" }}>
           {step > 0 ? (
             <button type="button" onClick={() => setStep((s) => s - 1)} className="cursor-pointer inline-flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, padding: "9px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e8e8ee", fontFamily: "inherit" }}>
               <Icon name="arrow-left" size={13} /> Back
@@ -475,6 +479,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

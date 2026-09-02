@@ -312,7 +312,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   if (joinMode) {
     return (
       <div
-        className="fixed inset-0 z-[500] flex items-center justify-center p-5"
+        className="fixed inset-0 z-[500] flex items-center justify-center p-5 crm-overlay"
         style={{ background: "rgba(0,0,0,0.82)", backdropFilter: "blur(6px)", animation: "modalIn 0.2s ease" }}
         onClick={(e) => { if (e.target === e.currentTarget) setJoinMode(false); }}
       >
@@ -404,7 +404,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   if (createdInvite) {
     return (
       <div
-        className="fixed inset-0 z-[500] flex items-center justify-center p-5"
+        className="fixed inset-0 z-[500] flex items-center justify-center p-5 crm-overlay"
         style={{
           background: "rgba(0,0,0,0.82)",
           backdropFilter: "blur(6px)",
@@ -543,7 +543,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
      ────────────────────────────────────────────────────────── */
   return (
     <div
-      className="fixed inset-0 z-[500] flex items-center justify-center p-5"
+      className="fixed inset-0 z-[500] flex items-center justify-center p-5 crm-overlay"
       style={{
         background: "rgba(0,0,0,0.78)",
         backdropFilter: "blur(4px)",
