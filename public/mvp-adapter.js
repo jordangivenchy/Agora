@@ -5,39 +5,55 @@
 (function () {
   function go(url) { window.location.href = url; }
 
-  /* Hero carousel = the live rooms, most watched first. With nothing
-     live it shows today's question instead (one slide, pushed by
-     TopicsHome through applyData as heroTopics). News never goes in the
-     hero: it has its own row further down (HomeNews.tsx). */
+  /* Hero carousel = popular live rooms interleaved with top news stories
+     (from /api/news, Particle-backed). Room slides and news slides are
+     built independently and merged here, so either source can arrive or
+     update at any time. */
   var roomSlides = [];
-  var topicSlides = [];
+  var newsSlides = [];
+
+  var NEWS_GRADIENTS = [
+    'linear-gradient(120deg,#101426 0%,#1c2340 55%,#25172e 100%)',
+    'linear-gradient(120deg,#141020 0%,#2a1a33 55%,#12203a 100%)',
+    'linear-gradient(120deg,#0e1a2a 0%,#182a45 55%,#2b1f38 100%)',
+  ];
 
   function rebuildCarousel() {
     CAROUSEL_DATA.length = 0;
-    var src = roomSlides.length ? roomSlides : topicSlides;
-    for (var i = 0; i < src.length; i++) CAROUSEL_DATA.push(src[i]);
+    var n = Math.max(roomSlides.length, newsSlides.length);
+    for (var i = 0; i < n; i++) {
+      if (roomSlides[i]) CAROUSEL_DATA.push(roomSlides[i]);
+      if (newsSlides[i]) CAROUSEL_DATA.push(newsSlides[i]);
+    }
     renderCarousel();
   }
 
-  function applyData(D) {
-    if (!D) return;
-
-    if (Array.isArray(D.heroTopics)) {
-      topicSlides = D.heroTopics.slice(0, 1).map(function (t) {
+  fetch('/api/news')
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      // Sample feeds are invented headlines — never put them in the hero.
+      if (j.sample) return;
+      // Hero = the major stories (ranked server-side); the ticker takes the rest.
+      var stories = j.stories || [];
+      var majors = stories.filter(function (s) { return s.major; });
+      newsSlides = (majors.length ? majors : stories).slice(0, 3).map(function (s, i) {
         return {
-          kind: 'topic',
-          id: t.id,
-          question: t.question,
-          topicKey: t.topicKey,
-          topicLabel: t.topicLabel,
-          color: t.color,
-          queueCount: t.queueCount || 0,
-          amQueued: !!t.amQueued,
-          rotateIn: t.rotateIn || '',
+          kind: 'news',
+          headline: s.headline,
+          category: s.category || null,
+          url: s.url,
+          sources: s.sources || [],
+          imageUrl: s.imageUrl || null,
+          summary: s.summary || null,
+          gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length],
         };
       });
-      rebuildCarousel();
-    }
+      if (newsSlides.length) rebuildCarousel();
+    })
+    .catch(function () { /* no news feed → carousel stays rooms-only */ });
+
+  function applyData(D) {
+    if (!D) return;
 
     if (Array.isArray(D.debates) && D.debates.length) {
       DEBATES.length = 0;
@@ -184,12 +200,12 @@
   /* Friends section is rendered by React (FriendsSection) — the demo
      renderer stays idle. */
 
-  /* "View all →" opens the Explore grid (no sidebar entry any more —
-     React serves it on agora:tab). */
+  /* "View all →" opens the Explore page. */
   document.querySelectorAll('.view-all').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'explore' }));
+      var explore = document.querySelector('[data-nav-id="explore"]');
+      if (explore) explore.click();
     });
   });
   /* Create button opens the real CreateRoomModal (document-level capture
@@ -210,9 +226,4 @@
       }
     }, true);
   }
-
-  /* React components that publish through __agoraApplyData (TopicsHome's
-     hero question) may have done so before this script ran; tell them
-     it's safe to publish again. */
-  window.dispatchEvent(new CustomEvent('agora:adapter-ready'));
 })();

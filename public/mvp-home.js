@@ -329,27 +329,43 @@ function escHTML(s) {
   ));
 }
 
-// Today's question (kind: 'topic', pushed by mvp-adapter from the daily
-// topics): the hero when nothing is live. One card, one action — the
-// queue button hands off to TopicsHome (agora:queue-topic), which owns
-// the RPC and republishes the slide with the new state.
-function topicSlideHTML(c) {
-  const accent = c.color || '#4a9eff';
-  const waiting = c.queueCount > 0
-    ? `${c.queueCount} waiting to talk`
-    : 'no one waiting yet — be first';
-  const label = c.amQueued
-    ? 'In queue — tap to leave'
-    : (c.queueCount > 0 ? 'Queue — match now' : 'Queue for this question');
+// News slide (kind: 'news', pushed by mvp-adapter): headline + the outlets
+// reporting the story; side panel lists coverage instead of a debater.
+function newsSlideHTML(c, i, total) {
+  const chips = (c.sources || []).slice(0, 4).map(s => `
+    <span class="carousel-news-chip">
+      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="13" height="13" />` : ''}
+      ${escHTML(s.name)}
+    </span>`).join('');
+  const rows = (c.sources || []).slice(0, 5).map(s => `
+    <div class="panel-outlet-row">
+      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="14" height="14" />` : ''}
+      <span>${escHTML(s.name)}</span>
+    </div>`).join('');
+  const hasUrl = !!(c.url && /^https:\/\//.test(c.url));
+  const img = c.imageUrl
+    ? `<img class="carousel-news-img" src="${escHTML(c.imageUrl)}" alt="" loading="eager" decoding="async"
+         onerror="this.remove()" />`
+    : '';
   return `
-    <div class="carousel-item topic" role="group" aria-label="Today's question">
-      <div class="carousel-bg" style="background: radial-gradient(120% 140% at 12% 8%, ${escHTML(accent)}40 0%, rgba(11,11,13,0) 55%), linear-gradient(120deg, #111528 0%, #0b0b0d 100%);"></div>
-      <div class="carousel-bg-grid"></div>
-      <div class="carousel-topic-body">
-        <div class="carousel-topic-kicker" style="--chip:${escHTML(accent)};"><span class="carousel-topic-dot"></span>Today's question · ${escHTML(c.topicLabel || 'Discussion')}</div>
-        <div class="carousel-motion carousel-topic-question">${escHTML(c.question)}</div>
-        <div class="carousel-topic-meta">${escHTML(waiting)}${c.rotateIn ? ` · new questions in ${escHTML(c.rotateIn)}` : ''}</div>
-        <button class="carousel-watch-btn carousel-topic-queue${c.amQueued ? ' queued' : ''}" data-topic-id="${escHTML(c.id)}">${label}</button>
+    <div class="carousel-item news" role="group" aria-label="Slide ${i+1} of ${total}">
+      <div class="carousel-bg" style="background:${c.gradient};">${img}</div>
+      <div class="carousel-news-shade"></div>
+      <div class="carousel-lower-third">
+        <div class="carousel-motion">${escHTML(c.headline)}</div>
+        <div class="carousel-news-chips">${chips}</div>
+      </div>
+      <div class="carousel-panel carousel-news-card">
+        <div class="carousel-news-byline">
+          <span class="panel-name">Reported by</span>
+          <div class="panel-outlets">${rows}</div>
+        </div>
+        ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
+        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read at ${escHTML((c.sources && c.sources[0] && c.sources[0].name) || 'source')} ↗</button>` : ''}
+        <button class="carousel-watch-btn carousel-queue-btn${(window.__agoraHeroQueue || {})[c.headline] === 'queued' ? ' queued' : ''}"
+          data-headline="${escHTML(c.headline)}" data-category="${escHTML(c.category || '')}" data-url="${escHTML(c.url || '')}">
+          ${(window.__agoraHeroQueue || {})[c.headline] === 'queued' ? 'In queue — tap to leave' : 'Queue a discussion'}
+        </button>
       </div>
     </div>`;
 }
@@ -362,8 +378,8 @@ function renderCarousel() {
   const cSection = document.querySelector('.carousel-section');
   if (cSection) cSection.style.display = CAROUSEL_DATA.length ? '' : 'none';
 
-  const slideHTML = (c, i) => c.kind === 'topic'
-    ? topicSlideHTML(c)
+  const slideHTML = (c, i) => c.kind === 'news'
+    ? newsSlideHTML(c, i, CAROUSEL_DATA.length)
     : `
     <div class="carousel-item${c.thumbnailUrl ? ' has-thumb' : ''}" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
       <div class="carousel-bg" style="background:${c.gradient};">${c.thumbnailUrl
@@ -421,12 +437,6 @@ function renderCarousel() {
   dots.innerHTML = CAROUSEL_DATA.map((_, i) =>
     `<div class="carousel-dot${i === currentSlide ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
   ).join('');
-  // One slide (today's question, or a lone live room) has nothing to
-  // page through: no dots, no arrows. The question card is also shorter.
-  dots.style.display = N > 1 ? '' : 'none';
-  document.querySelectorAll('.carousel-arrow').forEach(a => { a.style.display = N > 1 ? '' : 'none'; });
-  const stage = document.getElementById('carouselStage');
-  if (stage) stage.classList.toggle('is-topic', N > 0 && CAROUSEL_DATA.every(c => c.kind === 'topic'));
 
   dots.querySelectorAll('.carousel-dot').forEach(dot => {
     dot.addEventListener('click', () => { goToSlide(parseInt(dot.dataset.index)); resetAutoPlay(); });
@@ -434,7 +444,7 @@ function renderCarousel() {
   });
 
   // Phase 2: wire carousel watch buttons
-  track.querySelectorAll('.room-panel-watch').forEach(btn => {
+  track.querySelectorAll('.carousel-watch-btn:not(.carousel-news-btn)').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const idx = parseInt(btn.dataset.debateIndex);
@@ -442,19 +452,57 @@ function renderCarousel() {
     });
   });
 
-  // Today's question → the daily-topics queue. TopicsHome (React) owns
-  // the RPC and republishes the hero with the resulting state; until
-  // then the button just shows it's working.
-  track.querySelectorAll('.carousel-topic-queue').forEach(btn => {
+  // "Read article" opens the outlet's story in a new tab; slides without
+  // a link fall back to the in-app News panel (React listens on agora:tab).
+  track.querySelectorAll('.carousel-news-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (btn.disabled) return;
-      btn.disabled = true;
-      btn.textContent = '…';
-      window.dispatchEvent(new CustomEvent('agora:queue-topic', { detail: { topicId: btn.dataset.topicId } }));
+      const url = btn.dataset.url;
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      else window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
+    });
+    // Long outlet names ("The Washington Post") shrink the type until the
+    // label fits the pill on one line, instead of getting ellipsized.
+    // scrollWidth needs layout — defer a frame so the slide has a size.
+    requestAnimationFrame(() => {
+      let size = 13;
+      while (size > 10 && btn.scrollWidth > btn.clientWidth) {
+        size -= 0.5;
+        btn.style.fontSize = size + 'px';
+      }
+    });
+  });
+
+  // "Queue a discussion" — React (page.tsx) owns the RPC + match polling;
+  // the hero just raises the event and paints whatever state comes back.
+  track.querySelectorAll('.carousel-queue-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (btn.dataset.busy) return;
+      window.dispatchEvent(new CustomEvent('agora:queue-headline', {
+        detail: { headline: btn.dataset.headline, category: btn.dataset.category, url: btn.dataset.url },
+      }));
     });
   });
 }
+
+// Queue-state paint: a global map survives the 30s carousel re-renders
+// (newsSlideHTML reads it for the initial label).
+window.__agoraHeroQueue = window.__agoraHeroQueue || {};
+window.addEventListener('agora:hero-queue-state', (e) => {
+  const d = e.detail || {};
+  if (!d.headline) return;
+  window.__agoraHeroQueue[d.headline] = d.state;
+  document.querySelectorAll('.carousel-queue-btn').forEach(btn => {
+    if (btn.dataset.headline !== d.headline) return;
+    delete btn.dataset.busy;
+    btn.classList.toggle('queued', d.state === 'queued');
+    if (d.state === 'busy') { btn.dataset.busy = '1'; btn.textContent = '…'; }
+    else if (d.state === 'queued') btn.textContent = 'In queue — tap to leave';
+    else if (d.state === 'error') btn.textContent = d.message || 'Couldn’t queue — try again';
+    else btn.textContent = 'Queue a discussion';
+  });
+});
 
 let carouselSnapTimer = null;
 let carouselSnapPending = false;

@@ -13,7 +13,7 @@ import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
 import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
 import NotificationsBell from "@/components/NotificationsBell";
-import HomeNews from "@/components/HomeNews";
+import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage, { topicFor } from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
@@ -577,9 +577,6 @@ export default function Home() {
       if (typeof tab === "string" && isPanelTab(tab)) setActiveTab(tab);
       else if (tab === "close") setActiveTab(null);
       else if (tab === "home") onSidebarNavigate("home");
-      /* Explore left the sidebar (Home is the rooms view now); "View all"
-         and "Explore all … rooms" still open the full grid this way. */
-      else if (tab === "explore") onSidebarNavigate("explore");
       else if (tab === "battle") {
         // Legacy Topics-tab key: the dropdowns now live on the home feed.
         setActiveTab(null);
@@ -695,7 +692,7 @@ export default function Home() {
         </div>
       )}
       <NotificationsBell container={bellHost} />
-      <HomeNews container={newsHost} />
+      <NewsTicker container={newsHost} />
       <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />

@@ -2009,18 +2009,23 @@ html.reduce-motion .nav-sparkle {
   padding: 9px 22px;
   border-radius: 999px;
   border: none;
-  /* The one primary colour on the page (sidebar active, hero CTA). */
-  background: #ffb700;
-  color: #1a0e00;
+  background: #2f7fe0;
+  color: #fff;
   white-space: nowrap;
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
-.queue-join-btn:hover { background: #ffc633; }
+.queue-join-btn:hover { background: #3c8ceb; }
 .queue-join-btn:active { transform: scale(0.97); }
 .queue-join-btn:disabled { opacity: 0.55; cursor: default; }
-/* Someone is already waiting: same button, a glow says "right now". */
-.queue-join-btn--instant { box-shadow: 0 2px 16px rgba(255, 183, 0, 0.35); }
-.queue-join-btn--instant:hover { box-shadow: 0 3px 22px rgba(255, 183, 0, 0.5); }
+.queue-join-btn--instant {
+  background: #d9a238;
+  color: #2b1a02;
+  box-shadow: 0 2px 14px rgba(217, 162, 56, 0.3);
+}
+.queue-join-btn--instant:hover {
+  background: #e5b04a;
+  box-shadow: 0 3px 20px rgba(217, 162, 56, 0.45);
+}
 
 /* ═══ Hover-rail width (2026-08-26) ═════════════════════════════════
    Unlayered on purpose: routes that pull mvp-home.css through
