@@ -243,7 +243,7 @@ export default function MessagesPage({ initialUsername }: { initialUsername?: st
           >
             <Icon name="search" size={13} />
           </span>
-          <input
+          <input className="msg-rail-search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search conversations"

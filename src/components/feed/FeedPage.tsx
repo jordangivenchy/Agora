@@ -318,10 +318,10 @@ export default function FeedPage({ open, onClose }: Props) {
           tabIndex={0}
           onClick={() => { window.location.href = replayPath(r); }}
           onKeyDown={(e) => { if (e.key === "Enter") window.location.href = replayPath(r); }}
-          className="p-3 mb-3 flex gap-4 items-center cursor-pointer"
+          className="p-3 mb-3 flex gap-4 items-center cursor-pointer feed-replay"
           style={{ ...card, padding: 18 }}
         >
-          <div style={{ position: "relative", width: 208, height: 117, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="feed-replay-thumb" style={{ position: "relative", width: 208, height: 117, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#15151b", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {r.thumbnail_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={r.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -398,7 +398,7 @@ export default function FeedPage({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed overflow-y-auto"
+      className="fixed overflow-y-auto shell-page"
       style={{
         top: "var(--nav-height)",
         left: "calc(var(--sidebar-width) + 12px)",
@@ -406,12 +406,12 @@ export default function FeedPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
-        <div className="flex items-center gap-4 mb-5 flex-wrap">
+      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
+        <div className="flex items-center gap-4 mb-5 flex-wrap feed-head">
           <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
             Your feed
           </span>
-          <div className="flex gap-2 flex-1 flex-wrap">
+          <div className="flex gap-2 flex-1 flex-wrap feed-filters">
             {FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -444,7 +444,7 @@ export default function FeedPage({ open, onClose }: Props) {
         )}
 
         {userId && (
-          <div className="flex gap-5 items-start">
+          <div className="flex gap-5 items-start feed-body">
           <div className="flex-1 min-w-0">
             {error && (
               <p className="text-[12px] px-4 py-3 mb-3 rounded-xl" style={{ background: "rgba(226,120,120,0.08)", border: "0.5px solid rgba(226,120,120,0.3)", color: "#f09595" }}>
@@ -454,7 +454,7 @@ export default function FeedPage({ open, onClose }: Props) {
 
             {/* Small screens only — on lg+ the rail's Live block covers this. */}
             {live.length > 0 && (
-              <section className="mb-5 lg:hidden">
+              <section className="mb-5 lg:hidden feed-live">
                 <p className="m-0 mb-2 text-[12px] font-semibold inline-flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.7)" }}>
                   <span style={{ color: "#ef4444" }}>●</span> Live now
                 </p>

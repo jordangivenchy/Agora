@@ -171,7 +171,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
   }, [supabase]);
 
   return (
-    <aside className="hidden lg:block shrink-0 sticky" style={{ width: 310, top: "calc(var(--nav-height, 60px) + 8px)" }}>
+    <aside className="hidden lg:block shrink-0 sticky feed-rail" style={{ width: 310, top: "calc(var(--nav-height, 60px) + 8px)" }}>
       {live.length > 0 && (
         <>
           {sectionLabel("LIVE NOW", <span style={{ color: "#ef4444", letterSpacing: 0 }}>●</span>)}

@@ -210,7 +210,7 @@ export default function TrendingPage({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed overflow-y-auto"
+      className="fixed overflow-y-auto shell-page"
       style={{
         top: "var(--nav-height)",
         left: "calc(var(--sidebar-width) + 12px)",
@@ -220,7 +220,7 @@ export default function TrendingPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
         <div className="flex items-center gap-4 mb-5 trend-head">
           {activeShort && (
             <button

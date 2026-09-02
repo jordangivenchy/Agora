@@ -762,7 +762,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                       <Icon name="smile" size={13} />
                     </button>
                     {reactFor === m.id && (
-                      <div
+                      <div className="dm-react-strip"
                         style={{
                           position: "absolute",
                           bottom: 27,
@@ -902,7 +902,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
       {sendError && <p style={{ margin: 0, padding: "6px 12px", color: "#ff9d92", fontSize: 11.5 }}>{sendError}</p>}
 
       {/* Composer */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
+      <div className="dm-composer" style={{ position: "relative", borderTop: "1px solid rgba(255,255,255,0.08)", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
         {replyTo && (
           <div
             style={{
@@ -1007,7 +1007,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             }}
             placeholder="Message…"
             rows={1}
-            autoFocus
+            autoFocus={typeof window === "undefined" || !window.matchMedia("(max-width: 639px)").matches}
             style={{
               flex: 1,
               minWidth: 0,
@@ -1027,7 +1027,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               boxSizing: "border-box",
             }}
           />
-          <span style={{ position: "relative", display: "inline-flex" }}>
+          <span className="dm-picker-anchor dm-emoji-btn" style={{ position: "relative", display: "inline-flex" }}>
             <button
               onClick={() => setPicker(picker === "emoji" ? null : "emoji")}
               style={{ ...dmIconBtn, color: picker === "emoji" ? YELLOW : dmIconBtn.color }}
@@ -1053,7 +1053,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             />
           </label>
           {giphyEnabled && (
-            <span style={{ position: "relative", display: "inline-flex" }}>
+            <span className="dm-picker-anchor" style={{ position: "relative", display: "inline-flex" }}>
               <button
                 onClick={() => setPicker(picker === "gif" ? null : "gif")}
                 style={{

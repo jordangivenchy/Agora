@@ -174,7 +174,7 @@ export default function ClipEditor({
   if (savedId) {
     const link = `${window.location.origin}/clips/${savedId}`;
     return (
-      <div style={panelStyle}>
+      <div className="rp-clip-panel" style={panelStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, color: "#f4d47c", fontWeight: 600 }}>Clip saved ✓</span>
           <span style={{ fontSize: 12, color: "#c0c0c8", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 300 }}>{link}</span>
@@ -200,7 +200,7 @@ export default function ClipEditor({
   }
 
   return (
-    <div style={panelStyle} onPointerDown={(e) => e.stopPropagation()}>
+    <div className="rp-clip-panel" style={panelStyle} onPointerDown={(e) => e.stopPropagation()}>
       {/* Timeline strip */}
       <div
         ref={stripRef}

@@ -122,7 +122,13 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
 
     const toggleFs = useCallback(() => {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-      else wrapRef.current?.requestFullscreen().catch(() => {});
+      else if (wrapRef.current?.requestFullscreen) wrapRef.current.requestFullscreen().catch(() => {});
+      else {
+        /* iPhone Safari has no element fullscreen API — only the video
+           element's own webkitEnterFullscreen. */
+        const v = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+        v?.webkitEnterFullscreen?.();
+      }
       poke();
     }, [poke]);
 
@@ -279,11 +285,11 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
-            <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} style={btn}>
+          <div className="rp-controls" style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
+            <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="rp-btn" style={btn}>
               <Icon name={playing ? "pause" : "play"} size={17} style={{ fill: "currentColor" }} />
             </button>
-            <button onClick={() => setVolume(muted ? (vol || 1) : 0)} aria-label={muted ? "Unmute" : "Mute"} style={btn}>
+            <button onClick={() => setVolume(muted ? (vol || 1) : 0)} aria-label={muted ? "Unmute" : "Mute"} className="rp-btn" style={btn}>
               <Icon name={muted ? "volume-x" : "volume-2"} size={16} />
             </button>
             <input
@@ -292,9 +298,9 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
               value={muted ? 0 : vol}
               onChange={(e) => setVolume(Number(e.target.value))}
               aria-label="Volume"
-              style={{ width: 68, accentColor: GOLD, cursor: "pointer" }}
+              className="rp-vol" style={{ width: 68, accentColor: GOLD, cursor: "pointer" }}
             />
-            <span style={{ fontSize: 11.5, color: "#d9d9df", fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap" }}>
+            <span className="rp-time" style={{ fontSize: 11.5, color: "#d9d9df", fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap" }}>
               {fmtTime(shownTime)} <span style={{ color: "#8b8b94" }}>/ {fmtTime(eDur)}</span>
             </span>
             <span style={{ flex: 1 }} />
@@ -308,7 +314,7 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
                 <Icon name="scissors" size={16} />
               </button>
             )}
-            <button onClick={toggleFs} aria-label={fs ? "Exit fullscreen" : "Fullscreen"} style={btn}>
+            <button onClick={toggleFs} aria-label={fs ? "Exit fullscreen" : "Fullscreen"} className="rp-btn" style={btn}>
               <Icon name={fs ? "minimize" : "maximize"} size={16} />
             </button>
           </div>

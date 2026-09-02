@@ -560,7 +560,7 @@ export default function SettingsPage() {
       case "profile":
         return (
           <SectionCard title="Profile" sub="How you appear across AgoraSphere.">
-            <div className="flex items-center gap-3.5 px-4 py-3">
+            <div className="flex items-center gap-3.5 px-4 py-3 settings-profile-row">
               <span
                 className="flex items-center justify-center shrink-0 overflow-hidden"
                 style={{ width: 52, height: 52, borderRadius: "50%", background: "#2c5382", color: "#fff", fontSize: 20, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
@@ -628,7 +628,7 @@ export default function SettingsPage() {
                     {pwMsg.text}
                   </p>
                 )}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 settings-inline-form">
                   <button style={btnPrimary} disabled={pwBusy || !curPw || !newPw} type="submit">
                     {pwBusy ? "Updating…" : "Update password"}
                   </button>
@@ -661,7 +661,7 @@ export default function SettingsPage() {
                 )}
 
                 {!twoFactorEnabled && enrollPending && (
-                  <form onSubmit={verifyEnroll} className="flex items-center gap-2.5">
+                  <form onSubmit={verifyEnroll} className="flex items-center gap-2.5 settings-inline-form">
                     <input
                       style={{ ...inputStyle, width: 130, textAlign: "center", letterSpacing: "0.2em" }}
                       type="text"
@@ -700,7 +700,7 @@ export default function SettingsPage() {
                 )}
 
                 {twoFactorEnabled && disableOpen && (
-                  <form onSubmit={disable2fa} className="flex items-center gap-2.5">
+                  <form onSubmit={disable2fa} className="flex items-center gap-2.5 settings-inline-form">
                     {hasPasswordIdentity && (
                       <input
                         style={{ ...inputStyle, width: 200 }}
@@ -789,7 +789,7 @@ export default function SettingsPage() {
               <div className="px-4 pb-3">
                 {recUsage ? (
                   <>
-                    <div className="flex items-baseline justify-between mb-1.5">
+                    <div className="flex items-baseline justify-between mb-1.5 settings-storage-head">
                       <span className="text-[13px]" style={{ color: "#f5f5f0", fontWeight: 600 }}>
                         {usedGb! < 0.1 && recUsage.used_bytes > 0 ? "<0.1" : usedGb!.toFixed(1)} GB
                         <span style={{ color: "#8b8b94", fontWeight: 400 }}> of {limitGb!.toFixed(0)} GB used</span>
@@ -943,7 +943,7 @@ export default function SettingsPage() {
               </p>
             ) : (
               blocked.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 px-4 py-2.5">
+                <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 settings-blocked-row">
                   <span
                     className="flex items-center justify-center shrink-0 overflow-hidden"
                     style={{ width: 32, height: 32, borderRadius: "50%", background: "#3a3a42", color: "#fff", fontSize: 13 }}
@@ -1031,15 +1031,15 @@ export default function SettingsPage() {
 
   return (
     <SiteChrome>
-    <div className="replay-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="mx-auto px-4 py-6" style={{ maxWidth: 980 }}>
+    <div className="replay-beside-sidebar settings-shell" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="mx-auto px-4 py-6 settings-inner" style={{ maxWidth: 980 }}>
 
         {/* header */}
-        <div className="flex items-center gap-3 mb-5">
+        <div className="flex items-center gap-3 mb-5 settings-head">
           {/* Mobile back: panel → list */}
           {mobilePanelOpen && (
             <button
-              className="md:hidden"
+              className="md:hidden settings-back"
               style={{ ...btnGhost, padding: "6px 12px" }}
               onClick={() => setMobilePanelOpen(false)}
               aria-label="Back to settings sections"
@@ -1050,7 +1050,7 @@ export default function SettingsPage() {
           <a href="/" className="hidden md:inline-block" style={{ ...btnGhost, padding: "6px 12px", textDecoration: "none" }}>
             ← Home
           </a>
-          <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
+          <h1 className="m-0 text-[22px] settings-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
             {mobilePanelOpen ? activeMeta?.label : "Settings"}
           </h1>
           <span

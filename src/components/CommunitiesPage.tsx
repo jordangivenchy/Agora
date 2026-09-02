@@ -1422,7 +1422,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
   /* Share / repost / delete row under a post. */
   const postActions = (p: Post, inDetail: boolean) => (
-    <span className="flex items-center gap-3">
+    <span className="flex items-center gap-3 cm-post-actions">
       <button
         onClick={(e) => { e.stopPropagation(); sharePost(p); }}
         className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
@@ -1524,7 +1524,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <img src={c.image_url} alt="" className="mt-1.5 rounded-lg"
                     style={{ maxHeight: 260, maxWidth: "100%" }} />
                 )}
-                <div className="flex items-center gap-3 mt-1.5">
+                <div className="flex items-center gap-3 mt-1.5 cm-comment-actions">
                   <span className="flex items-center gap-1">
                     <button
                       onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
@@ -1582,7 +1582,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 </div>
                 {replyTo === c.id && (
                   <div className="mt-2">
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-2 items-end cm-composer-row">
                       <span className="relative flex-1 min-w-0">
                         <RichEditor
                           ref={replyInputRef}
@@ -1596,7 +1596,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "reply" ? null : "reply") : undefined}
                           onEmoji={() => setEmojiFor(emojiFor === "reply" ? null : "reply")}
                           trailing={
-                            <span className="relative inline-block" style={{ alignSelf: "stretch" }}>
+                            <span className="relative inline-block cm-popover-host" style={{ alignSelf: "stretch" }}>
                               {emojiFor === "reply" && (
                                 <EmojiPicker
                                   onPick={(e) => replyInputRef.current?.insertText(e)}
@@ -1667,7 +1667,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
   return (
     <div
-      className="fixed overflow-y-auto"
+      className="fixed overflow-y-auto shell-page cm-overlay"
       style={{
         top: "var(--nav-height)",
         left: "calc(var(--sidebar-width) + 12px)",
@@ -1681,7 +1681,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         background: "rgba(6,6,8,0.45)",
       }}
     >
-      <div className="mx-auto" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
@@ -1777,7 +1777,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         <div className="flex gap-5 items-start flex-col md:flex-row-reverse">
 
           {/* community rail — right side */}
-          <nav className="w-full md:w-[310px] shrink-0">
+          <nav className="w-full md:w-[310px] shrink-0 cm-rail">
             {/* About card — the open board's name and description, up top */}
             {selectedCommunity && (
               <div className="mb-3 overflow-hidden" style={{
@@ -2185,7 +2185,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           </nav>
 
           {/* main column */}
-          <main className="flex-1 min-w-0 w-full">
+          <main className="flex-1 min-w-0 w-full cm-main">
 
             {openPost ? (
               /* ── post detail ── */
@@ -2247,7 +2247,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 {/* comment composer — media/emoji live in the editor toolbar; only
                     the submit button sits beside the box, bottom-aligned. */}
                 <div className="mb-4">
-                  <div className="flex gap-2 items-end">
+                  <div className="flex gap-2 items-end cm-composer-row">
                     <span className="relative flex-1 min-w-0">
                       <RichEditor
                         ref={commentInputRef}
@@ -2262,7 +2262,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "comment" ? null : "comment") : undefined}
                         onEmoji={() => setEmojiFor(emojiFor === "comment" ? null : "comment")}
                         trailing={
-                          <span className="relative inline-block" style={{ alignSelf: "stretch" }}>
+                          <span className="relative inline-block cm-popover-host" style={{ alignSelf: "stretch" }}>
                             {emojiFor === "comment" && (
                               <EmojiPicker
                                 onPick={(e) => commentInputRef.current?.insertText(e)}
@@ -2381,7 +2381,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         />
                       )}
                       {isMod && (
-                        <span className="absolute flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                        <span className="absolute flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity cm-brand-tools"
                           style={{ right: 10, bottom: 10 }}>
                           {selectedCommunity.banner_url && (
                             <button
@@ -2413,7 +2413,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         </span>
                       )}
                     </div>
-                    <div className="px-5 pb-5">
+                    <div className="px-5 pb-5 cm-board-head">
                     {/* Identity row: avatar flush left straddling the banner
                         edge, name beside it; actions (incl. the ⋯ menu)
                         float on the right just under the banner. */}
@@ -2438,7 +2438,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           )}
                         </span>
                         {isMod && (
-                          <span className="absolute flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                          <span className="absolute flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity cm-brand-tools"
                             style={{ right: -4, bottom: -4 }}>
                             {selectedCommunity.avatar_url && (
                               <button
@@ -2472,7 +2472,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </span>
                       {/* identity cluster: name and stats beside the avatar,
                           lifted off the row's bottom edge */}
-                      <span className="flex-1 min-w-0" style={{ paddingTop: 6, paddingBottom: 12, minWidth: 200 }}>
+                      <span className="flex-1 min-w-0 cm-board-identity" style={{ paddingTop: 6, paddingBottom: 12, minWidth: 200 }}>
                         <span className="block text-[21px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.15 }}>
                           {selectedCommunity.is_private && <Icon name="lock" size={16} title="Private community" style={{ marginRight: 5 }} />}
                           {selectedCommunity.name}
@@ -2903,7 +2903,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 </div>
 
                 {composing && (
-                  <div className="p-4 mb-4 flex flex-col gap-2.5" style={{ ...card, position: "relative", zIndex: 30 }}>
+                  <div className="p-4 mb-4 flex flex-col gap-2.5 cm-composer" style={{ ...card, position: "relative", zIndex: 30 }}>
                     {selected === "all" && (
                       <CommunityPicker
                         communities={communities.filter((c) => !c.is_private || c.joined)}
@@ -2929,7 +2929,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       onEmoji={() => setEmojiFor(emojiFor === "post" ? null : "post")}
                       trailing={
                         <>
-                          <span className="relative inline-block" style={{ alignSelf: "stretch" }}>
+                          <span className="relative inline-block cm-popover-host" style={{ alignSelf: "stretch" }}>
                             {emojiFor === "post" && (
                               <EmojiPicker
                                 onPick={(e) => bodyRef.current?.insertText(e)}

@@ -110,7 +110,7 @@ export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
   post, onVote, size = 13,
 }: { post: P; onVote: (p: P, v: number) => void; size?: number }) {
   return (
-    <div className="flex flex-col items-center shrink-0" style={{ width: 34 }}>
+    <div className="flex flex-col items-center shrink-0 vote-box" style={{ width: 34 }}>
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === 1 ? 0 : 1); }}
         className="cursor-pointer bg-transparent border-none px-1"

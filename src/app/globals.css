@@ -2114,12 +2114,15 @@ html.reduce-motion .nav-sparkle {
   .mobile-tab.active { color: #ffb700; }
   .mobile-tab-icon {
     display: inline-flex;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     align-items: center;
     justify-content: center;
   }
-  .mobile-tab-label { white-space: nowrap; }
+  .mobile-tab-icon svg { width: 22px; height: 22px; }
+  /* Icons only — the labels are dropped on purpose; the tab bar reads
+     as a control strip, and the active icon carries the yellow. */
+  .mobile-tab-label { display: none; }
 
   /* Standalone routes: full width, tight gutters, room for the bar. */
   .profile-beside-sidebar,
@@ -2207,4 +2210,148 @@ html.reduce-motion .nav-sparkle {
   button.rounded-full, a.rounded-full, button.rounded-lg, button.rounded-xl {
     min-height: 36px;
   }
+
+  /* iOS zooms the page when a focused field is under 16px. Beats the
+     type remap above by specificity (html + element > attribute). */
+  html input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  html textarea,
+  html select { font-size: 16px !important; }
+
+  /* ── Phase 3: signed-in + deep surfaces ─────────────────────────── */
+
+  /* The home-shell overlays (Feed, Trending, Communities) are fixed
+     panels sized for the rail: kill the leftover 12px rail gutter, stop
+     at the tab bar, and never pan sideways when a popover overhangs. */
+  .shell-page {
+    left: 0 !important;
+    bottom: calc(58px + env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+  }
+  .shell-page-inner { padding: 12px 12px 24px !important; }
+
+  /* Feed */
+  .feed-head { row-gap: 8px; }
+  .feed-head .feed-filters,
+  .feed-live > div {
+    flex-wrap: nowrap !important;
+    flex-basis: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .feed-head .feed-filters::-webkit-scrollbar,
+  .feed-live > div::-webkit-scrollbar { display: none; }
+  .feed-head .feed-filters > * { flex-shrink: 0; white-space: nowrap; }
+  .feed-replay { flex-direction: column; align-items: stretch !important; gap: 10px !important; padding: 12px !important; }
+  .feed-replay-thumb { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+  .feed-replay-thumb > img, .feed-replay-thumb > span:first-child { width: 100% !important; height: 100% !important; }
+  .feed-body { flex-direction: column; }
+  /* The rail's Queue + Upcoming blocks have no other phone surface. */
+  .feed-rail { display: block !important; width: 100% !important; position: static !important; }
+  .vote-box button { min-height: 30px; min-width: 34px; }
+
+  /* Communities: content first, rail after; rows wrap; tap targets. */
+  .cm-rail { order: 2; margin-top: 16px; }
+  .cm-post-actions, .cm-comment-actions { flex-wrap: wrap; row-gap: 4px; }
+  .cm-post-actions > *, .cm-comment-actions > button, .cm-comment-actions > span { min-height: 32px; }
+  [aria-label="Upvote"], [aria-label="Downvote"],
+  [aria-label="Upvote comment"], [aria-label="Downvote comment"] { min-height: 32px; min-width: 32px; }
+  [aria-label="Collapse thread"], [aria-label="Expand thread"] { width: 32px !important; min-height: 32px; }
+  .cm-composer-row { flex-wrap: wrap; }
+  .cm-composer-row > span { flex-basis: 100%; }
+  .cm-composer-row > button { margin-left: auto; }
+  .cm-popover-host > div {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+    bottom: calc(66px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    margin: 0 !important;
+    z-index: 130 !important;
+  }
+  .cm-composer [role="listbox"] { width: calc(100vw - 48px) !important; max-width: 300px; }
+  .cm-board-identity { min-width: 0 !important; }
+  .cm-board-head { padding-left: 16px !important; padding-right: 16px !important; }
+  .cm-brand-tools { opacity: 1 !important; }
+  .cm-brand-tools > * { width: 32px !important; height: 32px !important; }
+  [style*="padding: 5px 13px"] { min-height: 36px; padding: 8px 14px !important; }
+  html .cm-children { margin-left: 4px !important; padding-left: 16px !important; gap: 10px; }
+  html .cm-child::after { left: -16px !important; width: 16px !important; }
+  html .cm-child::before { left: -16px !important; }
+  html .cm-children .cm-children .cm-children { margin-left: 0 !important; padding-left: 0 !important; }
+  html .cm-children .cm-children .cm-children > .cm-child::before,
+  html .cm-children .cm-children .cm-children > .cm-child::after { display: none; }
+  .rich-text { overflow-wrap: anywhere; }
+  .rich-editor > .absolute { left: 0; right: 0; flex-wrap: wrap; }
+  .rich-editor > .absolute input { flex: 1 1 100%; width: auto !important; }
+  .rich-editor [role="toolbar"] button { width: 32px; height: 32px; min-width: 32px; }
+
+  /* Settings */
+  html .replay-beside-sidebar.settings-shell { padding-inline: 0 !important; padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+  .settings-inner { padding-inline: 12px !important; }
+  .settings-title { min-width: 0; flex: 1; font-size: 18px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .settings-back { min-height: 36px; }
+  .settings-inline-form { flex-wrap: wrap; }
+  .settings-inline-form input { width: 100% !important; flex-basis: 100%; }
+  .settings-profile-row { flex-wrap: wrap; }
+  .settings-profile-row > button { flex-basis: 100%; }
+  .settings-profile-row p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .settings-storage-head { flex-wrap: wrap; row-gap: 4px; }
+  .settings-storage-head > * { flex-basis: 100%; }
+  .settings-blocked-row > .flex-1 { min-width: 0; overflow-wrap: anywhere; }
+  [role="switch"] { position: relative; }
+  [role="switch"]::after { content: ""; position: absolute; inset: -8px -10px; }
+
+  /* Replay route */
+  html .replay-beside-sidebar:not(.settings-shell) { padding-left: 0 !important; }
+  html .replay-beside-sidebar .dr-wrap { padding: 12px 12px calc(76px + env(safe-area-inset-bottom)) !important; }
+  html .dr-btn { min-height: 36px; }
+  html .dr-panel-head { flex-wrap: wrap; }
+  html .dr-search { flex-basis: 100%; min-height: 36px; }
+  html .dr-search input { width: 100% !important; }
+  html .dr-section { padding: 14px 12px !important; border-radius: 12px !important; }
+  html .dr-more-grid {
+    display: flex !important;
+    overflow-x: auto;
+    gap: 12px;
+    margin: 0 -12px;
+    padding: 12px 12px 4px;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  html .dr-more-grid::-webkit-scrollbar { display: none; }
+  html .dr-more-card { flex: 0 0 min(70vw, 260px); scroll-snap-align: start; }
+  html .dr-toast { bottom: calc(70px + env(safe-area-inset-bottom)) !important; max-width: calc(100vw - 24px); z-index: 130 !important; }
+  .rp-vol { display: none !important; }
+  .rp-controls { gap: 6px !important; }
+  .rp-time { font-size: 11px !important; }
+  .rp-btn { min-width: 36px; min-height: 36px; justify-content: center; }
+  .rp-clip-panel {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(66px + env(safe-area-inset-bottom)) !important;
+    z-index: 130 !important;
+  }
+  .rp-clip-panel input { min-width: 0 !important; flex-basis: 100%; }
+
+  /* Messages */
+  .msg-rail-search { height: 40px !important; }
+  .dm-msg-row { max-width: 92% !important; }
+  .dm-msg-row img { max-width: 100% !important; height: auto; max-height: 60vh; }
+  .dm-reply-btn { width: 32px !important; height: 32px !important; }
+  .dm-react-strip {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(66px + env(safe-area-inset-bottom)) !important;
+    justify-content: space-around;
+    z-index: 130 !important;
+  }
+  .dm-react-strip button { min-width: 40px; min-height: 40px; }
+  .dm-emoji-btn { display: none !important; }
+  .dm-picker-anchor { position: static !important; }
+  .dm-picker-anchor > div, .dm-picker-anchor > .absolute { left: 0 !important; right: 0 !important; width: auto !important; }
 }
