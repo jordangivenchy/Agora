@@ -27,6 +27,7 @@ import UserAvatar from "./UserAvatar";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { formatBookmarks, isGroup, parseBookmarks, safeBookmarks, type Bookmark } from "@/lib/communityBookmarks";
 import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
+import CreateCommunityModal from "@/components/community/CreateCommunityModal";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { communitySlug, findCommunityBySlug } from "@/lib/communityUrls";
 import { pathFor, setSectionTitle } from "@/lib/routes";
@@ -114,14 +115,6 @@ type RailDebate = CommunityDebate & {
   community_name: string;
   community_color: string;
 };
-
-const KINDS = [
-  { key: "topic-circle", label: "Topic circle" },
-  { key: "university", label: "University" },
-  { key: "hs-team", label: "HS team" },
-  { key: "mun", label: "Model UN" },
-  { key: "pre-law", label: "Pre-law" },
-];
 
 const TAG_COLORS = ["#e2b96b", "#64B5F6", "#00b894", "#d98fb9", "#9d8fd9", "#e0956a"];
 
@@ -296,10 +289,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const replyImageInputRef = useRef<HTMLInputElement | null>(null);
   const postImageInputRef = useRef<HTMLInputElement | null>(null);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
+  /* "+ New community" opens CreateCommunityModal (community/). */
   const [creatingCommunity, setCreatingCommunity] = useState(false);
-  const [newCommunityName, setNewCommunityName] = useState("");
-  const [newCommunityKind, setNewCommunityKind] = useState("topic-circle");
-  const [newCommunityPrivate, setNewCommunityPrivate] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Sharing / reposting
@@ -734,6 +725,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   /* /?post=<id>&comment=<cid>: once the post is open, find the comment
      (paging deeper if it isn't in the first 60 threads), expand its
      ancestors, scroll to it and flash it. */
+  /* Latest loadCommunities for the mount-once listeners below. */
+  const loadCommunitiesRef = useRef<(() => Promise<unknown>) | null>(null);
+  useEffect(() => { loadCommunitiesRef.current = loadCommunities; }, [loadCommunities]);
+
   useEffect(() => {
     const onOpen = (e: Event) => {
       const id = (e as CustomEvent).detail?.postId;
@@ -748,11 +743,15 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     /* Community names elsewhere in the app (room cards, feed rows) route
        here: open that community's home page. */
     const onOpenCommunity = (e: Event) => {
-      const id = (e as CustomEvent).detail?.communityId;
+      const detail = (e as CustomEvent).detail as { communityId?: string; refresh?: boolean } | undefined;
+      const id = detail?.communityId;
       if (typeof id === "string" && id) {
         setOpenPost(null);
         setPendingPostId(null);
         setSelected(id);
+        /* A board created elsewhere (the site-wide modal) isn't in our
+           list yet — refetch so it can render. */
+        if (detail?.refresh) void loadCommunitiesRef.current?.();
       }
     };
     /* URL routes from page.tsx (/communities/<slug>, /posts/<id>): the
@@ -1059,25 +1058,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     }
     loadCommunities();
   }, [supabase, requireAuth, userId, loadCommunities]);
-
-  const createCommunity = useCallback(async () => {
-    if (!requireAuth()) return;
-    const name = newCommunityName.trim();
-    if (!name) return;
-    const { data, error: err } = await supabase
-      .from("communities")
-      .insert({ name, kind: newCommunityKind, created_by: userId, is_private: newCommunityPrivate })
-      .select("id")
-      .single();
-    if (!err && data) {
-      await supabase.from("community_members").insert({ community_id: data.id, user_id: userId, role: "owner" });
-      setCreatingCommunity(false);
-      setNewCommunityName("");
-      setNewCommunityPrivate(false);
-      setSelected(data.id);
-      loadCommunities();
-    }
-  }, [supabase, requireAuth, newCommunityName, newCommunityKind, newCommunityPrivate, userId, loadCommunities]);
 
   /* Share: copy a deep link that reopens this post (handled in page.tsx). */
   const [copiedCommentId, setCopiedCommentId] = useState<string | null>(null);
@@ -1804,40 +1784,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           </p>
         )}
 
-        {creatingCommunity && (
-          <div className="p-4 mb-4 flex gap-3 items-center flex-wrap" style={card}>
-            <input
-              value={newCommunityName}
-              onChange={(e) => setNewCommunityName(e.target.value)}
-              placeholder="Community name"
-              style={{ ...inputStyle, width: "auto", flex: 1, minWidth: 200 }}
-            />
-            <select
-              value={newCommunityKind}
-              onChange={(e) => setNewCommunityKind(e.target.value)}
-              className="text-[13px] px-3 py-2 rounded-lg"
-              style={{ background: "rgba(16,16,19,0.7)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(238,238,245,0.88)" }}
-            >
-              {KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
-            </select>
-            <label className="flex items-center gap-1.5 text-[12px] cursor-pointer" style={{ color: "rgba(238,238,245,0.65)" }}>
-              <input
-                type="checkbox"
-                checked={newCommunityPrivate}
-                onChange={(e) => setNewCommunityPrivate(e.target.checked)}
-              />
-              <Icon name="lock" size={12} /> Private
-            </label>
-            <button
-              onClick={createCommunity}
-              disabled={!newCommunityName.trim()}
-              className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
-              style={btnBlue}
-            >
-              Create
-            </button>
-          </div>
-        )}
+        <CreateCommunityModal
+          open={creatingCommunity}
+          onClose={() => setCreatingCommunity(false)}
+          onCreated={(c) => { setSelected(c.id); loadCommunities(); }}
+        />
 
         {/* Reddit-style split: feed left, rail right (rail first on mobile). */}
         <div className="flex gap-5 items-start flex-col md:flex-row-reverse">

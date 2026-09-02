@@ -21,6 +21,8 @@ interface Props {
      the room is linked to the community and its members get notified. */
   communityId?: string;
   communityName?: string;
+  /** Site-wide hand-off to the community creation flow (foot of the form). */
+  onCreateCommunity?: () => void;
 }
 
 /* Format a Date as the local "YYYY-MM-DDTHH:mm" string that datetime-local
@@ -43,7 +45,7 @@ function defaultScheduleValue() {
   return toLocalInputValue(d);
 }
 
-export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule, communityId, communityName }: Props) {
+export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule, communityId, communityName, onCreateCommunity }: Props) {
   const router = useRouter();
   const supabase = createClient();
   useEscapeClose(open, onClose);
@@ -982,6 +984,20 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                   : "Create room"}
               </button>
             </div>
+            {/* The other thing people come here to make. */}
+            {onCreateCommunity && (
+              <p className="m-0 text-center" style={{ marginTop: 14, fontSize: 12.5, color: "rgba(238,238,245,0.45)" }}>
+                Want a place for your group instead?{" "}
+                <button
+                  type="button"
+                  onClick={onCreateCommunity}
+                  className="cursor-pointer"
+                  style={{ background: "none", border: "none", padding: 0, color: "#ffb700", fontWeight: 600, fontFamily: "inherit", fontSize: 12.5 }}
+                >
+                  Create a community →
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
+import CreateCommunityModal from "@/components/community/CreateCommunityModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
 import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
@@ -68,6 +69,9 @@ function fmtViewers(n: number): string {
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [showCreate, setShowCreate] = useState(false);
+  /* Site-wide community creation: /?create=community, agora:create-community,
+     and the hand-off at the foot of the discussion modal. */
+  const [showCreateCommunity, setShowCreateCommunity] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab | null>(null);
   /* Search panel (anchored under the navbar box, see search/SearchPage):
      open+pinned ⇔ activeTab === "search" (/search?q=…); open+unpinned is
@@ -560,6 +564,13 @@ export default function Home() {
 
   useEffect(() => {
     const onCreate = () => { openCreate(null); };
+    const onCreateCommunity = async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) { window.location.href = "/login"; return; }
+      setShowCreate(false);
+      setShowCreateCommunity(true);
+    };
+    window.addEventListener("agora:create-community", onCreateCommunity);
     const onProfile = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (typeof detail === "string" && detail) {
@@ -600,7 +611,8 @@ export default function Home() {
         params.delete("create");
         const q = params.toString();
         window.history.replaceState(null, "", window.location.pathname + (q ? `?${q}` : ""));
-        openCreate({ motion: "", topic: "", schedule: c === "schedule" });
+        if (c === "community") void onCreateCommunity();
+        else openCreate({ motion: "", topic: "", schedule: c === "schedule" });
       }
     }
     window.addEventListener("agora:profile", onProfile);
@@ -608,6 +620,7 @@ export default function Home() {
     window.addEventListener("agora:logout", onLogout);
     return () => {
       window.removeEventListener("agora:create", onCreate);
+      window.removeEventListener("agora:create-community", onCreateCommunity);
       window.removeEventListener("agora:profile", onProfile);
       window.removeEventListener("agora:tab", onTab);
       window.removeEventListener("agora:logout", onLogout);
@@ -732,6 +745,19 @@ export default function Home() {
         initialSchedule={createPrefill?.schedule}
         communityId={createPrefill?.communityId}
         communityName={createPrefill?.communityName}
+        onCreateCommunity={() => { setShowCreate(false); setShowCreateCommunity(true); }}
+      />
+      <CreateCommunityModal
+        open={showCreateCommunity}
+        onClose={() => setShowCreateCommunity(false)}
+        onCreated={(c) => {
+          /* Land in the new board: open the Communities tab, then ask it
+             to select the board once it has refreshed its list. */
+          onSidebarNavigate("communities");
+          setTimeout(() => {
+            document.dispatchEvent(new CustomEvent("agora:open-community", { detail: { communityId: c.id, refresh: true } }));
+          }, 80);
+        }}
       />
     </>
   );

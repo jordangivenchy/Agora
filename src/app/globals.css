@@ -2526,6 +2526,12 @@ html.reduce-motion .nav-sparkle {
   .cm-rail { order: 2; margin-top: 16px; }
   /* Header: the create buttons drop under the title as their own row. */
   .cm-head .cm-head-actions { flex-basis: 100%; margin-left: 0 !important; }
+  /* Create-community sheet: single columns, edge to edge. */
+  .ccm-overlay { padding: 0 !important; align-items: flex-end !important; }
+  .ccm-panel { max-height: 94vh !important; border-radius: 20px 20px 0 0 !important; }
+  .ccm-kinds { grid-template-columns: 1fr 1fr !important; }
+  .ccm-kinds > button { min-width: 0; }
+  .ccm-images, .ccm-access { grid-template-columns: 1fr !important; }
   .cm-head .cm-head-actions > button { min-height: 36px; }
   .cm-post-actions, .cm-comment-actions { flex-wrap: wrap; row-gap: 4px; }
   .cm-post-actions > *, .cm-comment-actions > button, .cm-comment-actions > span { min-height: 32px; }
