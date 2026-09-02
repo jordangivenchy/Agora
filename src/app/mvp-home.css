@@ -6248,7 +6248,10 @@ body { background: transparent; }
     max-width: none !important;
     flex: 1 1 auto;
     margin: 0;
-    transform: none !important;
+    /* Not !important: an important transform would also override the
+       entrance animation (globals.css searchPillIn). The id in the
+       selector already beats the desktop translateX(-50%). */
+    transform: none;
     align-items: center;
     height: 44px !important;
     padding: 0 4px 0 14px;

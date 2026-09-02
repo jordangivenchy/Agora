@@ -90,6 +90,15 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* Phone search entrance (see the phone block near the end of the file). */
+@keyframes searchPillIn {
+  from { opacity: 0; transform: translateX(14px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes searchSheetBodyIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
 
 /* Utility: hide scrollbar */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -1958,6 +1967,10 @@ html.reduce-motion .nav-sparkle {
 }
 .search-panel-seeall.is-active { background: rgba(74,158,255,0.14); border-color: rgba(74,158,255,0.4); }
 
+/* (The phone search entrance keyframes — searchPillIn / searchSheetBodyIn
+   — live with the other keyframes at the top of this file: declared down
+   here they were dropped from the build.) */
+
 /* Empty sheet (no query): a proper landing rather than one sentence. */
 .search-empty {
   display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -2411,11 +2424,20 @@ html.reduce-motion .nav-sparkle {
        .search-sheet-open below — so nothing ghosts through. */
     background: rgba(6,7,12,0.3) !important;
     box-shadow: none !important;
-    /* Rises a few px as it fades in; desktop's -50% translate is gone. */
-    transform: translateY(8px) !important;
+    /* Entrance: the sheet rises and fades over ~a quarter second, its
+       content a beat behind it, while the pill slides in from where the
+       icon sat. (Desktop's -50% translate is gone.) */
+    transform: translateY(14px) !important;
+    transition: opacity 220ms ease, transform 260ms cubic-bezier(.2,.7,.2,1) !important;
     z-index: 130 !important;
   }
   .search-panel.is-open { transform: none !important; }
+  .search-panel.is-open .search-panel-body { animation: searchSheetBodyIn 340ms cubic-bezier(.2,.7,.2,1) both; }
+  #navSearchWrap[data-search-open] { animation: searchPillIn 240ms cubic-bezier(.2,.7,.2,1) both; }
+  @media (prefers-reduced-motion: reduce) {
+    #navSearchWrap[data-search-open],
+    .search-panel.is-open .search-panel-body { animation: none; }
+  }
   .search-panel-body { padding: 16px 16px 24px !important; }
   /* The scrim must sit UNDER the sheet or it eats every tap; with the
      page hidden it has nothing to dim, so it stays clear (stars intact). */
