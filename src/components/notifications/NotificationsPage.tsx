@@ -12,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import SiteChrome from "@/components/SiteChrome";
 import { Icon } from "@/components/icons";
-import Wordmark from "@/components/Wordmark";
 import UserAvatar from "@/components/UserAvatar";
 import {
   actorLabel, matchesFilter, notifDetail, notifHref, notifIcon, notifText, timeAgo,
@@ -144,12 +143,18 @@ export default function NotificationsPage() {
   }, [visible]);
 
   if (userId === null) {
+    /* Same chrome as the signed-in page (and as /messages signed out), so
+       the top bar, search and phone tab bar are there on every route. */
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "var(--bg-primary, #0a0a0c)" }}>
-        <Wordmark size={24} />
-        <p style={{ color: "#8b8b94", fontFamily: "'DM Sans', sans-serif" }}>Sign in to see your notifications.</p>
-        <Link href="/" style={{ color: "#9cc4f0", fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>← Back to the Agora</Link>
-      </div>
+      <SiteChrome>
+        <main
+          className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar flex flex-col items-center justify-center gap-4"
+          style={{ minHeight: "60vh", fontFamily: "'DM Sans', sans-serif" }}
+        >
+          <p className="m-0" style={{ color: "#8b8b94" }}>Sign in to see your notifications.</p>
+          <Link href="/login" style={{ color: "#9cc4f0", fontSize: 14 }}>Sign in →</Link>
+        </main>
+      </SiteChrome>
     );
   }
 
