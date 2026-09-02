@@ -3,25 +3,16 @@
    global lexical scope (DEBATES, CAROUSEL_DATA, voteCounts, userVotes).
    Exposes window.__agoraApplyData so React can push live updates. */
 (function () {
-  /* Full-page jumps out of the shell: drop the AgoraSphere loader over
-     the page first (same look as app/loading.tsx), then navigate on the
-     next frame so it actually paints. */
+  /* Full-page jumps out of the shell: drop the top progress bar in (the
+     same .sk-progress the route skeleton uses) so the tap answers at
+     once, then navigate on the next frame so it paints. The page stays
+     put — the same feel as an in-app navigation. */
   function go(url) {
-    if (!document.querySelector('.agora-leaving')) {
-      var o = document.createElement('div');
-      o.className = 'agora-leaving';
-      o.setAttribute('role', 'status');
-      o.setAttribute('aria-label', 'Loading');
-      o.innerHTML =
-        '<div class="agora-loader">' +
-          '<span class="agora-loader-mark">' +
-            '<span class="agora-loader-ring"></span>' +
-            '<span class="agora-loader-ring agora-loader-ring--late"></span>' +
-            '<img src="/icon.png" alt="" width="56" height="56">' +
-          '</span>' +
-          '<span class="agora-loader-dots" aria-hidden="true"><span></span><span></span><span></span></span>' +
-        '</div>';
-      document.body.appendChild(o);
+    if (!document.querySelector('.sk-progress')) {
+      var bar = document.createElement('div');
+      bar.className = 'sk-progress';
+      bar.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(bar);
     }
     requestAnimationFrame(function () { window.location.href = url; });
   }
