@@ -279,7 +279,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
 
   return (
     <div
-      className="fixed overflow-y-auto"
+      className="fixed overflow-y-auto news-page"
       style={{
         top: "var(--nav-height)",
         left: "calc(var(--sidebar-width) + 12px)",

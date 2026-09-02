@@ -2421,7 +2421,9 @@ html.reduce-motion .nav-sparkle {
      page hidden it has nothing to dim, so it stays clear (stars intact). */
   .search-panel-scrim { z-index: 129 !important; background: transparent !important; }
   .search-sheet-open .main,
-  .search-sheet-open .site-chrome-content { visibility: hidden; }
+  .search-sheet-open .site-chrome-content,
+  .search-sheet-open .shell-page,
+  .search-sheet-open .news-page { visibility: hidden; }
   /* Result filters scroll sideways in one row instead of wrapping into
      two ragged lines; rows get thumb-sized. */
   .search-tabs { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
