@@ -238,7 +238,7 @@ export default function PostCard<P extends PostRow>({
             <span>{timeAgo(p.created_at)}</span>
           </span>
           <RoleBadge role={p.author_role} />
-          {p.is_repost && <span className="inline-flex items-center" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /></span>}
+          {/* No repost glyph up here: the embed below says "from <board>". */}
           {p.pinned_at && (
             <span className="text-[9px] font-bold rounded" style={{
               background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",

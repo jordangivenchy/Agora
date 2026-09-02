@@ -305,6 +305,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   // Sharing / reposting
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [repostFor, setRepostFor] = useState<Post | null>(null);
+  /* The ⋯ menu under a post (pin / delete), anchored to its button. */
+  const [postMenu, setPostMenu] = useState<{ id: string; top: number; right: number } | null>(null);
   const [repostCommunity, setRepostCommunity] = useState<string>("");
 
   // Application to a private board — the message dialog.
@@ -1420,55 +1422,106 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     );
   };
 
-  /* Share / repost / delete row under a post. */
-  const postActions = (p: Post, inDetail: boolean) => (
-    <span className="flex items-center gap-3 cm-post-actions">
-      <button
-        onClick={(e) => { e.stopPropagation(); sharePost(p); }}
-        className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
-        style={{ color: copiedId === p.id ? "#00b894" : "rgba(238,238,245,0.55)", fontFamily: "inherit" }}
-      >
-        {copiedId === p.id ? <><Icon name="check" size={14} /> Link copied</> : <><Icon name="share" size={14} /> Share</>}
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          if (!requireAuth()) return;
-          setRepostFor(p);
-          setRepostComment("");
-          const options = communities.filter((c) => c.joined && c.id !== p.community_id);
-          setRepostCommunity(options[0]?.id ?? "");
-        }}
-        className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
-        style={{ color: "rgba(238,238,245,0.55)", fontFamily: "inherit" }}
-      >
-        <Icon name="repeat" size={14} /> Repost
-      </button>
-      {canModerate(p.community_id) && (
-        <button
-          onClick={(e) => { e.stopPropagation(); togglePostPin(p); }}
-          className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
-          style={{ color: "#4a9eff", fontFamily: "inherit" }}
-        >
-          {p.pinned_at ? "Unpin" : <><Icon name="pin" size={14} /> Pin</>}
-        </button>
-      )}
-      {(p.author_id === userId || canModerate(p.community_id)) && (
-        <button
-          onClick={(e) => { e.stopPropagation(); deletePost(p); }}
-          className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
-          style={{ color: p.author_id === userId ? "rgba(238,238,245,0.55)" : "#e2b96b", fontFamily: "inherit" }}
-        >
-          {p.author_id === userId ? "Delete" : "Remove (mod)"}
-        </button>
-      )}
-      {!inDetail && (
-        <span className="text-[12px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.55)" }}>
-          <Icon name="message-circle" size={14} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
-        </span>
-      )}
-    </span>
+  /* "+ New post" (page header): compose into the open board, else where
+     you last posted, then a favorite, then any joined board. */
+  const startCompose = () => {
+    if (!requireAuth()) return;
+    setComposing((v) => !v);
+    setComposeCommunity(selected !== "all" ? selected : (() => {
+      const last = typeof window !== "undefined" ? window.localStorage.getItem("agora:lastPostCommunity") : null;
+      const ok = (id: string | null | undefined) => !!id && communities.some((c) => c.id === id && (!c.is_private || c.joined));
+      if (ok(last)) return last as string;
+      return communities.find((c) => c.joined && c.favorite)?.id ?? communities.find((c) => c.joined)?.id ?? communities[0]?.id ?? "";
+    })());
+  };
+
+  /* Under a post: comments · Share · Repost, then a ⋯ menu holding the
+     owner / mod actions (pin, delete) — those don't belong in the main
+     row next to Share. The row swallows clicks so the card doesn't open. */
+  const postMenuItem = (icon: IconName, label: string, run: () => void, danger = false) => (
+    <button
+      role="menuitem"
+      onClick={(e) => { e.stopPropagation(); setPostMenu(null); run(); }}
+      className="cursor-pointer text-left text-[12.5px] flex items-center gap-2 px-2.5 py-2 rounded-lg"
+      style={{ background: "transparent", border: "none", color: danger ? "#ff8a80" : "#e8e8ee", fontFamily: "inherit" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <Icon name={icon} size={14} /> {label}
+    </button>
   );
+  const postActions = (p: Post, inDetail: boolean) => {
+    const canPin = canModerate(p.community_id);
+    const canDelete = p.author_id === userId || canModerate(p.community_id);
+    const quiet: React.CSSProperties = { color: "rgba(238,238,245,0.55)", fontFamily: "inherit" };
+    const open = postMenu?.id === p.id;
+    return (
+      <span className="flex items-center gap-3 cm-post-actions" onClick={(e) => e.stopPropagation()}>
+        {!inDetail && (
+          <span className="text-[12px] inline-flex items-center gap-1" style={quiet}>
+            <Icon name="message-circle" size={14} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
+          </span>
+        )}
+        <button
+          onClick={() => sharePost(p)}
+          className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
+          style={{ ...quiet, color: copiedId === p.id ? "#00b894" : quiet.color }}
+        >
+          {copiedId === p.id ? <><Icon name="check" size={14} /> Link copied</> : <><Icon name="share" size={14} /> Share</>}
+        </button>
+        <button
+          onClick={() => {
+            if (!requireAuth()) return;
+            setRepostFor(p);
+            setRepostComment("");
+            const options = communities.filter((c) => c.joined && c.id !== p.community_id);
+            setRepostCommunity(options[0]?.id ?? "");
+          }}
+          className="cursor-pointer bg-transparent border-none p-0 text-[12px] inline-flex items-center gap-1"
+          style={quiet}
+        >
+          <Icon name="repeat" size={14} /> Repost
+        </button>
+        {(canPin || canDelete) && (
+          <span className="inline-flex ml-auto">
+            <button
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setPostMenu(open ? null : { id: p.id, top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) });
+              }}
+              aria-label="More actions"
+              aria-haspopup="menu"
+              aria-expanded={open}
+              className="cursor-pointer inline-flex items-center justify-center border-none p-0"
+              style={{ ...quiet, width: 28, height: 28, borderRadius: 8, background: open ? "rgba(255,255,255,0.1)" : "transparent" }}
+            >
+              <Icon name="more-horizontal" size={16} />
+            </button>
+            {open && postMenu && createPortal(
+              <>
+                <div className="fixed inset-0" style={{ zIndex: 998 }} onClick={(e) => { e.stopPropagation(); setPostMenu(null); }} />
+                <div
+                  className="fixed flex flex-col"
+                  role="menu"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    top: postMenu.top, right: postMenu.right, minWidth: 190, zIndex: 999,
+                    background: "rgba(18,18,22,0.98)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+                    border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: 12,
+                    boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
+                  }}
+                >
+                  {canPin && postMenuItem("pin", p.pinned_at ? "Unpin post" : "Pin post", () => togglePostPin(p))}
+                  {canDelete && postMenuItem("trash", p.author_id === userId ? "Delete post" : "Remove post (mod)", () => deletePost(p), true)}
+                </div>
+              </>,
+              document.body,
+            )}
+          </span>
+        )}
+      </span>
+    );
+  };
 
   /* One thread node: collapse toggle, vote pips, body, actions, reply
      box, then children — visual indent caps at MAX_INDENT so deep
@@ -1685,7 +1738,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
-        <div className="flex items-end gap-3.5 mb-5 flex-wrap">
+        <div className="flex items-center gap-3.5 mb-5 flex-wrap cm-head">
           {(openPost || selected !== "all") && (
             <button
               onClick={() => {
@@ -1708,24 +1761,37 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           )}
           <span
             className="flex flex-col cursor-pointer"
-            style={{ gap: 6 }}
+            style={{ gap: 4 }}
             title="Back to all posts"
             onClick={() => { closePostDetail(); setSelected("all"); }}
           >
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#eeeef5", lineHeight: 1 }}>
               Communities
             </span>
+            <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.45)" }}>
+              Boards for your school, team, or topic
+            </span>
           </span>
-          <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.45)", paddingBottom: 2 }}>
-            Boards for your school, team, or topic
-          </span>
-          <button
-            onClick={() => { if (requireAuth()) setCreatingCommunity((v) => !v); }}
-            className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-full border-none ml-auto"
-            style={{ background: "#ffb700", color: "#1a0e00" }}
-          >
-            + New community
-          </button>
+          {/* The two ways to add something, together: post is the primary
+              (yellow), a new board the quiet one. Hidden inside a post. */}
+          {!openPost && (
+            <span className="flex items-center gap-2 ml-auto cm-head-actions">
+              <button
+                onClick={() => { if (requireAuth()) setCreatingCommunity((v) => !v); }}
+                className="cursor-pointer text-[12px] font-medium px-3.5 py-1.5 rounded-full"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee", fontFamily: "inherit" }}
+              >
+                + New community
+              </button>
+              <button
+                onClick={startCompose}
+                className="cursor-pointer text-[12px] font-semibold px-4 py-1.5 rounded-full border-none"
+                style={{ background: "#ffb700", color: "#1a0e00", fontFamily: "inherit" }}
+              >
+                + New post
+              </button>
+            </span>
+          )}
         </div>
 
         {error && (
@@ -2883,23 +2949,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       {s === "best" ? "Best" : s === "new" ? "New" : "Top"}
                     </button>
                   ))}
-                  <button
-                    onClick={() => {
-                      if (!requireAuth()) return;
-                      setComposing((v) => !v);
-                      setComposeCommunity(selected !== "all" ? selected : (() => {
-                        /* Default to where you last posted, then a favorite, then any joined board. */
-                        const last = typeof window !== "undefined" ? window.localStorage.getItem("agora:lastPostCommunity") : null;
-                        const ok = (id: string | null | undefined) => !!id && communities.some((c) => c.id === id && (!c.is_private || c.joined));
-                        if (ok(last)) return last as string;
-                        return communities.find((c) => c.joined && c.favorite)?.id ?? communities.find((c) => c.joined)?.id ?? communities[0]?.id ?? "";
-                      })());
-                    }}
-                    className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-full ml-auto"
-                    style={{ background: "#2f7fe0", border: "none", color: "#fff", borderRadius: 999, fontFamily: "inherit" }}
-                  >
-                    + New post
-                  </button>
                 </div>
 
                 {composing && (
