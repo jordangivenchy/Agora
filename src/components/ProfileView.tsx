@@ -694,8 +694,10 @@ export default function ProfileView({
            the standalone route (inline — the mvp reset eats pt- utilities). */
         style={{ paddingTop: embedded ? 0 : 28 }}
       >
-       {/* Standalone: profile column + the feed's right rail (lg+). */}
-       <div className={embedded ? undefined : "flex gap-6 items-start"}>
+       {/* Standalone: profile column + the feed's right rail (lg+). On
+           phones the row stacks — profile first, rail after (globals.css
+           phone block, .profile-layout). */}
+       <div className={embedded ? undefined : "flex gap-6 items-start profile-layout"}>
         <div className={embedded ? undefined : "flex-1 min-w-0"}>
         {/* ── Banner. With a photo: everyone sees it. Without one: only the
                owner sees a dark grey placeholder with a hover "?" that opens
