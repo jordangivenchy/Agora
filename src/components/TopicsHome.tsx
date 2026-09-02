@@ -64,6 +64,8 @@ const FORMAT_LABEL: Record<string, string> = {
 
 const POLL_MS = 2500;
 const REFRESH_MS = 30000;
+/* A field can carry a dozen questions; three rows of two is a screenful. */
+const QUESTIONS_SHOWN = 6;
 
 /* Rooms carry scheduling as a scheduled_start on a 'created' (or
    'scheduled') row — mirror page.tsx's classification. */
@@ -183,6 +185,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [reminders, setReminders] = useState<Record<string, { count: number; amSet: boolean }>>({});
   const [selectedKey, setSelectedKey] = useState<string>(TOPICS[0].key);
+  const [showAllQuestions, setShowAllQuestions] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -428,7 +431,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               key={cat.key}
               role="tab"
               aria-selected={active}
-              onClick={() => setSelectedKey(cat.key)}
+              onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); }}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
                 background: "rgba(11,11,13,0.95)",
@@ -774,7 +777,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             than a stack that occasionally pairs up. Phones collapse to
             one (globals.css phone block). */}
         <div className="daily-topics-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-        {selRows.map((t) => {
+        {(showAllQuestions ? selRows : selRows.slice(0, QUESTIONS_SHOWN)).map((t) => {
           const inQueue = t.am_queued;
           return (
             <div
@@ -867,6 +870,15 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           );
         })}
         </div>
+        {selRows.length > QUESTIONS_SHOWN && (
+          <button
+            onClick={() => setShowAllQuestions((v) => !v)}
+            className="cursor-pointer text-[12px] self-start"
+            style={{ background: "transparent", border: "none", color: "#c0c0c8", fontFamily: "inherit", padding: "4px 2px" }}
+          >
+            {showAllQuestions ? "Show fewer" : `Show all ${selRows.length} questions →`}
+          </button>
+        )}
         {selRows.length === 0 && (
           <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
             No standing questions in {selCat.label} yet.
