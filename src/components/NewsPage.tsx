@@ -213,7 +213,9 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   /* Live debates on the platform right now → jump to the Explore live list. */
   const watchLive = () => {
     onClose();
-    (document.querySelector('[data-nav-id="explore"]') as HTMLElement | null)?.click();
+    /* Explore has no sidebar entry any more (Home is the rooms view); the
+       shell still serves it on agora:tab. */
+    window.dispatchEvent(new CustomEvent("agora:tab", { detail: "explore" }));
   };
 
   useEffect(() => {

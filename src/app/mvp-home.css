@@ -1304,39 +1304,6 @@ body {
 .carousel-watch-btn:hover { background: rgba(255,123,0,0.95); transform: translateY(-1px); }
 a.carousel-watch-btn { text-decoration: none; }
 
-/* ── News slides (interleaved with live rooms by mvp-adapter) ── */
-.carousel-live-badge.news {
-  background: rgba(226,185,107,0.14);
-  border: 1px solid rgba(226,185,107,0.4);
-  color: #f4d47c;
-}
-.carousel-news-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
-.carousel-news-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 11px;
-  border-radius: 100px;
-  background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.14);
-  backdrop-filter: blur(6px);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  color: #d5d5dc;
-}
-.carousel-news-chip img { border-radius: 3px; opacity: 0.9; }
-.panel-outlets { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 100%; }
-.panel-outlet-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  color: #b9b9c2;
-}
-.panel-outlet-row img { border-radius: 3px; opacity: 0.9; }
 
 .carousel-panel {
   position: absolute;
@@ -5948,105 +5915,53 @@ body { background: transparent; }
    edge, so no part of the picture is wasted behind it) under a light
    bottom-weighted shade for the headline. The right column is opaque and
    full-height: Reported by · outlets · summary · Read more. */
-.carousel-item.news .carousel-bg { overflow: hidden; right: 250px; }
-.carousel-news-img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; object-position: center 30%;
-  display: block;
-}
-.carousel-news-shade {
-  position: absolute; top: 0; bottom: 0; left: 0; right: 250px;
-  z-index: 1; pointer-events: none;
-  background: linear-gradient(to top, rgba(6,7,12,0.78) 0%, rgba(6,7,12,0.28) 40%, rgba(6,7,12,0) 65%);
-}
-.carousel-item.news .carousel-lower-third {
-  right: 250px;
-  background: none;
-  padding-bottom: 22px;
-}
-.carousel-item.news .carousel-motion {
-  font-size: 26px;
-  line-height: 1.2;
-  text-shadow: 0 2px 14px rgba(0,0,0,0.55);
-}
-.carousel-item.news .carousel-panel.carousel-news-card {
-  top: 0; right: 0; bottom: 0;
-  width: 250px;
-  border-radius: 0;
-  border: none;
-  border-left: 0.5px solid #2e2e38;
-  background: #0b0b0d !important; /* solid — same surface on every slide */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  text-align: left;
-  padding: 22px 20px 22px 22px;
+/* ═══ Today's question (hero when nothing is live) ═══
+   One card, one action. The stage is shorter than the room hero — it
+   is a sentence, not a stream. */
+.carousel-stage.is-topic { height: 300px; }
+.carousel-item.topic .carousel-bg-grid { opacity: 0.6; }
+.carousel-topic-body {
+  position: absolute; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-start;
   gap: 12px;
+  padding: 32px 40px;
+  max-width: 760px;
 }
-/* "Reported by" + outlets on one line */
-.carousel-item.news .carousel-news-card .panel-name {
-  margin: 0;
-  align-self: auto;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(238,238,245,0.55);
+.carousel-topic-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(238,238,245,0.7);
 }
-.carousel-item.news .carousel-news-card .panel-outlets {
-  margin: 0;
-  width: auto;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+.carousel-topic-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--chip, #4a9eff);
+  box-shadow: 0 0 8px var(--chip, #4a9eff);
 }
-.carousel-item.news .carousel-news-card .panel-outlet-row { margin: 0; }
-.carousel-news-byline {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+.carousel-item.topic .carousel-motion {
+  font-size: 30px; line-height: 1.2;
+  max-width: 680px;
+  text-shadow: none;
 }
-.carousel-news-summary {
-  margin: 2px 0 0;
-  font-size: 15px;
-  line-height: 1.5;
-  color: rgba(238,238,245,0.9);
-  display: -webkit-box;
-  -webkit-line-clamp: 7;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-/* One line always — a wrapped pill reads as a double-decker blob. The
-   label is "Read at ⟨outlet⟩" (short form) so it fits the 250px column. */
-.carousel-item.news .carousel-news-btn { margin-top: 8px; align-self: flex-start; font-size: 13px; padding: 10px 16px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; text-align: center; line-height: 1.3; }
-
-/* "Queue a discussion" — the solid queue-pill blue used by the Daily
-   Topics Join buttons; darkens once you're in line. */
-.carousel-item.news .carousel-queue-btn {
-  margin-top: 8px;
-  align-self: flex-start;
+.carousel-topic-meta {
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
-  padding: 10px 16px;
-  white-space: nowrap;
-  max-width: 100%;
-  line-height: 1.3;
-  background: #2f7fe0;
-  border: 1px solid transparent;
-  color: #fff;
-  font-weight: 600;
+  color: rgba(238,238,245,0.6);
 }
-.carousel-item.news .carousel-queue-btn:hover { background: #3d8bea; }
-.carousel-item.news .carousel-queue-btn.queued { background: #1d4f8c; }
-@media (max-width: 900px) {
-  .carousel-item.news .carousel-panel.carousel-news-card { display: none; }
-  .carousel-item.news .carousel-bg,
-  .carousel-news-shade,
-  .carousel-item.news .carousel-lower-third { right: 0; }
+.carousel-item.topic .carousel-topic-queue { margin-top: 4px; font-size: 13px; padding: 10px 20px; }
+.carousel-item.topic .carousel-topic-queue.queued {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.22);
+  color: #fff;
+}
+.carousel-item.topic .carousel-topic-queue.queued:hover { background: rgba(255,255,255,0.18); }
+.carousel-item.topic .carousel-topic-queue:disabled { opacity: 0.6; cursor: default; transform: none; }
+@media (max-width: 600px) {
+  .carousel-stage.is-topic { height: 230px; }
+  .carousel-topic-body { padding: 20px 18px; gap: 9px; }
+  .carousel-item.topic .carousel-motion { font-size: 20px; }
 }
 
 
@@ -6269,9 +6184,6 @@ body { background: transparent; }
     text-decoration: none;
     flex-shrink: 0;
   }
-  /* Source chips on the hero were the one stylesheet size still under
-     the phone floor. */
-  html .carousel-news-chip { font-size: 12.5px !important; }
   html .nav-auth .btn-ghost,
   html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }
 
@@ -6282,7 +6194,6 @@ body { background: transparent; }
   }
 
   /* Hero title sized for portrait. */
-  html .carousel-motion,
-  html .carousel-item.news .carousel-motion { font-size: 19px !important; line-height: 1.2 !important; }
+  html .carousel-motion { font-size: 19px !important; line-height: 1.2 !important; }
   html .carousel-section { margin-bottom: 12px; }
 }

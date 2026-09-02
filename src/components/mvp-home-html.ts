@@ -162,13 +162,15 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <button class="carousel-arrow right" id="arrowRight" aria-label="Next">${iconSvg("chevron-right", 26, { strokeWidth: 1.5 })}</button>
     </div>
     <div class="carousel-dots" id="carouselDots"></div>
-    <!-- News headlines — React portal target (NewsTicker.tsx) -->
-    <div id="newsTickerHost"></div>
   </section>
 
   <!-- TOPICS — React portal target (TopicsHome.tsx renders the
        field-of-study dropdowns: queue questions + user lobbies) -->
   <section id="fieldsSection"></section>
+
+  <!-- IN THE NEWS — React portal target (HomeNews.tsx): a short row of
+       headlines to discuss, after the platform's own content. -->
+  <section id="newsTickerHost" class="home-news"></section>
 
 </div><!-- /homeFeed -->
 

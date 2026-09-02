@@ -43,9 +43,9 @@ interface NavItem {
   icon: ReactElement;
 }
 
-/* Ordered "yours" (Home · Feed · Communities) over "discover"
-   (Trending · News · Explore): the landing page leads, the personal
-   destinations follow, and search-adjacent Explore closes the list. */
+/* Four destinations, the same four as the phone tab bar: Home (the rooms
+   view — Explore and Trending folded into it; both still answer at their
+   URLs and on agora:tab), Feed, Communities, News. */
 const NAV: NavItem[] = [
   {
     id: "home",
@@ -89,21 +89,6 @@ const NAV: NavItem[] = [
     ),
   },
   {
-    id: "trending",
-    label: "Trending",
-    /* Not in the phone bar: Home · Feed · [+ create] · Boards · News. */
-    phoneTab: false,
-    sparkles: [
-      ["0.3s", "4.2s", "28%", "42%", "5px"],
-      ["1.1s", "3.6s", "68%", "60%", "-5px"],
-      ["1.9s", "4.5s", "84%", "25%", "4px"],
-      ["2.7s", "3.8s", "45%", "82%", "-4px"],
-    ],
-    icon: (
-      <Icon name="flame" size={15} />
-    ),
-  },
-  {
     id: "news",
     label: "News",
     sparkles: [
@@ -113,22 +98,6 @@ const NAV: NavItem[] = [
     ],
     icon: (
       <Icon name="newspaper" size={16} />
-    ),
-  },
-  {
-    id: "explore",
-    label: "Explore",
-    page: "explore",
-    /* On phones the top bar's search icon is the way into Explore. */
-    phoneTab: false,
-    sparkles: [
-      ["0.5s", "4.3s", "18%", "55%", "-5px"],
-      ["1.3s", "3.8s", "62%", "35%", "6px"],
-      ["2.1s", "4.6s", "85%", "68%", "-4px"],
-      ["2.9s", "3.5s", "38%", "22%", "5px"],
-    ],
-    icon: (
-      <Icon name="compass" size={15} />
     ),
   },
 ];
