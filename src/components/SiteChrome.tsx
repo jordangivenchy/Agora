@@ -15,6 +15,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import NotificationsBell from "@/components/NotificationsBell";
+import useNavbarSearch from "@/components/search/useNavbarSearch";
+import type { SearchKeyHandler } from "@/components/search/SearchPage";
 import { pathFor } from "@/lib/routes";
 import { userPath } from "@/lib/urls";
 import type { HomeNavId } from "@/components/HomeSidebar";
@@ -27,6 +29,9 @@ import "@/components/home-sidebar.css";
    inside the sidebar) stays wrapped in its layer. */
 const HomeSidebar = dynamic(() => import("@/components/HomeSidebar"), { ssr: false });
 const Starfield = dynamic(() => import("@/components/Starfield"), { ssr: false });
+/* The homepage's typeahead search panel, mounted here too so search
+   opens in place on every route (it reads localStorage for recents). */
+const SearchPage = dynamic(() => import("@/components/search/SearchPage"), { ssr: false });
 
 interface NavUser {
   id: string;
@@ -38,7 +43,17 @@ interface NavUser {
 function SiteNavbar() {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
-  const [q, setQ] = useState("");
+  /* The same typeahead search panel the homepage has: the hook binds
+     the navbar box (#searchInput) and drives SearchPage, so search opens
+     in place on every route instead of loading the home shell. Pinning
+     (Enter / "See all results") is the one thing that navigates. */
+  const searchKeyRef = useRef<SearchKeyHandler | null>(null);
+  const closeSearchRef = useRef<() => void>(() => {});
+  const navSearch = useNavbarSearch({
+    onKey: (e, v) => searchKeyRef.current?.(e, v) ?? false,
+    onCloseRequest: () => closeSearchRef.current(),
+  });
+  closeSearchRef.current = navSearch.closePanel;
   /* undefined = still resolving (render neither auth state to avoid a
      Log in flash for signed-in users). */
   const [user, setUser] = useState<NavUser | null | undefined>(undefined);
@@ -75,9 +90,13 @@ function SiteNavbar() {
     };
   }, [menuOpen]);
 
-  const submitSearch = () => router.push(pathFor.search(q));
+  const pinSearch = (query: string) => {
+    navSearch.closePanel();
+    router.push(pathFor.search(query));
+  };
 
   return (
+    <>
     <nav className="nav">
       <a className="nav-logo" href="/" aria-label="AgoraSphere">
         {/* Inline height is the pre-CSS fallback; the stylesheet's
@@ -90,9 +109,7 @@ function SiteNavbar() {
         <input
           id="searchInput"
           type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submitSearch(); }}
+          /* Uncontrolled on purpose: useNavbarSearch owns this element. */
           placeholder="Search topics, people, or keywords…"
           aria-label="Search"
           autoComplete="off"
@@ -115,7 +132,7 @@ function SiteNavbar() {
           className="nav-search-icon"
           href="/search"
           aria-label="Search"
-          onClick={(e) => { e.preventDefault(); router.push(pathFor.search()); }}
+          onClick={(e) => { e.preventDefault(); navSearch.openPanel(); }}
         >
           <Icon name="search" size={17} />
         </a>
@@ -206,6 +223,16 @@ function SiteNavbar() {
         )}
       </div>
     </nav>
+    <SearchPage
+      open={navSearch.open}
+      pinned={false}
+      query={navSearch.query}
+      setQuery={navSearch.setQuery}
+      onClose={navSearch.closePanel}
+      onPin={pinSearch}
+      keyHandlerRef={searchKeyRef}
+    />
+    </>
   );
 }
 
