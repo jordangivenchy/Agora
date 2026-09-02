@@ -91,6 +91,8 @@ const NAV: NavItem[] = [
   {
     id: "trending",
     label: "Trending",
+    /* Not in the phone bar: Home · Feed · [+ create] · Boards · News. */
+    phoneTab: false,
     sparkles: [
       ["0.3s", "4.2s", "28%", "42%", "5px"],
       ["1.1s", "3.6s", "68%", "60%", "-5px"],
@@ -264,22 +266,41 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
         tab bar is the navigation — same items, same callback. Styled in
         globals.css (.mobile-tabbar); display:none above the breakpoint. */}
     <nav className="mobile-tabbar" aria-label="Sections">
-      {NAV.filter((item) => item.phoneTab !== false).map((item) => (
-        <a
-          key={item.id}
-          className={`mobile-tab${activeId === item.id ? " active" : ""}`}
-          href="#"
-          data-nav-id={item.id}
-          aria-current={activeId === item.id ? "page" : undefined}
-          onClick={(e) => {
-            e.preventDefault();
-            onNavigate(item.id);
-          }}
-        >
-          <span className="mobile-tab-icon">{item.icon}</span>
-          <span className="mobile-tab-label">{item.short ?? item.label}</span>
-        </a>
-      ))}
+      {(() => {
+        const tabs = NAV.filter((item) => item.phoneTab !== false);
+        const tab = (item: NavItem) => (
+          <a
+            key={item.id}
+            className={`mobile-tab${activeId === item.id ? " active" : ""}`}
+            href="#"
+            data-nav-id={item.id}
+            aria-current={activeId === item.id ? "page" : undefined}
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate(item.id);
+            }}
+          >
+            <span className="mobile-tab-icon">{item.icon}</span>
+            <span className="mobile-tab-label">{item.short ?? item.label}</span>
+          </a>
+        );
+        const mid = Math.ceil(tabs.length / 2);
+        return (
+          <>
+            {tabs.slice(0, mid).map(tab)}
+            {/* Centre action: create a room. /?create=1 opens the create
+                modal on the home shell (signed-out users land on /login). */}
+            <a className="mobile-tab mobile-tab-create" href="/?create=1" aria-label="Create a room">
+              <span className="mobile-tab-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </span>
+            </a>
+            {tabs.slice(mid).map(tab)}
+          </>
+        );
+      })()}
     </nav>
     </>
   );

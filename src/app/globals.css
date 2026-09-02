@@ -2123,6 +2123,16 @@ html.reduce-motion .nav-sparkle {
   /* Icons only — the labels are dropped on purpose; the tab bar reads
      as a control strip, and the active icon carries the yellow. */
   .mobile-tab-label { display: none; }
+  /* Centre "+": create a room — the one filled control in the bar. */
+  .mobile-tab-create .mobile-tab-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #ffb700;
+    color: #1a0e00;
+    box-shadow: 0 6px 18px rgba(255,183,0,0.28);
+  }
+  .mobile-tab-create:active .mobile-tab-icon { transform: scale(0.96); }
 
   /* Standalone routes: full width, tight gutters, room for the bar. */
   .profile-beside-sidebar,

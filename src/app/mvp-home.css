@@ -6206,9 +6206,8 @@ body { background: transparent; }
   }
 }
 
-/* Phone-only search + create icons in the navbar's right cluster (both
-   navbars). */
-.nav-search-icon, .nav-create-icon { display: none; }
+/* Phone-only search icon in the navbar's right cluster (both navbars). */
+.nav-search-icon { display: none; }
 
 /* ═══ Phones (<640px) ═══════════════════════════════════════════════
    Kick-style mobile shell: a compact top bar, the rail hidden (a bottom
@@ -6242,21 +6241,6 @@ body { background: transparent; }
     color: #c0c0c8;
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.1);
-    text-decoration: none;
-    flex-shrink: 0;
-  }
-  /* Create: the one yellow control in the bar (replaces a floating
-     button that sat over the Daily Topics "Queue" buttons). */
-  html .nav-create-icon {
-    display: inline-flex !important;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    color: #1a0e00;
-    background: #ffb700;
-    border: 1px solid rgba(255,221,100,0.35);
     text-decoration: none;
     flex-shrink: 0;
   }
