@@ -290,7 +290,19 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
             {tabs.slice(0, mid).map(tab)}
             {/* Centre action: create a room. /?create=1 opens the create
                 modal on the home shell (signed-out users land on /login). */}
-            <a className="mobile-tab mobile-tab-create" href="/?create=1" aria-label="Create a room">
+            <a
+              className="mobile-tab mobile-tab-create"
+              href="/?create=1"
+              aria-label="Create a room"
+              onClick={(e) => {
+                /* On the home shell the modal can open in place; the
+                   href is the fallback from every other route. */
+                if (document.getElementById("createModal")) {
+                  e.preventDefault();
+                  window.dispatchEvent(new CustomEvent("agora:create"));
+                }
+              }}
+            >
               <span className="mobile-tab-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
                   <path d="M12 5v14M5 12h14" />
