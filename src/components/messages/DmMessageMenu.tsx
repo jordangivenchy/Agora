@@ -26,6 +26,10 @@ interface Props {
   onUnsend: () => void;
   onDelete: () => void;
   onClose: () => void;
+  /** The scrim asks before closing on a click: a press-and-hold opens the
+      menu while the finger is still down, so the release (and the click
+      the browser synthesises) lands on the scrim and must not count. */
+  shouldIgnoreClick?: () => boolean;
 }
 
 const GAP = 6;
@@ -33,7 +37,7 @@ const EDGE = 8;
 
 export default function DmMessageMenu({
   anchor, root, mine, reactions, myReactions, canUnsend, hasText,
-  onReact, onReply, onCopy, onUnsend, onDelete, onClose,
+  onReact, onReply, onCopy, onUnsend, onDelete, onClose, shouldIgnoreClick,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   /* First paint below the bubble; flip above if that runs off the root. */
@@ -55,7 +59,14 @@ export default function DmMessageMenu({
 
   return (
     <>
-      <div className="dm-menu-scrim" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} aria-hidden="true" />
+      {/* contextmenu only prevents the browser's own (Android raises one
+          from the same long press, on the scrim); it never closes. */}
+      <div
+        className="dm-menu-scrim"
+        onClick={() => { if (shouldIgnoreClick?.()) return; onClose(); }}
+        onContextMenu={(e) => e.preventDefault()}
+        aria-hidden="true"
+      />
       <div
         ref={cardRef}
         role="menu"

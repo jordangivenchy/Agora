@@ -171,7 +171,9 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
      bubble's rect is captured at open; the scrim keeps the list still. */
   const [menuFor, setMenuFor] = useState<{ id: string; rect: DOMRect } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuOpenedAt = useRef(0);
   const openMenu = useCallback((m: Dm, el: HTMLElement) => {
+    menuOpenedAt.current = Date.now();
     setMenuFor({ id: m.id, rect: el.getBoundingClientRect() });
   }, []);
   const [press] = useState(() => createLongPress<Dm>((m, el) => {
@@ -627,6 +629,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
           onUnsend={() => { setMenuFor(null); setConfirmAction({ kind: "unsend", m: menuMsg }); }}
           onDelete={() => { setMenuFor(null); setConfirmAction({ kind: "delete", m: menuMsg }); }}
           onClose={() => setMenuFor(null)}
+          /* The release of the press that opened it lands on the scrim. */
+          shouldIgnoreClick={() => press.consumeClick() || Date.now() - menuOpenedAt.current < 350}
         />
       )}
 
