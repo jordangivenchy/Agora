@@ -50,6 +50,10 @@ export default function NewsTicker({ container }: Props) {
     if (stories.length === 0) return;
     let raf = 0;
     let speed = 0;
+    /* Position is accumulated as a float and written as whole pixels:
+       iOS Safari rounds scrollLeft, so `scrollLeft += 0.6` was silently
+       dropped every frame and the strip never moved on phones. */
+    let pos = scrollRef.current?.scrollLeft ?? 0;
     const step = () => {
       const el = scrollRef.current;
       if (el) {
@@ -57,9 +61,12 @@ export default function NewsTicker({ container }: Props) {
         // ramp back up. (Glide distance ≈ cruise speed / factor.)
         const target = pausedRef.current ? 0 : 0.6;
         speed += (target - speed) * (pausedRef.current ? 0.01 : 0.03);
-        el.scrollLeft += speed;
+        // A finger or wheel moved it: pick up from where the user left it.
+        if (Math.abs(el.scrollLeft - Math.round(pos)) > 2) pos = el.scrollLeft;
+        pos += speed;
         const half = el.scrollWidth / 2;
-        if (el.scrollLeft >= half) el.scrollLeft -= half;
+        if (half > 0 && pos >= half) pos -= half;
+        el.scrollLeft = Math.round(pos);
       }
       raf = requestAnimationFrame(step);
     };

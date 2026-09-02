@@ -3,7 +3,28 @@
    global lexical scope (DEBATES, CAROUSEL_DATA, voteCounts, userVotes).
    Exposes window.__agoraApplyData so React can push live updates. */
 (function () {
-  function go(url) { window.location.href = url; }
+  /* Full-page jumps out of the shell: drop the AgoraSphere loader over
+     the page first (same look as app/loading.tsx), then navigate on the
+     next frame so it actually paints. */
+  function go(url) {
+    if (!document.querySelector('.agora-leaving')) {
+      var o = document.createElement('div');
+      o.className = 'agora-leaving';
+      o.setAttribute('role', 'status');
+      o.setAttribute('aria-label', 'Loading');
+      o.innerHTML =
+        '<div class="agora-loader">' +
+          '<span class="agora-loader-mark">' +
+            '<span class="agora-loader-ring"></span>' +
+            '<span class="agora-loader-ring agora-loader-ring--late"></span>' +
+            '<img src="/icon.png" alt="" width="56" height="56">' +
+          '</span>' +
+          '<span class="agora-loader-dots" aria-hidden="true"><span></span><span></span><span></span></span>' +
+        '</div>';
+      document.body.appendChild(o);
+    }
+    requestAnimationFrame(function () { window.location.href = url; });
+  }
 
   /* Hero carousel = popular live rooms interleaved with top news stories
      (from /api/news, Particle-backed). Room slides and news slides are
