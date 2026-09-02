@@ -789,9 +789,9 @@ export default function ProfileView({
                 {displayName(profile)}
               </h1>
               {profile.verified && <VerifiedBadge size={20} />}
-              {/* Social links, right of the name. */}
+              {/* Social links: far right of the name line. */}
               {socialLinks.length > 0 && (
-                <span className="inline-flex items-center gap-1.5" style={{ marginLeft: 4 }}>
+                <span className="inline-flex items-center gap-1.5" style={{ marginLeft: "auto", paddingLeft: 12 }}>
                   {socialLinks.map((url) => (
                     <a
                       key={url}
