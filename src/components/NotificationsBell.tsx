@@ -20,9 +20,8 @@ import { Icon } from "@/components/icons";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
-import {
-  actorLabel, notifDetail, notifHref, notifIcon, notifText, timeAgo, type NotifRow,
-} from "@/lib/notifications";
+import { notifHref, type NotifRow } from "@/lib/notifications";
+import NotificationsPanel, { type PushState } from "@/components/notifications/NotificationsPanel";
 
 interface Props {
   container?: HTMLElement | null;
@@ -66,6 +65,8 @@ export default function NotificationsBell({ container }: Props) {
   const [followedBack, setFollowedBack] = useState<Set<string>>(new Set());
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
+  /* Where the popover hangs on desktop (the panel is portaled to body). */
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   useEscapeClose(open, () => setOpen(false));
 
@@ -94,7 +95,7 @@ export default function NotificationsBell({ container }: Props) {
 
   /* Web-push: reminders reach closed tabs. State reflects whether THIS
      browser holds a live subscription. */
-  const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "busy">("off");
+  const [pushState, setPushState] = useState<PushState>("off");
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       setPushState("unsupported");
@@ -188,18 +189,18 @@ export default function NotificationsBell({ container }: Props) {
     return () => { supabase.removeChannel(channel); };
   }, [userId, supabase, load]);
 
-  /* Click-away closes the dropdown. */
+  /* The panel's scrim handles click-away; keep its anchor honest while
+     the window resizes. */
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    const measure = () => setAnchor(wrapRef.current?.getBoundingClientRect() ?? null);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, [open]);
 
   const toggle = useCallback(async () => {
     const next = !open;
+    setAnchor(wrapRef.current?.getBoundingClientRect() ?? null);
     setOpen(next);
     if (!next) return;
     // First open doubles as the browser-notification permission ask —
@@ -269,149 +270,24 @@ export default function NotificationsBell({ container }: Props) {
         )}
       </button>
 
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 10px)",
-            width: 330,
-            maxHeight: 420,
-            overflowY: "auto",
-            background: "rgba(12,12,18,0.97)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 14,
-            boxShadow: "0 12px 36px rgba(0,0,0,0.55)",
-            backdropFilter: "blur(18px)",
-            zIndex: 300,
-          }}
-        >
-          <div className="flex items-center justify-between" style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <p className="m-0 text-[12px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-              Notifications
-              {unread > 0 && (
-                <span className="text-[10px] rounded-full" style={{ marginLeft: 8, padding: "2px 7px", background: "rgba(226,185,107,0.18)", color: "#f4d47c", fontWeight: 700 }}>
-                  {unread} new
-                </span>
-              )}
-            </p>
-            <button
-              onClick={markAllRead}
-              disabled={unread === 0}
-              className="flex items-center gap-1 text-[11px] cursor-pointer bg-transparent border-none"
-              style={{ color: unread > 0 ? "#9cc4f0" : "#55555e", fontFamily: "inherit" }}
-            >
-              <Icon name="check-check" size={12} /> Mark all read
-            </button>
-          </div>
-          {items.length === 0 && (
-            <p className="text-[12px] text-center" style={{ margin: 0, padding: "24px 16px", color: "#6b6b74" }}>
-              Nothing yet — follow speakers and set reminders to hear when things go live.
-            </p>
-          )}
-          {items.filter((n) => !dismissed.has(n.id)).map((n) => {
-            const href = notifHref(n);
-            const detail = notifDetail(n);
-            const unreadRow = !n.read_at;
-            return (
-              <button
-                key={n.id}
-                onClick={() => openItem(n)}
-                className="w-full text-left flex items-start"
-                style={{
-                  padding: "10px 14px",
-                  gap: 10,
-                  background: unreadRow ? "rgba(226,185,107,0.05)" : "transparent",
-                  border: "none",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                  cursor: href ? "pointer" : "default",
-                  fontFamily: "inherit",
-                }}
-              >
-                <span
-                  className="flex items-center justify-center shrink-0"
-                  style={{
-                    width: 26, height: 26, borderRadius: 8, marginTop: 1,
-                    background: unreadRow ? "rgba(226,185,107,0.14)" : "rgba(255,255,255,0.06)",
-                    color: unreadRow ? "#f4d47c" : "#9a9aa4",
-                  }}
-                >
-                  <Icon name={notifIcon(n.type)} size={13} />
-                </span>
-                <span className="flex-1 text-[12.5px]" style={{ color: unreadRow ? "#f0f0f4" : "#c4c4cc", lineHeight: 1.45 }}>
-                  {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)
-                    ? `${actorLabel(n)} started following you`
-                    : notifText(n)}
-                  {detail && (
-                    <span className="block text-[11.5px] truncate" style={{ marginTop: 2, color: "#8b8b94" }}>
-                      “{detail}”
-                    </span>
-                  )}
-                  {n.type === "new_follower" && n.actor_id && !followedBack.has(n.actor_id) && (
-                    <span className="flex" style={{ gap: 8, marginTop: 6 }}>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const { error } = await supabase.rpc("follow_user", { p_target: n.actor_id });
-                          if (!error) setFollowedBack((s) => new Set(s).add(n.actor_id!));
-                        }}
-                        className="text-[11px] font-semibold px-2.5 py-1 rounded-md cursor-pointer"
-                        style={{ background: "#7c6ef7", color: "white", border: "none" }}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDismissed((s) => new Set(s).add(n.id));
-                        }}
-                        className="text-[11px] px-2.5 py-1 rounded-md cursor-pointer"
-                        style={{ background: "rgba(255,255,255,0.07)", color: "#c9c9d4", border: "1px solid rgba(255,255,255,0.12)" }}
-                      >
-                        Dismiss
-                      </button>
-                    </span>
-                  )}
-                </span>
-                <span className="text-[10.5px] shrink-0 flex items-center" style={{ gap: 6, color: "#6b6b74", marginTop: 2 }}>
-                  {timeAgo(n.created_at)}
-                  {unreadRow && <span style={{ width: 6, height: 6, borderRadius: 3, background: "#f4d47c" }} />}
-                </span>
-              </button>
-            );
-          })}
-          <a
-            href="/notifications"
-            className="block w-full text-center text-[11.5px] no-underline"
-            style={{ padding: "10px 16px", color: "#9cc4f0", borderTop: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            See all notifications
-          </a>
-          {pushState !== "unsupported" && (
-            <button
-              onClick={togglePush}
-              disabled={pushState === "busy"}
-              className="w-full text-left text-[11.5px] flex items-center cursor-pointer"
-              style={{
-                padding: "10px 16px",
-                gap: 8,
-                background: "transparent",
-                border: "none",
-                borderTop: "1px solid rgba(255,255,255,0.06)",
-                color: pushState === "on" ? "#8fd3a8" : "#9a9aa4",
-                fontFamily: "inherit",
-              }}
-            >
-              <span style={{ fontSize: 12 }}>{pushState === "on" ? "●" : "○"}</span>
-              {pushState === "busy"
-                ? "…"
-                : pushState === "on"
-                  ? "Push notifications on — reminders reach this device even with the tab closed"
-                  : "Enable push notifications for discussion reminders"}
-            </button>
-          )}
-        </div>
-      )}
+      <NotificationsPanel
+        open={open}
+        anchor={anchor}
+        items={items}
+        unread={unread}
+        followedBack={followedBack}
+        dismissed={dismissed}
+        pushState={pushState}
+        onClose={() => setOpen(false)}
+        onMarkAllRead={markAllRead}
+        onOpen={openItem}
+        onAccept={async (n) => {
+          const { error } = await supabase.rpc("follow_user", { p_target: n.actor_id });
+          if (!error && n.actor_id) setFollowedBack((s) => new Set(s).add(n.actor_id!));
+        }}
+        onDismiss={(n) => setDismissed((s) => new Set(s).add(n.id))}
+        onTogglePush={togglePush}
+      />
     </div>
   );
 
