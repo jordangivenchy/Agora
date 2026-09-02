@@ -85,7 +85,7 @@ const NAV: NavItem[] = [
       ["2.0s", "4.7s", "82%", "76%", "-4px"],
     ],
     icon: (
-      <Icon name="message-square" size={16} />
+      <Icon name="users-round" size={16} />
     ),
   },
   {
