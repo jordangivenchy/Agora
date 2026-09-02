@@ -2527,21 +2527,20 @@ html.reduce-motion .nav-sparkle {
   /* Header: the create buttons drop under the title as their own row. */
   .cm-head .cm-head-actions { flex-basis: 100%; margin-left: 0 !important; }
   /* Create modals sit above the tab bar on phones (it was covering their
-     footers). The community sheet is full-height from the top: header
-     and footer pinned, the body scrolls. */
+     footers). The community modal floats centred, sized to its content:
+     header and footer pinned inside the card, only the body scrolls. */
   .ccm-overlay, .crm-overlay { z-index: 1200 !important; }
-  .ccm-overlay { padding: 0 !important; align-items: stretch !important; }
+  .ccm-overlay { padding: 12px !important; align-items: center !important; }
   .ccm-panel {
-    max-height: none !important;
-    height: 100dvh !important;
-    border-radius: 0 !important;
-    border: none !important;
+    height: auto !important;
+    max-height: min(90vh, calc(100dvh - 24px)) !important;
+    border-radius: 20px !important;
     display: flex; flex-direction: column;
     overflow: hidden !important;
   }
-  .ccm-head { flex-shrink: 0; padding-top: calc(16px + env(safe-area-inset-top)) !important; }
-  .ccm-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-  .ccm-foot { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.06); padding: 12px 20px calc(14px + env(safe-area-inset-bottom)) !important; }
+  .ccm-head { flex-shrink: 0; padding: 16px 16px 12px 20px !important; }
+  .ccm-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 20px 6px !important; gap: 14px !important; }
+  .ccm-foot { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 16px 14px !important; }
   .ccm-kinds { grid-template-columns: 1fr 1fr !important; }
   .ccm-kinds > button { min-width: 0; }
   .ccm-images, .ccm-access { grid-template-columns: 1fr !important; }
