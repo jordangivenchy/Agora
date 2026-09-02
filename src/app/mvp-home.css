@@ -6208,6 +6208,9 @@ body { background: transparent; }
 
 /* Phone-only search icon in the navbar's right cluster (both navbars). */
 .nav-search-icon { display: none; }
+/* Leading glyph inside the search box (injected by useNavbarSearch):
+   phones only, while searching — desktop's pill carries Create. */
+.nav-search-glyph { display: none; }
 
 /* ═══ Phones (<640px) ═══════════════════════════════════════════════
    Kick-style mobile shell: a compact top bar, the rail hidden (a bottom
@@ -6236,7 +6239,9 @@ body { background: transparent; }
      sets data-search-open on the wrapper while the panel is open. These
      live here, not in globals.css: this sheet is layered on the
      homepage, and a layered !important beats an unlayered one. */
-  html .nav-search[data-search-open] {
+  /* The id in the selector outranks the desktop `#navSearchWrap`
+     rules (fixed 52px height etc.) that share this layer. */
+  html #navSearchWrap.nav-search[data-search-open] {
     display: flex !important;
     position: static !important;
     width: auto !important;
@@ -6245,13 +6250,18 @@ body { background: transparent; }
     margin: 0;
     transform: none !important;
     align-items: center;
-    height: 40px !important;
-    padding: 0 6px 0 0;
-    background: rgba(255,255,255,0.08) !important;
+    height: 44px !important;
+    padding: 0 4px 0 14px;
+    background: rgba(255,255,255,0.09) !important;
     border: 1px solid rgba(255,255,255,0.14) !important;
     border-radius: 9999px !important;
   }
-  html .nav-search[data-search-open] input { height: 38px; }
+  html .nav-search[data-search-open] .nav-search-glyph {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    color: rgba(255,255,255,0.5);
+  }
+  html .nav-search[data-search-open] input { height: 42px; padding-left: 10px !important; }
+  html .nav-search[data-search-open] .search-active-indicator { display: none !important; }
   html .nav:has(.nav-search[data-search-open]) .nav-logo,
   html .nav:has(.nav-search[data-search-open]) .nav-auth { display: none !important; }
   html .nav-search .create-btn { display: none !important; }

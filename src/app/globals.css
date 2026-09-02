@@ -1958,6 +1958,47 @@ html.reduce-motion .nav-sparkle {
 }
 .search-panel-seeall.is-active { background: rgba(74,158,255,0.14); border-color: rgba(74,158,255,0.4); }
 
+/* Empty sheet (no query): a proper landing rather than one sentence. */
+.search-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 26px 16px 22px;
+}
+.search-empty-glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255,183,0,0.12); color: #ffb700;
+  border: 1px solid rgba(255,183,0,0.25);
+  margin-bottom: 14px;
+}
+.search-empty-title {
+  margin: 0; font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px; font-weight: 700; color: #f5f5f0; letter-spacing: -0.01em;
+}
+.search-empty-sub { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: rgba(238,238,245,0.55); max-width: 320px; }
+/* Recent searches as rows (clock · query · remove), like every search
+   history people already know. */
+.search-recent-list { display: flex; flex-direction: column; }
+.search-recent-row {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 42px; padding: 4px 6px 4px 8px; border-radius: 10px; cursor: pointer;
+  color: #eeeef5; font-size: 14px;
+  transition: background 80ms ease;
+}
+.search-recent-row:hover, .search-recent-row:focus-visible { background: rgba(255,255,255,0.06); outline: none; }
+.search-recent-icon { display: inline-flex; color: rgba(238,238,245,0.4); flex-shrink: 0; }
+.search-recent-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-recent-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: transparent; border: 0; color: rgba(238,238,245,0.4); cursor: pointer; padding: 0;
+}
+.search-recent-remove:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.search-field-chip { padding: 7px 12px 7px 10px; }
+
+/* The navbar box's leading glyph (.nav-search-glyph) is styled in
+   mvp-home.css — hidden by default, shown on phones while searching —
+   so both rules sit in the same cascade layer. */
+
 /* Navbar box while the panel is open: active ring + × inside the box. */
 .nav-search[data-search-open] {
   box-shadow: 0 0 0 1px rgba(255,255,255,0.18) !important;
@@ -2364,12 +2405,27 @@ html.reduce-motion .nav-sparkle {
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    transform: none !important;
+    border-top: 1px solid rgba(255,255,255,0.07) !important;
+    /* Opaque: phones have no backdrop blur, and at 97% the page's bright
+       text ghosted through the sheet. */
+    background: #0b0d12 !important;
+    box-shadow: none !important;
+    /* Rises a few px as it fades in; desktop's -50% translate is gone. */
+    transform: translateY(8px) !important;
     z-index: 130 !important;
   }
-  .search-panel-body { padding: 12px 12px 20px !important; }
+  .search-panel.is-open { transform: none !important; }
+  .search-panel-body { padding: 16px 16px 24px !important; }
   /* The scrim must sit UNDER the sheet or it eats every tap. */
   .search-panel-scrim { z-index: 129 !important; }
+  /* Result filters scroll sideways in one row instead of wrapping into
+     two ragged lines; rows get thumb-sized. */
+  .search-tabs { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .search-tabs::-webkit-scrollbar { display: none; }
+  .search-tabs > * { flex-shrink: 0; }
+  .search-panel-suggest { padding: 10px 12px !important; min-height: 48px; }
+  .search-recent-row { min-height: 46px; }
+  .nav-search .nav-search-clear { width: 26px !important; height: 26px !important; margin-right: 8px !important; }
   /* The navbar box's phone takeover (data-search-open) lives at the end
      of mvp-home.css — see the note there about layered !important. */
 

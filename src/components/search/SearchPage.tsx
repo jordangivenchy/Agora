@@ -33,6 +33,8 @@ import UserAvatar from "@/components/UserAvatar";
 import PostCard, { RepostEmbed, authorLabel, timeAgo, type PostRow } from "@/components/community/PostCard";
 import { PersonCard, useFollowToggle, type Suggestion as PersonSuggestion } from "@/components/people/PeopleSuggestions";
 import { useUserMenu } from "@/components/userMenuContext";
+import { TOPICS } from "@/types/database";
+import TopicIcon from "@/components/topicIcons";
 
 export type SearchKeyHandler = (e: KeyboardEvent, value: string) => boolean | void;
 
@@ -389,6 +391,12 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
     writeLocalRecent([]);
     if (userId) await supabase.from("search_history").delete().eq("user_id", userId);
   };
+  const removeRecent = async (q: string) => {
+    const next = recent.filter((p) => p !== q);
+    setRecent(next);
+    writeLocalRecent(next);
+    if (userId) await supabase.from("search_history").delete().eq("user_id", userId).eq("query", q);
+  };
 
   const openPost = (id: string, commentId?: string | null) => { onClose(); shellNavigate(pathFor.post(id, commentId)); };
 
@@ -621,28 +629,65 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
         <div className="search-panel-body" ref={bodyRef}>
           {!query && (
             <div>
-              {recent.length > 0 && (
-                <section className="mb-4">
-                  <div className="flex items-center mb-2">
-                    <p style={sectionLabel} className="inline-flex items-center gap-1.5"><Icon name="clock" size={12} /> RECENT SEARCHES</p>
+              {/* Recent searches as rows (clock · query · remove). */}
+              {recent.length > 0 ? (
+                <section className="mb-5">
+                  <div className="flex items-center mb-1">
+                    <p style={sectionLabel} className="inline-flex items-center gap-1.5"><Icon name="clock" size={12} /> RECENT</p>
                     <button onClick={clearRecent} className="ml-auto cursor-pointer text-[11px] mb-2" style={{ background: "none", border: 0, color: "rgba(238,238,245,0.45)", fontFamily: "inherit" }}>
-                      Clear
+                      Clear all
                     </button>
                   </div>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="search-recent-list">
                     {recent.map((q) => (
-                      <button
+                      <div
                         key={q}
+                        className="search-recent-row"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => { setNavQuery(q); setQuery(q); }}
-                        className="cursor-pointer text-[12px] px-3 py-1 rounded-full"
-                        style={btnGhost}
+                        onKeyDown={(e) => { if (e.key === "Enter") { setNavQuery(q); setQuery(q); } }}
                       >
-                        {q}
-                      </button>
+                        <span className="search-recent-icon"><Icon name="clock" size={14} /></span>
+                        <span className="search-recent-text">{q}</span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${q} from recent searches`}
+                          title="Remove"
+                          className="search-recent-remove"
+                          onClick={(e) => { e.stopPropagation(); removeRecent(q); }}
+                        >
+                          <Icon name="x" size={12} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </section>
+              ) : (
+                <div className="search-empty">
+                  <span className="search-empty-glyph"><Icon name="search" size={22} /></span>
+                  <p className="search-empty-title">Search AgoraSphere</p>
+                  <p className="search-empty-sub">Discussions, posts, people, communities and comments.</p>
+                </div>
               )}
+
+              {/* A way in without typing: one chip per field of study. */}
+              <section className="mb-5">
+                <p style={sectionLabel} className="inline-flex items-center gap-1.5"><Icon name="layout-grid" size={12} /> BROWSE A FIELD</p>
+                <div className="flex gap-2 flex-wrap">
+                  {TOPICS.map((cat) => (
+                    <button
+                      key={cat.key}
+                      onClick={() => { setNavQuery(cat.label); setQuery(cat.label); }}
+                      className="cursor-pointer text-[12.5px] rounded-full inline-flex items-center gap-1.5 search-field-chip"
+                      style={btnGhost}
+                    >
+                      <TopicIcon topicKey={cat.key} size={14} /> {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
               {trending && trending.length > 0 && (
                 <section>
                   <p style={sectionLabel} className="inline-flex items-center gap-1.5"><Icon name="flame" size={12} /> TRENDING NOW</p>
@@ -652,11 +697,6 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                     ))}
                   </div>
                 </section>
-              )}
-              {recent.length === 0 && (!trending || trending.length === 0) && (
-                <p className="m-0 text-[13px]" style={{ color: "rgba(238,238,245,0.5)" }}>
-                  Search for discussions, posts, people, communities and comments.
-                </p>
               )}
             </div>
           )}
@@ -690,7 +730,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                 </div>
               )}
 
-              <div className="flex gap-2 mb-4 flex-wrap items-center" role="tablist">
+              <div className="flex gap-2 mb-4 flex-wrap items-center search-tabs" role="tablist">
                 {TABS.map((t) => {
                   const n = t.id === "all" ? undefined : counts[t.id];
                   return (

@@ -82,6 +82,13 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
         try { el.setSelectionRange(n, n); } catch { /* ignore */ }
       }
 
+      /* The desktop placeholder clips beside the glyph at phone widths. */
+      const phone = window.matchMedia("(max-width: 639px)");
+      const fullPlaceholder = el.placeholder;
+      const applyPlaceholder = () => { el.placeholder = phone.matches ? "Search AgoraSphere" : fullPlaceholder; };
+      applyPlaceholder();
+      phone.addEventListener("change", applyPlaceholder);
+
       const onFocus = () => setOpen(true);
       const onInput = () => {
         setQueryState(el.value);
@@ -113,6 +120,18 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
       };
       icon?.addEventListener("click", onIconClick);
 
+      /* Leading search glyph (phones only — CSS keeps it hidden on
+         desktop, where the pill has the Create button instead). */
+      let glyph: HTMLSpanElement | null = null;
+      if (wrap && !wrap.querySelector(".nav-search-glyph")) {
+        glyph = document.createElement("span");
+        glyph.className = "nav-search-glyph";
+        glyph.setAttribute("aria-hidden", "true");
+        glyph.innerHTML =
+          '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>';
+        el.insertAdjacentElement("beforebegin", glyph);
+      }
+
       /* × inside the box: clears the text and closes the panel. */
       let clearBtn: HTMLButtonElement | null = null;
       if (wrap && !wrap.querySelector(".nav-search-clear")) {
@@ -137,7 +156,10 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
         el.removeEventListener("input", onInput);
         el.removeEventListener("keydown", onKeyDown);
         icon?.removeEventListener("click", onIconClick);
+        phone.removeEventListener("change", applyPlaceholder);
+        el.placeholder = fullPlaceholder;
         clearBtn?.remove();
+        glyph?.remove();
       };
     };
 
