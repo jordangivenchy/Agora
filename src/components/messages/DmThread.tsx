@@ -26,6 +26,8 @@ import {
 } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { Icon } from "@/components/icons";
+import DmMessageMenu from "@/components/messages/DmMessageMenu";
+import { createLongPress } from "@/lib/longPress";
 import { createClient } from "@/lib/supabase-browser";
 import UserAvatar from "../UserAvatar";
 import { displayName } from "@/lib/names";
@@ -164,7 +166,18 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   const [picker, setPicker] = useState<null | "emoji" | "gif">(null);
   const [replyTo, setReplyTo] = useState<Dm | null>(null);
   /* message id whose quick-react strip is open */
-  const [reactFor, setReactFor] = useState<string | null>(null);
+  /* The per-message menu (react / reply / copy / unsend / delete): left
+     click or right click on desktop, press-and-hold on phones. The
+     bubble's rect is captured at open; the scrim keeps the list still. */
+  const [menuFor, setMenuFor] = useState<{ id: string; rect: DOMRect } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const openMenu = useCallback((m: Dm, el: HTMLElement) => {
+    setMenuFor({ id: m.id, rect: el.getBoundingClientRect() });
+  }, []);
+  const [press] = useState(() => createLongPress<Dm>((m, el) => {
+    if (navigator.vibrate) navigator.vibrate(8);
+    openMenu(m, el);
+  }));
   const [reactions, setReactions] = useState<Map<string, Reaction[]>>(new Map());
   const [peerTyping, setPeerTyping] = useState(false);
   /* The "agora:dm" open path builds a Peer before any thread row exists,
@@ -190,8 +203,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
           setConfirmAction(null);
           return true;
         }
-        if (reactFor) {
-          setReactFor(null);
+        if (menuFor) {
+          setMenuFor(null);
           return true;
         }
         if (picker) {
@@ -205,7 +218,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
         return false;
       },
     }),
-    [picker, replyTo, reactFor, confirmAction]
+    [picker, replyTo, menuFor, confirmAction]
   );
 
   /* ── Load on peer change ─────────────────────────────────────────── */
@@ -215,7 +228,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     setSendError(null);
     setPicker(null);
     setReplyTo(null);
-    setReactFor(null);
+    setMenuFor(null);
     setReactions(new Map());
     setPeerTyping(false);
     setPeerName(peer.display_name);
@@ -481,7 +494,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   /* Toggle my reaction — optimistic; the realtime echo is deduped. */
   const toggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
-      setReactFor(null);
+      setMenuFor(null);
       const had = (reactions.get(messageId) ?? []).some((r) => r.user_id === me && r.emoji === emoji);
       setReactions((map) => {
         const list = map.get(messageId) ?? [];
@@ -594,24 +607,28 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   const page = variant === "page";
   const hydratedPeer = { ...peer, display_name: peerName === undefined ? peer.display_name : peerName };
 
-  const hoverBtn: React.CSSProperties = {
-    width: 24,
-    height: 24,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    background: "none",
-    color: "rgba(255,255,255,0.45)",
-    cursor: "pointer",
-    padding: 0,
-    flexShrink: 0,
-  };
+  const menuMsg = menuFor ? msgs.find((x) => x.id === menuFor.id) ?? null : null;
 
   return (
-    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
-      {/* Click-away for the quick-react strip. */}
-      {reactFor && <div onClick={() => setReactFor(null)} style={{ position: "absolute", inset: 0, zIndex: 5 }} />}
+    <div ref={rootRef} style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
+      {/* Per-message menu. */}
+      {menuFor && menuMsg && rootRef.current && (
+        <DmMessageMenu
+          anchor={menuFor.rect}
+          root={rootRef.current.getBoundingClientRect()}
+          mine={menuMsg.sender_id === me}
+          reactions={QUICK_REACTIONS}
+          myReactions={new Set((reactions.get(menuMsg.id) ?? []).filter((r) => r.user_id === me).map((r) => r.emoji))}
+          canUnsend={canUnsend(menuMsg)}
+          hasText={menuMsg.content.trim().length > 0}
+          onReact={(e) => { setMenuFor(null); toggleReaction(menuMsg.id, e); }}
+          onReply={() => { setMenuFor(null); setReplyTo(menuMsg); taRef.current?.focus(); }}
+          onCopy={() => { setMenuFor(null); void navigator.clipboard?.writeText(menuMsg.content); }}
+          onUnsend={() => { setMenuFor(null); setConfirmAction({ kind: "unsend", m: menuMsg }); }}
+          onDelete={() => { setMenuFor(null); setConfirmAction({ kind: "delete", m: menuMsg }); }}
+          onClose={() => setMenuFor(null)}
+        />
+      )}
 
       {/* Confirm sheet for unsend / delete-for-you. */}
       {confirmAction && (
@@ -790,6 +807,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                 }}
               >
                 <div
+                  className={`dm-bubble${menuFor?.id === m.id ? " is-menu" : ""}`}
                   style={{
                     padding: m.image_url ? 4 : "7px 11px",
                     borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
@@ -802,6 +820,20 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     minWidth: 0,
                   }}
                   title={fmtTime(m.created_at)}
+                  /* Desktop: left or right click opens the menu; phones:
+                     press-and-hold (the click it synthesises afterwards is
+                     swallowed). Links and images inside keep their own
+                     click. */
+                  onPointerDown={(e) => press.onPointerDown(e, m)}
+                  onPointerMove={press.onPointerMove}
+                  onPointerUp={press.onPointerUp}
+                  onPointerCancel={press.onPointerCancel}
+                  onClick={(e) => {
+                    if (press.consumeClick()) { e.preventDefault(); return; }
+                    if ((e.target as HTMLElement).closest("a")) return;
+                    if (press.lastPointerType() === "mouse") openMenu(m, e.currentTarget);
+                  }}
+                  onContextMenu={(e) => { e.preventDefault(); if (press.lastPointerType() === "mouse") openMenu(m, e.currentTarget); }}
                 >
                   {m.reply_to && (
                     <div
@@ -859,87 +891,6 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   )}
                   {hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
                 </div>
-                <span style={{ display: "inline-flex", gap: 2, flexShrink: 0 }}>
-                  <span style={{ position: "relative", display: "inline-flex" }}>
-                    <button
-                      className="dm-reply-btn"
-                      onClick={() => setReactFor(reactFor === m.id ? null : m.id)}
-                      aria-label="React to this message"
-                      title="React"
-                      style={hoverBtn}
-                    >
-                      <Icon name="smile" size={13} />
-                    </button>
-                    {reactFor === m.id && (
-                      <div className="dm-react-strip"
-                        style={{
-                          position: "absolute",
-                          bottom: 27,
-                          [mine ? "right" : "left"]: 0,
-                          display: "flex",
-                          gap: 2,
-                          padding: "4px 6px",
-                          borderRadius: 999,
-                          background: "#15171f",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                          zIndex: 6,
-                        }}
-                      >
-                        {QUICK_REACTIONS.map((e) => (
-                          <button
-                            key={e}
-                            onClick={() => toggleReaction(m.id, e)}
-                            aria-label={`React ${e}`}
-                            style={{
-                              border: "none",
-                              background: "none",
-                              fontSize: 18,
-                              lineHeight: "24px",
-                              cursor: "pointer",
-                              padding: "0 3px",
-                              borderRadius: 6,
-                            }}
-                          >
-                            {e}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </span>
-                  <button
-                    className="dm-reply-btn"
-                    onClick={() => {
-                      setReplyTo(m);
-                      taRef.current?.focus();
-                    }}
-                    aria-label="Reply to this message"
-                    title="Reply"
-                    style={hoverBtn}
-                  >
-                    <Icon name="text-quote" size={13} />
-                  </button>
-                  {canUnsend(m) && (
-                    <button
-                      className="dm-reply-btn"
-                      onClick={() => setConfirmAction({ kind: "unsend", m })}
-                      aria-label="Unsend message"
-                      title="Unsend (for everyone)"
-                      style={{ ...hoverBtn, color: "rgba(255,150,140,0.55)" }}
-                    >
-                      <Icon name="circle-x" size={13} />
-                    </button>
-                  )}
-                  <button
-                    className="dm-reply-btn"
-                    onClick={() => setConfirmAction({ kind: "delete", m })}
-                    aria-label="Delete message for you"
-                    title="Delete for you"
-                    style={hoverBtn}
-                  >
-                    <Icon name="trash" size={13} />
-                  </button>
-                </span>
               </div>
               {rxGroups.length > 0 && (
                 <div

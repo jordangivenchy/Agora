@@ -99,6 +99,11 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
+/* DM per-message menu pops from its bubble. */
+@keyframes dmMenuIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
 /* /messages on phones: the page rises in; inbox ↔ thread slide. */
 @keyframes msgsIn {
   from { opacity: 0; transform: translateY(14px); }
@@ -1886,12 +1891,61 @@ html.reduce-motion .nav-sparkle {
   transform-origin: 100% 100%; /* rises out of its bottom-right anchor */
 }
 .dm-dock-closing { animation: dmDockOut 0.15s ease-in both; }
-.dm-msg-row .dm-reply-btn { opacity: 0; transition: opacity 0.12s ease; }
-.dm-msg-row:hover .dm-reply-btn,
-.dm-msg-row .dm-reply-btn:focus-visible { opacity: 1; }
+
+/* ── Per-message menu (DmMessageMenu.tsx) ── */
+.dm-bubble { cursor: pointer; transition: filter 0.12s ease, box-shadow 0.12s ease; }
+.dm-bubble:hover { filter: brightness(1.06); }
+.dm-bubble.is-menu { box-shadow: 0 0 0 2px rgba(255,255,255,0.28); }
+.dm-menu-scrim { position: absolute; inset: 0; z-index: 20; background: transparent; }
+.dm-menu {
+  position: absolute; z-index: 21;
+  width: 236px;
+  padding: 6px;
+  border-radius: 16px;
+  background: #15171f;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4);
+  font-family: 'DM Sans', sans-serif;
+  transform-origin: top left;
+  animation: dmMenuIn 140ms cubic-bezier(.2,.7,.2,1) both;
+}
+.dm-menu.is-mine { transform-origin: top right; }
+.dm-menu.is-above { transform-origin: bottom left; }
+.dm-menu.is-mine.is-above { transform-origin: bottom right; }
+.dm-menu-reactions {
+  display: flex; justify-content: space-between; gap: 2px;
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 4px;
+}
+.dm-menu-react {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 19px; line-height: 1;
+  background: transparent; border: 0; cursor: pointer; padding: 0;
+  transition: background 0.1s ease, transform 0.1s ease;
+}
+.dm-menu-react:hover { background: rgba(255,255,255,0.1); transform: scale(1.15); }
+.dm-menu-react.is-on { background: rgba(255,183,0,0.22); box-shadow: 0 0 0 1px rgba(255,183,0,0.5) inset; }
+.dm-menu-rows { display: flex; flex-direction: column; }
+.dm-menu-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 10px; border-radius: 10px;
+  background: transparent; border: 0; cursor: pointer;
+  color: #e8e8ee; font-family: inherit; font-size: 13.5px; font-weight: 500; text-align: left;
+}
+.dm-menu-row:hover, .dm-menu-row:focus-visible { background: rgba(255,255,255,0.08); outline: none; }
+.dm-menu-row--danger { color: #ff8a80; }
+.dm-menu-row--danger:hover { background: rgba(255,90,90,0.12); }
+@media (hover: none) {
+  /* Press-and-hold must not select text or raise the OS callout. */
+  .dm-bubble { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  .dm-bubble:hover { filter: none; }
+  .dm-menu-scrim { background: rgba(0,0,0,0.45); }
+}
+@media (prefers-reduced-motion: reduce) { .dm-menu { animation: none; } }
 /* Touch devices have no hover — the reply affordance must just be there. */
 @media (hover: none) {
-  .dm-msg-row .dm-reply-btn { opacity: 1; }
 }
 @keyframes dmTypingBlink {
   0%, 80%, 100% { opacity: 0.25; }
@@ -1902,7 +1956,6 @@ html.reduce-motion .nav-sparkle {
 .dm-typing-dot:nth-child(3) { animation-delay: 0.3s; }
 @media (prefers-reduced-motion: reduce) {
   .dm-dock-panel, .dm-dock-closing, .dm-typing-dot { animation: none !important; }
-  .dm-msg-row .dm-reply-btn { opacity: 1; }
 }
 
 /* ── Notifications popover (NotificationsPanel.tsx, portaled to body) ──
@@ -2659,16 +2712,10 @@ html.reduce-motion .nav-sparkle {
   .msg-rail-search { height: 40px !important; }
   .dm-msg-row { max-width: 92% !important; }
   .dm-msg-row img { max-width: 100% !important; height: auto; max-height: 60vh; }
-  .dm-reply-btn { width: 32px !important; height: 32px !important; }
-  .dm-react-strip {
-    position: fixed !important;
-    left: 12px !important;
-    right: 12px !important;
-    bottom: calc(66px + env(safe-area-inset-bottom)) !important;
-    justify-content: space-around;
-    z-index: 130 !important;
-  }
-  .dm-react-strip button { min-width: 40px; min-height: 40px; }
+  /* Per-message menu: thumb-sized, and not wider than the screen. */
+  .dm-menu { width: min(260px, calc(100vw - 24px)); padding: 8px; }
+  .dm-menu-react { width: 38px; height: 38px; font-size: 21px; }
+  .dm-menu-row { padding: 12px 12px; font-size: 15px; }
   .dm-emoji-btn { display: none !important; }
   .dm-picker-anchor { position: static !important; }
   .dm-picker-anchor > div, .dm-picker-anchor > .absolute { left: 0 !important; right: 0 !important; width: auto !important; }
