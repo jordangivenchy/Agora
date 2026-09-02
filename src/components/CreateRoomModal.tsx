@@ -570,17 +570,49 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           className="flex items-center justify-between"
           style={{ padding: "20px 24px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <h2
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "18px",
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "var(--text-primary)",
-            }}
-          >
-            Start a discussion
-          </h2>
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "18px",
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+                color: "var(--text-primary)",
+              }}
+            >
+              Start a discussion
+            </h2>
+            {/* What to create — the community flow is one tap away, up
+                here where it can be seen, not at the foot of the form. */}
+            {onCreateCommunity && (
+              <div
+                role="tablist"
+                aria-label="What to create"
+                className="inline-flex items-center"
+                style={{ marginTop: 10, padding: 3, borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", gap: 2 }}
+              >
+                <span
+                  role="tab"
+                  aria-selected="true"
+                  className="inline-flex items-center gap-1.5"
+                  style={{ padding: "5px 12px", borderRadius: 999, background: "#ffb700", color: "#1a0e00", fontSize: 12, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  <Icon name="mic" size={12} /> Discussion
+                </span>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  onClick={onCreateCommunity}
+                  className="cursor-pointer inline-flex items-center gap-1.5"
+                  style={{ padding: "5px 12px", borderRadius: 999, background: "transparent", border: "none", color: "rgba(238,238,245,0.7)", fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  <Icon name="users-round" size={12} /> Community
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="flex items-center justify-center cursor-pointer transition-all"
@@ -984,20 +1016,6 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                   : "Create room"}
               </button>
             </div>
-            {/* The other thing people come here to make. */}
-            {onCreateCommunity && (
-              <p className="m-0 text-center" style={{ marginTop: 14, fontSize: 12.5, color: "rgba(238,238,245,0.45)" }}>
-                Want a place for your group instead?{" "}
-                <button
-                  type="button"
-                  onClick={onCreateCommunity}
-                  className="cursor-pointer"
-                  style={{ background: "none", border: "none", padding: 0, color: "#ffb700", fontWeight: 600, fontFamily: "inherit", fontSize: 12.5 }}
-                >
-                  Create a community →
-                </button>
-              </p>
-            )}
           </div>
         </div>
       </div>
