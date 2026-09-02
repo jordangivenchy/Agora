@@ -119,6 +119,16 @@ function SiteNavbar() {
         >
           <Icon name="search" size={17} />
         </a>
+        {/* Phones only (CSS): Create lives in the hidden search pill on
+            desktop, so it gets its own yellow "+" here. */}
+        <a
+          className="nav-create-icon"
+          href="/?create=1"
+          aria-label="Create a discussion"
+          onClick={(e) => { e.preventDefault(); router.push(user ? "/?create=1" : "/login"); }}
+        >
+          <Icon name="sparkles" size={17} />
+        </a>
         {user === null && (
           <>
             <button className="btn-ghost" onClick={() => router.push("/login")}>Log in</button>

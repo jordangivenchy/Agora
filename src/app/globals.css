@@ -2057,28 +2057,8 @@ html.reduce-motion .nav-sparkle {
    beside-sidebar offset follows), the bottom tab bar appears, and the
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
-.mobile-fab { display: none; }
 
 @media (max-width: 639px) {
-  /* Create: a hero-yellow floating action button above the tab bar. */
-  .mobile-fab {
-    display: inline-flex;
-    position: fixed;
-    right: 16px;
-    bottom: calc(56px + 16px + env(safe-area-inset-bottom));
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    background: #ffb700;
-    color: #1a0e00;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,221,100,0.35);
-    z-index: 121;
-    text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   /* Friends overlay mounts on body here (no sidebar to host it): a
      full-screen, opaque sheet above the page and the tab bar. */
   .friends-ui-overlay {
@@ -2126,9 +2106,9 @@ html.reduce-motion .nav-sparkle {
     gap: 3px;
     color: #8b8b94;
     text-decoration: none;
-    font-size: 10px;
+    font-size: 11.5px;
     font-weight: 600;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
     -webkit-tap-highlight-color: transparent;
   }
   .mobile-tab.active { color: #ffb700; }
@@ -2181,5 +2161,50 @@ html.reduce-motion .nav-sparkle {
     height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
+  }
+
+  /* ── Phone type scale ──────────────────────────────────────────────
+     The site has no typography tokens: sizes are hard-coded in three
+     places (stylesheets, Tailwind text-[Npx] classes, inline React
+     styles), and 63% of them sit in the 10–13px band — fine at desk
+     distance, unreadable at arm's length. Rather than touching hundreds
+     of call sites, phones remap every family onto one ladder:
+
+         9–10.5px → 12px    11–11.5 → 12.5    12–12.5 → 13.5
+         13–13.5  → 14.5    14      → 15
+
+     Tailwind classes are plain selectors; inline styles are matched on
+     the serialized style attribute (React writes `font-size: 12px;`),
+     which is why those rules need !important. Desktop is untouched. */
+  body { line-height: 1.45; }
+
+  .text-\[9px\], .text-\[9\.5px\], .text-\[10px\], .text-\[10\.5px\],
+  [style*="font-size: 9px"], [style*="font-size: 9.5px"],
+  [style*="font-size: 10px"], [style*="font-size: 10.5px"] { font-size: 12px !important; }
+
+  .text-\[11px\], .text-\[11\.5px\],
+  [style*="font-size: 11px"], [style*="font-size: 11.5px"] { font-size: 12.5px !important; }
+
+  .text-\[12px\], .text-\[12\.5px\], .text-xs,
+  [style*="font-size: 12px"], [style*="font-size: 12.5px"] { font-size: 13.5px !important; }
+
+  .text-\[13px\], .text-\[13\.5px\],
+  [style*="font-size: 13px"], [style*="font-size: 13.5px"] { font-size: 14.5px !important; }
+
+  .text-\[14px\], .text-sm,
+  [style*="font-size: 14px"] { font-size: 15px !important; }
+
+  /* Small uppercase section labels keep their tracking but drop the
+     widest steps, which read as gaps at the larger size. */
+  [style*="letter-spacing: 1px"], [style*="letter-spacing: 0.1em"],
+  [style*="letter-spacing: 0.12em"] { letter-spacing: 0.06em !important; }
+
+  /* Headings on phones: one step down from desktop display sizes. */
+  [style*="font-size: 24px"], [style*="font-size: 25px"] { font-size: 22px !important; }
+  [style*="font-size: 21px"] { font-size: 19px !important; }
+
+  /* Bigger tap targets on the text-only pill buttons. */
+  button.rounded-full, a.rounded-full, button.rounded-lg, button.rounded-xl {
+    min-height: 36px;
   }
 }

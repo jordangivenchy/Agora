@@ -30,6 +30,7 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
   </div>
   <div class="nav-auth">
     <a class="nav-search-icon" href="/search" aria-label="Search">${iconSvg("search", 17)}</a>
+    <a class="nav-create-icon" href="/?create=1" aria-label="Create a discussion">${iconSvg("sparkles", 17)}</a>
     <button class="btn-ghost">Log in</button>
     <button class="btn-signup">Sign up</button>
     <button class="nav-messages-btn" id="nav-messages-btn" type="button" aria-label="Messages">

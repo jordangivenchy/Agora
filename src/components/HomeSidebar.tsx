@@ -34,6 +34,8 @@ type Sparkle = [string, string, string, string, string];
 interface NavItem {
   id: HomeNavId;
   label: string;
+  /** Phone tab-bar label when the full one won't fit six-across. */
+  short?: string;
   page?: "home" | "explore";
   sparkles: Sparkle[];
   icon: ReactElement;
@@ -74,6 +76,7 @@ const NAV: NavItem[] = [
   {
     id: "communities",
     label: "Communities",
+    short: "Boards",
     sparkles: [
       ["0.4s", "4.4s", "24%", "58%", "-5px"],
       ["1.2s", "3.9s", "65%", "32%", "6px"],
@@ -270,16 +273,10 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
           }}
         >
           <span className="mobile-tab-icon">{item.icon}</span>
-          <span className="mobile-tab-label">{item.label}</span>
+          <span className="mobile-tab-label">{item.short ?? item.label}</span>
         </a>
       ))}
     </nav>
-    {/* Phones: the Create button lives inside the (hidden) search pill,
-        so a floating action button carries it; /?create=1 opens the
-        create modal on the home shell. */}
-    <a className="mobile-fab" href="/?create=1" aria-label="Create a discussion">
-      <Icon name="sparkles" size={20} />
-    </a>
     </>
   );
 }

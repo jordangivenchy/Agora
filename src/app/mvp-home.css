@@ -6206,8 +6206,9 @@ body { background: transparent; }
   }
 }
 
-/* Phone-only search icon in the navbar's right cluster (both navbars). */
-.nav-search-icon { display: none; }
+/* Phone-only search + create icons in the navbar's right cluster (both
+   navbars). */
+.nav-search-icon, .nav-create-icon { display: none; }
 
 /* ═══ Phones (<640px) ═══════════════════════════════════════════════
    Kick-style mobile shell: a compact top bar, the rail hidden (a bottom
@@ -6221,7 +6222,14 @@ body { background: transparent; }
   /* Top bar: mark + auth/avatar only; the search pill is desktop-only
      for now (Explore covers search on phones). */
   html .nav { padding: 8px 12px 0 !important; gap: 10px !important; }
-  html .nav-logo img { height: 20px !important; }
+  /* Wordmark → the square mark (Kick-style): the right cluster —
+     search, create, messages, bell, avatar — needs the width. */
+  html .nav-logo img {
+    content: url("/icon.png");
+    height: 30px !important;
+    width: 30px !important;
+    border-radius: 8px;
+  }
   html .nav-search { display: none !important; }
   html .nav-auth { gap: 8px !important; }
   html .nav-search-icon {
@@ -6237,6 +6245,24 @@ body { background: transparent; }
     text-decoration: none;
     flex-shrink: 0;
   }
+  /* Create: the one yellow control in the bar (replaces a floating
+     button that sat over the Daily Topics "Queue" buttons). */
+  html .nav-create-icon {
+    display: inline-flex !important;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    color: #1a0e00;
+    background: #ffb700;
+    border: 1px solid rgba(255,221,100,0.35);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  /* Source chips on the hero were the one stylesheet size still under
+     the phone floor. */
+  html .carousel-news-chip { font-size: 12.5px !important; }
   html .nav-auth .btn-ghost,
   html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }
 
