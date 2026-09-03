@@ -892,7 +892,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   }, [loaded, currentUser, room, myParticipation, roomId, supabase, fetchAll, gated]);
 
   /* Leaving vacates the seat (best effort — a closed tab can't stamp out). */
+  const leavingRef = useRef(false);
   const vacateSeat = useCallback(() => {
+    leavingRef.current = true;
     if (!currentUser || !myParticipation) return;
     supabase
       .from("debate_participants")
@@ -930,6 +932,64 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       window.removeEventListener("beforeunload", beacon);
     };
   }, [roomId, broadcast]);
+
+  /* ── Coming back ────────────────────────────────────────────
+     Phones freeze the page the moment the screen locks: heartbeats stop,
+     the call's sockets drop, and by the time the person is back the
+     LiveKit webhook (or the ghost sweep) has stamped their seat left —
+     and, for a host, started the grace clock on the whole room. On
+     return, and whenever the call reconnects after a drop: touch the
+     seat, clear the host grace, take the seat back if it was stamped out
+     while we were away, then refetch. A removal by the host from before
+     we went away stands (the stamp predates the absence), and nothing
+     runs after an intentional leave. */
+  const hiddenAtRef = useRef<number | null>(null);
+  const restoreSeat = useCallback(async () => {
+    if (!currentUser || !room || room.status === "ended" || gated || broadcast || leavingRef.current) return;
+    const awaySince = Math.max(hiddenAtRef.current ?? 0, call.lastDropAt ?? 0);
+    if (!awaySince) return;
+    try {
+      const { data: mine } = await supabase
+        .from("debate_participants")
+        .select("id, left_at")
+        .eq("room_id", roomId)
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+      if (!mine?.left_at) return;
+      if (new Date(mine.left_at).getTime() < awaySince - 60_000) return;
+      await supabase
+        .from("debate_participants")
+        .update({ left_at: null, joined_at: new Date().toISOString() })
+        .eq("id", mine.id);
+    } catch {
+      /* seating is cosmetic — the room still works unlisted */
+    }
+  }, [currentUser, room, gated, broadcast, roomId, supabase, call.lastDropAt]);
+  const cameBack = useCallback(() => {
+    if (!currentUser || !room || room.status === "ended" || broadcast || leavingRef.current) return;
+    supabase.rpc("touch_seat", { p_room: roomId }).then(undefined, () => {});
+    if (currentUser.id === room.host_id) {
+      supabase.rpc("clear_host_left", { p_room: roomId }).then(undefined, () => {});
+    }
+    restoreSeat().finally(fetchAll);
+  }, [currentUser, room, broadcast, roomId, supabase, restoreSeat, fetchAll]);
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") hiddenAtRef.current = Date.now();
+      else cameBack();
+    };
+    window.addEventListener("pageshow", cameBack);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pageshow", cameBack);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [cameBack]);
+  useEffect(() => {
+    if (call.reconnects > 0) cameBack();
+    // Only the reconnect edge should fire this, not every cameBack identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [call.reconnects]);
 
   /* Host is back: cancel the grace timer. The participant_joined webhook
      normally clears host_left_at; this covers the race where the page
@@ -1726,8 +1786,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               silence with no idea the browser muted the room ── */}
         {call.audioBlocked && (
           <button
-            className="ag-invite cursor-pointer"
-            style={{ border: "1px solid #f4d47c", bottom: 140 }}
+            className="ag-invite ag-audio-prompt cursor-pointer"
             onClick={call.enableAudio}
           >
             <span className="ag-invite-text">

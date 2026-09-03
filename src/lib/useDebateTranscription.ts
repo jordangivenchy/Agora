@@ -15,6 +15,7 @@
    can't spin the tab. */
 
 import { useEffect, useRef, useState } from "react";
+import { isAppleMobile } from "@/lib/platform";
 import { extractWake } from "@/lib/wakeWord";
 
 const FLUSH_MS = 8000;
@@ -60,6 +61,14 @@ export function useDebateTranscription(params: {
 
   useEffect(() => {
     if (!enabled || !roomId) return;
+    /* iOS Safari hands the microphone to one thing at a time: starting
+       SpeechRecognition there re-prompts for mic access on every
+       (auto-restarted) session and interrupts the call's own capture —
+       the person on stage goes silent to the room. Off on iPhone/iPad. */
+    if (isAppleMobile()) {
+      const t = setTimeout(() => setUnavailable(true), 0);
+      return () => clearTimeout(t);
+    }
     const Ctor = getRecognition();
     if (!Ctor) {
       // Deferred so the effect never sets state synchronously during render

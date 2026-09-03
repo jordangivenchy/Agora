@@ -3100,6 +3100,7 @@
 .ag-sheet-scrim { display: none; }
 .ag-more-layout { display: none; }
 .ag-watch { display: inline-flex; align-items: center; gap: 6px; }
+.ag-audio-prompt { border-color: #f4d47c; bottom: 140px; }
 
 @media (max-width: 639px) {
   .ag-root,
@@ -3286,6 +3287,7 @@
     padding: 12px 14px;
   }
   .ag-invite-actions { display: flex; }
+  .ag-audio-prompt { bottom: var(--ag-band-b); }
   .ag-invite-join,
   .ag-invite-decline { flex: 1; }
 

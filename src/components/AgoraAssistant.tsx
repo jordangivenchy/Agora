@@ -17,6 +17,7 @@
    OS voice as fallback — see lib/voice/tts. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isAppleMobile } from "@/lib/platform";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import { useDebateTranscription } from "@/lib/useDebateTranscription";
@@ -190,6 +191,10 @@ export default function AgoraAssistant({
      mic): the "hey agora" button starts it — needs the explicit click for
      the browser's mic permission anyway. */
   const toggleHotword = useCallback(() => {
+    if (isAppleMobile()) {
+      setLog((l) => [...l, { from: "agora", text: "Hands-free listening is off on iPhone and iPad — Safari gives the microphone to one thing at a time, and the call keeps it. Type your question instead." }]);
+      return;
+    }
     const Ctor = getRecognition();
     if (!Ctor) {
       setLog((l) => [...l, { from: "agora", text: "Hands-free listening isn't supported in this browser — type your question instead." }]);

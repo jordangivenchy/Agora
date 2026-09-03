@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ConnectionState,
+  DisconnectReason,
   RemoteTrack,
   RemoteTrackPublication,
   Room,
@@ -26,6 +27,18 @@ import {
   VideoPresets,
   VideoQuality,
 } from "livekit-client";
+
+/* Disconnects that are a verdict, not an accident — no automatic reconnect. */
+const NO_RECONNECT = new Set<DisconnectReason>([
+  DisconnectReason.CLIENT_INITIATED,
+  DisconnectReason.DUPLICATE_IDENTITY,
+  DisconnectReason.PARTICIPANT_REMOVED,
+  DisconnectReason.ROOM_DELETED,
+  DisconnectReason.ROOM_CLOSED,
+  DisconnectReason.JOIN_FAILURE,
+  DisconnectReason.USER_REJECTED,
+  DisconnectReason.USER_UNAVAILABLE,
+]);
 
 export interface Reaction {
   id: number;
@@ -101,6 +114,14 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   /* Bumping this re-runs the connect effect — the page uses it to
      escape HLS mode when the stream dies (hls_url goes null). */
   const [connectNonce, setConnectNonce] = useState(0);
+  /* A drop that was not ours (screen locked, app backgrounded, a blip
+     that outlasted LiveKit's own reconnect window). The visibility
+     handler below reconnects on return; the page re-takes its seat. */
+  const droppedRef = useRef(false);
+  const everConnectedRef = useRef(false);
+  const retriesRef = useRef(0);
+  const [reconnects, setReconnects] = useState(0);
+  const [lastDropAt, setLastDropAt] = useState<number | null>(null);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [videoTiles, setVideoTiles] = useState<VideoTile[]>([]);
   const hqRef = useRef(highQuality);
@@ -207,6 +228,37 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     roomRef.current = room;
     let cancelled = false;
     const audioEls: HTMLMediaElement[] = [];
+    const recovering = everConnectedRef.current;
+
+    /* Browsers block autoplaying audio until a gesture, and iOS counts
+       only real activation events (touchend / click / keydown — not a
+       pointerdown alone). Listen for all of them, unlock once, and re-arm
+       whenever playback reports blocked again (a reconnect, a locked
+       screen). The UI shows a tap-to-listen prompt while blocked. */
+    const gestures = ["pointerdown", "touchend", "click", "keydown"] as const;
+    let armed = false;
+    function disarm() {
+      armed = false;
+      gestures.forEach((g) => document.removeEventListener(g, unlock));
+    }
+    function unlock() {
+      room.startAudio().catch(() => {});
+      disarm();
+    }
+    function arm() {
+      if (armed) return;
+      armed = true;
+      gestures.forEach((g) => document.addEventListener(g, unlock, { passive: true }));
+    }
+    function watchPlayback() {
+      setAudioBlocked(!room.canPlaybackAudio);
+      if (!room.canPlaybackAudio) arm();
+      room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        setAudioBlocked(!room.canPlaybackAudio);
+        if (!room.canPlaybackAudio) arm();
+      });
+      room.startAudio().catch(() => {});
+    }
 
     const attachAudio = (track: RemoteTrack) => {
       if (track.kind !== Track.Kind.Audio) return;
@@ -263,6 +315,30 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           })
           .on(RoomEvent.ConnectionStateChanged, (s) => {
             setConnected(s === ConnectionState.Connected);
+            if (s === ConnectionState.Connected) {
+              retriesRef.current = 0;
+              if (everConnectedRef.current && recovering) setReconnects((n) => n + 1);
+              everConnectedRef.current = true;
+            }
+          })
+          .on(RoomEvent.Disconnected, (reason) => {
+            /* Ours, or the server's verdict (removed, room closed, a second
+               tab took our identity): stay down. Anything else is a lost
+               connection — iOS cuts the page's sockets the moment the
+               screen locks — so remember it for the return handler and,
+               if we're still on screen, come straight back. */
+            if (cancelled || (reason !== undefined && NO_RECONNECT.has(reason))) return;
+            droppedRef.current = true;
+            setLastDropAt(Date.now());
+            if (document.visibilityState === "visible" && retriesRef.current < 5) {
+              retriesRef.current += 1;
+              setTimeout(() => {
+                if (!cancelled && droppedRef.current) {
+                  droppedRef.current = false;
+                  setConnectNonce((n) => n + 1);
+                }
+              }, 1500);
+            }
           });
 
         if (external) {
@@ -273,11 +349,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           }
           setConnected(true);
           refreshTiles();
-          setAudioBlocked(!room.canPlaybackAudio);
-          room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
-            setAudioBlocked(!room.canPlaybackAudio);
-          });
-          room.startAudio().catch(() => {});
+          watchPlayback();
           return;
         }
         const res = await fetch("/api/livekit", {
@@ -314,19 +386,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
         setConnected(true);
         refreshTiles();
 
-        /* Browsers block autoplaying audio until a gesture. Track the real
-           playback status (silently swallowing it = listeners hear nothing
-           and never know why), resume on first interaction, and let the UI
-           show a tap-to-listen prompt while blocked. */
-        setAudioBlocked(!room.canPlaybackAudio);
-        room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
-          setAudioBlocked(!room.canPlaybackAudio);
-        });
-        const resume = () => {
-          room.startAudio().catch(() => {});
-          document.removeEventListener("pointerdown", resume);
-        };
-        document.addEventListener("pointerdown", resume);
+        watchPlayback();
       } catch (e) {
         console.warn("agora call connect failed", e);
         setMediaError("Couldn't connect to the live call — reload to retry.");
@@ -335,6 +395,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
 
     return () => {
       cancelled = true;
+      disarm();
       audioEls.forEach((el) => el.remove());
       room.disconnect();
       roomRef.current = null;
@@ -347,6 +408,27 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     // `external` is stable for the life of a broadcast page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, roomId, userId, canPublish, pushReaction, refreshTiles, external?.token, connectNonce]);
+
+  /* Back on screen (unlocked, foregrounded, restored from the back-forward
+     cache): if the call died while we were away, reconnect. */
+  useEffect(() => {
+    const back = () => {
+      if (document.visibilityState !== "visible") return;
+      const room = roomRef.current;
+      const dead =
+        droppedRef.current ||
+        (everConnectedRef.current && !!room && room.state === ConnectionState.Disconnected);
+      if (!dead) return;
+      droppedRef.current = false;
+      setConnectNonce((n) => n + 1);
+    };
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("pageshow", back);
+    return () => {
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("pageshow", back);
+    };
+  }, []);
 
   /* Turn a getUserMedia / publish failure into something a user can act on.
      Swallowing these (the old behavior) made the buttons look dead. */
@@ -541,6 +623,9 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     mediaBusy,
     mediaError,
     audioBlocked,
+    /* Bumps each time the call comes back after a drop; when it happened. */
+    reconnects,
+    lastDropAt,
     /* ?avdebug=1 overlay: where in the chain audio/video is breaking. */
     debugSnapshot: () => {
       const room = roomRef.current;
