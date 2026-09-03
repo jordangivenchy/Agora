@@ -1260,6 +1260,31 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         ? "Lower your hand"
         : "Raise your hand to request to speak";
 
+  /* Layout switcher: rendered in the control row on desktop and inside
+     the More drawer on phones (agora.css shows one or the other). */
+  const layoutSwitch = (
+    <div className="ag-layout-switch" role="group" aria-label="Call layout">
+      {(
+        [
+          { id: "stage", icon: "person-standing", label: "Stage view" },
+          { id: "gallery", icon: "layout-grid", label: "Gallery view" },
+          { id: "multi", icon: "users", label: "Multi-speaker view" },
+        ] as const
+      ).map((opt) => (
+        <button
+          key={opt.id}
+          className={`ag-layout-seg${layout === opt.id ? " is-active" : ""}`}
+          title={`${opt.label} (g cycles)`}
+          aria-label={opt.label}
+          aria-pressed={layout === opt.id}
+          onClick={() => pickLayout(opt.id)}
+        >
+          <Icon name={opt.icon} size={17} />
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}`}>
       <div className="ag-main">
@@ -1326,11 +1351,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           <div className="ag-topbar-actions">
             {room.hls_url && !onStage(myRole) && (
               <button
-                className="ag-follow"
+                className="ag-follow ag-watch"
                 title="Watch the broadcast stream instead of the live call"
                 onClick={() => setHlsOpen(true)}
               >
-                Watch stream
+                <Icon name="play" size={13} />
+                <span className="ag-watch-label">Watch stream</span>
               </button>
             )}
             <button
@@ -1993,28 +2019,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           {/* ── Layout switcher: how *you* see the room. Local only —
                 every viewer arranges their own pictures. `g` cycles.
                 Hidden in HLS mode — the broadcast is a single feed. ── */}
-          {!hlsAudience && !duel && (
-          <div className="ag-layout-switch" role="group" aria-label="Call layout">
-            {(
-              [
-                { id: "stage", icon: "person-standing", label: "Stage view" },
-                { id: "gallery", icon: "layout-grid", label: "Gallery view" },
-                { id: "multi", icon: "users", label: "Multi-speaker view" },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                className={`ag-layout-seg${layout === opt.id ? " is-active" : ""}`}
-                title={`${opt.label} (g cycles)`}
-                aria-label={opt.label}
-                aria-pressed={layout === opt.id}
-                onClick={() => pickLayout(opt.id)}
-              >
-                <Icon name={opt.icon} size={17} />
-              </button>
-            ))}
-          </div>
-          )}
+          {!hlsAudience && !duel && layoutSwitch}
 
           {/* ── More: the room's tool drawer ──
               Four quadrants rather than a list. The tools are peers, not a
@@ -2041,6 +2046,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           <div className="ag-react-wrap" ref={moreWrapRef}>
             {moreOpen && (
               <div className="ag-more-menu" role="menu" aria-label="Room tools">
+                {!hlsAudience && !duel && (
+                  <div className="ag-more-layout">
+                    <span className="ag-more-layout-label">Layout</span>
+                    {layoutSwitch}
+                  </div>
+                )}
                 <div className="ag-tool-grid">
                   <button className="ag-tool" role="menuitem" disabled title="Whiteboard — not built yet">
                     <span className="ag-tool-ico"><Icon name="monitor" size={23} /></span>

@@ -3098,6 +3098,8 @@
    Menus that hang off the row go full-width from the row's top edge. */
 .ag-ctl--chat { display: none; }
 .ag-sheet-scrim { display: none; }
+.ag-more-layout { display: none; }
+.ag-watch { display: inline-flex; align-items: center; gap: 6px; }
 
 @media (max-width: 639px) {
   .ag-root,
@@ -3119,13 +3121,20 @@
     min-height: 0;
   }
 
-  /* ── Top bar: back · two-line title · follow/⋯ ── */
+  /* ── Top bar: two rows. Back and the action buttons share the first;
+     the title block takes the whole second, so a motion gets 350px of
+     two-line room instead of whatever is left beside three buttons (a
+     room with a broadcast has "Watch stream" up here too, which left the
+     title 90px wide). ── */
   .ag-topbar {
-    gap: 10px;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 18px;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 16px;
   }
   .ag-back { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; font-size: 15px; }
-  .ag-topbar-info { flex: 1; min-width: 0; }
+  .ag-topbar-info { order: 3; flex: 1 1 100%; min-width: 0; }
+  .ag-watch { width: 32px; height: 32px; padding: 0; justify-content: center; }
+  .ag-watch-label { display: none; }
   .ag-motion {
     margin: 2px 0 3px;
     font-size: 14.5px;
@@ -3139,13 +3148,52 @@
   /* Elapsed and audience only: topic and community wrapped to a second
      meta line that ran under the stage's top edge. */
   .ag-topbar-meta > span:nth-child(n + 3) { display: none; }
-  .ag-topbar-actions { flex-shrink: 0; align-self: flex-start; gap: 6px; }
+  .ag-topbar-actions { flex-shrink: 0; margin-left: auto; gap: 6px; }
   .ag-follow { padding: 7px 11px; border-radius: 9px; font-size: 12px; }
   .ag-more { width: 32px; height: 32px; border-radius: 9px; }
   .ag-more-menu--down { max-width: calc(100vw - 24px); }
 
-  /* ── Control row: one line of 42px rounds ── */
-  .ag-controls { flex-wrap: nowrap; gap: 7px; padding: 0 8px var(--ag-controls-lift); }
+  /* ── Control row: one floating glass pill ──
+     On desktop each button carries its own glass and floats free on the
+     scene. On a phone the seven of them ride together in one long pill
+     that floats off the bottom edge — one blurred surface, the buttons
+     flat circles inside it, only the stateful ones (live, leave,
+     reacting, active) keeping a solid fill. The blur lives on ::before,
+     not on the footer itself: a backdrop-filter on the footer would make
+     it the containing block for the fixed menus that hang off the row. */
+  .ag-root,
+  .ag-main { --ag-controls-h: 58px; }
+  .ag-controls {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 6px;
+    margin: auto 10px var(--ag-controls-lift);
+    min-height: 0;
+    height: var(--ag-controls-h);
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: var(--ag-glass-rim), 0 14px 36px rgba(0, 0, 0, 0.45);
+    /* Above the host button and view toggle (20): the reaction tray and
+       the More drawer hang off this row and span the full width, so they
+       must paint over band A rather than under its right end. */
+    z-index: 21;
+  }
+  .ag-controls::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(160deg, rgba(20, 22, 32, 0.58), rgba(4, 5, 10, 0.66));
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+  .ag-root .ag-controls .ag-ctl:not(.ag-ctl--live):not(.ag-ctl--leave):not(.ag-ctl--active):not(.ag-ctl--reacting):not(.ag-ctl--sharing) {
+    border-color: transparent;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
   .ag-root .ag-ctl,
   .ag-root .ag-ctl:hover:not(:disabled),
   .ag-root .ag-ctl:focus-visible:not(:disabled),
@@ -3161,6 +3209,27 @@
   .ag-ctl-caret,
   .ag-ctl--share { display: none; }
   .ag-ctl--chat { display: grid; }
+  /* The stage/gallery/multi switcher is 130px of pill the row can't
+     spare: it moves into the More drawer (its second render). */
+  .ag-controls > .ag-layout-switch { display: none; }
+  .ag-more-layout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 10px;
+    padding: 0 4px 10px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .ag-more-layout-label { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: #8a8f9c; }
+  .ag-more-layout .ag-layout-switch {
+    height: 44px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  /* Square tiles are 163px each on a 355px drawer — shorter, not square. */
+  .ag-more-menu .ag-tool { aspect-ratio: auto; min-height: 92px; gap: 7px; }
 
   /* ── Band A ── */
   .ag-stage { bottom: var(--ag-band-a); }
@@ -3201,7 +3270,7 @@
   .ag-video-dock::-webkit-scrollbar { display: none; }
   .ag-video-tile { flex: 0 0 auto; width: 108px; border-radius: 10px; }
   .ag-cast {
-    top: calc(100px + env(safe-area-inset-top, 0px));
+    top: calc(128px + env(safe-area-inset-top, 0px));
     bottom: calc(var(--ag-band-a) + 50px);
     width: calc(100% - 20px);
   }
