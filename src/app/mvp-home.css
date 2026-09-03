@@ -6301,3 +6301,32 @@ body { background: transparent; }
   html .carousel-item.news .carousel-motion { font-size: 19px !important; line-height: 1.2 !important; }
   html .carousel-section { margin-bottom: 12px; }
 }
+
+/* ═══ Phone carousel: a live room's thumbnail is the whole slide ═══
+   The "square floats beside the panel" composition above ends in two
+   late, specific rules (`.carousel-item.has-thumb .carousel-room-thumb
+   { left: 50% }`, `.carousel-item .carousel-lower-third { right: 250px }`)
+   that outrank the 900px overrides earlier in the file — so on a phone
+   the portrait sat in the right half, the blurred copy in the left, and
+   the title was crammed into 125px. Below 900px the panel is gone and
+   there is nothing beside: the sharp thumbnail covers the slide edge to
+   edge and the title band runs the full width. */
+@media (max-width: 900px) {
+  .carousel-item.has-thumb .carousel-bg { right: 0; }
+  .carousel-item.has-thumb .carousel-room-thumb,
+  .carousel-room-thumb {
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    transform: none;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    z-index: 0;
+  }
+  .carousel-item .carousel-lower-third,
+  .carousel-item.has-thumb .carousel-lower-third { right: 0; }
+}
