@@ -279,7 +279,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
 
   return (
     <div
-      className="fixed overflow-y-auto news-page"
+      className="fixed overflow-y-auto shell-page news-page"
       style={{
         top: "var(--nav-height)",
         left: "calc(var(--sidebar-width) + 12px)",
@@ -292,11 +292,13 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
       {/* Inline spacing on purpose: this renders inside the MVP shell,
           whose CSS reset out-cascades Tailwind spacing utilities (and
           arbitrary ones like max-w-[1280px] silently fail there). */}
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 32px 40px", boxSizing: "border-box" }}>
-        <div className="flex items-center gap-3.5 mb-4 news-head">
+      {/* Same frame as Trending / Communities / Feed: 1440 wide, the same
+          gutters (12px on phones via .shell-page-inner), title top-left. */}
+      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px 40px", boxSizing: "border-box" }}>
+        <div className="flex items-center gap-3.5 mb-5 news-head">
           <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
           <span className="text-[12px] news-sub" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
-          <span className="text-[12px] ml-auto whitespace-nowrap" style={{ color: "#8b8b94" }}>
+          <span className="text-[12px] ml-auto whitespace-nowrap news-date" style={{ color: "#8b8b94" }}>
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </span>
         </div>
@@ -383,8 +385,8 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
           <>
             {majors.length > 0 && (
               <>
-                <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MAJOR STORIES</p>
-                <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))" }}>
+                <p className="m-0 mb-2.5 text-[11px] font-bold" style={{ color: "#9a9aa4", letterSpacing: "0.09em" }}>MAJOR STORIES</p>
+                <div className="grid mb-6 news-major-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(440px, 100%), 1fr))", gap: 16 }}>
                   {majors.map((st) => (
                     <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
                       <div style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}>
@@ -399,12 +401,12 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           />
                         )}
                       </div>
-                      <div className="flex flex-col gap-2 px-4 py-3 flex-1">
-                        <p className="m-0 text-[14px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, lineHeight: 1.3 }}>
+                      <div className="flex flex-col gap-2.5 flex-1" style={{ padding: "16px 18px 18px" }}>
+                        <p className="m-0 text-[17px]" style={{ color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, lineHeight: 1.25 }}>
                           {st.headline}
                         </p>
                         {st.summary && (
-                          <p className="m-0 text-[11.5px]" style={{ color: "#a9a9b4", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          <p className="m-0 text-[13px]" style={{ color: "#a9a9b4", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                             {st.summary}
                           </p>
                         )}
@@ -447,10 +449,10 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             {/* ── More headlines: compact rows ── */}
             {rest.length > 0 && (
               <>
-                <p className="m-0 mb-2 text-[10px] font-semibold" style={{ color: "#8b8b94", letterSpacing: "0.08em" }}>MORE HEADLINES</p>
-                <div className="flex flex-col gap-2 mb-5">
+                <p className="m-0 mb-2.5 text-[11px] font-bold" style={{ color: "#9a9aa4", letterSpacing: "0.09em" }}>MORE HEADLINES</p>
+                <div className="flex flex-col gap-2.5 mb-6">
                   {rest.map((st) => (
-                    <div key={st.id} className="flex items-center gap-3.5 px-4 py-3 flex-wrap" style={card}>
+                    <div key={st.id} className="flex items-center gap-4 flex-wrap" style={{ ...card, padding: "14px 18px" }}>
                       {st.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -459,13 +461,13 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           className="shrink-0"
                           loading="lazy"
                           onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }}
+                          style={{ width: 76, height: 76, borderRadius: 10, objectFit: "cover" }}
                         />
                       ) : (
                         <span className="shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: "#4a9eff" }} />
                       )}
                       <div className="flex-1" style={{ minWidth: 220 }}>
-                        <p className="m-0 text-[13px]" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{st.headline}</p>
+                        <p className="m-0 text-[15px]" style={{ color: "#f5f5f0", fontWeight: 600, lineHeight: 1.35 }}>{st.headline}</p>
                         <p className="m-0 mt-0.5 flex items-center gap-2 flex-wrap">
                           <Outlets sources={st.sources} max={2} />
                           {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
