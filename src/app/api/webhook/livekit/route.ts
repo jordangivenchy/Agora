@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { WebhookReceiver } from "livekit-server-sdk";
+import { RoomServiceClient, WebhookReceiver } from "livekit-server-sdk";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { planWebhook } from "@/lib/roomLifecycle";
 
@@ -24,6 +24,21 @@ import { planWebhook } from "@/lib/roomLifecycle";
    else can forge events. Always answer 200 fast on verified events
    (LiveKit retries non-2xx); per-event DB errors are logged and
    swallowed. /api/webhook/* is beta-gate exempt (src/proxy.ts). */
+
+/* Is this identity still connected to the LiveKit room (another device or
+   tab)? Unknown (API failure) reads as "no", so a real departure is never
+   swallowed by an outage. */
+async function stillConnected(roomId: string, identity: string, apiKey: string, apiSecret: string) {
+  const lkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+  if (!lkUrl) return false;
+  try {
+    const svc = new RoomServiceClient(lkUrl.replace(/^wss?:\/\//, "https://"), apiKey, apiSecret);
+    const participants = await svc.listParticipants(roomId);
+    return participants.some((p) => p.identity === identity);
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.LIVEKIT_API_KEY;
@@ -56,6 +71,15 @@ export async function POST(request: NextRequest) {
       const now = new Date().toISOString();
 
       if (plan.action === "participant_left") {
+        /* Two devices, one person: opening the room on a phone while the
+           desktop tab is still connected makes LiveKit drop the older
+           connection (DUPLICATE_IDENTITY) — and send participant_left
+           for an identity that is very much still in the room. Stamping
+           that as gone starts the host grace clock on a live host. Ask
+           LiveKit first; if the identity is still connected, ignore. */
+        if (await stillConnected(plan.roomId, plan.userId, apiKey, apiSecret)) {
+          return NextResponse.json({ ok: true, ignored: "still_connected" });
+        }
         await admin
           .from("debate_participants")
           .update({ left_at: now, hand_raised_at: null })

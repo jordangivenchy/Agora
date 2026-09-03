@@ -327,7 +327,16 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
                connection — iOS cuts the page's sockets the moment the
                screen locks — so remember it for the return handler and,
                if we're still on screen, come straight back. */
-            if (cancelled || (reason !== undefined && NO_RECONNECT.has(reason))) return;
+            if (cancelled) return;
+            if (reason === DisconnectReason.DUPLICATE_IDENTITY) {
+              setMediaError("This room is open on another device or tab — the call moved there.");
+              return;
+            }
+            if (reason === DisconnectReason.PARTICIPANT_REMOVED) {
+              setMediaError("You were removed from the call.");
+              return;
+            }
+            if (reason !== undefined && NO_RECONNECT.has(reason)) return;
             droppedRef.current = true;
             setLastDropAt(Date.now());
             if (document.visibilityState === "visible" && retriesRef.current < 5) {
@@ -414,11 +423,13 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   useEffect(() => {
     const back = () => {
       if (document.visibilityState !== "visible") return;
-      const room = roomRef.current;
-      const dead =
-        droppedRef.current ||
-        (everConnectedRef.current && !!room && room.state === ConnectionState.Disconnected);
-      if (!dead) return;
+      /* Only a drop we classified as ours to recover from. A room that is
+         down because the server said so — the same person joined from
+         another device (DUPLICATE_IDENTITY), a removal, a closed room —
+         must stay down: reconnecting here would kick the other device,
+         which would reconnect on its next visibility change and kick us
+         back, forever. */
+      if (!droppedRef.current) return;
       droppedRef.current = false;
       setConnectNonce((n) => n + 1);
     };
