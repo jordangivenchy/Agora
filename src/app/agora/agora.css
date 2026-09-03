@@ -3083,3 +3083,221 @@
   width: min(97%, calc((100vh - 230px) * 1.7778));
   max-width: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHONE (≤ 639px): the room becomes a call screen.
+   One viewport, nothing scrolls. The scene stays behind everything; the
+   top bar shrinks to two lines; the controls become one row of round
+   buttons pinned to the bottom (labels and the hover-expansion go —
+   there is no hover, and a tapped pill that stays :hover would shove the
+   row sideways); the chat rail turns into a bottom sheet raised by the
+   Chat button in that row. Everything that floated over the stage is
+   re-stacked into bands above the controls so nothing overlaps:
+     band A (just above the row): view toggle · host controls · queue pill
+     band B (above that):         camera dock strip · invites · media errors
+   Menus that hang off the row go full-width from the row's top edge. */
+.ag-ctl--chat { display: none; }
+.ag-sheet-scrim { display: none; }
+
+@media (max-width: 639px) {
+  .ag-root,
+  .ag-main {
+    --ag-controls-h: 62px;
+    --ag-controls-lift: calc(10px + env(safe-area-inset-bottom, 0px));
+    --ag-band-a: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 8px);
+    --ag-band-b: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 60px);
+  }
+  .ag-root {
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ag-main {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  /* ── Top bar: back · two-line title · follow/⋯ ── */
+  .ag-topbar {
+    gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 18px;
+  }
+  .ag-back { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; font-size: 15px; }
+  .ag-topbar-info { flex: 1; min-width: 0; }
+  .ag-motion {
+    margin: 2px 0 3px;
+    font-size: 14.5px;
+    line-height: 1.25;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .ag-topbar-meta { flex-wrap: wrap; gap: 3px 10px; font-size: 11px; }
+  /* Elapsed and audience only: topic and community wrapped to a second
+     meta line that ran under the stage's top edge. */
+  .ag-topbar-meta > span:nth-child(n + 3) { display: none; }
+  .ag-topbar-actions { flex-shrink: 0; align-self: flex-start; gap: 6px; }
+  .ag-follow { padding: 7px 11px; border-radius: 9px; font-size: 12px; }
+  .ag-more { width: 32px; height: 32px; border-radius: 9px; }
+  .ag-more-menu--down { max-width: calc(100vw - 24px); }
+
+  /* ── Control row: one line of 42px rounds ── */
+  .ag-controls { flex-wrap: nowrap; gap: 7px; padding: 0 8px var(--ag-controls-lift); }
+  .ag-root .ag-ctl,
+  .ag-root .ag-ctl:hover:not(:disabled),
+  .ag-root .ag-ctl:focus-visible:not(:disabled),
+  .ag-root .ag-ctl--leave,
+  .ag-root .ag-ctl--host.open {
+    grid-template-columns: 42px 0fr;
+    height: 42px;
+  }
+  .ag-root .ag-ctl-ico { width: 42px; height: 42px; }
+  .ag-root .ag-ctl-label { display: none; }
+  /* Device pickers live in Settings on a phone; screen share is a desktop
+     act (iOS has no getDisplayMedia at all). */
+  .ag-ctl-caret,
+  .ag-ctl--share { display: none; }
+  .ag-ctl--chat { display: grid; }
+
+  /* ── Band A ── */
+  .ag-stage { bottom: var(--ag-band-a); }
+  .ag-host,
+  .rail-collapsed .ag-host { right: 10px; bottom: var(--ag-band-a); }
+  .ag-host-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: calc(var(--ag-band-a) + 50px);
+    max-height: min(60dvh, 440px);
+  }
+  .ag-queue-pill {
+    left: 10px;
+    right: auto;
+    bottom: var(--ag-band-a);
+    transform: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 42px;
+    padding: 0 12px;
+    font-size: 11.5px;
+  }
+
+  /* ── Band B ── */
+  .ag-video-dock {
+    left: 10px;
+    right: 10px;
+    bottom: var(--ag-band-b);
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ag-video-dock::-webkit-scrollbar { display: none; }
+  .ag-video-tile { flex: 0 0 auto; width: 108px; border-radius: 10px; }
+  .ag-cast {
+    top: calc(100px + env(safe-area-inset-top, 0px));
+    bottom: calc(var(--ag-band-a) + 50px);
+    width: calc(100% - 20px);
+  }
+  .ag-media-error { left: 10px; right: 10px; bottom: var(--ag-band-b); transform: none; max-width: none; }
+  .ag-invite {
+    left: 10px;
+    right: 10px;
+    bottom: var(--ag-band-b);
+    transform: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .ag-invite-actions { display: flex; }
+  .ag-invite-join,
+  .ag-invite-decline { flex: 1; }
+
+  /* ── Menus hanging off the row: full width, from the row's top edge ── */
+  .ag-controls .ag-more-menu {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: var(--ag-band-a);
+    width: auto;
+    transform: none;
+  }
+  .ag-controls .ag-react-picker {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: var(--ag-band-a);
+    transform: none;
+    justify-content: space-between;
+  }
+
+  /* ── Chat: a bottom sheet ── */
+  .ag-root .ag-sidebar,
+  .ag-root.rail-collapsed .ag-sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+    width: auto;
+    height: min(68dvh, 560px);
+    padding: 0;
+    overflow: visible;
+    transform: translateY(103%);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .ag-root.ag-chat-open .ag-sidebar { transform: none; pointer-events: auto; }
+  .ag-root .ag-sidebar > * {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    /* Firmer ground than the desktop glass: the sheet sits over the
+       control row and whatever the stage is doing, on a small screen. */
+    background: rgba(9, 10, 16, 0.92);
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  .ag-root .ag-sidebar > .ag-card:not(.ag-chat-card) { overflow-y: auto; }
+  /* The rail's collapse chevron comes back as the sheet's close. */
+  .ag-rail-collapse { display: flex; width: 44px; }
+  .ag-chat-inputrow { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .ag-chat-input { font-size: 16px; } /* < 16px and iOS zooms the page on focus */
+  .ag-sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 69;
+    background: rgba(0, 0, 0, 0.42);
+    animation: agSheetScrimIn 0.25s ease;
+  }
+
+  /* ── Agora assistant: orb above band B on the left, panel full width ── */
+  .ag-assist-orb {
+    left: 10px !important;
+    bottom: calc(var(--ag-band-b) + 84px) !important;
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .ag-assist-panel {
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    bottom: var(--ag-band-a) !important;
+    max-height: min(60dvh, 460px) !important;
+  }
+}
+@keyframes agSheetScrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

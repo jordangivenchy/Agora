@@ -252,6 +252,12 @@ export default function AgoraSidebar({
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Message #discussion-chat"
                       maxLength={200}
+                      /* Phone keyboards cover a fixed bottom sheet; nudge the
+                         composer back into the visual viewport. */
+                      onFocus={(e) => {
+                        const el = e.currentTarget;
+                        setTimeout(() => el.scrollIntoView({ block: "nearest" }), 300);
+                      }}
                     />
                   </form>
                 ) : (

@@ -292,7 +292,7 @@ export default function AgoraAssistant({
               ? "Agora is listening in the background (interference off)"
               : 'Ask Agora — or say "Hey, Agora"'
         }
-        className={`fixed cursor-pointer flex items-center justify-center border-none ${orbClass}`}
+        className={`ag-assist-orb fixed cursor-pointer flex items-center justify-center border-none ${orbClass}`}
         style={{
           left: 18,
           bottom: 84,
@@ -313,7 +313,7 @@ export default function AgoraAssistant({
 
       {openPanel && (
         <div
-          className="fixed flex flex-col"
+          className="ag-assist-panel fixed flex flex-col"
           style={{
             left: 18,
             bottom: 140,

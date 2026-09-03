@@ -36,6 +36,12 @@ import type { User } from "@supabase/supabase-js";
 import { Icon } from "@/components/icons";
 import "../agora.css";
 
+/* Phone breakpoint shared with agora.css: below it the chat rail is a
+   bottom sheet driven by `chatOpen`, and the rail-collapse button closes
+   that sheet instead of folding the desktop rail. */
+const isPhoneViewport = () =>
+  typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
+
 function fmtElapsed(fromIso: string | null): string {
   if (!fromIso) return "00:00:00";
   const ms = Date.now() - new Date(fromIso).getTime();
@@ -206,6 +212,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      watching without the chat in frame. Lives here rather than in the
      rail because the collapsed class drives layout on .ag-root. */
   const [railCollapsed, setRailCollapsed] = useState(false);
+  /* Phone-only: the chat sheet. Desktop ignores it (agora.css). */
+  const [chatOpen, setChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /* Audience overflow: watch the composited HLS stream instead of WebRTC. */
   const [hlsOpen, setHlsOpen] = useState(false);
@@ -384,6 +392,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      it fires before focus moves, so the panel is already gone by the time
      whatever was clicked underneath reacts. */
   useEscapeClose(moreOpen, () => setMoreOpen(false));
+  useEscapeClose(chatOpen, () => setChatOpen(false));
   useEscapeClose(topMenuOpen, () => setTopMenuOpen(false));
   useEscapeClose(camMenuOpen, () => setCamMenuOpen(false));
   useEscapeClose(micMenuOpen, () => setMicMenuOpen(false));
@@ -1252,7 +1261,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         : "Raise your hand to request to speak";
 
   return (
-    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}`}>
+    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}`}>
       <div className="ag-main">
         {/* ── Top bar ── */}
         {(broadcast || duel) && (
@@ -1785,6 +1794,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                     setMicMenuOpen(false);
                     setSettingsOpen(true);
                     setRailCollapsed(false);
+                    setChatOpen(true);
                   }}
                 >
                   <span className="ag-cam-check" />
@@ -1868,6 +1878,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       setCamMenuOpen(false);
                       setSettingsOpen(true);
                       setRailCollapsed(false);
+                      setChatOpen(true);
                     }}
                   >
                   <span className="ag-cam-check" />
@@ -1961,7 +1972,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           {/* ── Share screen ── */}
           {!hlsAudience && (
           <button
-            className={`ag-ctl ${call.screenOn ? "ag-ctl--sharing" : ""}`}
+            className={`ag-ctl ag-ctl--share ${call.screenOn ? "ag-ctl--sharing" : ""}`}
             title={
               !onStage(myRole)
                 ? "Screen share — speakers only"
@@ -2015,6 +2026,18 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               the same reasoning as the media-error toast above: a control
               that looks ready and does nothing is worse than one that says
               it isn't ready. Settings is real and goes to /settings. */}
+          {/* ── Chat (phones only — agora.css hides it wider; the desktop rail
+                has its own collapse handle) ── */}
+          <button
+            className={`ag-ctl ag-ctl--chat${chatOpen ? " ag-ctl--active" : ""}`}
+            title={chatOpen ? "Hide chat" : "Chat"}
+            aria-expanded={chatOpen}
+            onClick={() => setChatOpen((v) => !v)}
+          >
+            <span className="ag-ctl-ico"><Icon name="message-circle" size={19} /></span>
+            <span className="ag-ctl-label">Chat</span>
+          </button>
+
           <div className="ag-react-wrap" ref={moreWrapRef}>
             {moreOpen && (
               <div className="ag-more-menu" role="menu" aria-label="Room tools">
@@ -2053,6 +2076,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       setCamMenuOpen(false);
                       setSettingsOpen(true);
                       setRailCollapsed(false);
+                      setChatOpen(true);
                     }}
                   >
                     <span className="ag-tool-ico"><Icon name="settings" size={23} /></span>
@@ -2115,12 +2139,20 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
       </div>
 
+      {/* Phone chat sheet scrim — tap outside to close. */}
+      {chatOpen && !broadcast && (
+        <div className="ag-sheet-scrim" onClick={() => setChatOpen(false)} aria-hidden />
+      )}
+
       {!broadcast && (
         <AgoraSidebar
           roomId={roomId}
           currentUser={currentUser}
           collapsed={railCollapsed}
-          onToggleCollapsed={() => setRailCollapsed((v) => !v)}
+          onToggleCollapsed={() => {
+            if (isPhoneViewport()) setChatOpen(false);
+            else setRailCollapsed((v) => !v);
+          }}
           settings={
             settingsOpen
               ? {
