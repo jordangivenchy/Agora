@@ -113,22 +113,22 @@ export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
     <div className="flex flex-col items-center shrink-0 vote-box" style={{ width: 34 }}>
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === 1 ? 0 : 1); }}
-        className="cursor-pointer bg-transparent border-none px-1"
-        style={{ color: post.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", fontSize: size + 1 }}
+        className="cursor-pointer bg-transparent border-none px-1 inline-flex items-center justify-center"
+        style={{ color: post.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
         aria-label="Upvote"
       >
-        ▲
+        <Icon name="chevron-up" size={size + 5} />
       </button>
       <span className="text-center" style={{ color: "#eeeef5", fontSize: size, fontWeight: 600 }}>
         {post.score}
       </span>
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === -1 ? 0 : -1); }}
-        className="cursor-pointer bg-transparent border-none px-1"
-        style={{ color: post.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", fontSize: size + 1 }}
+        className="cursor-pointer bg-transparent border-none px-1 inline-flex items-center justify-center"
+        style={{ color: post.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
         aria-label="Downvote"
       >
-        ▼
+        <Icon name="chevron-down" size={size + 5} />
       </button>
     </div>
   );

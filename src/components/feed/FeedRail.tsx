@@ -177,7 +177,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
     <aside className="hidden lg:block shrink-0 sticky feed-rail" style={{ width: 310, top: "calc(var(--nav-height, 60px) + 8px)" }}>
       {live.length > 0 && (
         <>
-          {sectionLabel("LIVE NOW", <span style={{ color: "#ef4444", letterSpacing: 0 }}>●</span>)}
+          {sectionLabel("LIVE NOW", <span className="feed-live-dot" aria-hidden="true" />)}
           {live.map((r) => (
             <a key={r.id} href={roomPath(r)} className="flex items-center gap-2.5 mb-1 px-3.5 py-2 no-underline" style={liveRow}>
               <UserAvatar size={26} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
@@ -215,7 +215,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
                   ? { background: "transparent", border: "0.5px solid rgba(111,211,160,0.4)", color: "#6fd3a0", fontFamily: "inherit" }
                   : { background: "#2f7fe0", border: "none", color: "#fff", fontFamily: "inherit", borderRadius: 6 }}
               >
-                {followed.has(p.id) ? "✓" : "Follow"}
+                {followed.has(p.id) ? <Icon name="check" size={11} /> : "Follow"}
               </button>
             </div>
           ))}

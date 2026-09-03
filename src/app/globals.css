@@ -99,6 +99,11 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
+/* Live dot (feed sections) — the same beat as the hero's LIVE badge. */
+@keyframes feedLiveDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
 /* Route-transition skeleton (PageSkeleton.tsx) — Kick's 2s pulse, and
    the top bar's trickle: quick to a third, then ever slower, never done
    on its own (the skeleton unmounting is what finishes it). */
@@ -2227,6 +2232,15 @@ html.reduce-motion .nav-sparkle {
   .sk-bone { animation: none; }
   .sk-progress { animation: none; transform: scaleX(0.6); }
 }
+
+/* Feed: "Live now" dot — a drawn dot, not a text glyph (those render
+   differently per platform font). */
+.feed-live-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.7);
+  animation: feedLiveDot 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .feed-live-dot { animation: none; } }
 
 /* Empty sheet (no query): a proper landing rather than one sentence. */
 .search-empty {

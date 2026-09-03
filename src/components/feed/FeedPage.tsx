@@ -456,7 +456,7 @@ export default function FeedPage({ open, onClose }: Props) {
             {live.length > 0 && (
               <section className="mb-5 lg:hidden feed-live">
                 <p className="m-0 mb-2 text-[12px] font-semibold inline-flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.7)" }}>
-                  <span style={{ color: "#ef4444" }}>●</span> Live now
+                  <span className="feed-live-dot" aria-hidden="true" /> Live now
                 </p>
                 <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
                   {live.map((it) => it.kind === "live" && (

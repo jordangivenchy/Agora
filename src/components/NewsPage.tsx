@@ -330,7 +330,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
               </div>
               <span className="text-[11px]" style={{ color: "#9a9aa2" }}>
                 {pct.total.toLocaleString()} votes
-                {liveNow > 0 && <> · <span style={{ color: "#f09595" }}>● {liveNow} discussion{liveNow === 1 ? "" : "s"} live</span></>}
+                {liveNow > 0 && <> · <span style={{ color: "#f09595" }}><span className="feed-live-dot" aria-hidden="true" style={{ marginRight: 5 }} />{liveNow} discussion{liveNow === 1 ? "" : "s"} live</span></>}
               </span>
             </div>
             <div className="flex gap-2.5 flex-wrap">
@@ -422,7 +422,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                           {queued[st.id] ? (
                             <div className="flex flex-col gap-1.5">
                               <p className="m-0 text-[11px] text-center" style={{ color: "#c9b8f2" }}>
-                                <span className="inline-block animate-pulse">●</span> In queue — waiting for a partner
+                                <span className="feed-live-dot" aria-hidden="true" style={{ background: "#c9b8f2", boxShadow: "none", marginRight: 5 }} />In queue — waiting for a partner
                               </p>
                               <button onClick={() => leaveQueue(st)} disabled={queueBusy === st.id} style={{ ...readBtn, width: "100%" }}>
                                 Leave queue

@@ -1561,22 +1561,22 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <span className="flex items-center gap-1">
                     <button
                       onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
-                      className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-                      style={{ color: c.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)" }}
+                      className="cursor-pointer bg-transparent border-none p-0 inline-flex items-center"
+                      style={{ color: c.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
                       aria-label="Upvote comment"
                     >
-                      ▲
+                      <Icon name="chevron-up" size={15} />
                     </button>
                     <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.65)", fontWeight: 600, minWidth: 12, textAlign: "center" }}>
                       {c.score}
                     </span>
                     <button
                       onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
-                      className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-                      style={{ color: c.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)" }}
+                      className="cursor-pointer bg-transparent border-none p-0 inline-flex items-center"
+                      style={{ color: c.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
                       aria-label="Downvote comment"
                     >
-                      ▼
+                      <Icon name="chevron-down" size={15} />
                     </button>
                   </span>
                   <button
@@ -2047,7 +2047,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           />
                           <span className="truncate" style={{ color: "rgba(238,238,245,0.5)" }}>{d.community_name}</span>
                           <span className="ml-auto shrink-0">
-                            {live ? "● LIVE — join" : fmtWhen(d.scheduled_start)}
+                            {live ? <><span className="feed-live-dot" aria-hidden="true" style={{ marginRight: 5 }} /> LIVE — join</> : fmtWhen(d.scheduled_start)}
                           </span>
                         </span>
                         <span className="block mt-0.5 text-[11.5px] leading-snug" style={{

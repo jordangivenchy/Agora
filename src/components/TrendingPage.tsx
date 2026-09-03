@@ -253,7 +253,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                 ))}
               </div>
               <span className="text-[11px] ml-auto whitespace-nowrap" style={{ color: "#6b6b74" }}>
-                <span style={{ color: "#f09595" }}>●</span> updated in real time
+                <span className="feed-live-dot" aria-hidden="true" /> updated in real time
               </span>
             </>
           )}
@@ -498,7 +498,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                       )}
                       {r.status === "live" ? (
                         <span className="absolute top-2 left-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full" style={{ background: "#e24b4a", color: "#fcebeb" }}>
-                          ● LIVE
+                          <span className="feed-live-dot" aria-hidden="true" style={{ background: "#fff", boxShadow: "none", width: 6, height: 6, marginRight: 4 }} />LIVE
                         </span>
                       ) : r.status === "created" ? (
                         <span className="absolute top-2 left-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full" style={{ background: "rgba(51,41,26,0.95)", border: "0.5px solid #6b5a30", color: "#f4d47c" }}>
