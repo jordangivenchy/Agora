@@ -3106,7 +3106,7 @@
   .ag-root,
   .ag-main {
     --ag-controls-h: 62px;
-    --ag-controls-lift: calc(10px + env(safe-area-inset-bottom, 0px));
+    --ag-controls-lift: calc(8px + env(safe-area-inset-bottom, 0px));
     --ag-band-a: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 8px);
     --ag-band-b: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 60px);
   }
@@ -3129,29 +3129,37 @@
      title 90px wide). ── */
   .ag-topbar {
     flex-wrap: wrap;
-    gap: 6px 10px;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 16px;
+    gap: 4px 8px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 12px;
   }
-  .ag-back { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; font-size: 15px; }
+  .ag-back { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
   .ag-topbar-info { order: 3; flex: 1 1 100%; min-width: 0; }
-  .ag-watch { width: 32px; height: 32px; padding: 0; justify-content: center; }
+  .ag-watch { width: 30px; height: 30px; padding: 0; justify-content: center; }
+  .ag-live-tag { font-size: 9.5px; letter-spacing: 0.12em; }
   .ag-watch-label { display: none; }
   .ag-motion {
-    margin: 2px 0 3px;
-    font-size: 14.5px;
-    line-height: 1.25;
+    margin: 1px 0 2px;
+    font-size: 13.5px;
+    line-height: 1.2;
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
-  .ag-topbar-meta { flex-wrap: wrap; gap: 3px 10px; font-size: 11px; }
-  /* Elapsed and audience only: topic and community wrapped to a second
-     meta line that ran under the stage's top edge. */
-  .ag-topbar-meta > span:nth-child(n + 3) { display: none; }
+  /* One line, all of it: elapsed · audience · topic · community at
+     10.5px, the tail fading out rather than wrapping. */
+  .ag-topbar-meta {
+    flex-wrap: nowrap;
+    gap: 9px;
+    font-size: 10.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
+  }
+  .ag-topbar-meta > span { flex-shrink: 0; }
   .ag-topbar-actions { flex-shrink: 0; margin-left: auto; gap: 6px; }
-  .ag-follow { padding: 7px 11px; border-radius: 9px; font-size: 12px; }
-  .ag-more { width: 32px; height: 32px; border-radius: 9px; }
+  .ag-follow { padding: 0 10px; height: 30px; border-radius: 8px; font-size: 11.5px; }
+  .ag-more { width: 30px; height: 30px; border-radius: 8px; font-size: 15px; }
   .ag-more-menu--down { max-width: calc(100vw - 24px); }
 
   /* ── Control row: one floating glass pill ──
@@ -3163,7 +3171,7 @@
      not on the footer itself: a backdrop-filter on the footer would make
      it the containing block for the fixed menus that hang off the row. */
   .ag-root,
-  .ag-main { --ag-controls-h: 58px; }
+  .ag-main { --ag-controls-h: 54px; }
   .ag-controls {
     flex-wrap: nowrap;
     justify-content: space-between;
@@ -3171,7 +3179,7 @@
     margin: auto 10px var(--ag-controls-lift);
     min-height: 0;
     height: var(--ag-controls-h);
-    padding: 0 8px;
+    padding: 0 7px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: var(--ag-glass-rim), 0 14px 36px rgba(0, 0, 0, 0.45);
@@ -3200,10 +3208,10 @@
   .ag-root .ag-ctl:focus-visible:not(:disabled),
   .ag-root .ag-ctl--leave,
   .ag-root .ag-ctl--host.open {
-    grid-template-columns: 42px 0fr;
-    height: 42px;
+    grid-template-columns: 40px 0fr;
+    height: 40px;
   }
-  .ag-root .ag-ctl-ico { width: 42px; height: 42px; }
+  .ag-root .ag-ctl-ico { width: 40px; height: 40px; }
   .ag-root .ag-ctl-label { display: none; }
   /* Device pickers live in Settings on a phone; screen share is a desktop
      act (iOS has no getDisplayMedia at all). */
@@ -3224,13 +3232,13 @@
   }
   .ag-more-layout-label { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: #8a8f9c; }
   .ag-more-layout .ag-layout-switch {
-    height: 44px;
+    height: 40px;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: none;
     box-shadow: none;
   }
   /* Square tiles are 163px each on a 355px drawer — shorter, not square. */
-  .ag-more-menu .ag-tool { aspect-ratio: auto; min-height: 92px; gap: 7px; }
+  .ag-more-menu .ag-tool { aspect-ratio: auto; min-height: 84px; gap: 6px; font-size: 11.5px; }
 
   /* ── Band A ── */
   .ag-stage { bottom: var(--ag-band-a); }
@@ -3252,9 +3260,9 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    height: 42px;
-    padding: 0 12px;
-    font-size: 11.5px;
+    height: 38px;
+    padding: 0 11px;
+    font-size: 11px;
   }
 
   /* ── Band B ── */
@@ -3269,9 +3277,9 @@
     -webkit-overflow-scrolling: touch;
   }
   .ag-video-dock::-webkit-scrollbar { display: none; }
-  .ag-video-tile { flex: 0 0 auto; width: 108px; border-radius: 10px; }
+  .ag-video-tile { flex: 0 0 auto; width: 96px; border-radius: 9px; }
   .ag-cast {
-    top: calc(128px + env(safe-area-inset-top, 0px));
+    top: calc(124px + env(safe-area-inset-top, 0px));
     bottom: calc(var(--ag-band-a) + 50px);
     width: calc(100% - 20px);
   }
