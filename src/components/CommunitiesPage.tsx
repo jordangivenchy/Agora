@@ -1718,7 +1718,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
-        <div className="flex items-center gap-3.5 mb-5 flex-wrap cm-head">
+        <div className="page-head cm-head">
           {(openPost || selected !== "all") && (
             <button
               onClick={() => {
@@ -1739,19 +1739,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               Back
             </button>
           )}
-          <span
-            className="flex flex-col cursor-pointer"
-            style={{ gap: 4 }}
+          <h1
+            className="page-title cursor-pointer"
             title="Back to all posts"
             onClick={() => { closePostDetail(); setSelected("all"); }}
           >
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, color: "#eeeef5", lineHeight: 1 }}>
-              Communities
-            </span>
-            <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.45)" }}>
-              Boards for your school, team, or topic
-            </span>
-          </span>
+            Communities
+          </h1>
           {/* The two ways to add something, together: post is the primary
               (yellow), a new board the quiet one. Hidden inside a post. */}
           {!openPost && (
@@ -1773,6 +1767,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             </span>
           )}
         </div>
+
+        {!openPost && selected === "all" && (
+          <p className="page-sub">Boards for your school, team, or topic</p>
+        )}
 
         {error && (
           <p className="mb-3 px-4 py-2.5 rounded-lg text-[12px]"

@@ -295,8 +295,8 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
       {/* Same frame as Trending / Communities / Feed: 1440 wide, the same
           gutters (12px on phones via .shell-page-inner), title top-left. */}
       <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px 40px", boxSizing: "border-box" }}>
-        <div className="flex items-center gap-3.5 mb-5 news-head">
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>News</span>
+        <div className="page-head news-head">
+          <h1 className="page-title">News</h1>
           <span className="text-[12px] news-sub" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>
           <span className="text-[12px] ml-auto whitespace-nowrap news-date" style={{ color: "#8b8b94" }}>
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}

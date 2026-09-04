@@ -407,10 +407,8 @@ export default function FeedPage({ open, onClose }: Props) {
       }}
     >
       <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
-        <div className="flex items-center gap-4 mb-5 flex-wrap feed-head">
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
-            Your feed
-          </span>
+        <div className="page-head feed-head">
+          <h1 className="page-title">Your feed</h1>
           <div className="flex gap-2 flex-1 flex-wrap feed-filters">
             {FILTERS.map((f) => (
               <button

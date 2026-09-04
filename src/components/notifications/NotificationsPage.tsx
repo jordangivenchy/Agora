@@ -163,9 +163,7 @@ export default function NotificationsPage() {
       <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
           <div>
-            <h1 className="m-0 text-[22px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-              Notifications
-            </h1>
+            <h1 className="page-title">Notifications</h1>
             <p className="m-0 mt-1 text-[12.5px]" style={{ color: "#8b8b94" }}>
               {unread > 0 ? `${unread} unread` : "You're all caught up"}
               {" · "}

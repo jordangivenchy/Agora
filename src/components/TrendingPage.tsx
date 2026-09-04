@@ -221,7 +221,7 @@ export default function TrendingPage({ open, onClose }: Props) {
       }}
     >
       <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
-        <div className="flex items-center gap-4 mb-5 trend-head">
+        <div className="page-head trend-head">
           {activeShort && (
             <button
               onClick={() => setActiveShort(null)}
@@ -233,9 +233,7 @@ export default function TrendingPage({ open, onClose }: Props) {
           )}
           {!activeShort && (
             <>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 24, color: "#f5f5f0" }}>
-                Trending
-              </span>
+              <h1 className="page-title">Trending</h1>
               <div className="flex gap-2 flex-1 flex-wrap trend-chips">
                 {CHIP_FILTERS.map((c) => (
                   <button
