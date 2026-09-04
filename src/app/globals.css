@@ -2130,9 +2130,8 @@ html.reduce-motion .nav-sparkle {
   max-height: 78vh;
   z-index: 901;
   display: flex; flex-direction: column;
-  background: rgba(10,12,18,0.97);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  /* Solid black: the page underneath used to ghost through the card. */
+  background: #000;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px;
   box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.4);
