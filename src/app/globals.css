@@ -2304,7 +2304,7 @@ html.reduce-motion .nav-sparkle {
 /* Flat search pill — matches the messages / bell buttons (no liquid glass).
    The Create button inside keeps its own styling. */
 #navSearchWrap.agora-search-shell {
-  background: rgba(255,255,255,0.05) !important;
+  background: #000 !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
@@ -2314,10 +2314,10 @@ html.reduce-motion .nav-sparkle {
 #navSearchWrap.agora-search-shell::before { display: none !important; }
 #navSearchWrap.agora-search-shell > canvas { display: none !important; }
 #navSearchWrap.agora-search-shell input { background: transparent !important; }
-#navSearchWrap.agora-search-shell:hover { background: rgba(255,255,255,0.07) !important; }
+#navSearchWrap.agora-search-shell:hover { background: #0a0a0c !important; }
 #navSearchWrap.agora-search-shell[data-search-open],
 #navSearchWrap.agora-search-shell:focus-within {
-  background: rgba(255,255,255,0.08) !important;
+  background: #0a0a0c !important;
   border-color: rgba(255,255,255,0.2) !important;
 }
 

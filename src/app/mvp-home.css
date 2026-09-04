@@ -3153,7 +3153,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 
 /* ─── SEARCH SHELL ─── */
-.agora-search-shell{position:relative;display:flex;align-items:center;width:min(480px,100%);padding:.28rem .28rem .28rem .28rem;border-radius:9999px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(17,10,29,.88),rgba(7,4,12,.92));backdrop-filter:blur(18px);box-shadow:0 0 0 1px rgba(255,255,255,.02) inset,0 8px 32px rgba(0,0,0,.28),0 0 36px rgba(25,118,210,.08)}
+.agora-search-shell{position:relative;display:flex;align-items:center;width:min(480px,100%);padding:.28rem .28rem .28rem .28rem;border-radius:9999px;border:1px solid rgba(255,255,255,.08);background:#000;backdrop-filter:blur(18px);box-shadow:0 0 0 1px rgba(255,255,255,.02) inset,0 8px 32px rgba(0,0,0,.28),0 0 36px rgba(25,118,210,.08)}
 .agora-search-shell::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(120deg,rgba(255,255,255,.07),rgba(66,165,245,.16),rgba(255,255,255,.04));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:0}
 
 /* override original nav-search rules when shell is active */
@@ -6254,8 +6254,8 @@ body { background: transparent; }
     align-items: center;
     height: 44px !important;
     padding: 0 4px 0 14px;
-    background: rgba(255,255,255,0.09) !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
+    background: #000 !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
     border-radius: 9999px !important;
   }
   html .nav-search[data-search-open] .nav-search-glyph {
