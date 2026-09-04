@@ -1096,7 +1096,7 @@ export default function ProfileView({
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1.5 mt-5 mb-4 flex-wrap profile-tabs">
-          {tabBtn("debates", "Discussions", counts.debates)}
+          {tabBtn("debates", "Replays", counts.debates)}
           {tabBtn("scheduled", "Scheduled", counts.scheduled)}
           {tabBtn("posts", "Posts", counts.posts)}
           {tabBtn("reposts", "Reposts", counts.reposts)}
@@ -1191,8 +1191,8 @@ export default function ProfileView({
             ) : recordedDiscussions.length === 0 ? (
               emptyState(
                 "mic",
-                isSelf ? "No recorded discussions yet" : `${first} has no recorded discussions`,
-                isSelf ? "Recorded discussions are saved here — turn on recording in Settings before you host." : "Their recorded discussions will show up here.",
+                isSelf ? "No replays yet" : `${first} has no replays yet`,
+                isSelf ? "Replays are saved here — turn on recording in Settings before you host." : "Their replays will show up here.",
                 isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
               )
             ) : (
@@ -1244,8 +1244,17 @@ export default function ProfileView({
                         {d.thumbnail_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={d.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : hostAvatar ? (
+                          /* No uploaded art: the host's portrait IS the
+                             thumbnail, full-bleed, the way the home cards
+                             and feed rows treat it — a 52px avatar on a
+                             gradient read as a missing image. */
+                          <>
+                            <UserAvatar size={420} radius={0} username={hostName} avatarUrl={hostAvatar} seed={d.host_id ?? d.id} />
+                            <span aria-hidden style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.42))" }} />
+                          </>
                         ) : (
-                          <UserAvatar size={52} username={hostName} avatarUrl={hostAvatar ?? null} seed={d.host_id ?? d.id} />
+                          <UserAvatar size={52} username={hostName} avatarUrl={null} seed={d.host_id ?? d.id} />
                         )}
                         {/* Status badge */}
                         <span

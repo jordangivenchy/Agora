@@ -594,10 +594,10 @@ export default function DebateReplay({
       <div className="dr-wrap">
         <div className="dr-topbar">
           <span className="dr-tag">
-            <span className="dr-tag-dot" /> {recorded ? "Recorded discussion" : "Ended discussion"}
+            <span className="dr-tag-dot" /> {recorded ? "Replay" : "Ended · no recording"}
           </span>
           <span className="dr-spacer" />
-          <button className="dr-btn" onClick={share} title="Copy the discussion link">
+          <button className="dr-btn" onClick={share} title="Copy the replay link">
             <Icon name="share" size={13} /> Share
           </button>
         </div>
@@ -615,7 +615,7 @@ export default function DebateReplay({
             </span>
             {recorded && durationLabel && (
               <span>
-                <Icon name="video" size={12} /> Recorded · {durationLabel}
+                <Icon name="video" size={12} /> Replay · {durationLabel}
               </span>
             )}
             {!recorded && durationLabel && <span>Lasted {durationLabel}</span>}
@@ -814,8 +814,8 @@ export default function DebateReplay({
           <section className="dr-section">
             <div className="dr-section-head">
               <div>
-                <h2 className="dr-section-title">More discussions</h2>
-                <p className="dr-section-sub">Recent recorded discussions to watch next</p>
+                <h2 className="dr-section-title">More replays</h2>
+                <p className="dr-section-sub">Recent replays to watch next</p>
               </div>
             </div>
             <div className="dr-more-grid">

@@ -41,7 +41,7 @@ const OS_BODY: Record<string, string> = {
   room_live: "A discussion you set a reminder for just went live.",
   followed_live: "Someone you follow just went live.",
   followed_scheduled: "Someone you follow scheduled a discussion.",
-  debate_replay_ready: "Your recorded discussion is ready to watch.",
+  debate_replay_ready: "Your replay is ready to watch.",
   join_request: "Someone applied to join your community.",
   join_approved: "Your community application was approved.",
   discussion_opened: "Someone opened the comment thread on your discussion.",
