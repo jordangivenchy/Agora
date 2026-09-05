@@ -518,7 +518,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
         {/* Selected field: popular rooms */}
         <div className="flex items-center gap-3 mb-0.5">
-          <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+          <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#2f7fe0", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
             Popular rooms
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -670,7 +670,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {selScheduled.length > 0 ? (
           <>
             <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-              <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+              <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#8b5cf6", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
                 Scheduled
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -778,7 +778,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-0.5">
-              <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+              <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#8b5cf6", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
                 Scheduled
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
@@ -793,7 +793,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
         {/* Selected field: queue questions */}
         <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-          <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f5f5f0", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+          <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f4d47c", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
             Daily topics
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
