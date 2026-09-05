@@ -2386,6 +2386,17 @@ html.reduce-motion .nav-sparkle {
   :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     --sidebar-width: 240px;
   }
+  /* Hover intent: the pointer has to rest on the rail for a beat before
+     it opens, so brushing across it on the way somewhere else doesn't
+     flick the whole page. The delay lives on the opening state only —
+     leaving collapses at once (the resting rule has none) — and keyboard
+     focus opens immediately. */
+  :root:has(#sidebar:hover) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
+    transition-delay: 140ms;
+  }
+  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
+    transition-delay: 0s;
+  }
 }
 
 /* ═══ Phones (<640px) ═══════════════════════════════════════════════

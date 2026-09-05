@@ -6173,6 +6173,8 @@ body { background: transparent; }
     transform: none;
     transition-delay: 0.05s;
   }
+  /* Labels wait out the rail's hover-intent delay (globals.css) too. */
+  .sidebar:hover .nav-label { transition-delay: 0.19s; }
   .sidebar-bottom-zone {
     opacity: 0;
     pointer-events: none;
@@ -6184,6 +6186,7 @@ body { background: transparent; }
     pointer-events: auto;
     transition-delay: 0.06s;
   }
+  .sidebar:hover .sidebar-bottom-zone { transition-delay: 0.2s; }
 }
 
 /* ── No indicator bar (2026-08-26): the active tab reads through its
