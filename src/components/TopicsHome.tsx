@@ -66,6 +66,8 @@ const POLL_MS = 2500;
 const REFRESH_MS = 30000;
 /* A field can carry a dozen questions; three rows of two is a screenful. */
 const QUESTIONS_SHOWN = 6;
+/* Popular rooms: three up front; a line under the strip unfolds the rest. */
+const ROOMS_SHOWN = 3;
 
 /* Rooms carry scheduling as a scheduled_start on a 'created' (or
    'scheduled') row — mirror page.tsx's classification. */
@@ -186,6 +188,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [reminders, setReminders] = useState<Record<string, { count: number; amSet: boolean }>>({});
   const [selectedKey, setSelectedKey] = useState<string>(TOPICS[0].key);
   const [showAllQuestions, setShowAllQuestions] = useState(false);
+  const [showAllRooms, setShowAllRooms] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -431,7 +434,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               key={cat.key}
               role="tab"
               aria-selected={active}
-              onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); }}
+              onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); setShowAllRooms(false); }}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
                 background: "rgba(11,11,13,0.95)",
@@ -532,8 +535,12 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         )}
 
         {selRooms.length > 0 && (
-          <div ref={roomsRowRef} className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-            {selRooms.map((r) => (
+          <div
+            ref={roomsRowRef}
+            className={`flex gap-3 pb-1 ${showAllRooms ? "flex-wrap" : "overflow-x-auto"}`}
+            style={{ scrollbarWidth: "none" }}
+          >
+            {(showAllRooms ? selRooms : selRooms.slice(0, ROOMS_SHOWN)).map((r) => (
               <div
                 key={r.id}
                 role="link"
@@ -633,6 +640,20 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {selRooms.length > ROOMS_SHOWN && (
+          <div className="flex items-center gap-3" style={{ marginTop: 2 }}>
+            <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+            <button
+              onClick={() => setShowAllRooms((v) => !v)}
+              aria-expanded={showAllRooms}
+              className="cursor-pointer text-[11.5px] px-3 py-1 rounded-full"
+              style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+            >
+              {showAllRooms ? "Show fewer" : `Show ${selRooms.length - ROOMS_SHOWN} more`}
+            </button>
+            <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
           </div>
         )}
 
