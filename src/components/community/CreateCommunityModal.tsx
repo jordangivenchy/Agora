@@ -57,6 +57,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreated?: (c: { id: string; name: string }) => void;
+  /* The Discussion | Community switch in the header; hidden when absent. */
+  onCreateDiscussion?: () => void;
+  /* See CreateRoomModal: crossfade phases for the switch. */
+  switchPhase?: "in" | "out";
 }
 
 const field: CSSProperties = {
@@ -80,7 +84,7 @@ const label: CSSProperties = {
 };
 const hintStyle: CSSProperties = { fontSize: 11.5, color: "rgba(238,238,245,0.42)", marginTop: 5 };
 
-export default function CreateCommunityModal({ open, onClose, onCreated }: Props) {
+export default function CreateCommunityModal({ open, onClose, onCreated, onCreateDiscussion, switchPhase }: Props) {
   const [supabase] = useState(() => createClient());
   useEscapeClose(open, onClose);
 
@@ -231,7 +235,12 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
   return createPortal(
     <div
       className="fixed inset-0 z-[500] flex items-center justify-center p-5 ccm-overlay"
-      style={{ background: "rgba(0,0,0,0.78)", backdropFilter: "blur(4px)", animation: "modalIn 0.2s ease" }}
+      style={{
+        background: switchPhase === "out" ? "transparent" : "rgba(0,0,0,0.78)",
+        backdropFilter: switchPhase === "out" ? "none" : "blur(4px)",
+        animation: switchPhase ? "none" : "modalIn 0.2s ease",
+        pointerEvents: switchPhase === "out" ? "none" : undefined,
+      }}
       onClick={onClose}
     >
       <div
@@ -242,12 +251,11 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
         style={{
           maxWidth: 560,
           maxHeight: "92vh",
-          background: "rgba(18,18,21,0.95)",
-          backdropFilter: "blur(24px)",
+          background: "#000",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 20,
           boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
-          animation: "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+          animation: switchPhase === "out" ? "modalPanelOut 0.16s ease forwards" : "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
           fontFamily: "'DM Sans', sans-serif",
         }}
         onClick={(e) => e.stopPropagation()}
@@ -258,6 +266,33 @@ export default function CreateCommunityModal({ open, onClose, onCreated }: Props
             <h2 id="ccm-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#f5f5f0" }}>
               Create a community
             </h2>
+            {onCreateDiscussion && (
+              <div
+                role="tablist"
+                aria-label="What to create"
+                className="inline-flex items-center"
+                style={{ marginTop: 10, padding: 3, borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  onClick={onCreateDiscussion}
+                  className="cursor-pointer inline-flex items-center gap-1.5"
+                  style={{ padding: "5px 12px", borderRadius: 999, background: "transparent", border: "none", color: "rgba(238,238,245,0.7)", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}
+                >
+                  <Icon name="mic" size={12} /> Discussion
+                </button>
+                <span
+                  role="tab"
+                  aria-selected="true"
+                  className="inline-flex items-center gap-1.5"
+                  style={{ padding: "5px 12px", borderRadius: 999, background: "#ffb700", color: "#1a0e00", fontSize: 12, fontWeight: 700, fontFamily: "inherit" }}
+                >
+                  <Icon name="users-round" size={12} /> Community
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2" style={{ marginTop: 8 }} aria-label={`Step ${step + 1} of ${steps.length}`}>
               {steps.map((s, i) => (
                 <span key={s} className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, fontWeight: 600, color: i === step ? "#ffb700" : i < step ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)" }}>

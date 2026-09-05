@@ -23,6 +23,10 @@ interface Props {
   communityName?: string;
   /** Site-wide hand-off to the community creation flow (foot of the form). */
   onCreateCommunity?: () => void;
+  /* Crossfade with the community modal: "out" fades this panel away over a
+     transparent overlay (the incoming modal carries the darkness), "in"
+     skips the overlay's own fade so the backdrop never double-dims. */
+  switchPhase?: "in" | "out";
 }
 
 /* Format a Date as the local "YYYY-MM-DDTHH:mm" string that datetime-local
@@ -45,7 +49,7 @@ function defaultScheduleValue() {
   return toLocalInputValue(d);
 }
 
-export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule, communityId, communityName, onCreateCommunity }: Props) {
+export default function CreateRoomModal({ open, onClose, initialMotion, initialTopic, initialSchedule, communityId, communityName, onCreateCommunity, switchPhase }: Props) {
   const router = useRouter();
   const supabase = createClient();
   useEscapeClose(open, onClose);
@@ -544,9 +548,10 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     <div
       className="fixed inset-0 z-[500] flex items-center justify-center p-5 crm-overlay"
       style={{
-        background: "rgba(0,0,0,0.78)",
-        backdropFilter: "blur(4px)",
-        animation: "modalIn 0.2s ease",
+        background: switchPhase === "out" ? "transparent" : "rgba(0,0,0,0.78)",
+        backdropFilter: switchPhase === "out" ? "none" : "blur(4px)",
+        animation: switchPhase ? "none" : "modalIn 0.2s ease",
+        pointerEvents: switchPhase === "out" ? "none" : undefined,
       }}
       onClick={onClose}
     >
@@ -555,12 +560,11 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         style={{
           maxWidth: "540px",
           maxHeight: "92vh",
-          background: "rgba(18,18,21,0.95)",
-          backdropFilter: "blur(24px)",
+          background: "#000",
           border: "1px solid var(--border)",
           borderRadius: "20px",
           boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
-          animation: "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+          animation: switchPhase === "out" ? "modalPanelOut 0.16s ease forwards" : "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
         }}
         onClick={(e) => e.stopPropagation()}
       >

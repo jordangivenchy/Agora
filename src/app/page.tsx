@@ -72,6 +72,23 @@ export default function Home() {
   /* Site-wide community creation: /?create=community, agora:create-community,
      and the hand-off at the foot of the discussion modal. */
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
+  /* The Discussion ⇄ Community switch crossfades the two modals in place:
+     `createLeaving` is the one fading out for ~170ms, `createVia` the one
+     that arrived by switching (its overlay must not fade in again). */
+  const [createLeaving, setCreateLeaving] = useState<"discussion" | "community" | null>(null);
+  const [createVia, setCreateVia] = useState<"discussion" | "community" | null>(null);
+  const switchCreate = useCallback((to: "discussion" | "community") => {
+    const from = to === "discussion" ? "community" : "discussion";
+    if (to === "community") setShowCreateCommunity(true);
+    else setShowCreate(true);
+    setCreateVia(to);
+    setCreateLeaving(from);
+    window.setTimeout(() => {
+      if (from === "community") setShowCreateCommunity(false);
+      else setShowCreate(false);
+      setCreateLeaving(null);
+    }, 170);
+  }, []);
   const [activeTab, setActiveTab] = useState<PanelTab | null>(null);
   /* Search panel (anchored under the navbar box, see search/SearchPage):
      open+pinned ⇔ activeTab === "search" (/search?q=…); open+unpinned is
@@ -739,17 +756,20 @@ export default function Home() {
       />
       <CreateRoomModal
         open={showCreate}
-        onClose={() => setShowCreate(false)}
+        onClose={() => { setShowCreate(false); setCreateVia((v) => (v === "discussion" ? null : v)); }}
+        switchPhase={createLeaving === "discussion" ? "out" : createVia === "discussion" ? "in" : undefined}
         initialMotion={createPrefill?.motion}
         initialTopic={createPrefill?.topic}
         initialSchedule={createPrefill?.schedule}
         communityId={createPrefill?.communityId}
         communityName={createPrefill?.communityName}
-        onCreateCommunity={() => { setShowCreate(false); setShowCreateCommunity(true); }}
+        onCreateCommunity={() => switchCreate("community")}
       />
       <CreateCommunityModal
         open={showCreateCommunity}
-        onClose={() => setShowCreateCommunity(false)}
+        onClose={() => { setShowCreateCommunity(false); setCreateVia((v) => (v === "community" ? null : v)); }}
+        onCreateDiscussion={() => switchCreate("discussion")}
+        switchPhase={createLeaving === "community" ? "out" : createVia === "community" ? "in" : undefined}
         onCreated={(c) => {
           /* Land in the new board: open the Communities tab, then ask it
              to select the board once it has refreshed its list. */
