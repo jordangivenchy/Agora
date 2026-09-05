@@ -321,8 +321,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           className="w-full"
           style={{
             maxWidth: "400px",
-            background: "rgba(18,18,21,0.95)",
-            backdropFilter: "blur(24px)",
+            background: "#000",
             border: "1px solid var(--border)",
             borderRadius: "20px",
             boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -416,8 +415,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           className="w-full"
           style={{
             maxWidth: "440px",
-            background: "rgba(18,18,21,0.95)",
-            backdropFilter: "blur(24px)",
+            background: "#000",
             border: "1px solid var(--border)",
             borderRadius: "20px",
             boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
