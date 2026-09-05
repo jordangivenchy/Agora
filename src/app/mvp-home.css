@@ -6157,9 +6157,7 @@ body { background: transparent; }
    no drawer/hamburger fallback at narrow widths (product decision). */
 @media all {
   .sidebar {
-    /* Always the open width: the resting rail is a clip (globals.css,
-       --rail-w), so expanding never re-lays-out the page. */
-    width: 240px !important;
+    width: var(--sidebar-width) !important;
     overflow: hidden;
   }
   .sidebar-nav { min-width: 224px; } /* rows keep expanded geometry while clipped */
@@ -6202,9 +6200,9 @@ body { background: transparent; }
     /* Track the rail so the box keeps the same 9px inset on BOTH sides
        in every state: 18px = 2×8px nav padding + 2×1px sidebar border.
        (A fixed 208px cap left the expanded pill 9px left / 23px right.) */
-    max-width: calc(var(--rail-w, 240px) - 18px);
+    max-width: calc(var(--sidebar-width, 240px) - 18px);
     border-radius: 10px !important;
-    transition: background 0.18s ease, color 0.18s ease, max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: background 0.18s ease, color 0.18s ease !important;
   }
 }
 

@@ -2368,33 +2368,14 @@ html.reduce-motion .nav-sparkle {
 }
 /* `all`: the hover rail is the only sidebar mode at every width — the
    narrow-viewport drawer/hamburger is retired. */
-/* The rail's own width, 64px resting → 240px open. Separate from
-   --sidebar-width on purpose (2026-09-04): the page used to be keyed to
-   the animating value, so every frame of the expansion re-laid-out the
-   main column, the hero and every panel, and re-blurred the rail's
-   backdrop over the starfield — a stutter, not a slide. Now the page
-   keeps the 64px offset and the open rail overlays it; the sidebar is
-   always laid out at 240px and the resting rail is a clip-path, which
-   the compositor animates without touching layout. */
-@property --rail-w {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 64px;
-}
 @media all {
-  :root:has(#sidebar) { --sidebar-width: 64px; }
-  #sidebar {
-    --rail-w: 64px;
-    clip-path: inset(0 176px 0 0 round 24px);
-    transition:
-      clip-path 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-      --rail-w 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: clip-path;
+  :root:has(#sidebar) {
+    --sidebar-width: 64px;
+    transition: --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  #sidebar:hover,
-  #sidebar:has(:focus-visible) {
-    --rail-w: 240px;
-    clip-path: inset(0 0 0 0 round 24px);
+  :root:has(#sidebar:hover),
+  :root:has(#sidebar :focus-visible) {
+    --sidebar-width: 240px;
   }
 }
 
