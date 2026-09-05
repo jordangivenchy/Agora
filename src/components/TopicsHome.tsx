@@ -68,6 +68,7 @@ const REFRESH_MS = 30000;
 const QUESTIONS_SHOWN = 6;
 /* Popular rooms: three up front; a line under the strip unfolds the rest. */
 const ROOMS_SHOWN = 3;
+const SCHEDULED_SHOWN = 3;
 
 /* Rooms carry scheduling as a scheduled_start on a 'created' (or
    'scheduled') row — mirror page.tsx's classification. */
@@ -189,6 +190,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [selectedKey, setSelectedKey] = useState<string>(TOPICS[0].key);
   const [showAllQuestions, setShowAllQuestions] = useState(false);
   const [showAllRooms, setShowAllRooms] = useState(false);
+  const [showAllScheduled, setShowAllScheduled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -330,6 +332,23 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   if (!container) return null;
 
   const selCat = TOPICS.find((c) => c.key === selectedKey) ?? TOPICS[0];
+  /* The one overflow gesture every home section shares: a hairline with a
+     pill that unfolds the rest, and folds it back. */
+  const showMoreLine = (hidden: number, open: boolean, toggle: () => void, noun: string) => (
+    <div className="flex items-center gap-3" style={{ marginTop: 2 }}>
+      <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+      <button
+        onClick={toggle}
+        aria-expanded={open}
+        className="cursor-pointer text-[11.5px] px-3 py-1 rounded-full"
+        style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
+      >
+        {open ? "Show fewer" : `Show ${hidden} more ${noun}`}
+      </button>
+      <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
+    </div>
+  );
+
   const selRows = topics
     .filter((t) => t.topic_key === selCat.key)
     .sort((a, b) => b.queue_count - a.queue_count);
@@ -434,7 +453,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               key={cat.key}
               role="tab"
               aria-selected={active}
-              onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); setShowAllRooms(false); }}
+              onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); setShowAllRooms(false); setShowAllScheduled(false); }}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
                 background: "rgba(11,11,13,0.95)",
@@ -642,20 +661,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             ))}
           </div>
         )}
-        {selRooms.length > ROOMS_SHOWN && (
-          <div className="flex items-center gap-3" style={{ marginTop: 2 }}>
-            <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
-            <button
-              onClick={() => setShowAllRooms((v) => !v)}
-              aria-expanded={showAllRooms}
-              className="cursor-pointer text-[11.5px] px-3 py-1 rounded-full"
-              style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
-            >
-              {showAllRooms ? "Show fewer" : `Show ${selRooms.length - ROOMS_SHOWN} more`}
-            </button>
-            <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
-          </div>
-        )}
+        {selRooms.length > ROOMS_SHOWN && showMoreLine(selRooms.length - ROOMS_SHOWN, showAllRooms, () => setShowAllRooms((v) => !v), "rooms")}
 
         </div>
         <div className="min-w-0 flex flex-col gap-2" style={{ flex: "1 1 0", minWidth: 320 }}>
@@ -669,8 +675,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-              {selScheduled.map((r) => (
+            <div className={`flex gap-3 pb-1 ${showAllScheduled ? "flex-wrap" : "overflow-x-auto"}`} style={{ scrollbarWidth: "none" }}>
+              {(showAllScheduled ? selScheduled : selScheduled.slice(0, SCHEDULED_SHOWN)).map((r) => (
                 <div
                   key={r.id}
                   role="link"
@@ -767,6 +773,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 </div>
               ))}
             </div>
+            {selScheduled.length > SCHEDULED_SHOWN && showMoreLine(selScheduled.length - SCHEDULED_SHOWN, showAllScheduled, () => setShowAllScheduled((v) => !v), "scheduled")}
           </>
         ) : (
           <>
@@ -891,15 +898,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           );
         })}
         </div>
-        {selRows.length > QUESTIONS_SHOWN && (
-          <button
-            onClick={() => setShowAllQuestions((v) => !v)}
-            className="cursor-pointer text-[12px] self-start"
-            style={{ background: "transparent", border: "none", color: "#c0c0c8", fontFamily: "inherit", padding: "4px 2px" }}
-          >
-            {showAllQuestions ? "Show fewer" : `Show all ${selRows.length} questions →`}
-          </button>
-        )}
+        {selRows.length > QUESTIONS_SHOWN && showMoreLine(selRows.length - QUESTIONS_SHOWN, showAllQuestions, () => setShowAllQuestions((v) => !v), "questions")}
         {selRows.length === 0 && (
           <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
             No standing questions in {selCat.label} yet.
