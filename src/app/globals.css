@@ -2871,6 +2871,7 @@ html.reduce-motion .nav-sparkle {
   .explore-title { font-size: 19px !important; line-height: 30px !important; }
   .explore-subtitle { font-size: 11px !important; margin-top: -2px !important; }
   .page-head { gap: 8px; row-gap: 6px; min-height: 30px; margin-bottom: 10px !important; }
+  .home-section-title { font-size: 14px !important; }
   .page-title { font-size: 19px !important; line-height: 30px !important; }
   .page-sub { display: none; } /* decorative; the title carries the page on a phone */
 }
