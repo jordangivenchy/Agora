@@ -6205,8 +6205,13 @@ body { background: transparent; }
        (A fixed 208px cap left the expanded pill 9px left / 23px right.) */
     max-width: calc(var(--sidebar-width, 240px) - 18px);
     border-radius: 10px !important;
-    transition: background 0.18s ease, color 0.18s ease !important;
+    /* The width variable is declared on the row itself now (globals.css,
+       not inherited), so its easing has to ride this shorthand — the
+       !important here would otherwise drop it and the pill would snap. */
+    transition: background 0.18s ease, color 0.18s ease, --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
+  /* …and the same hover-intent beat as the rail. */
+  .sidebar:hover .sidebar-link { transition-delay: 0s, 0s, 140ms !important; }
 }
 
 /* Phone-only search icon in the navbar's right cluster (both navbars). */
