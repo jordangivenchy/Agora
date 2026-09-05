@@ -2361,20 +2361,29 @@ html.reduce-motion .nav-sparkle {
    above instead of the rail. The registered property makes the value
    itself animate, so every surface keyed to it resizes in sync.
    Applies only where the home sidebar exists. */
+/* Not inherited (2026-09-04): as an inherited property the animating
+   value forced a style recalculation of every element on the page on
+   every frame of the expansion — thousands of nodes, for a handful that
+   read it. It is declared directly on each surface that does read it:
+   the rail, its rows, the main column, the shell pages and the
+   beside-sidebar routes. Same value, same transition, so they still
+   move in lockstep; nothing else recalculates. A registered property
+   always has a value, so a consumer missing from this list would get
+   the 240px initial — keep the list and the var() readers in step. */
 @property --sidebar-width {
   syntax: "<length>";
-  inherits: true;
+  inherits: false;
   initial-value: 240px;
 }
 /* `all`: the hover rail is the only sidebar mode at every width — the
    narrow-viewport drawer/hamburger is retired. */
 @media all {
-  :root:has(#sidebar) {
+  :root:has(#sidebar) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     --sidebar-width: 64px;
     transition: --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  :root:has(#sidebar:hover),
-  :root:has(#sidebar :focus-visible) {
+  :root:has(#sidebar:hover) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar),
+  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     --sidebar-width: 240px;
   }
 }
@@ -2423,9 +2432,9 @@ html.reduce-motion .nav-sparkle {
   @media (prefers-reduced-motion: reduce) {
     .messages-beside-sidebar > .msgs-shell, .msgs-thread-pane, .msgs-rail-pane { animation: none; }
   }
-  :root:has(#sidebar),
-  :root:has(#sidebar:hover),
-  :root:has(#sidebar :focus-visible) {
+  :root:has(#sidebar) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar),
+  :root:has(#sidebar:hover) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar),
+  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     --sidebar-width: 0px;
   }
 
