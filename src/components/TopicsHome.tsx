@@ -793,7 +793,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
         {/* Selected field: queue questions */}
         <div className="flex items-center gap-3 mt-2.5 mb-0.5">
-          <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#f4d47c", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+          <span className="home-section-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: "#ffb700", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
             Daily topics
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
