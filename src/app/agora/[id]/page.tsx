@@ -152,6 +152,16 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      and "multi" are flat overlays above the scene. Local-only — nothing
      changes on the wire — and remembered across visits. */
   const [layout, setLayout] = useState<"stage" | "gallery" | "multi">("stage");
+  /* Phones run the room flat: no 3D scene, and the stage layout (which
+     is the scene) isn't offered — gallery stands in for it. */
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setPhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   useEffect(() => {
     try {
       const saved = localStorage.getItem("agora:call-layout");
@@ -160,6 +170,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       /* private mode — default stands */
     }
   }, []);
+  useEffect(() => {
+    if (phone) setLayout((l) => (l === "stage" ? "gallery" : l));
+  }, [phone]);
   const pickLayout = useCallback((l: "stage" | "gallery" | "multi") => {
     setLayout(l);
     try {
@@ -919,6 +932,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const vacateSeat = useCallback(() => {
     leavingRef.current = true;
     logRoomEvent(roomId, "leave");
+    try { sessionStorage.removeItem(`agora:live:${roomId}`); } catch { /* private mode */ }
     if (!currentUser || !myParticipation) return;
     supabase
       .from("debate_participants")
@@ -957,6 +971,24 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       window.removeEventListener("beforeunload", beacon);
     };
   }, [roomId, broadcast]);
+
+  /* ── Unclean exits ─────────────────────────────────────────
+     A marker rides in sessionStorage while the call is up and is cleared
+     by a deliberate leave. Safari reloads a page it had to kill (memory,
+     a hung tab), so finding the marker on the next mount says the last
+     visit ended without us — the closest thing to a crash report. */
+  useEffect(() => {
+    if (!call.connected) return;
+    try { sessionStorage.setItem(`agora:live:${roomId}`, String(Date.now())); } catch { /* private mode */ }
+  }, [call.connected, roomId]);
+  useEffect(() => {
+    let since: string | null = null;
+    try { since = sessionStorage.getItem(`agora:live:${roomId}`); } catch { /* private mode */ }
+    if (!since) return;
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    logRoomEvent(roomId, "reopened_after_unclean_exit", nav?.type ?? "unknown", { since: Number(since), agoMs: Date.now() - Number(since) });
+    try { sessionStorage.removeItem(`agora:live:${roomId}`); } catch { /* private mode */ }
+  }, [roomId]);
 
   /* ── Coming back ────────────────────────────────────────────
      Phones freeze the page the moment the screen locks: heartbeats stop,
@@ -1364,7 +1396,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           { id: "gallery", icon: "layout-grid", label: "Gallery view" },
           { id: "multi", icon: "users", label: "Multi-speaker view" },
         ] as const
-      ).map((opt) => (
+      ).filter((opt) => !(phone && opt.id === "stage")).map((opt) => (
         <button
           key={opt.id}
           className={`ag-layout-seg${layout === opt.id ? " is-active" : ""}`}
@@ -1526,7 +1558,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
         {/* ── Amphitheater ── */}
         <Amphitheater
-        performanceMode={broadcast}
+          performanceMode={broadcast}
+          flat={phone}
           roomId={roomId}
           /* Flat layouts (gallery / multi) carry every picture themselves —
              the scene's 3D speaker panels and mic medallion would peek

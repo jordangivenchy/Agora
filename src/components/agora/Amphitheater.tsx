@@ -5,6 +5,7 @@
    speaker-view toggle. The 2D data logic (who's on stage, who's seated)
    lives in the page; this component just lays it out. */
 
+import { useEffect } from "react";
 import { Icon } from "@/components/icons";
 import AgoraScene3D, { type AgoraView } from "./AgoraScene3D";
 import { useUserMenu } from "../userMenuContext";
@@ -30,6 +31,8 @@ export interface SeatedPerson {
 }
 
 interface Props {
+  /** No 3D scene — a static backdrop under the DOM stage (phones). */
+  flat?: boolean;
   roomId: string;
   proSpeakers: StagePerson[];
   conSpeakers: StagePerson[];
@@ -126,24 +129,36 @@ export default function Amphitheater({
   micLive,
   performanceMode = false,
   onViewSettled,
+  flat = false,
 }: Props) {
   const inSpeaker = view === "speaker";
+  /* Flat: no 3D scene at all (phones — a full Three.js bowl with shadow
+     maps next to a WebRTC call is how Safari runs out of memory and
+     kills the tab). The DOM stage waits for the camera glide to settle;
+     with no camera, settle at once. */
+  useEffect(() => {
+    if (flat) onViewSettled?.(view);
+  }, [flat, view, onViewSettled]);
   /* The debaters' video moved out of the scene entirely: AgoraStage (DOM)
      draws the two speaker boxes over this canvas, where the panels stood.
      The scene keeps the environment — bowl, sky, stage, queue, crowd. */
   return (
     <div className="ag-theater">
-      <AgoraScene3D
-        roomId={roomId}
-        audience={audience}
-        viewerCount={viewerCount}
-        view={view}
-        performanceMode={performanceMode}
-        onViewSettled={onViewSettled}
-        queue={speakerQueue}
-        micHolder={micHolder}
-        micLive={micLive}
-      />
+      {flat ? (
+        <div className="ag-flat-backdrop" aria-hidden="true" />
+      ) : (
+        <AgoraScene3D
+          roomId={roomId}
+          audience={audience}
+          viewerCount={viewerCount}
+          view={view}
+          performanceMode={performanceMode}
+          onViewSettled={onViewSettled}
+          queue={speakerQueue}
+          micHolder={micHolder}
+          micLive={micLive}
+        />
+      )}
 
       {/* The discussion strip: hosts and promoted speakers, above the rail */}
       {stageStrip.length > 0 && (
@@ -155,7 +170,7 @@ export default function Amphitheater({
       )}
 
       {/* The stage rail: just the view toggle, floating over the scene */}
-      <div className="ag-stage">
+      {!flat && <div className="ag-stage">
         <div className="ag-stage-center">
           <button
             className="ag-switch-view"
@@ -176,7 +191,7 @@ export default function Amphitheater({
             </span>
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

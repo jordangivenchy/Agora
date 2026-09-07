@@ -221,9 +221,12 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
        layers nobody is subscribed to; capture capped at 720p; audience
        subscribers cap themselves at the medium layer below — together
        these keep per-viewer bandwidth a fraction of full-res. */
+    /* Phones capture at 540p: a 720p encode next to the call's decode is
+       more than an iPhone tab can carry for long. */
+    const phone = typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
     const room = new Room({
       dynacast: true,
-      videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+      videoCaptureDefaults: { resolution: (phone ? VideoPresets.h540 : VideoPresets.h720).resolution },
       publishDefaults: { simulcast: true },
     });
     roomRef.current = room;

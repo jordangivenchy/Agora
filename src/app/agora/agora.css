@@ -3380,3 +3380,12 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Phones run the room without the 3D scene: a still night under the
+   DOM stage where the canvas would be. */
+.ag-flat-backdrop {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(120% 80% at 50% 100%, #14120c 0%, #070707 55%, #000 100%);
+  pointer-events: none;
+}
