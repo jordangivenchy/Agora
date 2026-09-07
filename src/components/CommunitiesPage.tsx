@@ -2889,8 +2889,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       className="cursor-pointer text-[12px] px-3.5 py-1.5 rounded-full"
                       style={{
                         background: "#0b0b0d",
-                        border: "0.5px solid " + (sort === s ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.14)"),
-                        color: sort === s ? "#f5f5f0" : "rgba(238,238,245,0.65)",
+                        border: sort === s ? "1px solid #ffb700" : "0.5px solid rgba(255,255,255,0.14)",
+                        color: sort === s ? "#ffb700" : "rgba(238,238,245,0.65)",
                         fontFamily: "inherit",
                       }}
                       title={s === "best" ? "Wilson-score confidence: high ratios win, small samples don't" : undefined}

@@ -413,7 +413,7 @@ export default function FeedPage({ open, onClose }: Props) {
                 className="cursor-pointer text-[12px] px-3.5 py-1 rounded-lg"
                 style={
                   filter === f.id
-                    ? { background: "#0b0b0d", border: "0.5px solid rgba(255,255,255,0.5)", color: "#f5f5f0" }
+                    ? { background: "#0b0b0d", border: "1px solid #ffb700", color: "#ffb700" }
                     : { background: "#0b0b0d", border: "0.5px solid rgba(255,255,255,0.14)", color: "#c0c0c8" }
                 }
               >
