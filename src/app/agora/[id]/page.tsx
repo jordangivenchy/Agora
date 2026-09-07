@@ -171,7 +171,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     }
   }, []);
   useEffect(() => {
-    if (phone) setLayout((l) => (l === "stage" ? "gallery" : l));
+    if (!phone) return;
+    /* The tiles only exist in speaker view (audience view is the open
+       amphitheater, which phones don't render) — so phones live there. */
+    setView("speaker");
+    setLayout((l) => (l === "stage" ? "gallery" : l));
   }, [phone]);
   const pickLayout = useCallback((l: "stage" | "gallery" | "multi") => {
     setLayout(l);
