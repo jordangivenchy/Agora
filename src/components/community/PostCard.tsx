@@ -118,10 +118,24 @@ export function TagChip({ name, color, small }: { name: string; color: string | 
 
 /* Vote column shared by feed cards and the detail view. */
 export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
-  post, onVote, size = 13,
-}: { post: P; onVote: (p: P, v: number) => void; size?: number }) {
+  post, onVote, size = 13, centerOn,
+}: {
+  post: P;
+  onVote: (p: P, v: number) => void;
+  size?: number;
+  /** Centre the score on a neighbour's box of this height (the community
+      tile): the column takes that height and the arrows overflow it
+      evenly above and below. */
+  centerOn?: { height: number; offset?: number };
+}) {
   return (
-    <div className="flex flex-col items-center shrink-0 vote-box" style={{ width: 34 }}>
+    <div
+      className="flex flex-col items-center shrink-0 vote-box"
+      style={{
+        width: 34,
+        ...(centerOn ? { height: centerOn.height, marginTop: centerOn.offset ?? 0, justifyContent: "center", overflow: "visible" } : {}),
+      }}
+    >
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === 1 ? 0 : 1); }}
         className="cursor-pointer bg-transparent border-none px-1 inline-flex items-center justify-center"
@@ -248,7 +262,7 @@ export default function PostCard<P extends PostRow>({
   const [press] = useState(() => createLongPress<P>((post) => onLongPressRef.current?.(post)));
   return (
     <div
-      className={`cm-card ${compact ? "p-3" : "p-4"} mb-3 flex gap-3 cursor-pointer${className ? ` ${className}` : ""}`}
+      className={`cm-card ${compact ? "p-3" : "p-4"} mb-3 flex flex-col cursor-pointer${className ? ` ${className}` : ""}`}
       style={postCardStyle}
       onClick={(e) => {
         if (press.consumeClick()) { e.preventDefault(); return; }
@@ -260,17 +274,16 @@ export default function PostCard<P extends PostRow>({
       onPointerCancel={onLongPress ? press.onPointerCancel : undefined}
       onContextMenu={onLongPress ? (e) => { if (press.lastPointerType() !== "mouse") e.preventDefault(); } : undefined}
     >
-      {/* Reddit's arrangement: the vote column runs the full height of the
-          card; the "why it's here" caption sits at the top of the content
-          column; the community tile lines up with the community name. */}
-      {onVote && <VoteBox post={p} onVote={onVote} />}
-      <div className="flex-1 min-w-0">
+      {/* The "why it's here" caption runs across the top; below it the row:
+          votes (the score centred on the community tile), the tile level
+          with the community name, then the text. */}
       {reason && (
-        <p className="m-0 mb-2 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.38)" }}>
+        <p className="m-0 mb-3 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.38)" }}>
           <Icon name="sparkles" size={11} /> {reason}
         </p>
       )}
       <div className="flex gap-3">
+      {onVote && <VoteBox post={p} onVote={onVote} centerOn={communityArt ? { height: 30, offset: 2 } : undefined} />}
       {communityArt && (
         <span
           className="shrink-0"
@@ -329,7 +342,6 @@ export default function PostCard<P extends PostRow>({
             </span>
           )}
         </div>
-      </div>
       </div>
       </div>
     </div>
