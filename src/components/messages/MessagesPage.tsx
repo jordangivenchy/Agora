@@ -49,6 +49,7 @@ export default function MessagesPage({
   const [peer, setPeer] = useState<Peer | null>(null);
   const [group, setGroup] = useState<GroupRow | null>(null);
   const [newGroup, setNewGroup] = useState(false);
+  const [groupSeed, setGroupSeed] = useState<string[] | undefined>(undefined);
   const peerRef = useRef<Peer | null>(null);
   peerRef.current = peer;
   const groupRef = useRef<GroupRow | null>(null);
@@ -610,6 +611,8 @@ export default function MessagesPage({
               topic="page"
               onBack={wide ? undefined : () => selectPeer(null)}
               onThreadsChanged={loadThreads}
+              onLeft={() => selectPeer(null)}
+              onNewGroup={(p) => { setGroupSeed([p.id]); setNewGroup(true); }}
             />
           </div>
         ) : (
@@ -624,7 +627,8 @@ export default function MessagesPage({
       </div>
       {newGroup && (
         <NewGroupModal
-          onClose={() => setNewGroup(false)}
+          initialMembers={groupSeed}
+          onClose={() => { setNewGroup(false); setGroupSeed(undefined); }}
           onCreated={(chatId) => {
             setNewGroup(false);
             loadGroups().then((gs) => {

@@ -30,15 +30,18 @@ import {
 export default function NewGroupModal({
   onClose,
   onCreated,
+  initialMembers,
 }: {
   onClose: () => void;
   onCreated: (chatId: string) => void;
+  /** Friends already ticked when the modal opens ("New group with @x"). */
+  initialMembers?: string[];
 }) {
   const [supabase] = useState(() => createClient());
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
   const [friends, setFriends] = useState<GroupMember[] | null>(null);
-  const [picked, setPicked] = useState<Set<string>>(() => new Set());
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(initialMembers ?? []));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEscapeClose(true, onClose);

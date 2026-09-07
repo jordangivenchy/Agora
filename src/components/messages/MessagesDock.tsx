@@ -78,6 +78,7 @@ export default function MessagesDock() {
   const groupRef = useRef<GroupRow | null>(null);
   groupRef.current = group;
   const [newGroup, setNewGroup] = useState(false);
+  const [groupSeed, setGroupSeed] = useState<string[] | undefined>(undefined);
   const wideRef = useRef(false);
   const threadRef = useRef<DmThreadHandle>(null);
   const groupThreadRef = useRef<DmThreadHandle>(null);
@@ -575,7 +576,8 @@ export default function MessagesDock() {
     <>
     {newGroup && (
       <NewGroupModal
-        onClose={() => setNewGroup(false)}
+          initialMembers={groupSeed}
+        onClose={() => { setNewGroup(false); setGroupSeed(undefined); }}
         onCreated={(chatId) => {
           setNewGroup(false);
           loadGroups().then((gs) => {
@@ -692,6 +694,8 @@ export default function MessagesDock() {
             }
             onClose={wide ? undefined : closeDock}
             onThreadsChanged={loadThreads}
+            onLeft={() => { setPeer(null); loadThreads(); }}
+            onNewGroup={(p) => { setGroupSeed([p.id]); setNewGroup(true); }}
           />
         ) : (
           wide && (

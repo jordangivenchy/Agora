@@ -25,7 +25,9 @@ import {
   useState,
 } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
+import ReportModal from "@/components/ReportModal";
+import useEscapeClose from "@/lib/useEscapeClose";
 import DmMessageMenu from "@/components/messages/DmMessageMenu";
 import { createLongPress } from "@/lib/longPress";
 import { createClient } from "@/lib/supabase-browser";
@@ -157,10 +159,22 @@ interface Props {
   onClose?: () => void;
   /** Ping the parent to refresh its thread list (send/read/receive). */
   onThreadsChanged: () => void;
+  /** Chat options: "New group with @peer" — the parent opens its group modal. */
+  onNewGroup?: (peer: Peer) => void;
+  /** The thread is gone for me (deleted, or the peer blocked): leave it. */
+  onLeft?: () => void;
 }
 
+/* Copy for the confirm sheet, by what is about to happen. */
+const CONFIRM_COPY: Record<"unsend" | "delete" | "thread" | "block", { title: string; body: string; button: string }> = {
+  unsend: { title: "Unsend this message?", body: "It will be removed for both of you.", button: "Unsend" },
+  delete: { title: "Delete this message?", body: "It will only be removed for you — the other person keeps it.", button: "Delete for you" },
+  thread: { title: "Delete this conversation?", body: "Every message here is removed for you — the other person keeps their copy.", button: "Delete for you" },
+  block: { title: "Block this person?", body: "You'll unfollow each other and they can't message you. Undo it any time from Settings.", button: "Block" },
+};
+
 const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
-  { me, peer, variant, topic, onBack, onClose, onThreadsChanged },
+  { me, peer, variant, topic, onBack, onClose, onThreadsChanged, onNewGroup, onLeft },
   ref
 ) {
   const [supabase] = useState(() => createClient());
@@ -196,7 +210,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
      so the display name may be unknown — hydrated lazily below. */
   const [peerName, setPeerName] = useState<string | null | undefined>(peer.display_name);
   /* Pending unsend / delete-for-you, awaiting the confirm sheet. */
-  const [confirmAction, setConfirmAction] = useState<{ kind: "unsend" | "delete"; m: Dm } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ kind: "unsend" | "delete"; m: Dm } | { kind: "thread" | "block" } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const peerIdRef = useRef(peer.id);
@@ -599,13 +613,80 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     [supabase, onThreadsChanged]
   );
 
+  /* ── Chat options (the ⋯ at the header's far right) ─────────────
+     The peer's standing with me loads when the menu first opens; the
+     follow row and "New group with" (friends only) read it. */
+  const [options, setOptions] = useState(false);
+  const [rel, setRel] = useState<{ is_following: boolean; is_followed_by: boolean; is_friend: boolean } | null>(null);
+  const [relBusy, setRelBusy] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  useEscapeClose(options, () => setOptions(false));
+  useEffect(() => {
+    if (!options) return;
+    const onDown = (e: MouseEvent) => {
+      if (!optionsRef.current?.contains(e.target as Node)) setOptions(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [options]);
+  const loadRel = useCallback(async () => {
+    const { data } = await supabase.rpc("get_user_profile", { p_user: peer.id });
+    const row = (Array.isArray(data) ? data[0] : data) as { is_following?: boolean; is_followed_by?: boolean; is_friend?: boolean } | null;
+    setRel({ is_following: !!row?.is_following, is_followed_by: !!row?.is_followed_by, is_friend: !!row?.is_friend });
+  }, [supabase, peer.id]);
+  const openOptions = useCallback(() => {
+    setOptions((v) => !v);
+    if (!rel) void loadRel();
+  }, [rel, loadRel]);
+  const toggleFollow = useCallback(async () => {
+    if (relBusy) return;
+    setRelBusy(true);
+    const fn = rel?.is_following ? "unfollow_user" : "follow_user";
+    const { error } = await supabase.rpc(fn, { p_target: peer.id });
+    setRelBusy(false);
+    if (!error) void loadRel();
+  }, [relBusy, rel, supabase, peer.id, loadRel]);
+  const deleteThread = useCallback(async () => {
+    const { error } = await supabase.rpc("dm_delete_thread_for_me", { p_peer: peer.id });
+    if (error) { setSendError("Couldn't delete the conversation — try again."); return; }
+    setMsgs([]);
+    onThreadsChanged();
+    onLeft?.();
+  }, [supabase, peer.id, onThreadsChanged, onLeft]);
+  const blockPeer = useCallback(async () => {
+    const { error } = await supabase.rpc("block_user", { p_target: peer.id });
+    if (error) { setSendError("Couldn't block them — try again."); return; }
+    window.dispatchEvent(new CustomEvent("blocks-updated"));
+    onThreadsChanged();
+    onLeft?.();
+  }, [supabase, peer.id, onThreadsChanged, onLeft]);
+
   const runConfirm = useCallback(() => {
     if (!confirmAction) return;
-    const { kind, m } = confirmAction;
+    const action = confirmAction;
     setConfirmAction(null);
-    if (kind === "unsend") void unsend(m);
-    else void deleteForMe(m);
-  }, [confirmAction, unsend, deleteForMe]);
+    if (action.kind === "unsend") void unsend(action.m);
+    else if (action.kind === "delete") void deleteForMe(action.m);
+    else if (action.kind === "thread") void deleteThread();
+    else void blockPeer();
+  }, [confirmAction, unsend, deleteForMe, deleteThread, blockPeer]);
+
+  const optionRow = (icon: IconName, label: string, run: () => void, danger = false, disabled = false) => (
+    <button
+      key={label}
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      onClick={() => { setOptions(false); run(); }}
+      className="cursor-pointer"
+      style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 8, border: "none", background: "transparent", color: danger ? "#ff8a80" : "#e8e8ee", fontSize: 13, fontFamily: "inherit", opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "#1a1a1f"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <Icon name={icon} size={14} /> {label}
+    </button>
+  );
 
   const insertAtCaret = useCallback((s: string) => {
     const ta = taRef.current;
@@ -713,12 +794,10 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             }}
           >
             <p id="dm-confirm-title" style={{ margin: 0, color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15 }}>
-              {confirmAction.kind === "unsend" ? "Unsend this message?" : "Delete this message?"}
+              {confirmAction.kind === "block" ? `Block @${peer.username}?` : CONFIRM_COPY[confirmAction.kind].title}
             </p>
             <p style={{ margin: "6px 0 0", color: "#9a9aa4", fontSize: 13, lineHeight: 1.5 }}>
-              {confirmAction.kind === "unsend"
-                ? "It will be removed for both of you."
-                : "It will only be removed for you — the other person keeps it."}
+              {CONFIRM_COPY[confirmAction.kind].body}
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
               <button
@@ -740,7 +819,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   background: "#e05a5a", border: "1px solid #e05a5a", color: "#fff",
                 }}
               >
-                {confirmAction.kind === "unsend" ? "Unsend" : "Delete for you"}
+                {CONFIRM_COPY[confirmAction.kind].button}
               </button>
             </div>
           </div>
@@ -789,12 +868,49 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             </span>
           </span>
         </a>
-        {onClose && (
-          <button onClick={onClose} style={{ ...dmIconBtn, marginLeft: "auto" }} aria-label="Close messages">
-            <Icon name="x" size={14} />
+        {/* Far right: chat options, then the dock's close. */}
+        <div ref={optionsRef} style={{ marginLeft: "auto", position: "relative", display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={openOptions}
+            style={{ ...dmIconBtn, color: options ? "#f5f5f0" : dmIconBtn.color }}
+            aria-label="Chat options"
+            aria-expanded={options}
+            title="Chat options"
+          >
+            <Icon name="more-horizontal" size={17} />
           </button>
-        )}
+          {onClose && (
+            <button onClick={onClose} style={dmIconBtn} aria-label="Close messages">
+              <Icon name="x" size={14} />
+            </button>
+          )}
+          {options && (
+            <div
+              role="menu"
+              aria-label="Chat options"
+              style={{ position: "absolute", top: "calc(100% + 6px)", right: onClose ? 36 : 0, zIndex: 40, minWidth: 224, padding: 6, borderRadius: 12, background: "#000", border: "1px solid rgba(255,255,255,0.14)", boxShadow: "0 18px 48px rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {optionRow("user", "View profile", () => { window.location.href = `/users/${peer.username}`; })}
+              {optionRow(
+                rel?.is_following ? "user-check" : "user-plus",
+                rel?.is_following ? "Following" : rel?.is_followed_by ? "Add friend back" : "Add friend",
+                () => void toggleFollow(),
+                false,
+                relBusy
+              )}
+              {rel?.is_friend && onNewGroup && optionRow("users-round", `New group with @${peer.username}`, () => onNewGroup(peer))}
+              <div aria-hidden style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "4px 2px" }} />
+              {optionRow("trash", "Delete conversation", () => setConfirmAction({ kind: "thread" }), true)}
+              {optionRow("ban", `Block @${peer.username}`, () => setConfirmAction({ kind: "block" }), true)}
+              {optionRow("flag", `Report @${peer.username}`, () => setReporting(true), true)}
+            </div>
+          )}
+        </div>
       </div>
+      {reporting && (
+        <ReportModal target={{ userId: peer.id, username: peer.username, context: "profile" }} onClose={() => setReporting(false)} />
+      )}
 
       {/* Messages */}
       <div
