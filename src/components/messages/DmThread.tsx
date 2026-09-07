@@ -956,31 +956,34 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     const meta = b ? [kindLabel, b.is_private ? "Private" : "Public"].join(" · ") : null;
                     const memberLine = b ? `${b.members} member${b.members === 1 ? "" : "s"}` : null;
                     return (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "6px 4px 4px", minWidth: 260, maxWidth: 320 }}>
-                        <span style={{ fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <CommunityTile name={name} color={b?.color} avatarUrl={b?.avatar_url} size={40} />
-                          <span style={{ minWidth: 0, flex: 1 }}>
-                            <span style={{ display: "block", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
-                            {meta && <span style={{ display: "block", fontSize: 11, opacity: 0.65, marginTop: 2 }}>{meta}</span>}
-                          </span>
-                        </div>
-                        {b?.description && (
-                          <span style={{ fontSize: 12, lineHeight: 1.45, opacity: 0.8, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{b.description}</span>
-                        )}
-                        {b && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "6px 4px 4px", minWidth: 280, maxWidth: 340 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0, flex: 1 }}>
+                          <span style={{ fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            {!mine && (b.joined ? (
-                              <a href="/communities" className="no-underline" style={{ fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                                <Icon name="check" size={12} /> Joined
-                              </a>
-                            ) : (
-                              <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                                {joining === m.community_id ? "Joining…" : b.is_private ? "Accept and join" : "Join"}
-                              </button>
-                            ))}
-                            <span style={{ fontSize: 11.5, opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 5 }}><Icon name="users" size={12} /> {memberLine}</span>
+                            <CommunityTile name={name} color={b?.color} avatarUrl={b?.avatar_url} size={40} />
+                            <span style={{ minWidth: 0, flex: 1 }}>
+                              <span style={{ display: "block", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+                              {meta && <span style={{ display: "block", fontSize: 11, opacity: 0.65, marginTop: 2 }}>{meta}</span>}
+                            </span>
                           </div>
+                          {b?.description && (
+                            <span style={{ fontSize: 12, lineHeight: 1.45, opacity: 0.8, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{b.description}</span>
+                          )}
+                          {memberLine && (
+                            <span style={{ fontSize: 11.5, opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 5 }}><Icon name="users" size={12} /> {memberLine}</span>
+                          )}
+                        </div>
+                        {/* The action, centred on the right. */}
+                        {!mine && b && (
+                          b.joined ? (
+                            <a href="/communities" className="no-underline" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, padding: "8px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                              <Icon name="check" size={12} /> Joined
+                            </a>
+                          ) : (
+                            <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                              {joining === m.community_id ? "Joining…" : "Join"}
+                            </button>
+                          )
                         )}
                       </div>
                     );
