@@ -456,26 +456,25 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); setShowAllRooms(false); setShowAllScheduled(false); }}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
-                background: "rgba(11,11,13,0.95)",
-                border: active ? "1px solid #d9a238" : "0.5px solid #2e2e38",
-                boxShadow: active ? "0 0 12px rgba(217,162,56,0.25)" : "none",
+                background: active ? "#ffb700" : "#0b0b0d",
+                border: active ? "1px solid #ffb700" : "0.5px solid rgba(255,255,255,0.14)",
                 borderRadius: 999,
                 fontFamily: "inherit",
               }}
             >
               {/* Icon left of the whole text block; label + status stack beside it. */}
-              <span className="flex items-center gap-2.5" style={{ color: active ? "#f4d47c" : "#f5f5f0" }}>
+              <span className="flex items-center gap-2.5" style={{ color: active ? "#1a0e00" : "#f5f5f0" }}>
                 <TopicIcon topicKey={cat.key} size={17} />
                 <span className="flex flex-col items-start">
-                  <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: active ? "#f4d47c" : "#f5f5f0", whiteSpace: "nowrap" }}>
+                  <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: active ? "#1a0e00" : "#f5f5f0", whiteSpace: "nowrap" }}>
                     {cat.label}
-                    {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: "#f4d47c" }}>●</span>}
+                    {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: active ? "#1a0e00" : "#f4d47c" }}>●</span>}
                   </span>
                   {status && (
                     <span
                       className="flex items-center gap-1 mt-0.5"
                       style={{
-                        color: status.color,
+                        color: active ? "#1a0e00" : status.color,
                         whiteSpace: "nowrap",
                         fontSize: 9,
                         fontWeight: 700,
@@ -488,8 +487,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                           width: 5,
                           height: 5,
                           borderRadius: 999,
-                          background: status.color,
-                          boxShadow: `0 0 6px ${status.color}`,
+                          background: active ? "#1a0e00" : status.color,
+                          boxShadow: active ? "none" : `0 0 6px ${status.color}`,
                           flexShrink: 0,
                         }}
                       />
