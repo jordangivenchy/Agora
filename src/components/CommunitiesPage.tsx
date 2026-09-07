@@ -1435,7 +1435,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const postActions = (p: Post, inDetail: boolean) => {
     const canPin = canModerate(p.community_id);
     const canDelete = p.author_id === userId || canModerate(p.community_id);
-    const quiet: React.CSSProperties = { color: "rgba(238,238,245,0.55)", fontFamily: "inherit" };
+    const quiet: React.CSSProperties = { color: "#c9c9d2", fontFamily: "inherit" };
     const open = postMenu?.id === p.id;
     return (
       <span className="flex items-center gap-3 cm-post-actions" onClick={(e) => e.stopPropagation()}>
@@ -1475,7 +1475,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               aria-haspopup="menu"
               aria-expanded={open}
               className="cursor-pointer inline-flex items-center justify-center border-none p-0"
-              style={{ ...quiet, width: 28, height: 28, borderRadius: 8, background: open ? "rgba(255,255,255,0.1)" : "transparent" }}
+              style={{ ...quiet, width: 28, height: 28, borderRadius: 8, background: open ? "#1a1a1f" : "transparent" }}
             >
               <Icon name="more-horizontal" size={16} />
             </button>

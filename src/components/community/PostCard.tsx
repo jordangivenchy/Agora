@@ -272,9 +272,9 @@ export default function PostCard<P extends PostRow>({
             style={{ maxHeight: compact ? 160 : 220, maxWidth: "100%", objectFit: "cover" }} />
         )}
         {embed !== undefined ? embed : <RepostEmbed post={p} />}
-        <div className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)", marginTop: compact ? 10 : 16 }}>
+        <div className="m-0 text-[11px]" style={{ color: "#c9c9d2", marginTop: compact ? 10 : 16 }}>
           {actions ?? (
-            <span className="text-[12px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.55)" }}>
+            <span className="text-[12px] inline-flex items-center gap-1" style={{ color: "#c9c9d2" }}>
               <Icon name="message-circle" size={14} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
             </span>
           )}
