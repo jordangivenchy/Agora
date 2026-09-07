@@ -1,57 +1,65 @@
 "use client";
 
-/* The comment composer: its own screen, like Reddit's. A centred card on
-   desktop, a full-screen sheet on phones (sized to the visual viewport so
-   the toolbar rides above the keyboard). What you're answering — the
-   post's title or the comment you're replying to — sits under the header;
-   the text fills the middle; formatting is one scrolling row at the
-   bottom. The page owns the draft and the send; this owns the frame. */
+/* Creating a post is its own screen, Reddit-style: a centred card on
+   desktop, a full-screen sheet on phones (sized to the visual viewport
+   so nothing hides behind the keyboard). Community (when composing from
+   All), title, then the formatting row above a text area that fills the
+   rest; tags and the attachment ride underneath. The page owns the
+   draft and the send; this owns the frame. */
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/icons";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker from "@/components/community/GifPicker";
+import CommunityPicker from "@/components/community/CommunityPicker";
+import { TagChip } from "@/components/community/PostCard";
 import RichEditor, { type RichEditorHandle } from "@/components/community/RichEditor";
 import useEscapeClose from "@/lib/useEscapeClose";
-import { YELLOW } from "@/components/messages/DmThread";
 import { errorNote, modalCard, modalClose, modalOverlay, modalTitle, pillDark, pillYellow } from "@/components/messages/groups";
 
-export type ComposerContext =
-  | { kind: "post"; title: string }
-  | { kind: "comment"; author: string; body: string };
+export const POST_TITLE_MAX = 200;
 
-export default function CommentComposer({
+type PickerCommunities = ComponentProps<typeof CommunityPicker>["communities"];
+
+export default function PostComposer({
+  pickCommunity,
   title,
-  context,
-  value,
-  onChange,
-  placeholder,
-  submitLabel,
-  busy,
-  error,
+  onTitle,
+  body,
+  onBody,
+  tags,
+  tagId,
+  onTagId,
   imagePreview,
   gifUrl,
   onPickImage,
   onGif,
+  busy,
+  error,
+  canSubmit,
   giphyEnabled,
   mentions,
   maxLength,
   onSubmit,
   onClose,
 }: {
+  /** Shown when composing from All: which community this goes to. */
+  pickCommunity: { communities: PickerCommunities; value: string; onChange: (id: string) => void } | null;
   title: string;
-  context: ComposerContext;
-  value: string;
-  onChange: (markdown: string) => void;
-  placeholder: string;
-  submitLabel: string;
-  busy: boolean;
-  error: string | null;
+  onTitle: (title: string) => void;
+  body: string;
+  onBody: (markdown: string) => void;
+  tags: { id: string; name: string; color: string | null }[];
+  tagId: string;
+  onTagId: (id: string) => void;
   imagePreview: string | null;
   gifUrl: string | null;
   onPickImage: (file: File | null) => void;
   onGif: (url: string | null) => void;
+  busy: boolean;
+  error: string | null;
+  canSubmit: boolean;
   giphyEnabled: boolean;
   mentions: boolean;
   maxLength: number;
@@ -62,8 +70,8 @@ export default function CommentComposer({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [picker, setPicker] = useState<null | "emoji" | "gif">(null);
   const [phone, setPhone] = useState(false);
-  /* Phones: the sheet tracks the visual viewport so the bottom toolbar
-     sits on the keyboard instead of behind it. */
+  /* Phones: the sheet tracks the visual viewport so the keyboard never
+     covers the bottom of it. */
   const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
   useEscapeClose(true, onClose);
 
@@ -80,7 +88,7 @@ export default function CommentComposer({
       setVv(null);
       return;
     }
-    document.documentElement.classList.add("cmt-sheet-open");
+    document.documentElement.classList.add("composer-sheet-open");
     const v = window.visualViewport;
     const apply = () => {
       if (!v) return;
@@ -90,30 +98,29 @@ export default function CommentComposer({
     v?.addEventListener("resize", apply);
     v?.addEventListener("scroll", apply);
     return () => {
-      document.documentElement.classList.remove("cmt-sheet-open");
+      document.documentElement.classList.remove("composer-sheet-open");
       v?.removeEventListener("resize", apply);
       v?.removeEventListener("scroll", apply);
     };
   }, [phone]);
 
-  const canSend = !busy && value.trim().length > 0 && value.length <= maxLength;
-  const nearMax = value.length > maxLength * 0.9;
+  const nearMax = body.length > maxLength * 0.9;
   const attachment = imagePreview ?? gifUrl;
 
   const submitBtn = (compact: boolean) => (
     <button
       type="button"
       onClick={onSubmit}
-      disabled={!canSend}
+      disabled={!canSubmit}
       style={{
         ...pillYellow,
         height: compact ? 32 : 36,
         padding: compact ? "0 14px" : "0 18px",
-        opacity: canSend ? 1 : 0.45,
-        cursor: canSend ? "pointer" : "default",
+        opacity: canSubmit ? 1 : 0.45,
+        cursor: canSubmit ? "pointer" : "default",
       }}
     >
-      {busy ? "Posting…" : submitLabel}
+      {busy ? "Posting…" : "Post"}
     </button>
   );
 
@@ -124,7 +131,7 @@ export default function CommentComposer({
         boxShadow: "none",
         ...(vv ? { top: vv.top, height: vv.height, bottom: "auto" } : {}),
       }
-    : { ...modalCard, maxWidth: 600, height: "min(640px, 88vh)", padding: "18px 22px 18px" };
+    : { ...modalCard, maxWidth: 640, height: "min(720px, 92vh)", padding: "18px 22px 18px" };
 
   if (typeof document === "undefined") return null;
 
@@ -136,8 +143,8 @@ export default function CommentComposer({
     >
       <div
         role="dialog"
-        aria-label={title}
-        className="w-full cmt-composer-card"
+        aria-label="New post"
+        className="w-full composer-sheet"
         style={cardStyle}
         onClick={(e) => e.stopPropagation()}
       >
@@ -152,77 +159,67 @@ export default function CommentComposer({
             >
               Cancel
             </button>
-            <span style={{ ...modalTitle, fontSize: 16, flex: 1, textAlign: "center", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {title}
-            </span>
+            <span style={{ ...modalTitle, fontSize: 16, flex: 1, textAlign: "center" }}>New post</span>
             {submitBtn(true)}
           </div>
         ) : (
           <div className="flex items-center justify-between" style={{ marginBottom: 12, flexShrink: 0 }}>
-            <h2 style={modalTitle}>{title}</h2>
+            <h2 style={modalTitle}>New post</h2>
             <button type="button" onClick={onClose} aria-label="Close" style={modalClose}>
               <Icon name="x" size={14} />
             </button>
           </div>
         )}
 
-        {/* What this answers */}
-        {context.kind === "post" ? (
-          <p
-            style={{
-              margin: "0 0 10px",
-              fontSize: 12.5,
-              lineHeight: 1.4,
-              color: "rgba(238,238,245,0.5)",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ color: "rgba(238,238,245,0.35)" }}>On </span>
-            <span style={{ color: "rgba(238,238,245,0.75)", fontWeight: 600 }}>{context.title}</span>
-          </p>
-        ) : (
-          <div
-            style={{
-              margin: "0 0 12px",
-              padding: "6px 10px",
-              borderLeft: `2px solid ${YELLOW}`,
-              borderRadius: 6,
-              background: "#0b0b0d",
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#eeeef5" }}>@{context.author}</span>
-            <span
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                fontSize: 12.5,
-                lineHeight: 1.4,
-                color: "rgba(238,238,245,0.6)",
-              }}
-            >
-              {context.body}
-            </span>
+        {pickCommunity && (
+          <div style={{ marginBottom: 10, flexShrink: 0 }}>
+            <CommunityPicker
+              communities={pickCommunity.communities}
+              value={pickCommunity.value}
+              onChange={pickCommunity.onChange}
+            />
           </div>
         )}
 
-        {/* The text — fills whatever is left */}
+        {/* Title */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 10, flexShrink: 0 }}>
+          <input
+            className="composer-title"
+            value={title}
+            onChange={(e) => onTitle(e.target.value.slice(0, POST_TITLE_MAX))}
+            placeholder="Title"
+            maxLength={POST_TITLE_MAX}
+            autoFocus={!phone}
+            aria-label="Title"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: "none",
+              border: "none",
+              outline: "none",
+              color: "#f5f5f0",
+              fontSize: 20,
+              fontWeight: 700,
+              fontFamily: "'Space Grotesk', sans-serif",
+              letterSpacing: "-0.01em",
+              padding: "6px 0 10px",
+            }}
+          />
+          {title.length > POST_TITLE_MAX - 40 && (
+            <span style={{ fontSize: 11, color: title.length >= POST_TITLE_MAX ? "#e26b6b" : "rgba(238,238,245,0.35)", flexShrink: 0 }}>
+              {title.length} / {POST_TITLE_MAX}
+            </span>
+          )}
+        </div>
+
+        {/* Formatting row above the text; the text fills whatever is left */}
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <RichEditor
             ref={editorRef}
             frameless
-            toolbarPosition="bottom"
-            autoFocus
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            onSubmit={onSubmit}
+            value={body}
+            onChange={onBody}
+            placeholder="Text (optional — @ to mention someone)"
             mentions={mentions}
             onImage={() => fileRef.current?.click()}
             onGif={giphyEnabled ? () => setPicker(picker === "gif" ? null : "gif") : undefined}
@@ -232,14 +229,12 @@ export default function CommentComposer({
                 {picker === "emoji" && (
                   <EmojiPicker
                     align="right"
-                    vertical="above"
                     onPick={(e) => editorRef.current?.insertText(e)}
                     onClose={() => setPicker(null)}
                   />
                 )}
                 {picker === "gif" && (
                   <GifPicker
-                    placement="above"
                     align="right"
                     onPick={(u) => {
                       onGif(u);
@@ -265,6 +260,23 @@ export default function CommentComposer({
           />
         </div>
 
+        {tags.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "10px 0 2px", flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: "rgba(238,238,245,0.35)" }}>Tag:</span>
+            {tags.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onTagId(t.id)}
+                className="cursor-pointer bg-transparent border-none p-0"
+                style={{ opacity: tagId && tagId !== t.id ? 0.45 : 1 }}
+              >
+                <TagChip name={t.name} color={t.color} />
+              </button>
+            ))}
+          </div>
+        )}
+
         {attachment && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0 2px", flexShrink: 0 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -285,12 +297,12 @@ export default function CommentComposer({
 
         {error && <p style={{ ...errorNote, marginTop: 8, flexShrink: 0 }}>{error}</p>}
 
-        {/* Desktop footer: the send sits under the toolbar. Phones send from the header. */}
+        {/* Desktop footer. Phones post from the header. */}
         {!phone && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexShrink: 0 }}>
             {nearMax && (
-              <span style={{ fontSize: 11, color: value.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.35)" }}>
-                {value.length.toLocaleString()} / {maxLength.toLocaleString()}
+              <span style={{ fontSize: 11, color: body.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.35)" }}>
+                {body.length.toLocaleString()} / {maxLength.toLocaleString()}
               </span>
             )}
             <span style={{ flex: 1 }} />
@@ -301,8 +313,8 @@ export default function CommentComposer({
           </div>
         )}
         {phone && nearMax && (
-          <span style={{ fontSize: 11, padding: "4px 0 8px", color: value.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.35)", flexShrink: 0 }}>
-            {value.length.toLocaleString()} / {maxLength.toLocaleString()}
+          <span style={{ fontSize: 11, padding: "4px 0 8px", color: body.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.35)", flexShrink: 0 }}>
+            {body.length.toLocaleString()} / {maxLength.toLocaleString()}
           </span>
         )}
         {phone && <div style={{ height: 8, flexShrink: 0 }} />}

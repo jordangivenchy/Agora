@@ -312,26 +312,27 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
     { icon: "trash", tip: "Delete table", run: (e) => e.chain().focus().deleteTable().run() },
   ];
 
+  /* One row, always: the button strip scrolls sideways when the box is
+     narrow (phones) instead of wrapping into two ragged lines. Whatever
+     the caller appends (picker hosts, hints) sits after the strip,
+     outside the scroll clip so popovers aren't cut. */
   const toolbar = (
-    <div
-      className={`flex items-center ${toolbarBelow ? "rt-toolbar--scroll mt-1.5" : "flex-wrap mb-1.5"}`}
-      style={{ gap: 2 }}
-      role="toolbar"
-      aria-label="Formatting"
-    >
-      {groups.map((g, gi) => (
-        <span key={gi} className="flex items-center shrink-0" style={{ gap: 2 }}>
-          {gi > 0 && <span aria-hidden style={{ width: 1, height: size - 8, background: "rgba(255,255,255,0.12)", margin: "0 4px" }} />}
-          {g.map((b) => (
-            <ToolButton
-              key={b.tip}
-              b={b} size={size} iconSize={iconSize}
-              active={!!(b.active && a && a[b.active as keyof typeof a])}
-              onClick={() => { if (editor) b.run(editor); }}
-            />
-          ))}
-        </span>
-      ))}
+    <div className={`flex items-center ${toolbarBelow ? "mt-1.5" : "mb-1.5"}`} style={{ gap: 4 }}>
+      <div className="rt-toolbar--scroll flex items-center min-w-0" style={{ gap: 2 }} role="toolbar" aria-label="Formatting">
+        {groups.map((g, gi) => (
+          <span key={gi} className="flex items-center shrink-0" style={{ gap: 2 }}>
+            {gi > 0 && <span aria-hidden style={{ width: 1, height: size - 8, background: "rgba(255,255,255,0.12)", margin: "0 4px" }} />}
+            {g.map((b) => (
+              <ToolButton
+                key={b.tip}
+                b={b} size={size} iconSize={iconSize}
+                active={!!(b.active && a && a[b.active as keyof typeof a])}
+                onClick={() => { if (editor) b.run(editor); }}
+              />
+            ))}
+          </span>
+        ))}
+      </div>
       {trailing}
     </div>
   );
