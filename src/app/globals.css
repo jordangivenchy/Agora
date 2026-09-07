@@ -1722,6 +1722,15 @@ html.reduce-motion .nav-sparkle {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+/* No painted gap band under a see-through bar. The band (mvp-home.css,
+   .nav::after) masks the homepage carousel as it scrolls under the
+   opaque bar; on these routes it sat as a black strip under a
+   transparent one and, painting at the bar's level, cut the top 6px
+   off anything that starts inside it — the Messages shell, aligned
+   with the sidebar's top, lost its rounded top edge to it. */
+.site-chrome .nav::after {
+  display: none;
+}
 
 /* Replay route: shift the replay content out from under the homepage
    glass sidebar. Same --sidebar-width tracking as the profile route;
