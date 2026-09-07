@@ -839,7 +839,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                 </div>
               )}
               {/* Their name over the first bubble of each of their runs, iMessage-style. */}
-              {!mine && (i === 0 || msgs[i - 1].sender_id !== m.sender_id) && (
+              {/* An invite is its own moment: it always carries the name, even mid-run. */}
+              {!mine && (i === 0 || msgs[i - 1].sender_id !== m.sender_id || !!m.community_id || !!msgs[i - 1].community_id) && (
                 <div style={{ alignSelf: "flex-start", marginLeft: 34, marginTop: 6, marginBottom: 0, lineHeight: 1.2, fontSize: 11.5, color: "rgba(238,238,245,0.5)" }}>
                   {displayName(hydratedPeer)}
                 </div>
@@ -861,7 +862,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     right in yellow — the iMessage read. */}
                 {!mine && (
                   <span style={{ width: 22, height: 22, flexShrink: 0, alignSelf: "flex-end", marginBottom: 2 }}>
-                    {(i === msgs.length - 1 || msgs[i + 1].sender_id !== m.sender_id) && (
+                    {(i === msgs.length - 1 || msgs[i + 1].sender_id !== m.sender_id || !!m.community_id || !!msgs[i + 1].community_id) && (
                       <UserAvatar size={22} username={hydratedPeer.username} avatarUrl={hydratedPeer.avatarUrl} seed={hydratedPeer.id} />
                     )}
                   </span>
