@@ -387,9 +387,9 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         type="button"
                         onClick={() => setKind(k.key)}
                         aria-pressed={on}
-                        className="cursor-pointer text-left"
+                        className="cursor-pointer text-left ccm-kind"
                         style={{
-                          display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", borderRadius: 11,
+                          display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 11px", borderRadius: 11,
                           background: on ? "#ffb700" : "#0b0b0d",
                           border: `1px solid ${on ? "#ffb700" : "rgba(255,255,255,0.14)"}`,
                           color: on ? "#1a0e00" : "#eeeef5", fontFamily: "inherit",
@@ -400,7 +400,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         </span>
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>{k.label}</span>
-                          <span style={{ display: "block", fontSize: 11, color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.hint}</span>
+                          <span className="ccm-kind-hint" style={{ display: "block", fontSize: 11, lineHeight: "15px", color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)" }}>{k.hint}</span>
                         </span>
                       </button>
                     );

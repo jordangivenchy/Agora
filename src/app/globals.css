@@ -99,6 +99,12 @@ body {
 .ccm-step { display: flex; flex-direction: column; gap: 18px; animation: ccmStepFwd 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .ccm-step-back { animation-name: ccmStepBack; }
 @media (prefers-reduced-motion: reduce) { .ccm-step { animation: none; } }
+/* Type cards: the hint shows one line at rest and unfolds to the full
+   text on hover, on focus, and on the chosen card (phones have no hover). */
+.ccm-kind-hint { max-height: 15px; overflow: hidden; transition: max-height 0.22s ease; }
+.ccm-kind:hover .ccm-kind-hint,
+.ccm-kind:focus-visible .ccm-kind-hint,
+.ccm-kind[aria-pressed="true"] .ccm-kind-hint { max-height: 90px; }
 }
 /* Phone search entrance (see the phone block near the end of the file). */
 @keyframes searchPillIn {
