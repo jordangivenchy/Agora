@@ -289,8 +289,9 @@ export default function PostCard<P extends PostRow>({
               aria-hidden="true"
               className="cm-caption-spacer"
               style={{
-                /* vote column + row gap: 34 + 12 here, 28 + 10 on phones (globals.css) */
-                width: 46, flexShrink: 0, boxSizing: "border-box", paddingRight: 2,
+                /* vote column + row gap: 34 + 12 here, 28 + 10 on phones (globals.css).
+                   The 4px on the right is the icon's usual distance from the text. */
+                width: 46, flexShrink: 0, boxSizing: "border-box", paddingRight: 4,
                 display: "inline-flex", alignItems: "center", justifyContent: "flex-end",
                 color: "rgba(238,238,245,0.38)", lineHeight: 0,
               }}
