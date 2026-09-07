@@ -1360,9 +1360,9 @@ export default function ProfileView({
                             width: 34, height: 34, borderRadius: "50%",
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
                             padding: 0, flexShrink: 0,
-                            background: set ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.05)",
-                            border: set ? "1px solid rgba(255,255,255,0.4)" : "1px solid rgba(255,255,255,0.14)",
-                            color: set ? "#fff" : "#c9c9d2",
+                            background: set ? "#f5f5f0" : "#111114",
+                            border: set ? "1px solid #f5f5f0" : "1px solid rgba(255,255,255,0.14)",
+                            color: set ? "#0b0b0d" : "#c9c9d2",
                           }}
                         >
                           {set ? <Icon name="check" size={15} /> : <Icon name="bell" size={15} />}

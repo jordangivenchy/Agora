@@ -723,9 +723,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                         width: 26, height: 26, borderRadius: "50%",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 12, lineHeight: 1, padding: 0,
-                        background: reminders[r.id]?.amSet ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.55)",
-                        border: reminders[r.id]?.amSet ? "0.5px solid rgba(255,255,255,0.45)" : "0.5px solid rgba(255,255,255,0.25)",
-                        color: "#fff",
+                        background: reminders[r.id]?.amSet ? "#f5f5f0" : "#0b0b0d",
+                        border: reminders[r.id]?.amSet ? "0.5px solid #f5f5f0" : "0.5px solid rgba(255,255,255,0.25)",
+                        color: reminders[r.id]?.amSet ? "#0b0b0d" : "#fff",
                       }}
                     >
                       {reminders[r.id]?.amSet ? <Icon name="check" size={13} /> : <Icon name="bell" size={13} />}
