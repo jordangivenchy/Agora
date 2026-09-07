@@ -32,6 +32,7 @@ import { createClient } from "@/lib/supabase-browser";
 import UserAvatar from "../UserAvatar";
 import { displayName } from "@/lib/names";
 import { uploadPostImage } from "@/lib/postImages";
+import { pathFor } from "@/lib/routes";
 import { imageFromDataTransfer } from "@/lib/pasteImage";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
@@ -975,18 +976,24 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                             <span style={{ fontSize: 11.5, opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 5 }}><Icon name="users" size={12} /> {memberLine}</span>
                           )}
                         </div>
-                        {/* The action, centred on the right. */}
-                        {!mine && b && (
-                          b.joined ? (
-                            <a href="/communities" className="no-underline" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, padding: "8px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                              <Icon name="check" size={12} /> Joined
-                            </a>
-                          ) : (
-                            <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                        {/* The actions, centred on the right: Join for the
+                            invitee until they're in, and the community's own
+                            page for everyone — the inviter too. */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 6, flexShrink: 0 }}>
+                          {!mine && b && !b.joined && (
+                            <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12.5, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
                               {joining === m.community_id ? "Joining…" : "Join"}
                             </button>
-                          )
-                        )}
+                          )}
+                          <a href={pathFor.community(m.community_id)} className="no-underline" style={{ fontSize: 12, fontWeight: 700, padding: "8px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            <Icon name="arrow-up-right" size={12} /> View page
+                          </a>
+                          {!mine && b?.joined && (
+                            <span style={{ fontSize: 11, opacity: 0.7, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                              <Icon name="check" size={11} /> Joined
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })() : hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
