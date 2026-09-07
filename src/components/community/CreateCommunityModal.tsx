@@ -536,7 +536,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         <span style={{ color: on ? "#1a0e00" : "#c0c0c8", marginTop: 1 }}><Icon name={icon} size={15} /></span>
                         <span>
                           <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>{title}</span>
-                          <span style={{ display: "block", fontSize: 11.5, color: "rgba(238,238,245,0.5)", marginTop: 2 }}>{hint}</span>
+                          <span style={{ display: "block", fontSize: 11.5, color: on ? "rgba(26,14,0,0.72)" : "rgba(238,238,245,0.5)", marginTop: 2 }}>{hint}</span>
                         </span>
                       </button>
                     );
@@ -618,7 +618,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
             <span />
           )}
           <span style={{ marginLeft: "auto" }} />
-          {step < REVIEW ? (
+          {created ? null : step < REVIEW ? (
             <button
               type="button"
               onClick={() => canNext && go(step + 1)}
