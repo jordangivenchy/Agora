@@ -343,9 +343,12 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
     pinnedRef.current = true;
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [lastMsgId]);
-  useLayoutEffect(() => {
+  const repin = useCallback(() => {
     if (pinnedRef.current) listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [replyTo, typingLabel, filePreview]);
+  }, []);
+  useLayoutEffect(() => {
+    repin();
+  }, [replyTo, typingLabel, filePreview, repin]);
 
   /* Auto-grow the composer up to ~4 lines. */
   useEffect(() => {
@@ -719,6 +722,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
 
       {/* Typing strip — outside the scroller so it doesn't retrigger auto-scroll. */}
       <div
+        onTransitionEnd={repin}
         style={{ height: typingLabel ? 22 : 0, overflow: "hidden", transition: "height 0.15s ease", display: "flex", alignItems: "center", gap: 6, padding: page ? "0 18px" : "0 14px", flexShrink: 0 }}
         aria-live="polite"
       >

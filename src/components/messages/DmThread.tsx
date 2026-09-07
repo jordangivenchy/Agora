@@ -404,19 +404,37 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     };
   }, [me, peer.id, supabase]);
 
+  /* "Seen" goes under my newest message, and only once the peer has
+     read it (read_at set by their mark_dm_read, streamed back live). */
+  let lastMineReadId: string | null = null;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].sender_id === me) {
+      lastMineReadId = msgs[i].read_at ? msgs[i].id : null;
+      break;
+    }
+  }
+
   /* ── Pin-to-bottom ────────────────────────────────────────────────
      Keyed on the LAST MESSAGE ID, not array identity — read-receipt
      merges rebuild the array without adding messages and must not yank
      a reader who scrolled up. When composer chrome (reply chip, typing
-     strip, image preview) grows while pinned, re-pin after layout. */
+     strip, image preview) grows while pinned, re-pin after layout — and
+     again when "Seen" lands under my last message, which adds a line
+     at the bottom without adding a message. The typing strip animates
+     its height, so the list is re-pinned once more when that ends
+     (onTransitionEnd below); pinning only at the start left the last
+     line hidden under the strip. */
   const lastMsgId = msgs.length ? msgs[msgs.length - 1].id : null;
   useEffect(() => {
     pinnedRef.current = true;
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [lastMsgId]);
-  useLayoutEffect(() => {
+  const repin = useCallback(() => {
     if (pinnedRef.current) listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [replyTo, peerTyping, filePreview]);
+  }, []);
+  useLayoutEffect(() => {
+    repin();
+  }, [replyTo, peerTyping, filePreview, lastMineReadId, repin]);
 
   /* Auto-grow the composer up to ~4 lines. */
   useEffect(() => {
@@ -605,16 +623,6 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   }, []);
 
   const canSend = !sending && (draft.trim().length > 0 || !!file);
-
-  /* "Seen" goes under my newest message, and only once the peer has
-     read it (read_at set by their mark_dm_read, streamed back live). */
-  let lastMineReadId: string | null = null;
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i].sender_id === me) {
-      lastMineReadId = msgs[i].read_at ? msgs[i].id : null;
-      break;
-    }
-  }
 
   const page = variant === "page";
   const hydratedPeer = { ...peer, display_name: peerName === undefined ? peer.display_name : peerName };
@@ -1048,6 +1056,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
       {/* Typing indicator — lives outside the scroller so it doesn't
           retrigger the auto-scroll effect. */}
       <div
+        onTransitionEnd={repin}
         style={{
           height: peerTyping ? 22 : 0,
           overflow: "hidden",
