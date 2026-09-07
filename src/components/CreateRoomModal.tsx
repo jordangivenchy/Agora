@@ -1072,8 +1072,8 @@ function PillSelect({
         /* Solid fills — no translucency, matching the site's pill system. */
         background: active
           ? activeColor || "var(--accent-purple)"
-          : "#2a2a32",
-        border: "none",
+          : "#0b0b0d",
+        border: active ? "1px solid transparent" : "1px solid rgba(255,255,255,0.14)",
         color: active ? "white" : "#c9c9d2",
       }}
     >
