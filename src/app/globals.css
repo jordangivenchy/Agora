@@ -2954,8 +2954,8 @@ html.reduce-motion .nav-sparkle {
 .explore-subtitle { margin: 0 !important; font-size: 12.5px !important; }
 @media (max-width: 639px) {
   .explore-banner { padding: 4px 0 10px !important; }
-  .explore-title { font-size: 19px !important; line-height: 30px !important; }
-  .explore-subtitle { font-size: 11px !important; margin-top: -2px !important; }
+  .explore-title { font-size: 24px !important; line-height: 32px !important; }
+  .explore-subtitle { font-size: 11px !important; margin-top: 6px !important; }
   .page-head { gap: 8px; row-gap: 6px; min-height: 30px; margin-bottom: 10px !important; }
   .home-section-title { font-size: 14px !important; }
   .page-title { font-size: 19px !important; line-height: 30px !important; }

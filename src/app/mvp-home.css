@@ -6383,8 +6383,9 @@ body { background: transparent; }
    and results run flush with the title instead of 32px in. ═══ */
 @media (max-width: 639px) {
   html .explore-banner { display: block !important; padding: 4px 0 6px !important; }
-  html .explore-banner-stats { display: flex; gap: 16px; margin-top: 6px; }
-  html .explore-stat { text-align: left; display: flex; align-items: baseline; gap: 6px; }
+  /* Three equal columns across the width, each figure beside its label. */
+  html .explore-banner-stats { display: flex; gap: 0; margin-top: 14px; }
+  html .explore-stat { flex: 1; text-align: center; display: flex; justify-content: center; align-items: baseline; gap: 6px; }
   html .explore-stat-val { font-size: 20px; transform-origin: 0 60%; }
   html .explore-stat-label { font-size: 9.5px; margin-top: 0; }
   html .explore-search-wrap { padding: 6px 0 8px; border-bottom: none; }
