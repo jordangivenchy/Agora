@@ -242,8 +242,8 @@ export default function TrendingPage({ open, onClose }: Props) {
                     className="cursor-pointer text-[12px] px-3.5 py-1 rounded-lg"
                     style={
                       activeChip === c
-                        ? { background: "rgba(255,255,255,0.12)", border: "0.5px solid #4a4a54", color: "#f5f5f0" }
-                        : { background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#c0c0c8" }
+                        ? { background: "#0b0b0d", border: "0.5px solid rgba(255,255,255,0.5)", color: "#f5f5f0" }
+                        : { background: "#0b0b0d", border: "0.5px solid rgba(255,255,255,0.14)", color: "#c0c0c8" }
                     }
                   >
                     {c}

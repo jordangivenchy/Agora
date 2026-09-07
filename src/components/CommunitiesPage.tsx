@@ -2888,9 +2888,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       onClick={() => setSort(s)}
                       className="cursor-pointer text-[12px] px-3.5 py-1.5 rounded-full"
                       style={{
-                        background: sort === s ? "rgba(255,255,255,0.1)" : "rgba(16,16,19,0.7)",
-                        border: "0.5px solid " + (sort === s ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.1)"),
-                        color: sort === s ? "#eeeef5" : "rgba(238,238,245,0.65)",
+                        background: "#0b0b0d",
+                        border: "0.5px solid " + (sort === s ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.14)"),
+                        color: sort === s ? "#f5f5f0" : "rgba(238,238,245,0.65)",
                         fontFamily: "inherit",
                       }}
                       title={s === "best" ? "Wilson-score confidence: high ratios win, small samples don't" : undefined}
