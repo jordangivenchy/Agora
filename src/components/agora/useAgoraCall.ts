@@ -16,7 +16,7 @@
    speaker demoted) the hook reconnects with a re-scoped token. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { logRoomEvent } from "@/lib/roomDiag";
+import { logRoomEvent, noteRoomAction } from "@/lib/roomDiag";
 import {
   ConnectionState,
   DisconnectReason,
@@ -221,13 +221,14 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
        layers nobody is subscribed to; capture capped at 720p; audience
        subscribers cap themselves at the medium layer below — together
        these keep per-viewer bandwidth a fraction of full-res. */
-    /* Phones capture at 540p: a 720p encode next to the call's decode is
-       more than an iPhone tab can carry for long. */
+    /* Phones: 540p, one H.264 encode (the hardware path on iOS) instead
+       of three VP8 software simulcast layers — a Safari tab publishing
+       three encoders next to the call's decodes is what tips it over. */
     const phone = typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
     const room = new Room({
       dynacast: true,
       videoCaptureDefaults: { resolution: (phone ? VideoPresets.h540 : VideoPresets.h720).resolution },
-      publishDefaults: { simulcast: true },
+      publishDefaults: phone ? { simulcast: false, videoCodec: "h264" } : { simulcast: true },
     });
     roomRef.current = room;
     let cancelled = false;
@@ -481,8 +482,10 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     setMediaError(null);
     try {
       const next = !micOn;
+      noteRoomAction(roomId, next ? "mic_on" : "mic_off");
       await room.localParticipant.setMicrophoneEnabled(next);
       setMicOn(next);
+      logRoomEvent(roomId, next ? "mic_on" : "mic_off");
     } catch (e) {
       console.warn("mic toggle failed", e);
       setMediaError(explainMediaError("microphone", e));
@@ -609,8 +612,10 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     setMediaError(null);
     try {
       const next = !camOn;
+      noteRoomAction(roomId, next ? "camera_on" : "camera_off");
       await room.localParticipant.setCameraEnabled(next);
       setCamOn(next);
+      logRoomEvent(roomId, next ? "camera_on" : "camera_off");
       refreshTiles();
 
       refreshCameras();

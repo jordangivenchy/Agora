@@ -3389,3 +3389,14 @@
   background: radial-gradient(120% 80% at 50% 100%, #14120c 0%, #070707 55%, #000 100%);
   pointer-events: none;
 }
+
+/* Phones: no backdrop blur anywhere in the room — every blurred layer
+   over live video is another GPU surface Safari has to keep, and the
+   house style is solid surfaces anyway. */
+@media (max-width: 639px) {
+  .ag-controls::before, .ag-sheet-scrim, .ag-sidebar, .ag-more, .ag-more-drawer, .ag-assist-panel,
+  .ag-invite, .ag-audio-prompt, .ag-topbar, .ag-dock, .ag-dock-strip, .ag-tools {
+    backdrop-filter: none !important;
+  }
+  .ag-controls::before { background: #000 !important; }
+}

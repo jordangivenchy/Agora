@@ -8,7 +8,7 @@
    Host Controls panel is invisible to everyone else. */
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { logRoomEvent } from "@/lib/roomDiag";
+import { logRoomEvent, noteRoomAction, takeRoomAction } from "@/lib/roomDiag";
 import { useRouter } from "next/navigation";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { createClient } from "@/lib/supabase-browser";
@@ -988,10 +988,25 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     let since: string | null = null;
     try { since = sessionStorage.getItem(`agora:live:${roomId}`); } catch { /* private mode */ }
+    const lastAction = takeRoomAction(roomId);
     if (!since) return;
     const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-    logRoomEvent(roomId, "reopened_after_unclean_exit", nav?.type ?? "unknown", { since: Number(since), agoMs: Date.now() - Number(since) });
+    logRoomEvent(roomId, "reopened_after_unclean_exit", nav?.type ?? "unknown", {
+      since: Number(since), agoMs: Date.now() - Number(since), lastAction,
+    });
     try { sessionStorage.removeItem(`agora:live:${roomId}`); } catch { /* private mode */ }
+  }, [roomId]);
+  /* Every tap on a control is noted (its label), so an unclean exit can
+     name what was pressed just before. */
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const t = (e.target as HTMLElement | null)?.closest("button, a, [role=button], input, textarea") as HTMLElement | null;
+      if (!t) return;
+      const label = t.getAttribute("aria-label") || t.getAttribute("title") || t.textContent?.trim() || t.tagName;
+      noteRoomAction(roomId, `${e.pointerType}:${label}`);
+    };
+    document.addEventListener("pointerdown", onDown, { passive: true, capture: true });
+    return () => document.removeEventListener("pointerdown", onDown, { capture: true } as EventListenerOptions);
   }, [roomId]);
 
   /* ── Coming back ────────────────────────────────────────────

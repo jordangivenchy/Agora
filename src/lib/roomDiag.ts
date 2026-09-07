@@ -39,3 +39,24 @@ export function logRoomEvent(
     /* diagnostics never throw */
   }
 }
+
+/* The last thing the person did in the room (a control's label), kept
+   in sessionStorage so a page that comes back after an unclean exit
+   can say what was tapped right before it died. */
+export function noteRoomAction(roomId: string, label: string) {
+  try {
+    sessionStorage.setItem(`agora:lastAction:${roomId}`, `${label.slice(0, 60)}@${Date.now()}`);
+  } catch {
+    /* private mode */
+  }
+}
+
+export function takeRoomAction(roomId: string): string | null {
+  try {
+    const v = sessionStorage.getItem(`agora:lastAction:${roomId}`);
+    sessionStorage.removeItem(`agora:lastAction:${roomId}`);
+    return v;
+  } catch {
+    return null;
+  }
+}
