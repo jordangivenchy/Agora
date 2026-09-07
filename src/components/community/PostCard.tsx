@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import RichText from "./RichText";
 import { clipIdInBody, stripClipLink } from "./ClipEmbed";
+import { openImage } from "@/lib/lightbox";
 
 export type PostRow = {
   id: string;
@@ -204,9 +205,11 @@ export function RepostEmbed({ post: p, onOpenOriginal }: { post: PostRow; onOpen
       )}
       <ClipChip clipId={clipIdInBody(p.orig_body)} small />
       {p.orig_image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={p.orig_image_url} alt="" className="mt-1.5 rounded-lg"
-          style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover" }} />
+        <button type="button" onClick={(e) => { e.stopPropagation(); if (p.orig_image_url) openImage(p.orig_image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in", marginTop: 6, maxWidth: "100%" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.orig_image_url} alt="" className="rounded-lg"
+            style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover", display: "block" }} />
+        </button>
       )}
     </div>
   );
@@ -367,9 +370,11 @@ export default function PostCard<P extends PostRow>({
         )}
         <ClipChip clipId={clipIdInBody(p.body)} small={compact} />
         {p.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.image_url} alt="" className="mt-1.5 rounded-lg"
-            style={{ maxHeight: compact ? 160 : 220, maxWidth: "100%", objectFit: "cover" }} />
+          <button type="button" onClick={(e) => { e.stopPropagation(); if (p.image_url) openImage(p.image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in", marginTop: 6, maxWidth: "100%" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.image_url} alt="" className="rounded-lg"
+              style={{ maxHeight: compact ? 160 : 220, maxWidth: "100%", objectFit: "cover", display: "block" }} />
+          </button>
         )}
         {embed !== undefined ? embed : <RepostEmbed post={p} />}
         {/* The actions row hangs its leading icon (14px + 4px gap) into the

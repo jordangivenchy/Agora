@@ -34,6 +34,7 @@ import { displayName } from "@/lib/names";
 import { uploadPostImage } from "@/lib/postImages";
 import { pathFor } from "@/lib/routes";
 import { imageFromDataTransfer } from "@/lib/pasteImage";
+import { openImage } from "@/lib/lightbox";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
 import { CommunityTile } from "@/components/community/PostCard";
@@ -937,7 +938,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     </div>
                   )}
                   {m.image_url && (
-                    <a href={m.image_url} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+                    <button type="button" onClick={() => { if (m.image_url) openImage(m.image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={m.image_url}
@@ -950,7 +951,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                           objectFit: "cover",
                         }}
                       />
-                    </a>
+                    </button>
                   )}
                   {m.community_id ? (() => {
                     const b = inviteMeta.get(m.community_id);

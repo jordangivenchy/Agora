@@ -40,6 +40,7 @@ import PostCard, { PinnedBadge, RoleBadge, TagChip, VoteBox, timeAgo, type PostR
 import InviteFriends from "./community/InviteFriends";
 import ReplayEmbed from "./community/ReplayEmbed";
 import ClipEmbed, { stripClipLink } from "./community/ClipEmbed";
+import { openImage } from "@/lib/lightbox";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 import ActionSheet, { type SheetItem } from "./community/ActionSheet";
 import { createLongPress } from "@/lib/longPress";
@@ -1410,9 +1411,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           </div>
         )}
         {p.orig_image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.orig_image_url} alt="" className="mt-1.5 rounded-lg"
-            style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover" }} />
+          <button type="button" onClick={(e) => { e.stopPropagation(); if (p.orig_image_url) openImage(p.orig_image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in", marginTop: 6, maxWidth: "100%" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.orig_image_url} alt="" className="rounded-lg"
+              style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover", display: "block" }} />
+          </button>
         )}
       </div>
     );
@@ -1572,9 +1575,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <RichText text={c.body} />
                 </div>
                 {c.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.image_url} alt="" className="mt-1.5 rounded-lg"
-                    style={{ maxHeight: 260, maxWidth: "100%" }} />
+                  <button type="button" onClick={(e) => { e.stopPropagation(); if (c.image_url) openImage(c.image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in", marginTop: 6, maxWidth: "100%" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.image_url} alt="" className="rounded-lg"
+                      style={{ maxHeight: 260, maxWidth: "100%", display: "block" }} />
+                  </button>
                 )}
                 <div className="flex items-center gap-3 mt-1.5 cm-comment-actions">
                   <span className="flex items-center gap-1">
@@ -2360,9 +2365,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     {/* Posts sharing a clip link embed the clip the same way. */}
                     <ClipEmbed body={openPost.body} />
                     {openPost.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={openPost.image_url} alt="" className="mt-2 rounded-xl"
-                        style={{ maxWidth: "100%", maxHeight: 480 }} />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); if (openPost.image_url) openImage(openPost.image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in", marginTop: 8, maxWidth: "100%" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={openPost.image_url} alt="" className="rounded-xl"
+                          style={{ maxWidth: "100%", maxHeight: 480, display: "block" }} />
+                      </button>
                     )}
                     {repostEmbed(openPost)}
                     <div style={{ marginTop: 16 }}>{postActions(openPost, true)}</div>

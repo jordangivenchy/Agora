@@ -25,6 +25,7 @@ import UserAvatar from "../UserAvatar";
 import { displayName } from "@/lib/names";
 import { uploadPostImage } from "@/lib/postImages";
 import { imageFromDataTransfer } from "@/lib/pasteImage";
+import { openImage } from "@/lib/lightbox";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
 import {
@@ -699,14 +700,14 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
                     </div>
                   )}
                   {m.image_url && (
-                    <a href={m.image_url} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+                    <button type="button" onClick={() => { if (m.image_url) openImage(m.image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={m.image_url}
                         alt={isGif(m.image_url) ? "GIF" : "Photo"}
                         style={{ display: "block", maxWidth: page ? 420 : 280, maxHeight: page ? 440 : 320, borderRadius: 9, objectFit: "cover" }}
                       />
-                    </a>
+                    </button>
                   )}
                   {hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
                 </div>
