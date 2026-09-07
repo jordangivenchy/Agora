@@ -6396,9 +6396,12 @@ body { background: transparent; }
   html .explore-filter-group-label { font-size: 10px; margin-bottom: 9px; }
   html .explore-filter-pills { flex-wrap: wrap; gap: 10px; }
   html .explore-pill { height: 36px; padding: 0 16px; line-height: 34px; box-sizing: border-box; font-size: 13.5px; }
-  html .explore-filter-divider { margin: 4px 0 16px; }
+  /* One rhythm for every group: 18px between groups (no divider), 9px
+     from a label to its pills — the inline groups had both a label
+     margin and a column gap, which doubled theirs. */
+  html .explore-filter-divider { display: none; }
   html .explore-filter-row { flex-direction: column; gap: 18px; }
-  html .explore-filter-group-inline { gap: 9px; }
+  html .explore-filter-group-inline { gap: 0; }
   html .explore-results-wrap { padding: 14px 0 24px; }
   html .explore-results-meta { font-size: 11px; margin-bottom: 12px; }
   html .explore-results-grid { grid-template-columns: 1fr; gap: 8px; }
