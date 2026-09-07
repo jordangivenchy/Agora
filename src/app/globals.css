@@ -1903,11 +1903,10 @@ html.reduce-motion .nav-sparkle {
 }
 @media all {
   .messages-beside-sidebar {
-    margin-inline: calc(
-        var(--sidebar-width, 220px) +
-          max(24px, (100vw - var(--sidebar-width, 220px) - 1440px) / 2)
-      )
-      16px;
+    /* Hug the rail like the feed pages (.main: rail + 12px, then the
+       24px padding) rather than centring a 1440px column — on a wide
+       screen that left an empty band between the rail and the shell. */
+    margin-inline: calc(var(--sidebar-width, 220px) + 12px) 16px;
   }
 }
 
