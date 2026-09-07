@@ -1429,7 +1429,7 @@ export default function ProfileView({
                         {p.orig_author_username && <> · {identity({
                           id: avatarByUsername.get(p.orig_author_username)?.id,
                           username: p.orig_author_username,
-                          display_name: p.orig_author_display_name,
+                          display_name: null, /* boards name people by handle */
                           avatar_url: avatarByUsername.get(p.orig_author_username)?.avatar_url ?? null,
                         }, 16)}</>}</>
                     : "The original post was deleted."}

@@ -64,7 +64,10 @@ export function timeAgo(iso: string): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-export const authorLabel = (dn: string | null, username: string) => dn?.trim() || `@${username}`;
+/* On the boards a person is their handle: stable, unique, what mods act
+   on and what the profile URL spells. Display names stay for rooms and
+   profiles (the feed's room rows pass their own label). */
+export const authorLabel = (_dn: string | null, username: string) => `@${username}`;
 
 /* MOD / OWNER badge next to author names. */
 export function RoleBadge({ role }: { role: string | null }) {
