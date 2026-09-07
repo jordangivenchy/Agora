@@ -238,17 +238,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       </div>
 
       <div class="explore-filter-group-inline">
-        <span class="explore-filter-group-label">Format</span>
-        <div class="explore-filter-pills" id="epFormatFilter">
-          <button class="explore-pill active" onclick="_epFilter(this,'format')">All</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'format')">Open</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'format')">Oxford</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'format')">1v1</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'format')">Panel</button>
-        </div>
-      </div>
-
-      <div class="explore-filter-group-inline">
         <span class="explore-filter-group-label">Language</span>
         <div class="explore-filter-pills" id="epLangFilter">
           <button class="explore-pill active" onclick="_epFilter(this,'lang')">Any</button>
