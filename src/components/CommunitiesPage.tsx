@@ -1782,7 +1782,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         background: "rgba(6,6,8,0.45)",
       }}
     >
-      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="shell-page-inner" style={{ maxWidth: 1440, margin: 0, padding: "20px 24px" }}>
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}

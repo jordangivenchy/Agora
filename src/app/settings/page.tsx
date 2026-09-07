@@ -1032,7 +1032,7 @@ export default function SettingsPage() {
   return (
     <SiteChrome>
     <div className="replay-beside-sidebar settings-shell" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="mx-auto px-4 py-6 settings-inner" style={{ maxWidth: 980 }}>
+      <div className="settings-inner" style={{ maxWidth: 980, margin: 0, padding: "24px 20px" }}>
 
         {/* header */}
         <div className="flex items-center gap-3 mb-5 settings-head">

@@ -220,7 +220,7 @@ export default function TrendingPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="shell-page-inner" style={{ maxWidth: 1440, margin: 0, padding: "20px 24px" }}>
         <div className="page-head trend-head">
           {activeShort && (
             <button

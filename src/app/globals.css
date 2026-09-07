@@ -1699,13 +1699,11 @@ html.reduce-motion .nav-sparkle {
     max-width: 1440px !important;
     /* margin-inline (not -left): the element also carries mx-auto for
        the narrow no-sidebar layout, and only the same logical property
-       reliably out-cascades it. Centered in the space beside the rail,
-       never closer than 24px to it. */
-    margin-inline: calc(
-        var(--sidebar-width, 220px) +
-          max(24px, (100vw - var(--sidebar-width, 220px) - 1440px) / 2)
-      )
-      16px !important;
+       reliably out-cascades it. Hugs the rail like every other page
+       (rail edge, then the column's own 24px gutter) instead of centring
+       in the space beside it — on a wide screen that centring left an
+       empty band between the rail and the content. */
+    margin-inline: calc(var(--sidebar-width, 220px) + 12px) 16px !important;
   }
 }
 
@@ -1731,6 +1729,13 @@ html.reduce-motion .nav-sparkle {
 @media all {
   .replay-beside-sidebar {
     padding-left: calc(var(--sidebar-width, 220px) + 16px);
+  }
+  /* The replay column (debate-replay.css: 1180px, margin auto) hugs the
+     rail like every other page instead of centring in the space beside
+     it. Its own 20px gutter then puts the content 24px off the rail's
+     edge, the same seam as the shell tabs and the profile route. */
+  .replay-beside-sidebar .dr-wrap {
+    margin-inline: 0;
   }
 }
 

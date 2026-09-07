@@ -161,7 +161,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   return (
     <SiteChrome>
     <main className="replay-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "10px 20px 60px" }}>
+      <div style={{ maxWidth: 960, margin: 0, padding: "10px 20px 60px" }}>
         <h1 style={{ margin: "14px 0 4px", fontSize: 24, fontWeight: 700, color: "#f5f5f0", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.01em" }}>
           {clip ? clip.title || "Clip" : " "}
         </h1>

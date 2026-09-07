@@ -406,7 +406,7 @@ export default function FeedPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="mx-auto shell-page-inner" style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="shell-page-inner" style={{ maxWidth: 1440, margin: 0, padding: "20px 24px" }}>
         <div className="page-head feed-head">
           <h1 className="page-title">Your feed</h1>
           <div className="flex gap-2 flex-1 flex-wrap feed-filters">
