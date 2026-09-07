@@ -248,7 +248,7 @@ export default function PostCard<P extends PostRow>({
   const [press] = useState(() => createLongPress<P>((post) => onLongPressRef.current?.(post)));
   return (
     <div
-      className={`cm-card ${compact ? "p-3" : "p-4"} mb-3 flex flex-col cursor-pointer${className ? ` ${className}` : ""}`}
+      className={`cm-card ${compact ? "p-3" : "p-4"} mb-3 flex gap-3 cursor-pointer${className ? ` ${className}` : ""}`}
       style={postCardStyle}
       onClick={(e) => {
         if (press.consumeClick()) { e.preventDefault(); return; }
@@ -260,15 +260,17 @@ export default function PostCard<P extends PostRow>({
       onPointerCancel={onLongPress ? press.onPointerCancel : undefined}
       onContextMenu={onLongPress ? (e) => { if (press.lastPointerType() !== "mouse") e.preventDefault(); } : undefined}
     >
-      {/* Why it's in the feed — a caption across the top of the card, so
-          the community tile below lines up with the community name. */}
+      {/* Reddit's arrangement: the vote column runs the full height of the
+          card; the "why it's here" caption sits at the top of the content
+          column; the community tile lines up with the community name. */}
+      {onVote && <VoteBox post={p} onVote={onVote} />}
+      <div className="flex-1 min-w-0">
       {reason && (
         <p className="m-0 mb-2 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.38)" }}>
           <Icon name="sparkles" size={11} /> {reason}
         </p>
       )}
       <div className="flex gap-3">
-      {onVote && <VoteBox post={p} onVote={onVote} />}
       {communityArt && (
         <span
           className="shrink-0"
@@ -327,6 +329,7 @@ export default function PostCard<P extends PostRow>({
             </span>
           )}
         </div>
+      </div>
       </div>
       </div>
     </div>
