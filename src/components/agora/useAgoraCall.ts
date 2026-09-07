@@ -16,6 +16,7 @@
    speaker demoted) the hook reconnects with a re-scoped token. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logRoomEvent } from "@/lib/roomDiag";
 import {
   ConnectionState,
   DisconnectReason,
@@ -328,6 +329,9 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
                screen locks — so remember it for the return handler and,
                if we're still on screen, come straight back. */
             if (cancelled) return;
+            logRoomEvent(roomId, "disconnected", reason === undefined ? "unknown" : DisconnectReason[reason] ?? String(reason), {
+              retries: retriesRef.current, everConnected: everConnectedRef.current,
+            });
             if (reason === DisconnectReason.DUPLICATE_IDENTITY) {
               setMediaError("This room is open on another device or tab — the call moved there.");
               return;
@@ -373,7 +377,10 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
             role: canPublish ? "debater" : "spectator",
           }),
         });
-        if (!res.ok) throw new Error(`livekit token ${res.status}`);
+        if (!res.ok) {
+          logRoomEvent(roomId, "token_fail", `http ${res.status}`, { canPublish });
+          throw new Error(`livekit token ${res.status}`);
+        }
         const body = await res.json();
         if (cancelled) return;
         if (body.mode === "hls" && typeof body.url === "string") {
@@ -393,17 +400,20 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           return;
         }
         setConnected(true);
+        logRoomEvent(roomId, "connected", null, { canPublish, nonce: connectNonce, recovering });
         refreshTiles();
 
         watchPlayback();
       } catch (e) {
         console.warn("agora call connect failed", e);
+        logRoomEvent(roomId, "connect_fail", e instanceof Error ? e.message : String(e), { canPublish, nonce: connectNonce });
         setMediaError("Couldn't connect to the live call — reload to retry.");
       }
     })();
 
     return () => {
       cancelled = true;
+      if (everConnectedRef.current) logRoomEvent(roomId, "call_teardown", null, { canPublish, nonce: connectNonce });
       disarm();
       audioEls.forEach((el) => el.remove());
       room.disconnect();
@@ -431,6 +441,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
          back, forever. */
       if (!droppedRef.current) return;
       droppedRef.current = false;
+      logRoomEvent(roomId, "visibility_reconnect");
       setConnectNonce((n) => n + 1);
     };
     document.addEventListener("visibilitychange", back);

@@ -8,6 +8,7 @@
    Host Controls panel is invisible to everyone else. */
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { logRoomEvent } from "@/lib/roomDiag";
 import { useRouter } from "next/navigation";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { createClient } from "@/lib/supabase-browser";
@@ -244,7 +245,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [{ data: roomData }, { data: partData }] = await Promise.all([
+      const [{ data: roomData, error: roomErr }, { data: partData }] = await Promise.all([
         supabase.from("debate_rooms").select("*").eq("id", roomId).maybeSingle(),
         supabase
           .from("debate_participants")
@@ -252,6 +253,17 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           .eq("room_id", roomId)
           .is("left_at", null),
       ]);
+      if (roomErr) {
+        logRoomEvent(roomId, "room_fetch_fail", roomErr.message);
+        /* A failed request is not a missing room. This refetch runs on
+           every participant heartbeat, and a phone's radio drops requests
+           whenever the page is disturbed (a permission prompt, a tap that
+           wakes the connection) — treating that as "unreadable" sent
+           people through the gate and out of the room. Keep what we have;
+           the next change or the 30s tick tries again. */
+        console.warn("agora room fetch failed", roomErr.message);
+        return;
+      }
       if (!roomData) {
         /* Don't redirect yet: an empty row can mean "denied into a
            followers/friends room", which deserves the gate screen. The
@@ -483,8 +495,18 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     let stale = false;
     supabase.rpc("get_room_gate", { p_room: roomId }).then(({ data, error }) => {
       if (stale) return;
+      if (error) {
+        /* The gate couldn't be asked (the request failed) — that's not a
+           verdict. Drop back to the room we had and let the next refetch
+           try again; only a definite "no such room" sends anyone home. */
+        console.warn("agora gate check failed", error.message);
+        logRoomEvent(roomId, "gate_fail", error.message);
+        setRoomUnreadable(false);
+        return;
+      }
       const g = Array.isArray(data) ? data[0] : data;
-      if (error || !g || !g.room_exists) {
+      if (!g || !g.room_exists) {
+        logRoomEvent(roomId, "gate_exit", "room_missing");
         router.replace("/");
         return;
       }
@@ -495,6 +517,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         fetchAll();
         return;
       }
+      logRoomEvent(roomId, "gate_denied", g.access_mode);
       setDeniedGate({ motion: g.motion, host: g.host_username, mode: g.access_mode, communityName: g.community_name ?? null });
     });
     return () => {
@@ -895,6 +918,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const leavingRef = useRef(false);
   const vacateSeat = useCallback(() => {
     leavingRef.current = true;
+    logRoomEvent(roomId, "leave");
     if (!currentUser || !myParticipation) return;
     supabase
       .from("debate_participants")
@@ -919,6 +943,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     const beacon = () => {
       if (!seatedRef.current) return;
       seatedRef.current = false; // pagehide + beforeunload can both fire
+      logRoomEvent(roomId, "pagehide_beacon");
       try {
         navigator.sendBeacon("/api/rooms/leave", JSON.stringify({ roomId }));
       } catch {
@@ -956,7 +981,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         .eq("user_id", currentUser.id)
         .maybeSingle();
       if (!mine?.left_at) return;
-      if (new Date(mine.left_at).getTime() < awaySince - 60_000) return;
+      if (new Date(mine.left_at).getTime() < awaySince - 60_000) {
+        logRoomEvent(roomId, "seat_stale", "left before absence", { left_at: mine.left_at, awaySince });
+        return;
+      }
+      logRoomEvent(roomId, "seat_restored", null, { left_at: mine.left_at, awaySince });
       await supabase
         .from("debate_participants")
         .update({ left_at: null, joined_at: new Date().toISOString() })
@@ -975,8 +1004,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   }, [currentUser, room, broadcast, roomId, supabase, restoreSeat, fetchAll]);
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") hiddenAtRef.current = Date.now();
-      else cameBack();
+      if (document.visibilityState === "hidden") {
+        hiddenAtRef.current = Date.now();
+        logRoomEvent(roomId, "hidden");
+      } else {
+        logRoomEvent(roomId, "visible", null, { hiddenFor: hiddenAtRef.current ? Date.now() - hiddenAtRef.current : null });
+        cameBack();
+      }
     };
     window.addEventListener("pageshow", cameBack);
     document.addEventListener("visibilitychange", onVisibility);
