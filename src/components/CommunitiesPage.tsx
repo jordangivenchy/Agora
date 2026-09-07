@@ -2888,9 +2888,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       onClick={() => setSort(s)}
                       className="cursor-pointer text-[12px] px-3.5 py-1.5 rounded-full"
                       style={{
-                        background: "#0b0b0d",
+                        background: sort === s ? "#ffb700" : "#0b0b0d",
                         border: sort === s ? "1px solid #ffb700" : "0.5px solid rgba(255,255,255,0.14)",
-                        color: sort === s ? "#ffb700" : "rgba(238,238,245,0.65)",
+                        color: sort === s ? "#1a0e00" : "rgba(238,238,245,0.65)",
+                        fontWeight: sort === s ? 700 : 500,
                         fontFamily: "inherit",
                       }}
                       title={s === "best" ? "Wilson-score confidence: high ratios win, small samples don't" : undefined}
