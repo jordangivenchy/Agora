@@ -52,10 +52,13 @@ import {
 interface Props {
   me: string;
   chat: GroupRow;
+  variant: "dock" | "page";
   /** Unique realtime-topic suffix per surface (shared singleton client). */
   topic: string;
   /** Narrow-mode back arrow. */
   onBack?: () => void;
+  /** Dock narrow-mode close button. */
+  onClose?: () => void;
   /** Ping the parent to refresh its list (send/read/receive/rename). */
   onThreadsChanged: () => void;
   /** I left or was removed — the parent drops the selection. */
@@ -65,10 +68,11 @@ interface Props {
 const UNKNOWN: GroupMember = { id: "", username: "someone", display_name: "Someone", avatar_url: null };
 
 const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
-  { me, chat, topic, onBack, onThreadsChanged, onLeft },
+  { me, chat, variant, topic, onBack, onClose, onThreadsChanged, onLeft },
   ref
 ) {
   const [supabase] = useState(() => createClient());
+  const page = variant === "page";
   const chatId = chat.chat_id;
   const [name, setName] = useState(chat.name);
   const [members, setMembers] = useState<GroupMemberRow[]>([]);
@@ -545,9 +549,9 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
           display: "flex",
           alignItems: "center",
           gap: 8,
-          padding: "12px 16px",
+          padding: page ? "12px 16px" : onBack ? "10px 14px" : "8px 12px",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          minHeight: 56,
+          minHeight: page ? 56 : 46,
           flexShrink: 0,
         }}
       >
@@ -563,12 +567,12 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
           className="cursor-pointer"
           style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, background: "none", border: "none", padding: 0, color: "inherit", fontFamily: "inherit", textAlign: "left" }}
         >
-          <GroupTile members={tileMembers} size={40} />
+          <GroupTile members={tileMembers} size={page ? 40 : 32} />
           <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", color: "#f5f5f0", fontWeight: 600, fontSize: 16, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={{ display: "block", color: "#f5f5f0", fontWeight: 600, fontSize: page ? 16 : 14, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {name}
             </span>
-            <span style={{ display: "block", color: "#8b8b94", fontSize: 12.5, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={{ display: "block", color: "#8b8b94", fontSize: page ? 12.5 : 12, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {others.length
                 ? others.map((m) => displayName(m)).join(", ")
                 : `${memberCount} member${memberCount === 1 ? "" : "s"}`}
@@ -578,6 +582,11 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
         <button onClick={() => setInfo(true)} style={{ ...dmIconBtn, marginLeft: "auto" }} aria-label="Group info" title="Group info">
           <Icon name="info" size={16} />
         </button>
+        {onClose && (
+          <button onClick={onClose} style={dmIconBtn} aria-label="Close messages">
+            <Icon name="x" size={14} />
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -587,7 +596,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
           const el = e.currentTarget;
           pinnedRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
         }}
-        style={{ flex: 1, overflowY: "auto", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 6 }}
+        style={{ flex: 1, overflowY: "auto", padding: page ? "14px 18px" : "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}
       >
         {msgs.length === 0 && (
           <p style={{ color: "#8b8b94", fontSize: 13, textAlign: "center", marginTop: 24 }}>Say hi to the group 👋</p>
@@ -629,7 +638,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
               <div
                 id={`gm-msg-${m.id}`}
                 className="dm-msg-row"
-                style={{ display: "flex", alignItems: "flex-end", gap: 6, flexDirection: mine ? "row-reverse" : "row", alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "72%" }}
+                style={{ display: "flex", alignItems: "flex-end", gap: 6, flexDirection: mine ? "row-reverse" : "row", alignSelf: mine ? "flex-end" : "flex-start", maxWidth: page ? "72%" : "85%" }}
               >
                 {!mine && (
                   <span style={{ width: 22, height: 22, flexShrink: 0, alignSelf: "flex-end", marginBottom: 2 }}>
@@ -643,7 +652,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
                     borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
                     background: mine ? YELLOW : "#1e2129",
                     color: mine ? YELLOW_INK : "#f2f2f5",
-                    fontSize: 15,
+                    fontSize: page ? 15 : 14.5,
                     lineHeight: 1.4,
                     wordBreak: "break-word",
                     whiteSpace: "pre-wrap",
@@ -694,7 +703,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
                       <img
                         src={m.image_url}
                         alt={isGif(m.image_url) ? "GIF" : "Photo"}
-                        style={{ display: "block", maxWidth: 420, maxHeight: 440, borderRadius: 9, objectFit: "cover" }}
+                        style={{ display: "block", maxWidth: page ? 420 : 280, maxHeight: page ? 440 : 320, borderRadius: 9, objectFit: "cover" }}
                       />
                     </a>
                   )}
@@ -708,7 +717,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
 
       {/* Typing strip — outside the scroller so it doesn't retrigger auto-scroll. */}
       <div
-        style={{ height: typingLabel ? 22 : 0, overflow: "hidden", transition: "height 0.15s ease", display: "flex", alignItems: "center", gap: 6, padding: "0 18px", flexShrink: 0 }}
+        style={{ height: typingLabel ? 22 : 0, overflow: "hidden", transition: "height 0.15s ease", display: "flex", alignItems: "center", gap: 6, padding: page ? "0 18px" : "0 14px", flexShrink: 0 }}
         aria-live="polite"
       >
         {typingLabel && (
@@ -726,7 +735,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
       {sendError && <p style={{ margin: 0, padding: "6px 12px", color: "#ff9d92", fontSize: 11.5 }}>{sendError}</p>}
 
       {/* Composer */}
-      <div className="dm-composer" style={{ position: "relative", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "10px 14px", flexShrink: 0 }}>
+      <div className="dm-composer" style={{ position: "relative", borderTop: "1px solid rgba(255,255,255,0.08)", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
         {replyTo && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, padding: "4px 8px", borderLeft: `2px solid ${YELLOW}`, borderRadius: 6, background: "rgba(255,183,0,0.08)" }}>
             <div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.3 }}>

@@ -588,6 +588,7 @@ export default function MessagesPage({
               ref={groupThreadRef}
               me={me}
               chat={group}
+              variant="page"
               topic="page"
               onBack={wide ? undefined : () => selectGroup(null)}
               onThreadsChanged={loadAll}

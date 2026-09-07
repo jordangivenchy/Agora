@@ -31,9 +31,10 @@ import DmThread, {
   YELLOW,
   YELLOW_INK,
 } from "./DmThread";
+import GroupThread from "./GroupThread";
 import GroupTile from "./GroupTile";
+import NewGroupModal from "./NewGroupModal";
 import { groupPreview, type GroupRow } from "./groups";
-import { pathFor } from "@/lib/routes";
 
 const WIDE_MIN = 760;
 const LIST_WIDTH = 230;
@@ -73,8 +74,13 @@ export default function MessagesDock() {
   const [peer, setPeer] = useState<Peer | null>(null);
   const peerRef = useRef<Peer | null>(null);
   peerRef.current = peer;
+  const [group, setGroup] = useState<GroupRow | null>(null);
+  const groupRef = useRef<GroupRow | null>(null);
+  groupRef.current = group;
+  const [newGroup, setNewGroup] = useState(false);
   const wideRef = useRef(false);
   const threadRef = useRef<DmThreadHandle>(null);
+  const groupThreadRef = useRef<DmThreadHandle>(null);
   const closeTimerRef = useRef<number | null>(null);
 
   /* The /messages page is the full-size surface; the dock stands down
@@ -90,6 +96,8 @@ export default function MessagesDock() {
       setClosing(false);
       setPeer(null);
       peerRef.current = null;
+      setGroup(null);
+      groupRef.current = null;
     }
   }, [onMessagesRoute, open]);
 
@@ -106,6 +114,8 @@ export default function MessagesDock() {
          false "Seen" for messages nobody saw. */
       setPeer(null);
       peerRef.current = null;
+      setGroup(null);
+      groupRef.current = null;
     }, 150);
   }, []);
   useEffect(
@@ -117,9 +127,12 @@ export default function MessagesDock() {
 
   useEscapeClose(open, () => {
     if (closing) return; // exit animation already in flight
-    if (threadRef.current?.consumeEscape()) return; // picker / pending reply
-    if (peer && !wide) setPeer(null);
-    else closeDock();
+    const handle = group ? groupThreadRef.current : threadRef.current;
+    if (handle?.consumeEscape()) return; // picker / pending reply
+    if ((peer || group) && !wide) {
+      setPeer(null);
+      setGroup(null);
+    } else closeDock();
   });
 
   /* Layout mode tracks the viewport. */
@@ -149,16 +162,42 @@ export default function MessagesDock() {
     return ts;
   }, [supabase]);
 
-  /* Group chats live on the /messages page; the dock lists them (and
-     counts their unread) and hands off to the page when one is picked. */
+  /* Groups list beside DMs and open in the dock like any thread. The
+     open one refreshes with its row (rename, members) and drops out when
+     it's gone (left elsewhere, removed, last member out). */
   const loadGroups = useCallback(async () => {
     const { data } = await supabase.rpc("get_group_threads");
-    setGroups((data ?? []) as GroupRow[]);
+    const gs = (data ?? []) as GroupRow[];
+    setGroups(gs);
+    const cur = groupRef.current;
+    if (cur) {
+      const fresh = gs.find((g) => g.chat_id === cur.chat_id);
+      if (!fresh) {
+        groupRef.current = null;
+        setGroup(null);
+      } else if (fresh.name !== cur.name || fresh.member_count !== cur.member_count) {
+        groupRef.current = fresh;
+        setGroup(fresh);
+      }
+    }
+    return gs;
   }, [supabase]);
+  const loadAll = useCallback(() => {
+    void loadThreads();
+    void loadGroups();
+  }, [loadThreads, loadGroups]);
 
   const selectPeer = useCallback((p: Peer) => {
     peerRef.current = p;
+    groupRef.current = null;
+    setGroup(null);
     setPeer(p);
+  }, []);
+  const selectGroup = useCallback((g: GroupRow) => {
+    groupRef.current = g;
+    peerRef.current = null;
+    setPeer(null);
+    setGroup(g);
   }, []);
 
   /* Open events from anywhere in the app. */
@@ -307,24 +346,25 @@ export default function MessagesDock() {
       {visibleItems.map((it) => {
         if (it.kind === "group") {
           const g = it.g;
+          const gActive = group?.chat_id === g.chat_id;
           return (
-            <a
+            <div
               key={`g-${g.chat_id}`}
-              href={pathFor.messagesGroup(g.chat_id)}
-              className="no-underline"
+              onClick={() => {
+                if (!gActive) selectGroup(g);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 9,
                 padding: wide ? "9px 10px" : "10px 14px",
                 cursor: "pointer",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
+                borderBottom: gActive ? `1px solid ${YELLOW}` : "1px solid rgba(255,255,255,0.04)",
+                background: gActive ? YELLOW : "transparent",
                 borderLeft: "2px solid transparent",
-                textDecoration: "none",
-                color: "inherit",
               }}
             >
-              <GroupTile members={g.members} size={44} />
+              <GroupTile members={g.members} size={44} ring={gActive ? YELLOW : "#0b0b0d"} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                   <p
@@ -332,7 +372,7 @@ export default function MessagesDock() {
                       margin: 0,
                       flex: 1,
                       minWidth: 0,
-                      color: "#f5f5f0",
+                      color: gActive ? YELLOW_INK : "#f5f5f0",
                       fontSize: 14,
                       fontWeight: g.unread > 0 ? 700 : 500,
                       whiteSpace: "nowrap",
@@ -342,12 +382,12 @@ export default function MessagesDock() {
                   >
                     {g.name}
                   </p>
-                  <span style={{ color: "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(g.last_at)}</span>
+                  <span style={{ color: gActive ? "rgba(26,14,0,0.7)" : "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(g.last_at)}</span>
                 </div>
                 <p
                   style={{
                     margin: 0,
-                    color: g.unread > 0 ? "#c9c9d4" : "#8b8b94",
+                    color: gActive ? "rgba(26,14,0,0.72)" : g.unread > 0 ? "#c9c9d4" : "#8b8b94",
                     fontSize: 12.5,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
@@ -360,8 +400,8 @@ export default function MessagesDock() {
               {g.unread > 0 && (
                 <span
                   style={{
-                    background: YELLOW,
-                    color: YELLOW_INK,
+                    background: gActive ? YELLOW_INK : YELLOW,
+                    color: gActive ? YELLOW : YELLOW_INK,
                     borderRadius: 999,
                     fontSize: 10.5,
                     fontWeight: 700,
@@ -376,7 +416,7 @@ export default function MessagesDock() {
                   {g.unread}
                 </span>
               )}
-            </a>
+            </div>
           );
         }
         const t = it.t;
@@ -530,8 +570,21 @@ export default function MessagesDock() {
      760px never remounts DmThread (a remount would wipe the draft, a
      pending reply, and an attached image). Wide: header + list + pane.
      Narrow: header + list, or the pane alone (its own back/close). */
-  const showList = wide || !peer;
+  const showList = wide || (!peer && !group);
   return (
+    <>
+    {newGroup && (
+      <NewGroupModal
+        onClose={() => setNewGroup(false)}
+        onCreated={(chatId) => {
+          setNewGroup(false);
+          loadGroups().then((gs) => {
+            const g = gs.find((x) => x.chat_id === chatId);
+            if (g) selectGroup(g);
+          });
+        }}
+      />
+    )}
     <div
       className={`dm-dock-panel${closing ? " dm-dock-closing" : ""}`}
       style={{ ...panelBase, width: wide ? 660 : 350, height: wide ? 560 : 520 }}
@@ -559,11 +612,19 @@ export default function MessagesDock() {
           >
             Messages{totalUnread > 0 ? ` (${totalUnread})` : ""}
           </span>
+          <button
+            onClick={() => setNewGroup(true)}
+            style={{ ...dmIconBtn, marginLeft: "auto" }}
+            aria-label="New group chat"
+            title="New group"
+          >
+            <Icon name="users" size={15} />
+          </button>
           <a
             href="/messages"
             aria-label="Open full messages page"
             title="Open full page"
-            style={{ ...dmIconBtn, marginLeft: "auto", textDecoration: "none" }}
+            style={{ ...dmIconBtn, textDecoration: "none" }}
           >
             <Icon name="arrow-up-right" size={14} />
           </a>
@@ -589,7 +650,31 @@ export default function MessagesDock() {
             {threadList}
           </div>
         )}
-        {peer ? (
+        {group ? (
+          <GroupThread
+            key="group"
+            ref={groupThreadRef}
+            me={me}
+            chat={group}
+            variant="dock"
+            topic="dock"
+            onBack={
+              wide
+                ? undefined
+                : () => {
+                    setGroup(null);
+                    loadGroups();
+                  }
+            }
+            onClose={wide ? undefined : closeDock}
+            onThreadsChanged={loadAll}
+            onLeft={() => {
+              groupRef.current = null;
+              setGroup(null);
+              void loadGroups();
+            }}
+          />
+        ) : peer ? (
           <DmThread
             key="thread"
             ref={threadRef}
@@ -619,5 +704,6 @@ export default function MessagesDock() {
         )}
       </div>
     </div>
+    </>
   );
 }
