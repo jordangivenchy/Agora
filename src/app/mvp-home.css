@@ -6394,8 +6394,8 @@ body { background: transparent; }
   html .explore-filter-bar { padding: 6px 0 4px; border-bottom: none; }
   html .explore-filter-group { margin-bottom: 10px; }
   html .explore-filter-group-label { font-size: 10px; margin-bottom: 6px; }
-  html .explore-filter-pills { flex-wrap: wrap; gap: 6px; }
-  html .explore-pill { height: 30px; padding: 0 12px; line-height: 28px; box-sizing: border-box; font-size: 12px; }
+  html .explore-filter-pills { flex-wrap: wrap; gap: 8px; }
+  html .explore-pill { height: 36px; padding: 0 16px; line-height: 34px; box-sizing: border-box; font-size: 13.5px; }
   html .explore-filter-divider { margin: 6px 0 10px; }
   html .explore-filter-row { flex-direction: column; gap: 10px; }
   html .explore-filter-group-inline { gap: 6px; }
