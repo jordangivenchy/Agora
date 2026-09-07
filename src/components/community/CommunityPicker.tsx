@@ -204,7 +204,7 @@ export default function CommunityPicker({
                           {c.is_private && <Icon name="lock" size={11} style={{ opacity: 0.7 }} />}
                           <span className="truncate text-[13px]" style={{ fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}>{c.name}</span>
                           {(c.my_role === "owner" || c.my_role === "moderator") && (
-                            <span className="text-[9px] font-bold px-1 rounded" style={{ background: "rgba(226,185,107,0.14)", color: "#e2b96b", letterSpacing: "0.04em" }}>
+                            <span className="text-[9px] font-bold" style={{ color: "#e2b96b", letterSpacing: "0.09em" }}>
                               {c.my_role === "owner" ? "OWNER" : "MOD"}
                             </span>
                           )}

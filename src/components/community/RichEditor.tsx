@@ -363,7 +363,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
             style={{ width: 200, background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.12)", color: "#eeeef5", fontFamily: "inherit" }}
           />
           <button type="button" onClick={applyLink} className="cursor-pointer text-[11px] px-2.5 py-1 rounded-md"
-            style={{ background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)", color: "#4a9eff", fontFamily: "inherit" }}>
+            style={{ background: "#2f7fe0", border: "none", color: "#fff", fontFamily: "inherit" }}>
             {linkUrl.trim() ? "Apply" : "Remove"}
           </button>
           <button type="button" onClick={() => { setLinkOpen(false); editor?.commands.focus(); }} title="Close"

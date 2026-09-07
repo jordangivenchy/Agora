@@ -273,7 +273,7 @@ export default function FeedPage({ open, onClose }: Props) {
           <div className="flex-1 min-w-0">
             <Reason text={it.reason} />
             <p className="m-0 text-[10.5px] flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)" }}>
-              <span className="text-[9px] font-bold rounded" style={{ background: "rgba(139,92,246,0.18)", border: "0.5px solid rgba(139,92,246,0.5)", color: "#c4b5fd", padding: "1px 6px", letterSpacing: "0.06em" }}>SCHEDULED</span>
+              <span className="text-[9px] font-bold" style={{ color: "#c4b5fd", letterSpacing: "0.09em" }}>SCHEDULED</span>
               {r.host && authorChip(r.host.id, r.host.username, r.host.display_name ?? null, r.host.avatar_url, r.host.display_name?.trim() || r.host.username)}
               {r.community && <><span>·</span><span style={{ color: "#e2b96b" }}>{r.community.name}</span></>}
             </p>

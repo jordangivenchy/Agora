@@ -69,24 +69,23 @@ export function timeAgo(iso: string): string {
    profiles (the feed's room rows pass their own label). */
 export const authorLabel = (_dn: string | null, username: string) => `@${username}`;
 
-/* MOD / OWNER badge next to author names. */
+/* Status labels are small tracked caps in a colour — no fill, no box.
+   A tinted pill behind nine-point type was the one thing on the card
+   that looked like a sticker. */
+export const badgeStyle = (color: string): React.CSSProperties => ({
+  color, fontSize: 9, fontWeight: 800, letterSpacing: "0.09em", lineHeight: 1,
+  display: "inline-flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
+});
+
+/* MOD / OWNER label next to author names. */
 export function RoleBadge({ role }: { role: string | null }) {
   if (role !== "owner" && role !== "moderator") return null;
   const owner = role === "owner";
-  return (
-    <span
-      className="text-[9px] font-bold px-1.5 rounded"
-      style={{
-        background: owner ? "rgba(226,185,107,0.14)" : "rgba(0,184,148,0.14)",
-        border: `0.5px solid ${owner ? "rgba(226,185,107,0.4)" : "rgba(0,184,148,0.4)"}`,
-        color: owner ? "#e2b96b" : "#00b894",
-        letterSpacing: "0.04em",
-        padding: "1px 5px",
-      }}
-    >
-      {owner ? "OWNER" : "MOD"}
-    </span>
-  );
+  return <span style={badgeStyle(owner ? "#e2b96b" : "#00b894")}>{owner ? "OWNER" : "MOD"}</span>;
+}
+
+export function PinnedBadge() {
+  return <span style={badgeStyle("#4a9eff")}><Icon name="pin" size={10} /> PINNED</span>;
 }
 
 /* Solid, not tinted: a near-black pill with a hairline; the tag's colour
@@ -280,14 +279,7 @@ export default function PostCard<P extends PostRow>({
           </span>
           <RoleBadge role={p.author_role} />
           {/* No repost glyph up here: the embed below says "from <board>". */}
-          {p.pinned_at && (
-            <span className="text-[9px] font-bold rounded" style={{
-              background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
-              color: "#4a9eff", padding: "1px 5px", letterSpacing: "0.04em",
-            }}>
-              <Icon name="pin" size={10} /> PINNED
-            </span>
-          )}
+          {p.pinned_at && <PinnedBadge />}
           {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} small />}
         </p>
         <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#eeeef5" }}>

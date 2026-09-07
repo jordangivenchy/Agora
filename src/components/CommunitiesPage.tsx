@@ -36,7 +36,7 @@ import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
 import CommunityPicker from "./community/CommunityPicker";
 import RichText from "./community/RichText";
-import PostCard, { RoleBadge, TagChip, VoteBox, timeAgo, type PostRow } from "./community/PostCard";
+import PostCard, { PinnedBadge, RoleBadge, TagChip, VoteBox, timeAgo, type PostRow } from "./community/PostCard";
 import ReplayEmbed from "./community/ReplayEmbed";
 import ClipEmbed from "./community/ClipEmbed";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
@@ -1534,14 +1534,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 {authorSpan(c.author_id, c.author_username, c.author_display_name)} · {timeAgo(c.created_at)}
               </span>
               <RoleBadge role={c.author_role} />
-              {c.pinned_at && (
-                <span className="text-[9.5px] font-bold px-1.5 rounded" style={{
-                  background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
-                  color: "#4a9eff", padding: "1px 6px", letterSpacing: "0.04em",
-                }}>
-                  <Icon name="pin" size={10} /> PINNED
-                </span>
-              )}
+              {c.pinned_at && <PinnedBadge />}
               {isCollapsed && hidden > 0 && (
                 <span className="text-[10px]" style={{ color: "#e2b96b" }}>
                   {hidden} repl{hidden === 1 ? "y" : "ies"} hidden
@@ -2227,14 +2220,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       </span>
                       <RoleBadge role={openPost.author_role} />
                       {openPost.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /> repost</span>}
-                      {openPost.pinned_at && (
-                        <span className="text-[9.5px] font-bold rounded" style={{
-                          background: "rgba(74,158,255,0.12)", border: "0.5px solid rgba(74,158,255,0.35)",
-                          color: "#4a9eff", padding: "1px 6px", letterSpacing: "0.04em",
-                        }}>
-                          <Icon name="pin" size={10} /> PINNED
-                        </span>
-                      )}
+                      {openPost.pinned_at && <PinnedBadge />}
                       {openPost.tag_name && <TagChip name={openPost.tag_name} color={openPost.tag_color} />}
                     </p>
                     <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
