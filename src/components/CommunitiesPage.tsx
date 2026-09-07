@@ -1824,17 +1824,19 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
                 title="New post or community"
-                className="cursor-pointer inline-flex items-center justify-center border-none"
+                className={`cursor-pointer inline-flex items-center justify-center border-none cm-plus-btn${plusOpen ? " is-open" : ""}`}
                 style={{ width: 48, height: 48, borderRadius: 999, background: "#ffb700", color: "#1a0e00" }}
               >
-                <Icon name="plus" size={24} />
+                <span className="cm-plus-icon" style={{ display: "inline-flex", lineHeight: 0 }}>
+                  <Icon name="plus" size={24} />
+                </span>
               </button>
               {plusOpen && (
                 <>
                   <div className="fixed inset-0" style={{ zIndex: 998 }} onClick={() => setPlusOpen(false)} />
                   <div
                     role="menu"
-                    className="absolute flex flex-col"
+                    className="absolute flex flex-col cm-plus-menu"
                     style={{
                       top: 54, right: 0, minWidth: 190, zIndex: 999,
                       background: "#000", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12,

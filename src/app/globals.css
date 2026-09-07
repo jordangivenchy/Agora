@@ -2925,6 +2925,22 @@ html.reduce-motion .nav-sparkle {
 @media (max-width: 639px) {
   .cm-head-plus button { width: 40px !important; height: 40px !important; }
 }
+/* The + turns into an × as its menu unfolds beneath it; a press squashes
+   it slightly. */
+.cm-plus-btn { transition: transform 160ms cubic-bezier(.2,.7,.2,1), background-color 160ms ease; }
+.cm-plus-btn:hover { background-color: #ffc22e !important; }
+.cm-plus-btn:active { transform: scale(0.92); }
+.cm-plus-icon { transition: transform 220ms cubic-bezier(.2,.7,.2,1); }
+.cm-plus-btn.is-open .cm-plus-icon { transform: rotate(45deg); }
+@keyframes plusMenuIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.cm-plus-menu { transform-origin: top right; animation: plusMenuIn 180ms cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .cm-plus-btn, .cm-plus-icon { transition: none; }
+  .cm-plus-menu { animation: none; }
+}
 .page-sub {
   margin: -12px 0 16px;
   font-size: 12.5px;
