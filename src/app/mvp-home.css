@@ -4454,13 +4454,14 @@ body { background: transparent; }
 /* Search bar */
 .explore-search-wrap {
   position: relative;
-  padding: 14px 32px;
+  /* Flush with the title above (the banner has no side padding). */
+  padding: 12px 0;
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .explore-search-icon {
   position: absolute;
-  left: 50px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 17px;
@@ -4470,11 +4471,11 @@ body { background: transparent; }
 
 .explore-search-input {
   width: 100%;
-  height: 42px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  height: 40px;
+  background: #0b0b0d;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
-  padding: 0 18px 0 42px;
+  padding: 0 18px 0 40px;
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
   color: rgba(255,255,255,0.82);
@@ -4487,9 +4488,8 @@ body { background: transparent; }
 
 /* Filter bar */
 .explore-filter-bar {
-  padding: 14px 32px 12px;
+  padding: 12px 0 10px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
-  background: rgba(255,255,255,0.01);
 }
 
 .explore-filter-group { margin-bottom: 4px; }
@@ -4529,8 +4529,8 @@ body { background: transparent; }
 
 .explore-ar-input {
   width: 62px; padding: 5px 7px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: #0b0b0d;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 6px; color: rgba(255,255,255,0.6);
   font-size: 12px; font-family: 'DM Sans', sans-serif;
   text-align: center; outline: none;
@@ -4559,7 +4559,7 @@ body { background: transparent; }
 .mini-toggle-e.on .knob { left: 14px; }
 
 /* Results */
-.explore-results-wrap { padding: 18px 32px 48px; }
+.explore-results-wrap { padding: 16px 0 48px; }
 
 .explore-results-meta { font-size: 12px; color: rgba(255,255,255,0.25); margin-bottom: 14px; }
 
@@ -4571,14 +4571,14 @@ body { background: transparent; }
 
 /* Cards */
 .explore-result-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: #0b0b0d;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px; padding: 15px;
   cursor: pointer; transition: all 0.18s ease;
 }
 .explore-result-card:hover {
-  background: rgba(255,255,255,0.055);
-  border-color: rgba(255,255,255,0.12);
+  background: #131317;
+  border-color: rgba(255,255,255,0.14);
   transform: translateY(-1px);
 }
 
@@ -4591,9 +4591,10 @@ body { background: transparent; }
   font-size: 10px; font-weight: 700;
   padding: 3px 9px; border-radius: 999px; letter-spacing: 0.05em;
 }
-.explore-status.live      { background: rgba(239,68,68,0.12);  color: #f87171;  border: 1px solid rgba(239,68,68,0.22); }
-.explore-status.queue     { background: rgba(255,183,0,0.1);   color: #FFB700;  border: 1px solid rgba(255,183,0,0.22); }
-.explore-status.scheduled { background: rgba(25,118,210,0.1);  color: #64B5F6;  border: 1px solid rgba(25,118,210,0.2); }
+/* Colour in the text only; the chip itself is the solid ground. */
+.explore-status.live      { background: #0b0b0d; color: #f87171; border: 1px solid rgba(255,255,255,0.12); }
+.explore-status.queue     { background: #0b0b0d; color: #FFB700; border: 1px solid rgba(255,255,255,0.12); }
+.explore-status.scheduled { background: #0b0b0d; color: #64B5F6; border: 1px solid rgba(255,255,255,0.12); }
 
 .explore-card-category { font-size: 11px; color: rgba(255,255,255,0.25); }
 
@@ -6362,4 +6363,38 @@ body { background: transparent; }
   }
   .carousel-item .carousel-lower-third,
   .carousel-item.has-thumb .carousel-lower-third { right: 0; }
+}
+
+/* ═══ Explore on phones: the filters were a 500px wall of wrapped pills
+   before a single result. Each group is now one row that scrolls
+   sideways (like the Browse chips), the stats tuck under the title, and
+   the search, filters and results run flush with the title. ═══ */
+@media (max-width: 639px) {
+  html .explore-banner { display: block !important; padding: 4px 0 6px !important; }
+  html .explore-banner-stats { display: flex; gap: 16px; margin-top: 6px; }
+  html .explore-stat { text-align: left; display: flex; align-items: baseline; gap: 5px; }
+  html .explore-stat-val { font-size: 14px; }
+  html .explore-stat-label { font-size: 9.5px; }
+  html .explore-search-wrap { padding: 6px 0 8px; border-bottom: none; }
+  html .explore-search-icon { left: 12px; font-size: 14px; }
+  html .explore-search-input { height: 36px; font-size: 13px; padding: 0 12px 0 34px; border-radius: 10px; }
+  html .explore-filter-bar { padding: 4px 0 2px; border-bottom: none; }
+  html .explore-filter-group { margin-bottom: 6px; }
+  html .explore-filter-group-label { font-size: 9.5px; margin-bottom: 4px; }
+  html .explore-filter-pills {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px;
+    margin: 0 -12px; padding: 0 12px 2px;
+  }
+  html .explore-filter-pills::-webkit-scrollbar { display: none; }
+  html .explore-pill { height: 30px; padding: 0 12px; line-height: 28px; box-sizing: border-box; font-size: 12px; flex-shrink: 0; }
+  html .explore-filter-divider { margin: 4px 0 6px; }
+  html .explore-filter-row { flex-direction: column; gap: 6px; }
+  html .explore-filter-group-inline { gap: 4px; }
+  html .explore-results-wrap { padding: 6px 0 24px; }
+  html .explore-results-meta { font-size: 11px; margin-bottom: 8px; }
+  html .explore-results-grid { grid-template-columns: 1fr; gap: 8px; }
+  html .explore-result-card { padding: 12px; border-radius: 12px; }
+  html .explore-card-motion { font-size: 13px; margin-bottom: 8px; }
+  html .explore-card-meta { margin-bottom: 8px; }
+  html .explore-empty { padding: 32px 12px; font-size: 13px; }
 }
