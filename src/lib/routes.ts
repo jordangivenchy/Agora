@@ -27,6 +27,9 @@ export const pathFor = {
   messages(username?: string | null): string {
     return username ? `/messages/${encodeURIComponent(username)}` : "/messages";
   },
+  messagesGroup(chatId: string): string {
+    return `/messages/g/${encodeURIComponent(chatId)}`;
+  },
   search(q?: string | null): string {
     const t = (q ?? "").trim();
     return t ? `/search?q=${encodeURIComponent(t)}` : "/search";

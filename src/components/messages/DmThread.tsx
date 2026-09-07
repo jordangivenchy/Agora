@@ -128,7 +128,7 @@ interface Reaction {
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
 /* "Today" / "Yesterday" / "Aug 30" (+year when it isn't this year). */
-function dayLabel(iso: string) {
+export function dayLabel(iso: string) {
   const d = new Date(iso);
   const now = new Date();
   const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();

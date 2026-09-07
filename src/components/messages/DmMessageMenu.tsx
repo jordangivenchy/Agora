@@ -26,6 +26,8 @@ interface Props {
   onUnsend: () => void;
   onDelete: () => void;
   onClose: () => void;
+  /** Group threads have no per-person copy to delete. */
+  showDelete?: boolean;
   /** The scrim asks before closing on a click: a press-and-hold opens the
       menu while the finger is still down, so the release (and the click
       the browser synthesises) lands on the scrim and must not count. */
@@ -37,7 +39,7 @@ const EDGE = 8;
 
 export default function DmMessageMenu({
   anchor, root, mine, reactions, myReactions, canUnsend, hasText,
-  onReact, onReply, onCopy, onUnsend, onDelete, onClose, shouldIgnoreClick,
+  onReact, onReply, onCopy, onUnsend, onDelete, onClose, shouldIgnoreClick, showDelete = true,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   /* First paint below the bubble; flip above if that runs off the root. */
@@ -74,7 +76,7 @@ export default function DmMessageMenu({
         className={`dm-menu${mine ? " is-mine" : ""}${place.above ? " is-above" : ""}`}
         style={{ top: place.top, ...side }}
       >
-        <div className="dm-menu-reactions" role="group" aria-label="React">
+        {reactions.length > 0 && <div className="dm-menu-reactions" role="group" aria-label="React">
           {reactions.map((e) => (
             <button
               key={e}
@@ -87,7 +89,7 @@ export default function DmMessageMenu({
               {e}
             </button>
           ))}
-        </div>
+        </div>}
         <div className="dm-menu-rows">
           <button type="button" role="menuitem" className="dm-menu-row" onClick={onReply}>
             <Icon name="text-quote" size={15} /> Reply
@@ -102,9 +104,11 @@ export default function DmMessageMenu({
               <Icon name="circle-x" size={15} /> Unsend for everyone
             </button>
           )}
-          <button type="button" role="menuitem" className="dm-menu-row dm-menu-row--danger" onClick={onDelete}>
-            <Icon name="trash" size={15} /> Delete for you
-          </button>
+          {showDelete && (
+            <button type="button" role="menuitem" className="dm-menu-row dm-menu-row--danger" onClick={onDelete}>
+              <Icon name="trash" size={15} /> Delete for you
+            </button>
+          )}
         </div>
       </div>
     </>

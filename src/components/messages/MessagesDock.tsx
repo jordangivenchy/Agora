@@ -31,6 +31,9 @@ import DmThread, {
   YELLOW,
   YELLOW_INK,
 } from "./DmThread";
+import GroupTile from "./GroupTile";
+import { groupPreview, type GroupRow } from "./groups";
+import { pathFor } from "@/lib/routes";
 
 const WIDE_MIN = 760;
 const LIST_WIDTH = 230;
@@ -65,6 +68,7 @@ export default function MessagesDock() {
   const [closing, setClosing] = useState(false);
   const [wide, setWide] = useState(false);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [groups, setGroups] = useState<GroupRow[]>([]);
   const [search, setSearch] = useState("");
   const [peer, setPeer] = useState<Peer | null>(null);
   const peerRef = useRef<Peer | null>(null);
@@ -145,6 +149,13 @@ export default function MessagesDock() {
     return ts;
   }, [supabase]);
 
+  /* Group chats live on the /messages page; the dock lists them (and
+     counts their unread) and hands off to the page when one is picked. */
+  const loadGroups = useCallback(async () => {
+    const { data } = await supabase.rpc("get_group_threads");
+    setGroups((data ?? []) as GroupRow[]);
+  }, [supabase]);
+
   const selectPeer = useCallback((p: Peer) => {
     peerRef.current = p;
     setPeer(p);
@@ -179,6 +190,7 @@ export default function MessagesDock() {
   useEffect(() => {
     if (!me) return;
     loadThreads();
+    loadGroups();
     const channel = supabase
       .channel("dm-inbox")
       .on(
@@ -208,13 +220,22 @@ export default function MessagesDock() {
           loadThreads();
         }
       )
+      /* Group activity (RLS streams only my groups' rows; the read
+         cursor flips on group_chat_members when I read on the page). */
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "group_messages" }, () => {
+        loadGroups();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "group_chat_members" }, () => {
+        loadGroups();
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [me, supabase, loadThreads]);
+  }, [me, supabase, loadThreads, loadGroups]);
 
-  const totalUnread = threads.reduce((n, t) => n + Number(t.unread), 0);
+  const totalUnread =
+    threads.reduce((n, t) => n + Number(t.unread), 0) + groups.reduce((n, g) => n + Number(g.unread), 0);
 
   /* Unread badge on the navbar Messages button (MVP markup, homepage) —
      kept in sync even while the dock is closed, so DMs are never silent. */
@@ -246,21 +267,119 @@ export default function MessagesDock() {
         : threads,
     [threads, q]
   );
+  const visibleGroups = useMemo(
+    () =>
+      q
+        ? groups.filter(
+            (g) =>
+              g.name.toLowerCase().includes(q) ||
+              g.members.some(
+                (m) => m.username.toLowerCase().includes(q) || (m.display_name ?? "").toLowerCase().includes(q)
+              )
+          )
+        : groups,
+    [groups, q]
+  );
+  /* One list, newest activity first. */
+  const visibleItems = useMemo(
+    () =>
+      [
+        ...visibleThreads.map((t) => ({ kind: "dm" as const, at: t.last_at, t })),
+        ...visibleGroups.map((g) => ({ kind: "group" as const, at: g.last_at, g })),
+      ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)),
+    [visibleThreads, visibleGroups]
+  );
+  const anyThreads = threads.length > 0 || groups.length > 0;
 
   if (!me || !open || onMessagesRoute) return null;
 
   /* ── Conversation list ─────────────────────────────────────────── */
   const threadList = (
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-      {threads.length === 0 && (
+      {!anyThreads && (
         <p style={{ color: "#8b8b94", fontSize: 12.5, textAlign: "center", padding: "28px 18px" }}>
           No conversations yet. Open a friend&apos;s menu and hit <b>Message</b>, or use your Friend List.
         </p>
       )}
-      {threads.length > 0 && visibleThreads.length === 0 && (
+      {anyThreads && visibleItems.length === 0 && (
         <p style={{ color: "#8b8b94", fontSize: 12.5, textAlign: "center", padding: "28px 18px" }}>No matches.</p>
       )}
-      {visibleThreads.map((t) => {
+      {visibleItems.map((it) => {
+        if (it.kind === "group") {
+          const g = it.g;
+          return (
+            <a
+              key={`g-${g.chat_id}`}
+              href={pathFor.messagesGroup(g.chat_id)}
+              className="no-underline"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+                padding: wide ? "9px 10px" : "10px 14px",
+                cursor: "pointer",
+                borderBottom: "1px solid rgba(255,255,255,0.04)",
+                borderLeft: "2px solid transparent",
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              <GroupTile members={g.members} size={44} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      flex: 1,
+                      minWidth: 0,
+                      color: "#f5f5f0",
+                      fontSize: 14,
+                      fontWeight: g.unread > 0 ? 700 : 500,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {g.name}
+                  </p>
+                  <span style={{ color: "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(g.last_at)}</span>
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    color: g.unread > 0 ? "#c9c9d4" : "#8b8b94",
+                    fontSize: 12.5,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {groupPreview(g)}
+                </p>
+              </div>
+              {g.unread > 0 && (
+                <span
+                  style={{
+                    background: YELLOW,
+                    color: YELLOW_INK,
+                    borderRadius: 999,
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    minWidth: 18,
+                    height: 18,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 5px",
+                  }}
+                >
+                  {g.unread}
+                </span>
+              )}
+            </a>
+          );
+        }
+        const t = it.t;
         const active = peer?.id === t.peer_id;
         return (
           <div
@@ -493,7 +612,7 @@ export default function MessagesDock() {
           wide && (
             <div key="empty" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <p style={{ color: "#8b8b94", fontSize: 12.5, textAlign: "center", padding: 24 }}>
-                {threads.length === 0 ? "Your conversations will show up here." : "Pick a conversation."}
+                {!anyThreads ? "Your conversations will show up here." : "Pick a conversation."}
               </p>
             </div>
           )
