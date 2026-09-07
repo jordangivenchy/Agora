@@ -2675,8 +2675,6 @@ html.reduce-motion .nav-sparkle {
 
   /* Communities: content first, rail after; rows wrap; tap targets. */
   .cm-rail { order: 2; margin-top: 16px; }
-  /* Header: the create buttons drop under the title as their own row. */
-  .cm-head .cm-head-actions { flex-basis: 100%; margin-left: 0 !important; }
   /* Create modals sit above the tab bar on phones (it was covering their
      footers). The community modal floats centred, sized to its content:
      header and footer pinned inside the card, only the body scrolls. */
@@ -2696,7 +2694,6 @@ html.reduce-motion .nav-sparkle {
   .ccm-kinds { grid-template-columns: 1fr 1fr !important; }
   .ccm-kinds > button { min-width: 0; }
   .ccm-images, .ccm-access { grid-template-columns: 1fr !important; }
-  .cm-head .cm-head-actions > button { min-height: 36px; }
   .cm-post-actions, .cm-comment-actions { flex-wrap: wrap; row-gap: 4px; }
   .cm-post-actions > *, .cm-comment-actions > button, .cm-comment-actions > span { min-height: 32px; }
   [aria-label="Upvote"], [aria-label="Downvote"],
@@ -2965,7 +2962,6 @@ html.reduce-motion .nav-sparkle {
 
   /* Chips: feed filters, board sort, head actions — 30px, 12px type. */
   .feed-filters > button,
-  .cm-head .cm-head-actions > button,
   [style*="padding: 5px 13px"] {
     min-height: 0 !important;
     height: 30px !important;

@@ -294,6 +294,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [composeCommunity, setComposeCommunity] = useState<string>("");
   /* "+ New community" opens CreateCommunityModal (community/). */
   const [creatingCommunity, setCreatingCommunity] = useState(false);
+  /* The header's single "+" — a menu choosing between a post and a community. */
+  const [plusOpen, setPlusOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Sharing / reposting
@@ -1812,24 +1814,52 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           >
             Communities
           </h1>
-          {/* The two ways to add something, together: post is the primary
-              (yellow), a new board the quiet one. Hidden inside a post. */}
+          {/* One "+" beside the title: a menu with the two things you can
+              add. Hidden inside a post. */}
           {!openPost && (
-            <span className="flex items-center gap-2 ml-auto cm-head-actions">
+            <span className="relative inline-flex cm-head-plus" style={{ marginLeft: -2 }}>
               <button
-                onClick={() => { if (requireAuth()) setCreatingCommunity((v) => !v); }}
-                className="cursor-pointer text-[12px] font-medium px-3.5 py-1.5 rounded-full"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee", fontFamily: "inherit" }}
+                onClick={() => setPlusOpen((v) => !v)}
+                aria-label="Add"
+                aria-haspopup="menu"
+                aria-expanded={plusOpen}
+                title="New post or community"
+                className="cursor-pointer inline-flex items-center justify-center border-none"
+                style={{ width: 32, height: 32, borderRadius: 999, background: "#ffb700", color: "#1a0e00" }}
               >
-                + New community
+                <Icon name="plus" size={16} />
               </button>
-              <button
-                onClick={startCompose}
-                className="cursor-pointer text-[12px] font-semibold px-4 py-1.5 rounded-full border-none"
-                style={{ background: "#ffb700", color: "#1a0e00", fontFamily: "inherit" }}
-              >
-                + New post
-              </button>
+              {plusOpen && (
+                <>
+                  <div className="fixed inset-0" style={{ zIndex: 998 }} onClick={() => setPlusOpen(false)} />
+                  <div
+                    role="menu"
+                    className="absolute flex flex-col"
+                    style={{
+                      top: 38, left: 0, minWidth: 190, zIndex: 999,
+                      background: "#000", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12,
+                      boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
+                    }}
+                  >
+                    {([
+                      { icon: "file-text" as IconName, label: "New post", run: startCompose },
+                      { icon: "users" as IconName, label: "New community", run: () => { if (requireAuth()) setCreatingCommunity(true); } },
+                    ]).map((it) => (
+                      <button
+                        key={it.label}
+                        role="menuitem"
+                        onClick={() => { setPlusOpen(false); it.run(); }}
+                        className="cursor-pointer flex items-center gap-2.5 text-left border-none"
+                        style={{ padding: "9px 10px", borderRadius: 8, background: "transparent", color: "#eeeef5", fontSize: 13, fontWeight: 600, fontFamily: "inherit", whiteSpace: "nowrap" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#1a1a1f"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <Icon name={it.icon} size={15} /> {it.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </span>
           )}
         </div>
