@@ -617,7 +617,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           ) : (
             <span />
           )}
-          <span style={{ marginLeft: "auto" }} />
+          {!created && <span style={{ marginLeft: "auto" }} />}
           {created ? null : step < REVIEW ? (
             <button
               type="button"
