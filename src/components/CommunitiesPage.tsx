@@ -1515,9 +1515,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     return (
       <div key={c.id} className="cm-node" id={`comment-${c.id}`}>
         {/* Reddit's collapse: click anywhere on the comment to fold it (and
-            its replies) into one line, click again to open — at any depth,
-            replies or not. Links, buttons, the editor, and a text selection
-            keep their own click. */}
+            its replies) down to the author line, click again to open — at
+            any depth, replies or not. Links, buttons, the editor, and a text
+            selection keep their own click. */}
         <div
           className={`px-4 py-3 cm-comment${isCollapsed ? " is-collapsed" : ""}`}
           onClick={(e) => {
@@ -1540,14 +1540,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               </span>
               <RoleBadge role={c.author_role} />
               {c.pinned_at && <PinnedBadge />}
-              {isCollapsed && (
-                <span className="text-[11px] min-w-0 flex-1" style={{ color: "rgba(238,238,245,0.38)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {(c.body || "").replace(/\s+/g, " ").trim() || (c.image_url ? "Image" : "")}
-                </span>
-              )}
               {isCollapsed && hidden > 0 && (
                 <span className="text-[10.5px] shrink-0" style={{ color: "rgba(238,238,245,0.45)", fontWeight: 600 }}>
-                  {hidden} repl{hidden === 1 ? "y" : "ies"}
+                  · {hidden} repl{hidden === 1 ? "y" : "ies"}
                 </span>
               )}
             </div>
