@@ -35,6 +35,7 @@ import { uploadPostImage } from "@/lib/postImages";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
 import { CommunityTile } from "@/components/community/PostCard";
+import { COMMUNITY_KINDS } from "@/components/community/CreateCommunityModal";
 
 export interface Dm {
   id: string;
@@ -161,7 +162,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
 ) {
   const [supabase] = useState(() => createClient());
   /* Boards referenced by invite messages in this thread, and whether I'm in them. */
-  const [inviteMeta, setInviteMeta] = useState<Map<string, { name: string; color: string | null; avatar_url: string | null; is_private: boolean; joined: boolean }>>(new Map());
+  const [inviteMeta, setInviteMeta] = useState<Map<string, { name: string; color: string | null; avatar_url: string | null; is_private: boolean; description: string | null; kind: string; members: number; joined: boolean }>>(new Map());
   const [joining, setJoining] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Dm[]>([]);
   const [draft, setDraft] = useState("");
@@ -622,15 +623,17 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
     if (ids.length === 0) return;
     let alive = true;
     Promise.all([
-      supabase.from("communities").select("id, name, color, avatar_url, is_private").in("id", ids),
+      supabase.from("communities").select("id, name, color, avatar_url, is_private, description, kind").in("id", ids),
       supabase.from("community_members").select("community_id").eq("user_id", me).in("community_id", ids),
-    ]).then(([{ data: boards }, { data: mine }]) => {
+      Promise.all(ids.map((id) => supabase.from("community_members").select("community_id", { count: "exact", head: true }).eq("community_id", id).then(({ count }) => [id, count ?? 0] as const))),
+    ]).then(([{ data: boards }, { data: mine }, counts]) => {
       if (!alive) return;
       const joined = new Set(((mine ?? []) as { community_id: string }[]).map((r) => r.community_id));
+      const members = new Map(counts);
       setInviteMeta((prev) => {
         const next = new Map(prev);
-        for (const b of (boards ?? []) as { id: string; name: string; color: string | null; avatar_url: string | null; is_private: boolean }[]) {
-          next.set(b.id, { name: b.name, color: b.color, avatar_url: b.avatar_url, is_private: b.is_private, joined: joined.has(b.id) });
+        for (const b of (boards ?? []) as { id: string; name: string; color: string | null; avatar_url: string | null; is_private: boolean; description: string | null; kind: string }[]) {
+          next.set(b.id, { name: b.name, color: b.color, avatar_url: b.avatar_url, is_private: b.is_private, description: b.description, kind: b.kind, members: members.get(b.id) ?? 0, joined: joined.has(b.id) });
         }
         return next;
       });
@@ -932,21 +935,37 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   )}
                   {m.community_id ? (() => {
                     const b = inviteMeta.get(m.community_id);
+                    const name = b?.name ?? m.content.replace(/^Invited you to join /, "");
+                    const kindLabel = b ? (COMMUNITY_KINDS.find((k) => k.key === b.kind)?.label ?? "Community") : null;
+                    const meta = b ? [kindLabel, b.is_private ? "Private" : "Public", `${b.members} member${b.members === 1 ? "" : "s"}`].join(" · ") : null;
                     return (
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 2px", minWidth: 220 }}>
-                        <CommunityTile name={b?.name ?? "Community"} color={b?.color} avatarUrl={b?.avatar_url} size={36} />
-                        <span style={{ minWidth: 0, flex: 1 }}>
-                          <span style={{ display: "block", fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
-                          <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b?.name ?? m.content.replace(/^Invited you to join /, "")}</span>
-                        </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "6px 4px 4px", minWidth: 260, maxWidth: 320 }}>
+                        <span style={{ fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <CommunityTile name={name} color={b?.color} avatarUrl={b?.avatar_url} size={40} />
+                          <span style={{ minWidth: 0, flex: 1 }}>
+                            <span style={{ display: "block", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+                            {meta && <span style={{ display: "block", fontSize: 11, opacity: 0.65, marginTop: 2 }}>{meta}</span>}
+                          </span>
+                        </div>
+                        {b?.description && (
+                          <span style={{ fontSize: 12, lineHeight: 1.45, opacity: 0.8, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{b.description}</span>
+                        )}
                         {!mine && b && (
-                          b.joined ? (
-                            <a href="/communities" className="no-underline" style={{ fontSize: 12, fontWeight: 700, padding: "6px 12px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap" }}>Joined</a>
-                          ) : (
-                            <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                              {joining === m.community_id ? "Joining…" : "Join"}
-                            </button>
-                          )
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            {b.joined ? (
+                              <a href="/communities" className="no-underline" style={{ fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                <Icon name="check" size={12} /> Joined — open Communities
+                              </a>
+                            ) : (
+                              <>
+                                <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                                  {joining === m.community_id ? "Joining…" : b.is_private ? "Accept and join" : "Join"}
+                                </button>
+                                <span style={{ fontSize: 11, opacity: 0.6 }}>{b.is_private ? "The invite lets you in without applying." : "Free to join, free to leave."}</span>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
