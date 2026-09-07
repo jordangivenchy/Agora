@@ -357,7 +357,10 @@ export default function PostCard<P extends PostRow>({
             style={{ maxHeight: compact ? 160 : 220, maxWidth: "100%", objectFit: "cover" }} />
         )}
         {embed !== undefined ? embed : <RepostEmbed post={p} />}
-        <div className="m-0 text-[11px]" style={{ color: "#c9c9d2", marginTop: compact ? 10 : 16 }}>
+        {/* The actions row hangs its leading icon (14px + 4px gap) into the
+            column gap, so the comment count starts on the title's first
+            letter — the same treatment as the caption's sparkle. */}
+        <div className="m-0 text-[11px]" style={{ color: "#c9c9d2", marginTop: compact ? 10 : 16, marginLeft: communityArt ? -18 : 0 }}>
           {actions ?? (
             <span className="text-[12px] inline-flex items-center gap-1" style={{ color: "#c9c9d2" }}>
               <Icon name="message-circle" size={14} /> {p.comment_count} comment{p.comment_count === 1 ? "" : "s"}
