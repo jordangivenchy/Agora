@@ -167,11 +167,17 @@ export type RichEditorProps = {
   /* Disable @mention lookups (e.g. logged-out). */
   mentions?: boolean;
   onFocus?: () => void;
+  /** Toolbar under the text (composer sheets) instead of above it. */
+  toolbarPosition?: "top" | "bottom";
+  /** No box around the text — the editor fills its container (sheets). */
+  frameless?: boolean;
 };
 
 const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEditor({
   value, onChange, placeholder, compact = false, autoFocus = false, onSubmit, onImage, onGif, onEmoji, trailing, style, mentions = true, onFocus,
+  toolbarPosition = "top", frameless = false,
 }, ref) {
+  const toolbarBelow = toolbarPosition === "bottom";
   const [supabase] = useState(() => createClient());
   const lastEmitted = useRef<string>(value);
   const onChangeRef = useRef(onChange); onChangeRef.current = onChange;
@@ -306,24 +312,38 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
     { icon: "trash", tip: "Delete table", run: (e) => e.chain().focus().deleteTable().run() },
   ];
 
+  const toolbar = (
+    <div
+      className={`flex items-center ${toolbarBelow ? "rt-toolbar--scroll mt-1.5" : "flex-wrap mb-1.5"}`}
+      style={{ gap: 2 }}
+      role="toolbar"
+      aria-label="Formatting"
+    >
+      {groups.map((g, gi) => (
+        <span key={gi} className="flex items-center shrink-0" style={{ gap: 2 }}>
+          {gi > 0 && <span aria-hidden style={{ width: 1, height: size - 8, background: "rgba(255,255,255,0.12)", margin: "0 4px" }} />}
+          {g.map((b) => (
+            <ToolButton
+              key={b.tip}
+              b={b} size={size} iconSize={iconSize}
+              active={!!(b.active && a && a[b.active as keyof typeof a])}
+              onClick={() => { if (editor) b.run(editor); }}
+            />
+          ))}
+        </span>
+      ))}
+      {trailing}
+    </div>
+  );
+
   return (
-    <div className="rich-editor relative" data-compact={compact ? "" : undefined} onKeyDown={onWrapperKeyDown}>
-      <div className="flex items-center flex-wrap mb-1.5" style={{ gap: 2 }} role="toolbar" aria-label="Formatting">
-        {groups.map((g, gi) => (
-          <span key={gi} className="flex items-center" style={{ gap: 2 }}>
-            {gi > 0 && <span aria-hidden style={{ width: 1, height: size - 8, background: "rgba(255,255,255,0.12)", margin: "0 4px" }} />}
-            {g.map((b) => (
-              <ToolButton
-                key={b.tip}
-                b={b} size={size} iconSize={iconSize}
-                active={!!(b.active && a && a[b.active as keyof typeof a])}
-                onClick={() => { if (editor) b.run(editor); }}
-              />
-            ))}
-          </span>
-        ))}
-        {trailing}
-      </div>
+    <div
+      className="rich-editor relative"
+      data-compact={compact ? "" : undefined}
+      data-frameless={frameless ? "" : undefined}
+      onKeyDown={onWrapperKeyDown}
+    >
+      {!toolbarBelow && toolbar}
       {a?.table && !compact && (
         <div className="flex items-center flex-wrap mb-1.5" style={{ gap: 2 }} aria-label="Table">
           {tableOps.map((b) => (
@@ -343,8 +363,8 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
         <div
           className="absolute z-30 flex items-center gap-1.5 p-2"
           style={{
-            top: size + 8, left: 0,
-            background: "rgba(14,14,17,0.97)", border: "1px solid rgba(255,255,255,0.1)",
+            ...(toolbarBelow ? { bottom: size + 8 } : { top: size + 8 }), left: 0,
+            background: "#000", border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
           }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyLink(); } }}
@@ -375,6 +395,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
       <div className="rich-editor-box" style={style}>
         <EditorContent editor={editor} />
       </div>
+      {toolbarBelow && toolbar}
     </div>
   );
 });

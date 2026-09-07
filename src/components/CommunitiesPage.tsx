@@ -41,6 +41,7 @@ import InviteFriends from "./community/InviteFriends";
 import ReplayEmbed from "./community/ReplayEmbed";
 import ClipEmbed from "./community/ClipEmbed";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
+import CommentComposer from "./community/CommentComposer";
 
 interface Props {
   open: boolean;
@@ -263,7 +264,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [hasMoreComments, setHasMoreComments] = useState(false);
   const [loadingMoreComments, setLoadingMoreComments] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [replyTo, setReplyTo] = useState<string | null>(null);
+  /* The comment composer is its own screen; this is what it's answering. */
+  const [composerFor, setComposerFor] = useState<null | { parentId: string | null }>(null);
   const [replyText, setReplyText] = useState("");
   const [commentSort, setCommentSort] = useState<"top" | "new">("top");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -285,10 +287,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const bodyRef = useRef<RichEditorHandle | null>(null);
   /* Emoji picker (shared popover) for the post body / comment box. */
   const [emojiFor, setEmojiFor] = useState<null | "post" | "comment" | "reply">(null);
-  const commentInputRef = useRef<RichEditorHandle | null>(null);
-  const commentImageInputRef = useRef<HTMLInputElement | null>(null);
-  const replyInputRef = useRef<RichEditorHandle | null>(null);
-  const replyImageInputRef = useRef<HTMLInputElement | null>(null);
   const postImageInputRef = useRef<HTMLInputElement | null>(null);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
   /* "+ New community" opens CreateCommunityModal (community/). */
@@ -623,7 +621,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     setLoadingMoreComments(false);
     localRootIdsRef.current = new Set();
     setCommentText("");
-    setReplyTo(null);
     setReplyText("");
     clearCommentImages();
     loadComments(p.id);
@@ -636,7 +633,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     setHasMoreComments(false);
     setLoadingMoreComments(false);
     localRootIdsRef.current = new Set();
-    setReplyTo(null);
     clearCommentImages();
   }, [clearCommentImages]);
 
@@ -946,10 +942,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   }, [supabase, requireAuth, selected, composeCommunity, newTitle, newBody, newTagId, newImage, newGifUrl, userId, loadPosts, pickImage]);
 
   const submitComment = useCallback(async (parentId: string | null, body: string, image: File | null, gif: string | null = null) => {
-    if (busy || !openPost || !requireAuth()) return; // busy: Enter can auto-repeat
+    if (busy || !openPost || !requireAuth()) return false; // busy: Enter can auto-repeat
     const text = body.trim();
-    if (!text) return;
-    if (text.length > BODY_MAX) { setError(`Comment is too long (${text.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return; }
+    if (!text) return false;
+    if (text.length > BODY_MAX) { setError(`Comment is too long (${text.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return false; }
     setBusy(true);
     let imageUrl: string | null = null;
     if (image && userId) {
@@ -958,7 +954,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       } catch (e) {
         setBusy(false);
         setError(e instanceof Error ? e.message : "Image upload failed.");
-        return;
+        return false;
       }
     }
     const { data: inserted, error: err } = await supabase.from("community_comments").insert({
@@ -973,9 +969,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       setError(err.message.includes("rate_limited")
         ? "Slow down — you're commenting too quickly."
         : err.message);
-      return;
+      return false;
     }
-    setCommentText(""); setReplyTo(null); setReplyText("");
+    setCommentText(""); setReplyText("");
     setCommentGifUrl(null); setReplyGifUrl(null);
     pickCommentImage(null); pickReplyImage(null);
     /* Append the new comment locally instead of refetching — a refetch
@@ -1011,7 +1007,14 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
       p.id === openPost.id ? { ...p, comment_count: p.comment_count + 1 } : p;
     setPosts((ps) => ps.map(bump));
     setOpenPost((p) => (p ? bump(p) : p));
+    return true;
   }, [busy, supabase, requireAuth, openPost, userId, communities, getMyIdentity, fetchAvatars, loadComments, pickCommentImage, pickReplyImage]);
+
+  const openComposer = useCallback((parentId: string | null) => {
+    if (!requireAuth()) return;
+    setError(null);
+    setComposerFor({ parentId });
+  }, [requireAuth]);
 
   /* Mods can delete anything in their board (RLS-backed). */
   const canModerate = useCallback((communityId: string): boolean => {
@@ -1576,7 +1579,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     </button>
                   </span>
                   <button
-                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); setReplyGifUrl(null); } }}
+                    onClick={() => { setReplyText(""); pickReplyImage(null); setReplyGifUrl(null); openComposer(c.id); }}
                     className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
                     style={{ color: "#4a9eff", fontFamily: "inherit" }}
                   >
@@ -1609,72 +1612,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     </button>
                   )}
                 </div>
-                {replyTo === c.id && (
-                  <div className="mt-2">
-                    <div className="flex gap-2 items-end cm-composer-row">
-                      <span className="relative flex-1 min-w-0">
-                        <RichEditor
-                          ref={replyInputRef}
-                          compact
-                          autoFocus
-                          value={replyText}
-                          onChange={setReplyText}
-                          placeholder={`Reply to @${c.author_username}… (⌘↩ to send)`}
-                          onSubmit={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
-                          onImage={() => replyImageInputRef.current?.click()}
-                          onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "reply" ? null : "reply") : undefined}
-                          onEmoji={() => setEmojiFor(emojiFor === "reply" ? null : "reply")}
-                          trailing={
-                            <span className="relative inline-block cm-popover-host" style={{ alignSelf: "stretch" }}>
-                              {emojiFor === "reply" && (
-                                <EmojiPicker
-                                  onPick={(e) => replyInputRef.current?.insertText(e)}
-                                  onClose={() => setEmojiFor(null)}
-                                />
-                              )}
-                              {gifPickerFor === "reply" && (
-                                <GifPicker
-                                  onPick={(u) => { setReplyGifUrl(u); pickReplyImage(null); setGifPickerFor(null); }}
-                                  onClose={() => setGifPickerFor(null)}
-                                />
-                              )}
-                            </span>
-                          }
-                        />
-                        <input ref={replyImageInputRef} type="file" accept="image/*" className="hidden"
-                          onChange={(e) => { pickReplyImage(e.target.files?.[0] ?? null); setReplyGifUrl(null); e.target.value = ""; }} />
-                      </span>
-                      <button
-                        onClick={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
-                        disabled={busy || !replyText.trim()}
-                        className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-default"
-                        style={{ ...btnBlue, borderRadius: 10, height: 40 }}
-                      >
-                        Reply
-                      </button>
-                    </div>
-                    {replyGifUrl && (
-                      <span className="inline-flex items-center gap-2 mt-1.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={replyGifUrl} alt="" className="rounded" style={{ height: 40 }} />
-                        <button onClick={() => setReplyGifUrl(null)}
-                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-                          remove
-                        </button>
-                      </span>
-                    )}
-                    {replyImagePreview && (
-                      <span className="inline-flex items-center gap-2 mt-1.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={replyImagePreview} alt="" className="rounded" style={{ height: 36 }} />
-                        <button onClick={() => pickReplyImage(null)}
-                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-                          remove
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                )}
               </>
             )}
         </div>
@@ -2258,73 +2195,54 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   </div>
                 </div>
 
-                {/* comment composer — media/emoji live in the editor toolbar; only
-                    the submit button sits beside the box, bottom-aligned. */}
-                <div className="mb-4">
-                  <div className="flex gap-2 items-end cm-composer-row">
-                    <span className="relative flex-1 min-w-0">
-                      <RichEditor
-                        ref={commentInputRef}
-                        compact
-                        value={commentText}
-                        onChange={setCommentText}
-                        placeholder={userId ? "Add a comment… (@ to mention, ⌘↩ to send)" : "Sign in to comment"}
-                        onSubmit={() => submitComment(null, commentText, commentImage, commentGifUrl)}
-                        mentions={!!userId}
-                        onFocus={() => { if (!userId) window.location.href = "/login"; }}
-                        onImage={() => commentImageInputRef.current?.click()}
-                        onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "comment" ? null : "comment") : undefined}
-                        onEmoji={() => setEmojiFor(emojiFor === "comment" ? null : "comment")}
-                        trailing={
-                          <span className="relative inline-block cm-popover-host" style={{ alignSelf: "stretch" }}>
-                            {emojiFor === "comment" && (
-                              <EmojiPicker
-                                onPick={(e) => commentInputRef.current?.insertText(e)}
-                                onClose={() => setEmojiFor(null)}
-                              />
-                            )}
-                            {gifPickerFor === "comment" && (
-                              <GifPicker
-                                onPick={(u) => { setCommentGifUrl(u); pickCommentImage(null); setGifPickerFor(null); }}
-                                onClose={() => setGifPickerFor(null)}
-                              />
-                            )}
-                          </span>
-                        }
-                      />
-                      <input ref={commentImageInputRef} type="file" accept="image/*" className="hidden"
-                        onChange={(e) => { pickCommentImage(e.target.files?.[0] ?? null); setCommentGifUrl(null); e.target.value = ""; }} />
-                    </span>
-                    <button
-                      onClick={() => submitComment(null, commentText, commentImage, commentGifUrl)}
-                      disabled={busy || !commentText.trim()}
-                      className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-default"
-                      style={{ ...btnBlue, height: 40 }}
-                    >
-                      Comment
-                    </button>
-                  </div>
-                  {commentImagePreview && (
-                    <span className="inline-flex items-center gap-2 mt-1.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={commentImagePreview} alt="" className="rounded" style={{ height: 40 }} />
-                      <button onClick={() => pickCommentImage(null)}
-                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-                        remove
-                      </button>
-                    </span>
-                  )}
-                  {commentGifUrl && (
-                    <span className="inline-flex items-center gap-2 mt-1.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={commentGifUrl} alt="" className="rounded" style={{ height: 40 }} />
-                      <button onClick={() => setCommentGifUrl(null)}
-                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-                        remove
-                      </button>
-                    </span>
-                  )}
-                </div>
+                {/* The comment composer is its own screen
+                    (community/CommentComposer.tsx); this is the door. */}
+                <button
+                  type="button"
+                  onClick={() => openComposer(null)}
+                  className="w-full cursor-pointer text-left mb-4"
+                  style={{
+                    height: 44, borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.12)",
+                    color: "rgba(238,238,245,0.5)", padding: "0 16px", fontSize: 13.5, fontFamily: "inherit",
+                    display: "flex", alignItems: "center", gap: 10,
+                  }}
+                >
+                  <Icon name="message-circle" size={15} />
+                  {userId ? "Add a comment…" : "Sign in to comment"}
+                </button>
+                {composerFor && (() => {
+                  const isReply = !!composerFor.parentId;
+                  const parent = isReply ? comments.find((x) => x.id === composerFor.parentId) ?? null : null;
+                  const text = isReply ? replyText : commentText;
+                  const image = isReply ? replyImage : commentImage;
+                  const gif = isReply ? replyGifUrl : commentGifUrl;
+                  return (
+                    <CommentComposer
+                      title={isReply ? `Reply to @${parent?.author_username ?? "comment"}` : "Add a comment"}
+                      context={isReply && parent
+                        ? { kind: "comment", author: parent.author_username, body: parent.body }
+                        : { kind: "post", title: openPost.title }}
+                      value={text}
+                      onChange={isReply ? setReplyText : setCommentText}
+                      placeholder={isReply ? "Write a reply…" : "What are your thoughts?"}
+                      submitLabel={isReply ? "Reply" : "Comment"}
+                      busy={busy}
+                      error={error}
+                      imagePreview={isReply ? replyImagePreview : commentImagePreview}
+                      gifUrl={gif}
+                      onPickImage={isReply ? pickReplyImage : pickCommentImage}
+                      onGif={isReply ? setReplyGifUrl : setCommentGifUrl}
+                      giphyEnabled={giphyEnabled}
+                      mentions={!!userId}
+                      maxLength={BODY_MAX}
+                      onSubmit={async () => {
+                        const ok = await submitComment(composerFor.parentId, text, image, gif);
+                        if (ok) setComposerFor(null);
+                      }}
+                      onClose={() => setComposerFor(null)}
+                    />
+                  );
+                })()}
 
                 {/* comments */}
                 {commentTree.roots.length > 0 && (

@@ -1771,6 +1771,23 @@ html.reduce-motion .nav-sparkle {
   word-break: break-word;
 }
 .rich-editor[data-compact] .ProseMirror { min-height: 40px; padding: 8px 12px; }
+/* Composer sheets: the toolbar is one row that scrolls sideways, and the
+   text has no box — it fills the sheet. */
+.rt-toolbar--scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.rt-toolbar--scroll::-webkit-scrollbar { display: none; }
+.rich-editor[data-frameless] { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.rich-editor[data-frameless] .rich-editor-box {
+  background: none; border: none; border-radius: 0; flex: 1; min-height: 0; overflow-y: auto; font-size: 15px;
+}
+.rich-editor[data-frameless] .ProseMirror { min-height: 100%; max-height: none; padding: 4px 2px 16px; line-height: 1.5; overflow: visible; }
+.rich-editor[data-frameless] .ProseMirror p.is-editor-empty:first-child::before { color: rgba(238,238,245,0.38); }
+.cmt-composer-card { display: flex; flex-direction: column; }
+@media (max-width: 639px) {
+  /* Full-screen sheet; 16px text so iOS doesn't zoom the page on focus. */
+  .cmt-composer-card { position: fixed !important; inset: 0; max-width: none !important; border-radius: 0 !important; border: none !important; }
+  .rich-editor[data-frameless] .rich-editor-box { font-size: 16px; }
+  html.cmt-sheet-open, html.cmt-sheet-open body { overflow: hidden !important; }
+}
 .rich-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: rgba(238, 238, 245, 0.32);
