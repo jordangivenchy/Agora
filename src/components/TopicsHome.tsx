@@ -712,7 +712,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                         ? new Date(r.scheduled_start).toLocaleDateString([], { month: "short", day: "numeric" }).toUpperCase()
                         : "TBD"}
                     </span>
-                    {/* Reminder bell — a check mark once set */}
+                    {/* Reminder bell — gold once set */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleReminder(r); }}
                       disabled={busyId === r.id}
@@ -723,12 +723,11 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                         width: 26, height: 26, borderRadius: "50%",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 12, lineHeight: 1, padding: 0,
-                        background: "#0b0b0d",
-                        border: reminders[r.id]?.amSet ? "0.5px solid rgba(255,255,255,0.6)" : "0.5px solid rgba(255,255,255,0.25)",
-                        color: "#fff",
+                        background: reminders[r.id]?.amSet ? "rgba(226,185,107,0.92)" : "rgba(0,0,0,0.55)",
+                        border: reminders[r.id]?.amSet ? "0.5px solid #d9a238" : "0.5px solid rgba(255,255,255,0.25)",
                       }}
                     >
-                      {reminders[r.id]?.amSet ? <Icon name="check" size={13} /> : <Icon name="bell" size={13} />}
+                      <Icon name="bell" size={13} />
                     </button>
                   </div>
                   {/* Info overlaid on the photo — keeps the block a true square */}
