@@ -86,20 +86,26 @@ export function RoleBadge({ role }: { role: string | null }) {
   );
 }
 
+/* Solid, not tinted: a near-black pill with a hairline; the tag's colour
+   is a dot, never a wash behind the text. Shared by community tags and
+   the feed's topic chips. */
 export function TagChip({ name, color, small }: { name: string; color: string | null; small?: boolean }) {
   const c = color || "rgba(238,238,245,0.5)";
   return (
     <span
-      className="rounded-full"
+      className="rounded-full inline-flex items-center"
       style={{
         fontSize: small ? 9.5 : 10.5,
-        padding: small ? "1px 7px" : "2px 8px",
-        background: `${c}22`,
-        border: `0.5px solid ${c}66`,
-        color: c,
+        padding: small ? "1px 7px 1px 6px" : "2px 9px 2px 7px",
+        gap: 5,
+        background: "#0b0b0d",
+        border: "0.5px solid rgba(255,255,255,0.14)",
+        color: "#eeeef5",
         fontWeight: 600,
+        whiteSpace: "nowrap",
       }}
     >
+      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: c, flexShrink: 0 }} />
       {name}
     </span>
   );

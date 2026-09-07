@@ -25,6 +25,7 @@ import EditProfileModal from "@/components/EditProfileModal";
 import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
+import { TagChip } from "@/components/community/PostCard";
 
 interface Profile {
   id: string;
@@ -1391,19 +1392,7 @@ export default function ProfileView({
                 <span>·</span>
                 {p.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#c9b06a" }}><Icon name="repeat" size={11} /> reposted to</span>}
                 <span>{rowLink(communityHref(p.community_name), p.community_name)} · {timeAgo(p.created_at)} ago</span>
-                {p.tag_name && (
-                  <span
-                    className="rounded-full"
-                    style={{
-                      fontSize: 9.5, padding: "1px 7px", fontWeight: 600,
-                      background: `${p.tag_color || "#8b8b94"}22`,
-                      border: `0.5px solid ${p.tag_color || "#8b8b94"}66`,
-                      color: p.tag_color || "#8b8b94",
-                    }}
-                  >
-                    {p.tag_name}
-                  </span>
-                )}
+                {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color || "#8b8b94"} small />}
               </p>
               <p className="m-0 mt-1" style={{ fontSize: 14.5, fontWeight: 600 }}>
                 <a href={pathFor.post(p.id)} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>{p.title}</a>

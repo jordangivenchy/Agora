@@ -20,7 +20,7 @@ import { roomPath, replayPath } from "@/lib/urls";
 import { TOPICS } from "@/types/database";
 import RoomCard, { type RoomCardRoom } from "@/components/RoomCard";
 import UserAvatar from "@/components/UserAvatar";
-import PostCard, { RepostEmbed, authorLabel, timeAgo, type PostRow } from "@/components/community/PostCard";
+import PostCard, { RepostEmbed, TagChip, authorLabel, timeAgo, type PostRow } from "@/components/community/PostCard";
 import PeopleSuggestions from "@/components/people/PeopleSuggestions";
 import FeedRail from "@/components/feed/FeedRail";
 import { useUserMenu } from "@/components/userMenuContext";
@@ -282,9 +282,7 @@ export default function FeedPage({ open, onClose }: Props) {
             <p className="m-0 mt-1 text-[11.5px] flex items-center gap-2 flex-wrap" style={{ color: "#f4d47c", fontWeight: 600 }}>
               {whenLabel(r.scheduled_start)}
               {topic && (
-                <span className="rounded-full" style={{ fontSize: 9.5, padding: "1px 7px", background: `${topic.color}22`, border: `0.5px solid ${topic.color}66`, color: topic.color, fontWeight: 600 }}>
-                  {topic.label}
-                </span>
+                <TagChip name={topic.label} color={topic.color} small />
               )}
               {r.reminder_count > 0 && <span style={{ color: "#8b8b94", fontWeight: 400 }}>{r.reminder_count} waiting</span>}
             </p>
@@ -346,9 +344,7 @@ export default function FeedPage({ open, onClose }: Props) {
             <p className="m-0 mt-1 text-[11px] flex items-center gap-2 flex-wrap">
               <span style={{ color: "#4a9eff", fontWeight: 600 }}>▶ Watch discussion</span>
               {topic && (
-                <span className="rounded-full" style={{ fontSize: 9.5, padding: "1px 7px", background: `${topic.color}22`, border: `0.5px solid ${topic.color}66`, color: topic.color, fontWeight: 600 }}>
-                  {topic.label}
-                </span>
+                <TagChip name={topic.label} color={topic.color} small />
               )}
             </p>
           </div>

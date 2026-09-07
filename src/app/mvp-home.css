@@ -6124,10 +6124,13 @@ body { background: transparent; }
 .room-panel-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
 .room-panel-chip {
   --chip: #8b8b94;
-  font-size: 10.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
-  color: var(--chip); border: 0.5px solid color-mix(in srgb, var(--chip) 45%, transparent);
-  background: color-mix(in srgb, var(--chip) 12%, transparent);
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; font-weight: 600; padding: 4px 10px 4px 8px; border-radius: 999px;
+  /* Solid, not tinted: the topic colour is a dot, the pill stays black. */
+  color: #eeeef5; border: 0.5px solid rgba(255,255,255,0.14);
+  background: #0b0b0d;
 }
+.room-panel-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--chip); flex-shrink: 0; }
 .room-panel-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(238,238,245,0.4); margin-bottom: 8px; }
 .room-panel-speakers { display: flex; flex-direction: column; gap: 10px; }
 .room-panel-speaker { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -6136,7 +6139,7 @@ body { background: transparent; }
 .panel-avatar.small { width: 36px; height: 36px; font-size: 14px; flex-shrink: 0; }
 .room-panel-speaker-name { font-size: 13px; font-weight: 600; color: #eeeef5; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .room-panel-host { font-size: 11.5px; color: rgba(238,238,245,0.55); margin-top: 16px; }
-.room-panel-community { --chip: #4a9eff; color: var(--chip); font-weight: 700; }
+.room-panel-community { --chip: #4a9eff; font-weight: 700; }
 
 .room-panel-watch { margin-top: 18px; align-self: flex-start; }
 
