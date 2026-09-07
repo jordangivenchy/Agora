@@ -395,7 +395,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                           color: on ? "#1a0e00" : "#eeeef5", fontFamily: "inherit",
                         }}
                       >
-                        <span style={{ width: 30, height: 30, borderRadius: 9, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: on ? "rgba(255,183,0,0.18)" : "rgba(255,255,255,0.06)", color: on ? "#ffb700" : "#c0c0c8" }}>
+                        <span style={{ width: 30, height: 30, borderRadius: 9, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: on ? "#1a0e00" : "#16161a", color: on ? "#ffb700" : "#c0c0c8" }}>
                           <Icon name={k.icon} size={15} />
                         </span>
                         <span style={{ minWidth: 0 }}>
