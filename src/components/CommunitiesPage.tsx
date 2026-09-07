@@ -1882,6 +1882,16 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                       (presence.has(b.user_id) ? 1 : 0) - (presence.has(a.user_id) ? 1 : 0));
                     return (
                     <>
+                      {selectedCommunity.joined && (!selectedCommunity.is_private || isMod) && (
+                        <button
+                          type="button"
+                          onClick={() => setInviteOpen(true)}
+                          className="cursor-pointer inline-flex items-center gap-1.5"
+                          style={{ marginTop: 10, fontFamily: "inherit", fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee" }}
+                        >
+                          <Icon name="user-plus" size={13} /> Invite friends
+                        </button>
+                      )}
                       <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0 10px" }} />
                       <p className="m-0 text-[9.5px] font-bold flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.35)", letterSpacing: "0.09em", marginBottom: 8 }}>
                         MODERATORS

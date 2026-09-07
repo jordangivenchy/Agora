@@ -4,7 +4,9 @@
    create-discussion modal:
      1. Basics   name (with the handle it will live at), type, description
      2. Look     accent colour, avatar, banner — with a live preview card
-     3. Access   public or private (with the application prompt), rules
+     3. Access   public or private (with the application prompt)
+     4. Review   everything on one page, with Edit links back
+     5. Invite   after creation: friends to invite (see InviteFriends)
    Everything is written in one insert, then the creator becomes owner.
    Mounted by the Communities page (its "+ New community") and by the home
    shell for the site-wide entry points (?create=community, the link at
@@ -240,7 +242,10 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
     </div>
   );
 
-  const steps = ["Basics", "Look", "Access"];
+  const steps = ["Basics", "Look", "Access", "Review", "Invite"];
+  /* Review is the last step before the board exists; Invite is only reachable after. */
+  const REVIEW = 3;
+  const activeStep = created ? 4 : step;
 
   return createPortal(
     <div
@@ -305,11 +310,11 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 </span>
               </div>
             )}
-            <div className="flex items-center gap-2" style={{ marginTop: 8, visibility: created ? "hidden" : undefined }} aria-label={`Step ${step + 1} of ${steps.length}`}>
+            <div className="flex items-center gap-2" style={{ marginTop: 8 }} aria-label={`Step ${activeStep + 1} of ${steps.length}`}>
               {steps.map((s, i) => (
-                <span key={s} className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, fontWeight: 600, color: i === step ? "#ffb700" : i < step ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)" }}>
-                  <span style={{ width: 18, height: 18, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, background: i === step ? "#ffb700" : i < step ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)", color: i === step ? "#1a0e00" : "inherit" }}>
-                    {i < step ? <Icon name="check" size={10} /> : i + 1}
+                <span key={s} className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, fontWeight: 600, color: i === activeStep ? "#ffb700" : i < activeStep ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)" }}>
+                  <span style={{ width: 18, height: 18, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, background: i === activeStep ? "#ffb700" : i < activeStep ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)", color: i === activeStep ? "#1a0e00" : "inherit" }}>
+                    {i < activeStep ? <Icon name="check" size={10} /> : i + 1}
                   </span>
                   {s}
                   {i < steps.length - 1 && <span style={{ width: 14, height: 1, background: "rgba(255,255,255,0.12)", marginLeft: 4 }} />}
@@ -437,6 +442,18 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 />
                 <p style={{ ...hintStyle, textAlign: "right" }}>{description.length}/{DESC_MAX}</p>
               </div>
+              <div>
+                <label style={label} htmlFor="ccm-rules">Rules <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></label>
+                <textarea
+                  id="ccm-rules"
+                  value={rules}
+                  onChange={(e) => setRules(e.target.value.slice(0, RULES_MAX))}
+                  placeholder={"1. Stay on topic\n2. Argue the point, not the person"}
+                  rows={4}
+                  style={{ ...field, resize: "vertical", lineHeight: 1.45 }}
+                />
+                <p style={hintStyle}>Pinned in the board&rsquo;s sidebar. You can edit everything later in the board&rsquo;s settings.</p>
+              </div>
             </div>
           )}
 
@@ -540,19 +557,32 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                   <p style={hintStyle}>Shown when someone requests to join; their answer comes with the request.</p>
                 </div>
               )}
-              <div>
-                <label style={label} htmlFor="ccm-rules">Rules <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></label>
-                <textarea
-                  id="ccm-rules"
-                  value={rules}
-                  onChange={(e) => setRules(e.target.value.slice(0, RULES_MAX))}
-                  placeholder={"1. Stay on topic\n2. Argue the point, not the person"}
-                  rows={4}
-                  style={{ ...field, resize: "vertical", lineHeight: 1.45 }}
-                />
-                <p style={hintStyle}>Pinned in the board&rsquo;s sidebar. You can edit everything later in the board&rsquo;s settings.</p>
-              </div>
+            </div>
+          )}
+
+          {(!gate || gate.allowed) && !created && step === REVIEW && (
+            <div key="step-3" className={`ccm-step ccm-step-${dir}`}>
               {preview}
+              <div>
+                <span style={label}>Everything, before it exists</span>
+                <div style={{ display: "flex", flexDirection: "column", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "#0b0b0d", overflow: "hidden" }}>
+                  {([
+                    ["Name", trimmed, 0],
+                    ["Type", kindMeta.label, 0],
+                    ["Description", description.trim() || "None", 0],
+                    ["Rules", rules.trim() ? `${rules.trim().split(/\n+/).filter(Boolean).length} rule${rules.trim().split(/\n+/).filter(Boolean).length === 1 ? "" : "s"}` : "None", 0],
+                    ["Look", `${avatar ? "Avatar" : "Initial"} · ${banner ? "banner" : "colour band"}`, 1],
+                    ["Access", isPrivate ? `Private — people apply${prompt.trim() ? ", with a question" : ""}` : "Public — anyone can join", 2],
+                  ] as [string, string, number][]).map(([k, v, target], idx, arr) => (
+                    <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderBottom: idx < arr.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                      <span style={{ width: 84, flexShrink: 0, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>{k}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
+                      <button type="button" onClick={() => go(target)} className="cursor-pointer" style={{ background: "transparent", border: "none", padding: "2px 0", fontSize: 12, color: "rgba(238,238,245,0.55)", fontFamily: "inherit" }}>Edit</button>
+                    </div>
+                  ))}
+                </div>
+                <p style={hintStyle}>You&rsquo;ll be the owner. Everything here can be changed later in the board&rsquo;s settings.</p>
+              </div>
             </div>
           )}
 
@@ -585,10 +615,10 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               <Icon name="arrow-left" size={13} /> Back
             </button>
           ) : (
-            <span style={{ fontSize: 12, color: "rgba(238,238,245,0.4)" }}>You&rsquo;ll be the owner. You can add mods later.</span>
+            <span />
           )}
           <span style={{ marginLeft: "auto" }} />
-          {step < steps.length - 1 ? (
+          {step < REVIEW ? (
             <button
               type="button"
               onClick={() => canNext && go(step + 1)}
