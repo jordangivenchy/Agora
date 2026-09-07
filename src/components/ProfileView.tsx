@@ -482,7 +482,7 @@ export default function ProfileView({
     <div className="flex flex-col items-center text-center" style={{ ...card, padding: "36px 24px" }}>
       <span
         className="flex items-center justify-center"
-        style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#8b8b94", marginBottom: 12 }}
+        style={{ width: 44, height: 44, borderRadius: 14, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.08)", color: "#8b8b94", marginBottom: 12 }}
       >
         <Icon name={icon} size={20} />
       </span>
@@ -656,7 +656,7 @@ export default function ProfileView({
       onClick={() => setTab(key)}
       className="cursor-pointer"
       style={{
-        background: tab === key ? "rgba(255,255,255,0.09)" : "transparent",
+        background: tab === key ? "#1a1a1f" : "transparent",
         border: "none",
         borderRadius: 10,
         padding: "8px 16px",
@@ -807,7 +807,7 @@ export default function ProfileView({
                         height: 28,
                         borderRadius: 999,
                         border: "1px solid rgba(255,255,255,0.12)",
-                        background: "rgba(255,255,255,0.05)",
+                        background: "#0b0b0d",
                         color: "#a9a9b4",
                       }}
                     >
@@ -823,9 +823,9 @@ export default function ProfileView({
                   style={{
                     padding: "3px 10px",
                     borderRadius: 999,
-                    border: "1px solid rgba(224,90,90,0.5)",
-                    background: "rgba(224,90,90,0.12)",
-                    color: "#e05a5a",
+                    border: "1px solid #e05a5a",
+                    background: "#e05a5a",
+                    color: "#fff",
                     fontSize: 11.5,
                     fontWeight: 700,
                     maxWidth: 260,
@@ -890,7 +890,7 @@ export default function ProfileView({
                   style={{
                     color: "#6fd3a0", fontSize: 12, fontWeight: 600,
                     padding: "3px 10px 3px 8px", borderRadius: 999,
-                    background: "rgba(111,211,160,0.10)", border: "1px solid rgba(111,211,160,0.3)",
+                    background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)",
                   }}
                 >
                   <Icon name="user-check" size={13} /> Friends
@@ -950,7 +950,7 @@ export default function ProfileView({
                     padding: "8px 20px",
                     borderRadius: 999,
                     border: "1px solid rgba(255,255,255,0.14)",
-                    background: shared ? "rgba(111,211,160,0.12)" : "rgba(255,255,255,0.05)",
+                    background: "#0b0b0d",
                     color: shared ? "#6fd3a0" : "#c9c9d2",
                     fontFamily: "inherit",
                     fontSize: 13,
@@ -973,8 +973,8 @@ export default function ProfileView({
                     height: 38,
                     padding: "0 22px",
                     borderRadius: 999,
-                    border: profile.is_following ? "1px solid rgba(255,255,255,0.18)" : "none",
-                    background: profile.is_following ? "transparent" : "#3b6cf6",
+                    border: profile.is_following ? "1px solid rgba(255,255,255,0.14)" : "1px solid #2f7fe0",
+                    background: profile.is_following ? "#0b0b0d" : "#2f7fe0",
                     color: profile.is_following ? "#c9c9d2" : "white",
                     fontFamily: "inherit",
                     fontSize: 13.5,
@@ -996,7 +996,7 @@ export default function ProfileView({
                       padding: "0 18px",
                       borderRadius: 999,
                       border: "1px solid rgba(255,255,255,0.14)",
-                      background: "rgba(255,255,255,0.05)",
+                      background: "#0b0b0d",
                       color: "#c9c9d2",
                       fontFamily: "inherit",
                       fontSize: 13.5,
@@ -1017,7 +1017,7 @@ export default function ProfileView({
                       height: 38,
                       borderRadius: 999,
                       border: "1px solid rgba(255,255,255,0.14)",
-                      background: menuOpen ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
+                      background: menuOpen ? "#1a1a1f" : "#0b0b0d",
                       color: "#c9c9d2",
                       fontFamily: "inherit",
                       display: "inline-flex",
@@ -1036,7 +1036,7 @@ export default function ProfileView({
                     top: 42,
                     right: 0,
                     minWidth: 190,
-                    background: "rgba(18,18,21,0.97)",
+                    background: "#000",
                     border: "1px solid rgba(255,255,255,0.10)",
                     borderRadius: 12,
                     boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
@@ -1148,7 +1148,7 @@ export default function ProfileView({
                               fontWeight: 700,
                               padding: "1px 6px",
                               borderRadius: 999,
-                              background: "rgba(244,212,124,0.10)",
+                              background: "#0b0b0d",
                               border: "0.5px solid rgba(244,212,124,0.35)",
                               color: "#f4d47c",
                               letterSpacing: 0.3,
@@ -1224,7 +1224,7 @@ export default function ProfileView({
                       style={{
                         borderRadius: 14,
                         border: "1px solid rgba(255,255,255,0.08)",
-                        background: "rgba(255,255,255,0.02)",
+                        background: "#0b0b0d",
                         overflow: "hidden",
                       }}
                     >
@@ -1420,7 +1420,7 @@ export default function ProfileView({
               )}
               {p.is_repost && (
                 <p className="m-0 mt-1.5 px-3 py-2 rounded-lg" style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: "#0b0b0d",
                   border: "0.5px solid rgba(255,255,255,0.08)",
                   color: "#8b8b94", fontSize: 11.5,
                 }}>
