@@ -2530,7 +2530,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           <button
                             onClick={() => setModOpen((v) => !v)}
                             onMouseEnter={liftIn} onMouseLeave={liftOut}
-                            style={pillAmber}
+                            style={pillBlue}
                           >
                             {modOpen ? "Close mod tools" : <><Icon name="shield" size={13} /> Mod tools{joinRequests.length ? ` ()` : ""}</>}
                           </button>
