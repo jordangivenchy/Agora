@@ -76,6 +76,20 @@ const NAV: NavItem[] = [
     ),
   },
   {
+    id: "explore",
+    label: "Explore",
+    page: "explore",
+    sparkles: [
+      ["0.5s", "4.3s", "18%", "55%", "-5px"],
+      ["1.3s", "3.8s", "62%", "35%", "6px"],
+      ["2.1s", "4.6s", "85%", "68%", "-4px"],
+      ["2.9s", "3.5s", "38%", "22%", "5px"],
+    ],
+    icon: (
+      <Icon name="compass" size={15} />
+    ),
+  },
+  {
     id: "communities",
     label: "Communities",
     short: "Communities",
@@ -111,20 +125,6 @@ const NAV: NavItem[] = [
     ],
     icon: (
       <Icon name="newspaper" size={16} />
-    ),
-  },
-  {
-    id: "explore",
-    label: "Explore",
-    page: "explore",
-    sparkles: [
-      ["0.5s", "4.3s", "18%", "55%", "-5px"],
-      ["1.3s", "3.8s", "62%", "35%", "6px"],
-      ["2.1s", "4.6s", "85%", "68%", "-4px"],
-      ["2.9s", "3.5s", "38%", "22%", "5px"],
-    ],
-    icon: (
-      <Icon name="compass" size={15} />
     ),
   },
 ];
