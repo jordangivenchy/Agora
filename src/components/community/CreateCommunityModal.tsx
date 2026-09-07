@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { Icon, type IconName } from "@/components/icons";
 import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
+import InviteFriends from "./InviteFriends";
 
 export const COMMUNITY_KINDS: { key: string; label: string; icon: IconName; hint: string }[] = [
   { key: "topic-circle", label: "Topic circle", icon: "users-round", hint: "People around an interest" },
@@ -92,6 +93,8 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
   useEscapeClose(open, onClose);
 
   const [step, setStep] = useState(0);
+  /* Set once the board exists: the modal turns into the invite pane. */
+  const [created, setCreated] = useState<{ id: string; name: string } | null>(null);
   /* Which way the last step change went — the new step slides in from that side. */
   const [dir, setDir] = useState<"fwd" | "back">("fwd");
   const go = (n: number) => { setDir(n > step ? "fwd" : "back"); setStep(n); };
@@ -124,7 +127,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
     if (!open) return;
     setStep(0); setName(""); setKind(COMMUNITY_KINDS[0].key); setDescription("");
     setColor(COLORS[0]); setAvatar(null); setBanner(null); setIsPrivate(false);
-    setPrompt(""); setRules(""); setBusy(false); setError(null); setGate(null); setResent(false);
+    setPrompt(""); setRules(""); setBusy(false); setError(null); setGate(null); setResent(false); setCreated(null);
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
       setUserEmail(data.user?.email ?? null);
@@ -186,7 +189,8 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
       if (err || !data) throw new Error(GUARD_MESSAGES[err?.message ?? ""] ?? err?.message ?? "Couldn't create the community.");
       await supabase.from("community_members").insert({ community_id: data.id, user_id: userId, role: "owner" });
       onCreated?.({ id: data.id, name: data.name });
-      onClose();
+      /* Stay open: the board is made, now the people. */
+      setCreated({ id: data.id, name: data.name });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't create the community.");
     } finally {
@@ -272,7 +276,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         <div className="flex items-center justify-between ccm-head" style={{ flexShrink: 0, minHeight: 108, boxSizing: "border-box", padding: "20px 24px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div>
             <h2 id="ccm-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#f5f5f0" }}>
-              Create a community
+              {created ? "Invite friends" : "Create a community"}
             </h2>
             {onCreateDiscussion && (
               <div
@@ -301,7 +305,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 </span>
               </div>
             )}
-            <div className="flex items-center gap-2" style={{ marginTop: 8 }} aria-label={`Step ${step + 1} of ${steps.length}`}>
+            <div className="flex items-center gap-2" style={{ marginTop: 8, visibility: created ? "hidden" : undefined }} aria-label={`Step ${step + 1} of ${steps.length}`}>
               {steps.map((s, i) => (
                 <span key={s} className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, fontWeight: 600, color: i === step ? "#ffb700" : i < step ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)" }}>
                   <span style={{ width: 18, height: 18, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, background: i === step ? "#ffb700" : i < step ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)", color: i === step ? "#1a0e00" : "inherit" }}>
@@ -360,7 +364,15 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
             </div>
           )}
 
-          {(!gate || gate.allowed) && step === 0 && (
+          {created && (
+            <div key="invite" className="ccm-step ccm-step-fwd">
+              <div>
+                <span style={label}>Invite friends to {created.name}</span>
+                <InviteFriends communityId={created.id} communityName={created.name} isPrivate={isPrivate} />
+              </div>
+            </div>
+          )}
+          {(!gate || gate.allowed) && !created && step === 0 && (
             <div key="step-0" className={`ccm-step ccm-step-${dir}`}>
               <div>
                 <label style={label} htmlFor="ccm-name">Name</label>
@@ -428,7 +440,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
             </div>
           )}
 
-          {(!gate || gate.allowed) && step === 1 && (
+          {(!gate || gate.allowed) && !created && step === 1 && (
             <div key="step-1" className={`ccm-step ccm-step-${dir}`}>
               {preview}
               <div>
@@ -480,7 +492,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
             </div>
           )}
 
-          {(!gate || gate.allowed) && step === 2 && (
+          {(!gate || gate.allowed) && !created && step === 2 && (
             <div key="step-2" className={`ccm-step ccm-step-${dir}`}>
               <div>
                 <span style={label}>Who can join</span>
@@ -553,7 +565,15 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
 
         {/* Footer */}
         <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-          {gate && !gate.allowed ? (
+          {created ? (
+            <>
+              <span style={{ fontSize: 12, color: "rgba(238,238,245,0.4)" }}>You can invite more people from the board any time.</span>
+              <span style={{ marginLeft: "auto" }} />
+              <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }}>
+                Done
+              </button>
+            </>
+          ) : gate && !gate.allowed ? (
             <>
               <span style={{ marginLeft: "auto" }} />
               <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee", fontFamily: "inherit" }}>

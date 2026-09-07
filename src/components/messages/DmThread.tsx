@@ -34,6 +34,7 @@ import { displayName } from "@/lib/names";
 import { uploadPostImage } from "@/lib/postImages";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
+import { CommunityTile } from "@/components/community/PostCard";
 
 export interface Dm {
   id: string;
@@ -44,6 +45,8 @@ export interface Dm {
   created_at: string;
   reply_to: string | null;
   read_at: string | null;
+  /** A community invite rides the message (send_community_invite). */
+  community_id?: string | null;
 }
 
 export interface Peer {
@@ -75,7 +78,7 @@ export function relTime(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export const DM_SELECT = "id, sender_id, recipient_id, content, image_url, created_at, reply_to, read_at";
+export const DM_SELECT = "id, sender_id, recipient_id, content, image_url, created_at, reply_to, read_at, community_id";
 export const MAX_DM_IMAGE_BYTES = 5 * 1024 * 1024;
 /* Unsend (gone for both sides) is allowed this long after sending — the
    delete policy in 20260888 enforces the same window. After that the
@@ -157,6 +160,9 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
   ref
 ) {
   const [supabase] = useState(() => createClient());
+  /* Boards referenced by invite messages in this thread, and whether I'm in them. */
+  const [inviteMeta, setInviteMeta] = useState<Map<string, { name: string; color: string | null; avatar_url: string | null; is_private: boolean; joined: boolean }>>(new Map());
+  const [joining, setJoining] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Dm[]>([]);
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -611,6 +617,37 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
 
   const menuMsg = menuFor ? msgs.find((x) => x.id === menuFor.id) ?? null : null;
 
+  useEffect(() => {
+    const ids = [...new Set(msgs.map((m) => m.community_id).filter((x): x is string => !!x))].filter((id) => !inviteMeta.has(id));
+    if (ids.length === 0) return;
+    let alive = true;
+    Promise.all([
+      supabase.from("communities").select("id, name, color, avatar_url, is_private").in("id", ids),
+      supabase.from("community_members").select("community_id").eq("user_id", me).in("community_id", ids),
+    ]).then(([{ data: boards }, { data: mine }]) => {
+      if (!alive) return;
+      const joined = new Set(((mine ?? []) as { community_id: string }[]).map((r) => r.community_id));
+      setInviteMeta((prev) => {
+        const next = new Map(prev);
+        for (const b of (boards ?? []) as { id: string; name: string; color: string | null; avatar_url: string | null; is_private: boolean }[]) {
+          next.set(b.id, { name: b.name, color: b.color, avatar_url: b.avatar_url, is_private: b.is_private, joined: joined.has(b.id) });
+        }
+        return next;
+      });
+    });
+    return () => { alive = false; };
+    // inviteMeta is read to skip known ids; re-running on it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgs, me, supabase]);
+
+  const acceptInvite = async (communityId: string) => {
+    if (joining) return;
+    setJoining(communityId);
+    const { error } = await supabase.rpc("accept_community_invite", { p_community: communityId });
+    setJoining(null);
+    if (!error) setInviteMeta((prev) => { const next = new Map(prev); const b = next.get(communityId); if (b) next.set(communityId, { ...b, joined: true }); return next; });
+  };
+
   return (
     <div ref={rootRef} style={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", position: "relative" }}>
       {/* Per-message menu. */}
@@ -893,7 +930,27 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                       />
                     </a>
                   )}
-                  {hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
+                  {m.community_id ? (() => {
+                    const b = inviteMeta.get(m.community_id);
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 2px", minWidth: 220 }}>
+                        <CommunityTile name={b?.name ?? "Board"} color={b?.color} avatarUrl={b?.avatar_url} size={36} />
+                        <span style={{ minWidth: 0, flex: 1 }}>
+                          <span style={{ display: "block", fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
+                          <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b?.name ?? m.content.replace(/^Invited you to join /, "")}</span>
+                        </span>
+                        {!mine && b && (
+                          b.joined ? (
+                            <a href="/communities" className="no-underline" style={{ fontSize: 12, fontWeight: 700, padding: "6px 12px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap" }}>Joined</a>
+                          ) : (
+                            <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                              {joining === m.community_id ? "Joining…" : "Join"}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    );
+                  })() : hasText && <div style={{ padding: m.image_url ? "5px 7px 3px" : 0 }}>{m.content}</div>}
                 </div>
               </div>
               {rxGroups.length > 0 && (

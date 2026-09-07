@@ -37,6 +37,7 @@ import EmojiPicker from "./EmojiPicker";
 import CommunityPicker from "./community/CommunityPicker";
 import RichText from "./community/RichText";
 import PostCard, { PinnedBadge, RoleBadge, TagChip, VoteBox, timeAgo, type PostRow } from "./community/PostCard";
+import InviteFriends from "./community/InviteFriends";
 import ReplayEmbed from "./community/ReplayEmbed";
 import ClipEmbed from "./community/ClipEmbed";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
@@ -316,6 +317,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
   // Community header extras
   const [modOpen, setModOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [railDebates, setRailDebates] = useState<RailDebate[]>([]);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   /* The open community's mod team — shown to everyone in the About card. */
@@ -2513,6 +2515,15 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                             {selectedCommunity.requested ? "Pending" : selectedCommunity.is_private ? "Request to join" : "Join"}
                           </button>
                         )}
+                        {selectedCommunity.joined && (!selectedCommunity.is_private || isMod) && (
+                          <button
+                            onClick={() => setInviteOpen(true)}
+                            onMouseEnter={liftIn} onMouseLeave={liftOut}
+                            style={{ ...pillBase, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee" }}
+                          >
+                            <Icon name="user-plus" size={13} /> Invite
+                          </button>
+                        )}
                         {isMod && (
                           <button
                             onClick={() => setModOpen((v) => !v)}
@@ -2544,6 +2555,30 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         >
                           <Icon name="more-horizontal" size={20} />
                         </button>
+                        {inviteOpen && typeof document !== "undefined" && createPortal(
+                          <div
+                            className="fixed inset-0 z-[1200] flex items-center justify-center p-5 crm-overlay"
+                            style={{ background: "rgba(0,0,0,0.82)" }}
+                            onClick={() => setInviteOpen(false)}
+                          >
+                            <div
+                              role="dialog"
+                              aria-label="Invite friends"
+                              className="w-full"
+                              style={{ maxWidth: 440, background: "#000", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "20px 24px 22px", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+                                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#f5f5f0" }}>Invite friends</h2>
+                                <button type="button" onClick={() => setInviteOpen(false)} aria-label="Close" className="cursor-pointer inline-flex items-center justify-center" style={{ width: 28, height: 28, borderRadius: 8, color: "rgba(238,238,245,0.6)", background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)" }}>
+                                  <Icon name="x" size={14} />
+                                </button>
+                              </div>
+                              <InviteFriends communityId={selectedCommunity.id} communityName={selectedCommunity.name} isPrivate={selectedCommunity.is_private} />
+                            </div>
+                          </div>,
+                          document.body
+                        )}
                         {boardMenuAt && typeof document !== "undefined" && createPortal(
                           (() => {
                             const c = selectedCommunity;
