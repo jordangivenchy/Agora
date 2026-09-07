@@ -8,6 +8,7 @@ import { TOPICS, LANGUAGES } from "@/types/database";
 import { useRouter } from "next/navigation";
 import { roomPath } from "@/lib/urls";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
+import TopicIcon from "./topicIcons";
 
 interface Props {
   open: boolean;
@@ -682,7 +683,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 {TOPICS.map((t) => (
                   <PillSelect
                     key={t.key}
-                    label={`${t.emoji} ${t.label}`}
+                    icon={<TopicIcon topicKey={t.key} size={14} />}
+                    label={t.label}
                     active={topicKey === t.key}
                     onClick={() => setTopicKey(t.key)}
                     activeColor={t.color}
@@ -1050,11 +1052,14 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
 
 function PillSelect({
   label,
+  icon,
   active,
   onClick,
   activeColor,
 }: {
   label: string;
+  /** Drawn icon before the label (the topic set), never an emoji. */
+  icon?: React.ReactNode;
   active: boolean;
   onClick: () => void;
   activeColor?: string;
@@ -1062,7 +1067,7 @@ function PillSelect({
   return (
     <button
       onClick={onClick}
-      className="cursor-pointer transition-all"
+      className="cursor-pointer transition-all inline-flex items-center gap-1.5"
       style={{
         padding: "6px 14px",
         borderRadius: "100px",
@@ -1077,7 +1082,7 @@ function PillSelect({
         color: active ? "white" : "#c9c9d2",
       }}
     >
-      {label}
+      {icon}{label}
     </button>
   );
 }
