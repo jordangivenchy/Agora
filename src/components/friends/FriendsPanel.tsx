@@ -118,7 +118,7 @@ export function FriendsCard({
           height: 32,
           borderRadius: 9,
           background: "#ffb700",
-          color: "#fff",
+          color: "#1a0e00",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
