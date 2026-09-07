@@ -161,12 +161,14 @@ const pillBase: React.CSSProperties = {
   padding: "5px 13px", fontSize: 11, fontWeight: 600, letterSpacing: "0.01em",
   transition: "transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease",
   whiteSpace: "nowrap",
+  /* Icons sit on the text's centre line, not its baseline. */
+  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, lineHeight: 1.2,
 };
 const pillGold: React.CSSProperties = {
   ...pillBase,
-  background: "linear-gradient(135deg,#f7e3a0,#d9a238)",
-  border: "none", color: "#412402",
-  boxShadow: "0 3px 10px rgba(217,162,56,0.2)",
+  background: "#ffb700",
+  border: "none", color: "#1a0e00",
+  boxShadow: "0 3px 10px rgba(255,183,0,0.2)",
 };
 const pillBlue: React.CSSProperties = {
   ...pillBase,

@@ -494,7 +494,7 @@ export default function ProfileView({
           className="no-underline mt-4"
           style={{
             padding: "8px 18px", borderRadius: 999, fontSize: 12.5, fontWeight: 600,
-            background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402",
+            background: "#ffb700", color: "#1a0e00",
           }}
         >
           {cta.label}

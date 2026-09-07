@@ -310,7 +310,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
             <div className="flex justify-between items-start mb-2.5">
               <span
                 className="text-[10px] font-medium px-2.5 py-0.5 rounded-full"
-                style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402", letterSpacing: 1 }}
+                style={{ background: "#ffb700", color: "#1a0e00", letterSpacing: 1 }}
               >
                 <Icon name="sun" size={11} /> TODAY'S MOTION · {today}
               </span>
@@ -339,7 +339,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
               <button
                 onClick={() => daily && onStartDebate(daily.motion, "politics-ethics")}
                 className="cursor-pointer text-[12px] font-medium px-4 py-1.5 rounded-lg border-none"
-                style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
+                style={{ background: "#ffb700", color: "#1a0e00" }}
               >
                 <Icon name="sparkles" size={12} /> Discuss this now
               </button>

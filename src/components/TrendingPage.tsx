@@ -463,7 +463,7 @@ export default function TrendingPage({ open, onClose }: Props) {
                 <button
                   onClick={() => window.dispatchEvent(new CustomEvent("agora:create"))}
                   className="cursor-pointer text-[12px] font-medium px-4 py-2 rounded-lg border-none"
-                  style={{ background: "linear-gradient(135deg,#f7e3a0,#d9a238)", color: "#412402" }}
+                  style={{ background: "#ffb700", color: "#1a0e00" }}
                 >
                   <Icon name="sparkles" size={12} /> Start the first one
                 </button>
