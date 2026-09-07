@@ -843,19 +843,29 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                 className="dm-msg-row"
                 style={{
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: "flex-end",
                   gap: 6,
                   flexDirection: mine ? "row-reverse" : "row",
                   alignSelf: mine ? "flex-end" : "flex-start",
                   maxWidth: page ? "72%" : "85%",
                 }}
               >
+                {/* Who sent it: their picture sits by the last bubble of each of
+                    their runs (a spacer keeps the others aligned), yours ride
+                    right in yellow — the iMessage read. */}
+                {!mine && (
+                  <span style={{ width: 22, height: 22, flexShrink: 0, alignSelf: "flex-end", marginBottom: 2 }}>
+                    {(i === msgs.length - 1 || msgs[i + 1].sender_id !== m.sender_id) && (
+                      <UserAvatar size={22} username={hydratedPeer.username} avatarUrl={hydratedPeer.avatarUrl} seed={hydratedPeer.id} />
+                    )}
+                  </span>
+                )}
                 <div
                   className={`dm-bubble${menuFor?.id === m.id ? " is-menu" : ""}`}
                   style={{
                     padding: m.image_url ? 4 : "7px 11px",
                     borderRadius: mine ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
-                    background: mine ? YELLOW : "rgba(30,33,42,0.88)",
+                    background: mine ? YELLOW : "#1e2129",
                     color: mine ? YELLOW_INK : "#f2f2f5",
                     fontSize: page ? 15 : 14.5,
                     lineHeight: 1.4,
@@ -937,7 +947,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     const b = inviteMeta.get(m.community_id);
                     const name = b?.name ?? m.content.replace(/^Invited you to join /, "");
                     const kindLabel = b ? (COMMUNITY_KINDS.find((k) => k.key === b.kind)?.label ?? "Community") : null;
-                    const meta = b ? [kindLabel, b.is_private ? "Private" : "Public", `${b.members} member${b.members === 1 ? "" : "s"}`].join(" · ") : null;
+                    const meta = b ? [kindLabel, b.is_private ? "Private" : "Public"].join(" · ") : null;
+                    const memberLine = b ? `${b.members} member${b.members === 1 ? "" : "s"}` : null;
                     return (
                       <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "6px 4px 4px", minWidth: 260, maxWidth: 320 }}>
                         <span style={{ fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
@@ -951,20 +962,18 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                         {b?.description && (
                           <span style={{ fontSize: 12, lineHeight: 1.45, opacity: 0.8, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{b.description}</span>
                         )}
-                        {!mine && b && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            {b.joined ? (
+                        {b && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {!mine && (b.joined ? (
                               <a href="/communities" className="no-underline" style={{ fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#c9c9d2", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                                <Icon name="check" size={12} /> Joined — open Communities
+                                <Icon name="check" size={12} /> Joined
                               </a>
                             ) : (
-                              <>
-                                <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                                  {joining === m.community_id ? "Joining…" : b.is_private ? "Accept and join" : "Join"}
-                                </button>
-                                <span style={{ fontSize: 11, opacity: 0.6 }}>{b.is_private ? "The invite lets you in without applying." : "Free to join, free to leave."}</span>
-                              </>
-                            )}
+                              <button type="button" onClick={() => acceptInvite(m.community_id!)} disabled={joining === m.community_id} className="cursor-pointer" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                                {joining === m.community_id ? "Joining…" : b.is_private ? "Accept and join" : "Join"}
+                              </button>
+                            ))}
+                            <span style={{ fontSize: 11.5, opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 5 }}><Icon name="users" size={12} /> {memberLine}</span>
                           </div>
                         )}
                       </div>
