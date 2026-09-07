@@ -786,6 +786,13 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
                 send();
               }
             }}
+            /* iOS scrolls the document to reveal the composer behind the
+               keyboard and can leave it there; put the page back. */
+            onBlur={() => {
+              if (window.matchMedia("(max-width: 639px)").matches) {
+                requestAnimationFrame(() => window.scrollTo(0, 0));
+              }
+            }}
             placeholder={`Message ${name}…`}
             rows={1}
             autoFocus={typeof window === "undefined" || !window.matchMedia("(max-width: 639px)").matches}

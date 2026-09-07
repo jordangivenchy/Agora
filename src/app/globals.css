@@ -2448,10 +2448,25 @@ html.reduce-motion .nav-sparkle {
     background: rgba(6,7,12,0.3) !important;
     animation: msgsIn 260ms cubic-bezier(.2,.7,.2,1) both;
   }
+  /* An open thread is pinned to the viewport (top bar to bottom edge),
+     not laid out in the page: iOS scrolls the document to reveal the
+     composer when the keyboard comes up and can leave it scrolled, which
+     slid an in-flow thread up under the fixed top bar. Pinned, its
+     geometry never depends on the document's scroll offset; the document
+     itself is locked while a thread is open. */
   .msgs-thread-open .messages-beside-sidebar > .msgs-shell {
-    height: calc(100dvh - var(--nav-height, 60px)) !important;
+    position: fixed;
+    top: var(--nav-height, 60px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto !important;
+    min-height: 0 !important;
     padding-bottom: env(safe-area-inset-bottom);
+    z-index: 2;
   }
+  html.msgs-thread-open,
+  html.msgs-thread-open body { overflow: hidden !important; }
   .msgs-thread-open .mobile-tabbar { display: none !important; }
   .msgs-thread-pane { animation: msgsThreadIn 240ms cubic-bezier(.2,.7,.2,1) both; }
   .msgs-rail-pane { animation: msgsRailIn 220ms cubic-bezier(.2,.7,.2,1) both; }
@@ -2515,7 +2530,10 @@ html.reduce-motion .nav-sparkle {
     border-radius: 50%;
     background: #ffb700;
     color: #1a0e00;
-    box-shadow: 0 6px 18px rgba(255,183,0,0.28);
+    /* The halo stays inside the bar: the circle sits 6px from the bar's
+       top edge and the viewport's bottom, and a wider glow was cut by
+       both. */
+    box-shadow: 0 0 6px rgba(255,183,0,0.4);
   }
   .mobile-tab-create:active .mobile-tab-icon { transform: scale(0.96); }
 
