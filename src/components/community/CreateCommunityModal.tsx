@@ -89,6 +89,9 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
   useEscapeClose(open, onClose);
 
   const [step, setStep] = useState(0);
+  /* Which way the last step change went — the new step slides in from that side. */
+  const [dir, setDir] = useState<"fwd" | "back">("fwd");
+  const go = (n: number) => { setDir(n > step ? "fwd" : "back"); setStep(n); };
   const [name, setName] = useState("");
   const [kind, setKind] = useState(COMMUNITY_KINDS[0].key);
   const [description, setDescription] = useState("");
@@ -271,7 +274,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 role="tablist"
                 aria-label="What to create"
                 className="inline-flex items-center"
-                style={{ marginTop: 10, padding: 3, borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                style={{ marginTop: 10, padding: 3, borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.08)" }}
               >
                 <button
                   type="button"
@@ -309,7 +312,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
             onClick={onClose}
             aria-label="Close"
             className="flex items-center justify-center cursor-pointer"
-            style={{ width: 28, height: 28, borderRadius: 8, color: "rgba(238,238,245,0.6)", background: "rgba(255,255,255,0.04)", border: "none" }}
+            style={{ width: 28, height: 28, borderRadius: 8, color: "rgba(238,238,245,0.6)", background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)" }}
           >
             <Icon name="x" size={14} />
           </button>
@@ -353,7 +356,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           )}
 
           {(!gate || gate.allowed) && step === 0 && (
-            <>
+            <div key="step-0" className={`ccm-step ccm-step-${dir}`}>
               <div>
                 <label style={label} htmlFor="ccm-name">Name</label>
                 <input
@@ -387,9 +390,9 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         className="cursor-pointer text-left"
                         style={{
                           display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", borderRadius: 11,
-                          background: on ? "rgba(255,183,0,0.12)" : "rgba(255,255,255,0.04)",
-                          border: `1px solid ${on ? "rgba(255,183,0,0.55)" : "rgba(255,255,255,0.09)"}`,
-                          color: "#eeeef5", fontFamily: "inherit",
+                          background: on ? "#ffb700" : "#0b0b0d",
+                          border: `1px solid ${on ? "#ffb700" : "rgba(255,255,255,0.14)"}`,
+                          color: on ? "#1a0e00" : "#eeeef5", fontFamily: "inherit",
                         }}
                       >
                         <span style={{ width: 30, height: 30, borderRadius: 9, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: on ? "rgba(255,183,0,0.18)" : "rgba(255,255,255,0.06)", color: on ? "#ffb700" : "#c0c0c8" }}>
@@ -397,7 +400,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         </span>
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>{k.label}</span>
-                          <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.hint}</span>
+                          <span style={{ display: "block", fontSize: 11, color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.hint}</span>
                         </span>
                       </button>
                     );
@@ -417,11 +420,11 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 />
                 <p style={{ ...hintStyle, textAlign: "right" }}>{description.length}/{DESC_MAX}</p>
               </div>
-            </>
+            </div>
           )}
 
           {(!gate || gate.allowed) && step === 1 && (
-            <>
+            <div key="step-1" className={`ccm-step ccm-step-${dir}`}>
               {preview}
               <div>
                 <span style={label}>Accent colour</span>
@@ -452,7 +455,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                   ["avatar", "Avatar", "Square, shown beside the name.", avatar, avatarInput, setAvatar],
                   ["banner", "Banner", "Wide, across the top of the board.", banner, bannerInput, setBanner],
                 ] as const).map(([key, title, hint, file, ref, set]) => (
-                  <div key={key} style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.09)", background: "rgba(255,255,255,0.03)" }}>
+                  <div key={key} style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "#0b0b0d" }}>
                     <span style={{ ...label, marginBottom: 2 }}>{title} <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></span>
                     <p style={{ ...hintStyle, marginTop: 0, marginBottom: 10 }}>{hint}</p>
                     <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => set(e.target.files?.[0] ?? null)} />
@@ -469,11 +472,11 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
 
           {(!gate || gate.allowed) && step === 2 && (
-            <>
+            <div key="step-2" className={`ccm-step ccm-step-${dir}`}>
               <div>
                 <span style={label}>Who can join</span>
                 <div className="ccm-access" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -491,12 +494,12 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         className="cursor-pointer text-left"
                         style={{
                           display: "flex", gap: 10, alignItems: "flex-start", padding: "11px 12px", borderRadius: 12,
-                          background: on ? "rgba(255,183,0,0.12)" : "rgba(255,255,255,0.04)",
-                          border: `1px solid ${on ? "rgba(255,183,0,0.55)" : "rgba(255,255,255,0.09)"}`,
-                          color: "#eeeef5", fontFamily: "inherit",
+                          background: on ? "#ffb700" : "#0b0b0d",
+                          border: `1px solid ${on ? "#ffb700" : "rgba(255,255,255,0.14)"}`,
+                          color: on ? "#1a0e00" : "#eeeef5", fontFamily: "inherit",
                         }}
                       >
-                        <span style={{ color: on ? "#ffb700" : "#c0c0c8", marginTop: 1 }}><Icon name={icon} size={15} /></span>
+                        <span style={{ color: on ? "#1a0e00" : "#c0c0c8", marginTop: 1 }}><Icon name={icon} size={15} /></span>
                         <span>
                           <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>{title}</span>
                           <span style={{ display: "block", fontSize: 11.5, color: "rgba(238,238,245,0.5)", marginTop: 2 }}>{hint}</span>
@@ -533,7 +536,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 <p style={hintStyle}>Pinned in the board&rsquo;s sidebar. You can edit everything later in the board&rsquo;s settings.</p>
               </div>
               {preview}
-            </>
+            </div>
           )}
 
           {error && (
@@ -548,12 +551,12 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           {gate && !gate.allowed ? (
             <>
               <span style={{ marginLeft: "auto" }} />
-              <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e8e8ee", fontFamily: "inherit" }}>
+              <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee", fontFamily: "inherit" }}>
                 Close
               </button>
             </>
           ) : step > 0 ? (
-            <button type="button" onClick={() => setStep((s) => s - 1)} className="cursor-pointer inline-flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, padding: "9px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e8e8ee", fontFamily: "inherit" }}>
+            <button type="button" onClick={() => go(step - 1)} className="cursor-pointer inline-flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, padding: "9px 14px", borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)", color: "#e8e8ee", fontFamily: "inherit" }}>
               <Icon name="arrow-left" size={13} /> Back
             </button>
           ) : (
@@ -563,7 +566,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           {step < steps.length - 1 ? (
             <button
               type="button"
-              onClick={() => canNext && setStep((s) => s + 1)}
+              onClick={() => canNext && go(step + 1)}
               disabled={!canNext}
               className="cursor-pointer disabled:cursor-default disabled:opacity-50"
               style={{ fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }}

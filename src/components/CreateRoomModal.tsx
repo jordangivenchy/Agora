@@ -594,7 +594,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 role="tablist"
                 aria-label="What to create"
                 className="inline-flex items-center"
-                style={{ marginTop: 10, padding: 3, borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", gap: 2 }}
+                style={{ marginTop: 10, padding: 3, borderRadius: 999, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.08)", gap: 2 }}
               >
                 <span
                   role="tab"
