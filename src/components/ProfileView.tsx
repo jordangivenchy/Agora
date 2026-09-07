@@ -677,7 +677,9 @@ export default function ProfileView({
     <div
       className={embedded ? "" : "min-h-screen"}
       style={{
-        background: embedded ? "transparent" : "var(--bg-primary, #0a0a0c)",
+        /* Transparent on the route: SiteChrome paints the black ground and
+           the starfield behind it, and an opaque panel here hid the stars. */
+        background: "transparent",
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
@@ -816,41 +818,33 @@ export default function ProfileView({
                   ))}
                 </span>
               )}
+              {/* Live: the same red badge a room card wears, with the
+                  discussion's title as a quiet link beside it — one flat
+                  pill carrying both read as a mislabelled button. */}
               {profile.live_room_id && (
                 <a
                   href={roomPath({ id: profile.live_room_id, motion: profile.live_room_motion ?? null })}
-                  className="no-underline inline-flex items-center gap-1.5"
-                  style={{
-                    padding: "3px 10px",
-                    borderRadius: 999,
-                    border: "1px solid #e05a5a",
-                    background: "#e05a5a",
-                    color: "#fff",
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    maxWidth: 260,
-                  }}
+                  className="no-underline inline-flex items-center gap-2"
+                  style={{ minWidth: 0, maxWidth: 320, color: "#c9c9d2", fontSize: 13, fontWeight: 500 }}
                   title={profile.live_room_motion ?? "Live now"}
                 >
-                  <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true" style={{ flexShrink: 0 }}>
-                    <circle cx="4" cy="4" r="3" fill="#e05a5a">
-                      <animate attributeName="opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
-                    </circle>
-                  </svg>
-                  LIVE
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{ padding: "2px 8px 2px 7px", borderRadius: 6, background: "#ef4444", color: "#fff", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.06em", lineHeight: "16px", flexShrink: 0 }}
+                  >
+                    <svg width="6" height="6" viewBox="0 0 6 6" aria-hidden="true" style={{ flexShrink: 0 }}>
+                      <circle cx="3" cy="3" r="3" fill="#fff">
+                        <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                    LIVE
+                  </span>
                   {profile.live_room_motion && (
-                    <span
-                      style={{
-                        color: "#f0b7b7",
-                        fontWeight: 500,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {profile.live_room_motion}
                     </span>
                   )}
+                  <Icon name="arrow-up-right" size={12} style={{ flexShrink: 0, opacity: 0.7 }} />
                 </a>
               )}
             </div>
@@ -917,7 +911,7 @@ export default function ProfileView({
 
           {/* Right column: the action buttons (social icons ride the name
               line, above). */}
-          <div className="flex flex-col items-end justify-between gap-3 shrink-0 relative self-stretch" ref={menuRef}>
+          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "center" }} ref={menuRef}>
             {isSelf && (
               <div className="flex items-center gap-2.5">
                 <button
@@ -962,6 +956,9 @@ export default function ProfileView({
               </div>
             )}
 
+            {/* Actions ride the card's vertical middle (the column above
+                centres them), beside the info column, instead of hanging
+                off the top corner. */}
             {!isSelf && (
               <div className="flex flex-col items-end gap-2 relative">
               <div className="flex items-center gap-2">
