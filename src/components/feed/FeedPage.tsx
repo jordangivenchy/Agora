@@ -343,7 +343,10 @@ export default function FeedPage({ open, onClose }: Props) {
               {r.community && <><span>·</span><span style={{ color: "#e2b96b" }}>{r.community.name}</span></>}
             </p>
             <p className="m-0 mt-1 text-[11px] flex items-center gap-2 flex-wrap">
-              <span style={{ color: "#4a9eff", fontWeight: 600 }}>▶ Watch discussion</span>
+              <span style={{ color: "#4a9eff", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <Icon name="play" size={10} strokeWidth={0} style={{ fill: "currentColor" }} />
+                Watch discussion
+              </span>
               {topic && (
                 <TagChip name={topic.label} color={topic.color} small />
               )}
