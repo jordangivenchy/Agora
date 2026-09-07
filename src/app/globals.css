@@ -2638,16 +2638,17 @@ html.reduce-motion .nav-sparkle {
      header and footer pinned inside the card, only the body scrolls. */
   .ccm-overlay, .crm-overlay { z-index: 1200 !important; }
   .ccm-overlay { padding: 12px !important; align-items: center !important; }
-  .ccm-panel {
-    height: auto !important;
-    max-height: min(90vh, calc(100dvh - 24px)) !important;
+  .ccm-panel, .crm-panel {
+    height: min(88vh, calc(100dvh - 24px)) !important;
+    max-height: min(88vh, calc(100dvh - 24px)) !important;
     border-radius: 20px !important;
     display: flex; flex-direction: column;
     overflow: hidden !important;
   }
-  .ccm-head { flex-shrink: 0; padding: 16px 16px 12px 20px !important; }
-  .ccm-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 20px 6px !important; gap: 14px !important; }
-  .ccm-foot { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 16px 14px !important; }
+  .ccm-head, .crm-head { flex-shrink: 0; padding: 16px 16px 12px 20px !important; }
+  .ccm-body, .crm-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 20px 14px !important; gap: 14px !important; }
+  .ccm-foot, .crm-foot { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 16px 14px !important; }
+  .crm-overlay { padding: 12px !important; align-items: center !important; }
   .ccm-kinds { grid-template-columns: 1fr 1fr !important; }
   .ccm-kinds > button { min-width: 0; }
   .ccm-images, .ccm-access { grid-template-columns: 1fr !important; }

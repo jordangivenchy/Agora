@@ -250,13 +250,15 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
       onClick={onClose}
     >
       <div
-        className="w-full overflow-y-auto ccm-panel"
+        className="w-full ccm-panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby="ccm-title"
         style={{
-          maxWidth: 540, /* the create-discussion panel's width */
-          maxHeight: "92vh",
+          maxWidth: 540, /* the create-discussion panel's frame: width and height */
+          height: "min(720px, 92vh)",
+          display: "flex",
+          flexDirection: "column",
           background: "#000",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 20,
@@ -267,7 +269,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between ccm-head" style={{ padding: "20px 24px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center justify-between ccm-head" style={{ flexShrink: 0, minHeight: 108, boxSizing: "border-box", padding: "20px 24px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div>
             <h2 id="ccm-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", color: "#f5f5f0" }}>
               Create a community
@@ -322,7 +324,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         </div>
 
         {/* Body */}
-        <div className="ccm-body" style={{ padding: "20px 24px 4px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="ccm-body" style={{ padding: "20px 24px 20px", display: "flex", flexDirection: "column", gap: 20, flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
           {/* Gate: the database would refuse this account right now. */}
           {gate && !gate.allowed && gate.reason && (
             <div className="ccm-gate" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "26px 12px 18px" }}>
@@ -550,7 +552,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px" }}>
+        <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
           {gate && !gate.allowed ? (
             <>
               <span style={{ marginLeft: "auto" }} />

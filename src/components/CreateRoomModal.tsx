@@ -557,10 +557,14 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       onClick={onClose}
     >
       <div
-        className="w-full overflow-y-auto"
+        className="w-full crm-panel"
         style={{
           maxWidth: "540px",
-          maxHeight: "92vh",
+          /* One frame for both create modals: the same fixed height, the
+             body scrolling inside it, the footer pinned. */
+          height: "min(720px, 92vh)",
+          display: "flex",
+          flexDirection: "column",
           background: "#000",
           border: "1px solid var(--border)",
           borderRadius: "20px",
@@ -571,8 +575,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between"
-          style={{ padding: "20px 24px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          className="flex items-center justify-between crm-head"
+          style={{ padding: "20px 24px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0, minHeight: 108, boxSizing: "border-box" }}
         >
           <div>
             <h2
@@ -641,7 +645,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           </button>
         </div>
 
-        <div style={{ padding: "20px 24px 24px" }}>
+        <div className="crm-body" style={{ padding: "20px 24px 20px", flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
           <div className="flex flex-col gap-5">
             {error && (
               <div
@@ -971,57 +975,57 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               )}
             </div>
 
-            {/* Footer */}
-            <div
-              className="flex items-center justify-between pt-4"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-            >
-              <button
-                onClick={() => setJoinMode(true)}
-                className="cursor-pointer"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "12.5px",
-                  padding: "9px 4px",
-                  textDecoration: "underline",
-                  textUnderlineOffset: "3px",
-                }}
-              >
-                Have an invite code?
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={loading || !motion.trim()}
-                className="cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: "var(--accent-blue)",
-                  border: "none",
-                  color: "#fff",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "13.5px",
-                  fontWeight: 600,
-                  padding: "10px 24px",
-                  borderRadius: "100px",
-                }}
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.disabled)
-                    e.currentTarget.style.background = "var(--accent-purple-light)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--accent-blue)";
-                }}
-              >
-                {loading
-                  ? "Creating…"
-                  : scheduleEnabled
-                  ? "Schedule discussion"
-                  : "Create room"}
-              </button>
-            </div>
           </div>
+        </div>
+        {/* Footer — pinned under the scrolling body */}
+        <div
+          className="flex items-center justify-between crm-foot"
+          style={{ padding: "12px 24px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}
+        >
+          <button
+            onClick={() => setJoinMode(true)}
+            className="cursor-pointer"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: "12.5px",
+              padding: "9px 4px",
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+            }}
+          >
+            Have an invite code?
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={loading || !motion.trim()}
+            className="cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "#ffb700",
+              border: "none",
+              color: "#1a0e00",
+              fontFamily: "inherit",
+              fontSize: "13px",
+              fontWeight: 700,
+              padding: "9px 18px",
+              borderRadius: "999px",
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled)
+                e.currentTarget.style.background = "#ffc22e";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#ffb700";
+            }}
+          >
+            {loading
+              ? "Creating…"
+              : scheduleEnabled
+              ? "Schedule discussion"
+              : "Create room"}
+          </button>
         </div>
       </div>
     </div>
