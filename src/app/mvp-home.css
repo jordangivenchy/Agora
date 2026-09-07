@@ -4489,12 +4489,13 @@ body { background: transparent; }
 .explore-pill {
   padding: 6px 14px; border-radius: 999px;
   font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.42); cursor: pointer;
+  /* Solid black at rest (no tint); the chosen one stays the classic blue. */
+  border: 1px solid rgba(255,255,255,0.14);
+  background: #0b0b0d;
+  color: #c9c9d2; cursor: pointer;
   transition: background 0.13s ease, color 0.13s ease; white-space: nowrap; user-select: none;
 }
-.explore-pill:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.72); }
+.explore-pill:hover { background: #16161a; color: #f5f5f0; }
 .explore-pill.active { background: #2f7fe0; border-color: #2f7fe0; color: #fff; font-weight: 600; }
 .explore-pill.live-pill.active { background: #e05a5a; border-color: #e05a5a; color: #fff; }
 
