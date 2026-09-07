@@ -400,8 +400,8 @@ export default function MessagesDock() {
               padding: wide ? "9px 10px" : "10px 14px",
               cursor: "pointer",
               borderBottom: "1px solid rgba(255,255,255,0.04)",
-              background: active ? "rgba(255,183,0,0.12)" : "transparent",
-              borderLeft: active ? `2px solid ${YELLOW}` : "2px solid transparent",
+              background: active ? YELLOW : "transparent",
+              borderLeft: "2px solid transparent",
             }}
           >
             <UserAvatar size={44} username={t.peer_username} avatarUrl={t.peer_avatar_url} seed={t.peer_id} />
@@ -412,7 +412,7 @@ export default function MessagesDock() {
                     margin: 0,
                     flex: 1,
                     minWidth: 0,
-                    color: "#f5f5f0",
+                    color: active ? YELLOW_INK : "#f5f5f0",
                     fontSize: 14,
                     fontWeight: t.unread > 0 ? 700 : 500,
                     whiteSpace: "nowrap",
@@ -422,12 +422,12 @@ export default function MessagesDock() {
                 >
                   {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
                 </p>
-                <span style={{ color: "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
+                <span style={{ color: active ? "rgba(26,14,0,0.7)" : "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
               </div>
               <p
                 style={{
                   margin: 0,
-                  color: t.unread > 0 ? "#c9c9d4" : "#8b8b94",
+                  color: active ? "rgba(26,14,0,0.72)" : t.unread > 0 ? "#c9c9d4" : "#8b8b94",
                   fontSize: 12.5,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -441,8 +441,8 @@ export default function MessagesDock() {
             {t.unread > 0 && (
               <span
                 style={{
-                  background: YELLOW,
-                  color: YELLOW_INK,
+                  background: active ? YELLOW_INK : YELLOW,
+                  color: active ? YELLOW : YELLOW_INK,
                   borderRadius: 999,
                   fontSize: 10.5,
                   fontWeight: 700,
