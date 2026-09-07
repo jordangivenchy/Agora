@@ -279,9 +279,10 @@ export default function PostCard<P extends PostRow>({
           with the community name, then the text. */}
       {reason && (
         <div className="flex gap-3 mb-3 cm-card-row">
-          {/* Same width as the vote column, so the caption starts where the tile does. */}
-          {onVote && <span aria-hidden="true" className="vote-box shrink-0" style={{ width: 34 }} />}
-          <p className="m-0 text-[10.5px] inline-flex items-center gap-1 min-w-0" style={{ color: "rgba(238,238,245,0.38)" }}>
+          {/* The sparkle sits in the gap between the score and the tile; the
+              text starts at the tile's left edge (vote column minus the gap). */}
+          {onVote && <span aria-hidden="true" className="vote-spacer shrink-0" style={{ width: 22 }} />}
+          <p className="m-0 text-[10.5px] inline-flex items-center gap-0.5 min-w-0" style={{ color: "rgba(238,238,245,0.38)" }}>
             <Icon name="sparkles" size={11} /> {reason}
           </p>
         </div>
