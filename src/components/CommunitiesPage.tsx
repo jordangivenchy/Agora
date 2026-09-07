@@ -225,7 +225,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         className="cursor-pointer inline-flex items-center gap-1"
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
-        <UserAvatar size={14} username={username} avatarUrl={avatars[authorId]} seed={authorId} />
         {authorLabel(dn, username)}
       </span>
     ) : (
@@ -3044,6 +3043,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     showCommunity={selected === "all"}
                     onOpenCommunity={(id) => { closePostDetail(); setSelected(id); }}
                     author={authorSpan(p.author_id, p.author_username, p.author_display_name)}
+                    communityArt={(() => {
+                      const c = communities.find((x) => x.id === p.community_id);
+                      return { name: p.community_name, color: c?.color, avatarUrl: c?.avatar_url ?? null };
+                    })()}
                     actions={postActions(p, false)}
                     embed={repostEmbed(p)}
                   />

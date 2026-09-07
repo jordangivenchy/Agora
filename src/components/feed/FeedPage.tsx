@@ -57,7 +57,7 @@ type CommentPayload = {
   author: { id: string; username: string; display_name: string | null; avatar_url: string | null };
 };
 
-type FeedPost = PostRow & { author_avatar_url?: string | null; community_color?: string | null };
+type FeedPost = PostRow & { author_avatar_url?: string | null; community_color?: string | null; community_avatar_url?: string | null };
 
 type FeedItem =
   | { kind: "live" | "scheduled" | "replay"; item_id: string; score: number; created_at: string; reason: string; payload: RoomPayload }
@@ -229,14 +229,14 @@ export default function FeedPage({ open, onClose }: Props) {
   const live = useMemo(() => (items ?? []).filter((i) => i.kind === "live"), [items]);
   const stream = useMemo(() => (items ?? []).filter((i) => i.kind !== "live"), [items]);
 
-  const authorChip = (id: string | null, username: string, dn: string | null, avatar?: string | null, label?: string) =>
+  const authorChip = (id: string | null, username: string, dn: string | null, avatar?: string | null, label?: string, withAvatar = true) =>
     id ? (
       <span
         onClick={(e) => { e.stopPropagation(); openUserMenu({ x: e.clientX, y: e.clientY }, { userId: id, username }); }}
         className="cursor-pointer inline-flex items-center gap-1"
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
-        <UserAvatar size={14} username={username} avatarUrl={avatar ?? null} seed={id} />
+        {withAvatar && <UserAvatar size={14} username={username} avatarUrl={avatar ?? null} seed={id} />}
         {label ?? authorLabel(dn, username)}
       </span>
     ) : <>{label ?? authorLabel(dn, username)}</>;
@@ -258,7 +258,8 @@ export default function FeedPage({ open, onClose }: Props) {
           onVote={vote}
           showCommunity
           onOpenCommunity={() => shellNavigate(pathFor.community(null))}
-          author={authorChip(p.author_id, p.author_username, p.author_display_name, p.author_avatar_url)}
+          author={authorChip(p.author_id, p.author_username, p.author_display_name, null, undefined, false)}
+          communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }}
           reason={it.reason}
           embed={<RepostEmbed post={p} onOpenOriginal={openPost} />}
         />
@@ -363,7 +364,7 @@ export default function FeedPage({ open, onClose }: Props) {
           <Reason text={it.reason} />
           <p className="m-0 text-[11.5px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.6)" }}>
             <Icon name="message-circle" size={12} />
-            {authorChip(c.author.id, c.author.username, c.author.display_name, c.author.avatar_url)}
+            {authorChip(c.author.id, c.author.username, c.author.display_name, null, undefined, false)}
             <span>commented on</span>
             <span className="truncate" style={{ color: "#eeeef5", maxWidth: 360 }}>{c.post_title}</span>
             <span>· {timeAgo(c.created_at)}</span>

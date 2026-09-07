@@ -207,12 +207,36 @@ interface PostCardProps<P extends PostRow> {
   embed?: ReactNode;
   /** Muted "why you're seeing this" line above the title. */
   reason?: string | null;
+  /** The board's art — its avatar, or a coloured tile with its initial —
+      drawn just before the board's name in the meta line (only when the
+      name is shown). Replaces the author's picture. */
+  communityArt?: { name: string; color?: string | null; avatarUrl?: string | null };
   compact?: boolean;
   className?: string;
 }
 
+/* The board's mark: 30px, softly rounded, image or initial on the board's colour. */
+export function CommunityTile({ name, color, avatarUrl, size = 30 }: { name: string; color?: string | null; avatarUrl?: string | null; size?: number }) {
+  return (
+    <span
+      className="shrink-0 inline-flex items-center justify-center overflow-hidden"
+      title={name}
+      style={{
+        width: size, height: size, borderRadius: Math.round(size * 0.32),
+        background: color || "#2f7fe0", color: "#fff",
+        fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: Math.round(size * 0.45),
+      }}
+    >
+      {avatarUrl
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        : name.trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 export default function PostCard<P extends PostRow>({
-  post: p, onOpen, onVote, showCommunity, onOpenCommunity, author, actions, embed, reason, compact, className,
+  post: p, onOpen, onVote, showCommunity, onOpenCommunity, author, actions, embed, reason, communityArt, compact, className,
 }: PostCardProps<P>) {
   return (
     <div
@@ -233,10 +257,11 @@ export default function PostCard<P extends PostRow>({
               <>
                 <span
                   onClick={(e) => { e.stopPropagation(); onOpenCommunity?.(p.community_id); }}
-                  className="cursor-pointer"
+                  className="cursor-pointer inline-flex items-center gap-1.5"
                   title={`Go to ${p.community_name}`}
                   style={{ color: "#e2b96b", textDecoration: "underline dotted rgba(226,185,107,0.4)", textUnderlineOffset: 2 }}
                 >
+                  {communityArt && <CommunityTile name={communityArt.name} color={communityArt.color} avatarUrl={communityArt.avatarUrl} size={16} />}
                   {p.community_name}
                 </span>
                 <span>·</span>

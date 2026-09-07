@@ -102,7 +102,7 @@ type PersonPayload = {
   is_following: boolean;
   followers: number;
 };
-type SearchPost = PostRow & { author_avatar_url?: string | null; community_color?: string | null };
+type SearchPost = PostRow & { author_avatar_url?: string | null; community_color?: string | null; community_avatar_url?: string | null };
 
 type Row =
   | { kind: "debate"; id: string; rank: number; created_at: string; payload: DebatePayload }
@@ -465,7 +465,6 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
         className="cursor-pointer inline-flex items-center gap-1"
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
-        <UserAvatar size={14} username={username} avatarUrl={avatar ?? null} seed={id} />
         {authorLabel(dn, username)}
       </span>
     ) : <>{authorLabel(dn, username)}</>;
@@ -504,6 +503,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
             showCommunity
             onOpenCommunity={() => { onClose(); shellNavigate(pathFor.community(null)); }}
             author={authorChip(p.author_id, p.author_username, p.author_display_name, p.author_avatar_url)}
+            communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }}
             embed={<RepostEmbed post={p} onOpenOriginal={openPost} />}
           />
         );
