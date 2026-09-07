@@ -91,8 +91,6 @@ const NAV: NavItem[] = [
   {
     id: "trending",
     label: "Trending",
-    /* Not in the phone bar: Home · Feed · [+ create] · Boards · News. */
-    phoneTab: false,
     sparkles: [
       ["0.3s", "4.2s", "28%", "42%", "5px"],
       ["1.1s", "3.6s", "68%", "60%", "-5px"],
@@ -119,8 +117,6 @@ const NAV: NavItem[] = [
     id: "explore",
     label: "Explore",
     page: "explore",
-    /* On phones the top bar's search icon is the way into Explore. */
-    phoneTab: false,
     sparkles: [
       ["0.5s", "4.3s", "18%", "55%", "-5px"],
       ["1.3s", "3.8s", "62%", "35%", "6px"],
