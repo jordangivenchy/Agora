@@ -19,6 +19,21 @@ export function clipIdInBody(body: string | null | undefined): string | null {
   return m ? m[1].toLowerCase() : null;
 }
 
+const CLIP_URL_TOKEN = /\S*\/clips\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*/gi;
+
+/** The body without its clip link: the clip is shown as a player or a
+    chip wherever the post renders, so the bare URL would only repeat it
+    as a line of text. Empty string when the link was all there was. */
+export function stripClipLink(body: string | null | undefined): string {
+  if (!body) return "";
+  if (!clipIdInBody(body)) return body;
+  return body
+    .replace(CLIP_URL_TOKEN, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export default function ClipEmbed({ body }: { body: string | null | undefined }) {
   const [supabase] = useState(() => createClient());
   const clipId = clipIdInBody(body);

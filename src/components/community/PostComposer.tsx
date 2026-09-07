@@ -19,6 +19,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { errorNote, modalCard, modalClose, modalOverlay, modalTitle, pillDark, pillYellow } from "@/components/messages/groups";
 
 export const POST_TITLE_MAX = 200;
+export const POST_BODY_MAX = 10000;
 
 type PickerCommunities = ComponentProps<typeof CommunityPicker>["communities"];
 
@@ -43,7 +44,11 @@ export default function PostComposer({
   maxLength,
   onSubmit,
   onClose,
+  clip,
 }: {
+  /** A clip riding along with the post (the clip page's "Post to
+      community"): shown as a fixed attachment under the text. */
+  clip?: { title: string; duration: string | null } | null;
   /** Shown when composing from All: which community this goes to. */
   pickCommunity: { communities: PickerCommunities; value: string; onChange: (id: string) => void } | null;
   title: string;
@@ -143,7 +148,7 @@ export default function PostComposer({
     >
       <div
         role="dialog"
-        aria-label="New post"
+        aria-label={clip ? "Post clip" : "New post"}
         className="w-full composer-sheet"
         style={cardStyle}
         onClick={(e) => e.stopPropagation()}
@@ -159,12 +164,12 @@ export default function PostComposer({
             >
               Cancel
             </button>
-            <span style={{ ...modalTitle, fontSize: 16, flex: 1, textAlign: "center" }}>New post</span>
+            <span style={{ ...modalTitle, fontSize: 16, flex: 1, textAlign: "center" }}>{clip ? "Post clip" : "New post"}</span>
             {submitBtn(true)}
           </div>
         ) : (
           <div className="flex items-center justify-between" style={{ marginBottom: 12, flexShrink: 0 }}>
-            <h2 style={modalTitle}>New post</h2>
+            <h2 style={modalTitle}>{clip ? "Post clip" : "New post"}</h2>
             <button type="button" onClick={onClose} aria-label="Close" style={modalClose}>
               <Icon name="x" size={14} />
             </button>
@@ -219,7 +224,7 @@ export default function PostComposer({
             frameless
             value={body}
             onChange={onBody}
-            placeholder="Text (optional — @ to mention someone)"
+            placeholder={clip ? "Say something about the clip (optional — @ to mention someone)" : "Text (optional — @ to mention someone)"}
             mentions={mentions}
             onImage={() => fileRef.current?.click()}
             onGif={giphyEnabled ? () => setPicker(picker === "gif" ? null : "gif") : undefined}
@@ -274,6 +279,20 @@ export default function PostComposer({
                 <TagChip name={t.name} color={t.color} />
               </button>
             ))}
+          </div>
+        )}
+
+        {clip && (
+          <div style={{ display: "flex", alignItems: "center", padding: "8px 0 2px", flexShrink: 0, minWidth: 0 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 9, padding: "6px 12px 6px 7px", borderRadius: 10, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.12)", maxWidth: "100%", minWidth: 0 }}>
+              <span style={{ width: 28, height: 28, borderRadius: 8, background: "#ffb700", color: "#1a0e00", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon name="play" size={11} strokeWidth={0} style={{ fill: "currentColor", marginLeft: 1 }} />
+              </span>
+              <span style={{ minWidth: 0, display: "flex", flexDirection: "column", lineHeight: 1.3 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#f5f5f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clip.title}</span>
+                <span style={{ fontSize: 11, color: "rgba(238,238,245,0.5)" }}>Clip{clip.duration ? ` · ${clip.duration}` : ""} · attached to this post</span>
+              </span>
+            </span>
           </div>
         )}
 

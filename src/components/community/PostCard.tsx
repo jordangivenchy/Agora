@@ -19,6 +19,7 @@ import { createLongPress } from "@/lib/longPress";
 import type { ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import RichText from "./RichText";
+import { clipIdInBody, stripClipLink } from "./ClipEmbed";
 
 export type PostRow = {
   id: string;
@@ -193,14 +194,15 @@ export function RepostEmbed({ post: p, onOpenOriginal }: { post: PostRow; onOpen
       <p className="m-0 text-[12.5px] font-medium" style={{ color: "rgba(238,238,245,0.88)", marginTop: 5 }}>
         <RichText text={p.orig_title ?? ""} inline />
       </p>
-      {p.orig_body && (
+      {stripClipLink(p.orig_body) && (
         <div className="text-[11.5px]" style={{
           color: "rgba(238,238,245,0.55)", marginTop: 4, lineHeight: 1.5,
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
         }}>
-          <RichText text={p.orig_body} />
+          <RichText text={stripClipLink(p.orig_body)} />
         </div>
       )}
+      <ClipChip clipId={clipIdInBody(p.orig_body)} small />
       {p.orig_image_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={p.orig_image_url} alt="" className="mt-1.5 rounded-lg"
@@ -355,14 +357,15 @@ export default function PostCard<P extends PostRow>({
         <p className="m-0 mt-0.5 text-[14px] font-medium" style={{ color: "#eeeef5" }}>
           <RichText text={p.title} inline />
         </p>
-        {p.body && (
+        {stripClipLink(p.body) && (
           <div className="mt-1 text-[12px] leading-relaxed" style={{
             color: "rgba(238,238,245,0.55)",
             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
           }}>
-            <RichText text={p.body} />
+            <RichText text={stripClipLink(p.body)} />
           </div>
         )}
+        <ClipChip clipId={clipIdInBody(p.body)} small={compact} />
         {p.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.image_url} alt="" className="mt-1.5 rounded-lg"
@@ -382,5 +385,28 @@ export default function PostCard<P extends PostRow>({
       </div>
       </div>
     </div>
+  );
+}
+
+/* A post that shares a clip carries the clip link in its body; the card
+   swaps that line of URL for this chip (the open post gets the player,
+   community/ClipEmbed.tsx). Clicking it goes to the clip's page without
+   opening the post. Renders nothing for ordinary posts. */
+export function ClipChip({ clipId, small }: { clipId: string | null; small?: boolean }) {
+  if (!clipId) return null;
+  return (
+    <a
+      href={`/clips/${clipId}`}
+      onClick={(e) => e.stopPropagation()}
+      className="inline-flex items-center no-underline"
+      style={{
+        gap: 6, marginTop: 6, padding: small ? "3px 10px 3px 8px" : "4px 12px 4px 9px", borderRadius: 999,
+        background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.14)",
+        color: "#4a9eff", fontSize: small ? 11 : 12, fontWeight: 600, lineHeight: 1.4,
+      }}
+    >
+      <Icon name="play" size={9} strokeWidth={0} style={{ fill: "currentColor" }} />
+      Clip
+    </a>
   );
 }

@@ -39,11 +39,11 @@ import RichText from "./community/RichText";
 import PostCard, { PinnedBadge, RoleBadge, TagChip, VoteBox, timeAgo, type PostRow } from "./community/PostCard";
 import InviteFriends from "./community/InviteFriends";
 import ReplayEmbed from "./community/ReplayEmbed";
-import ClipEmbed from "./community/ClipEmbed";
+import ClipEmbed, { stripClipLink } from "./community/ClipEmbed";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 import ActionSheet, { type SheetItem } from "./community/ActionSheet";
 import { createLongPress } from "@/lib/longPress";
-import PostComposer from "./community/PostComposer";
+import PostComposer, { POST_BODY_MAX } from "./community/PostComposer";
 
 interface Props {
   open: boolean;
@@ -132,7 +132,7 @@ const card: React.CSSProperties = {
 };
 
 /* Stored markdown length cap for post bodies and comments. */
-const BODY_MAX = 10000;
+const BODY_MAX = POST_BODY_MAX;
 
 const inputStyle: React.CSSProperties = {
   background: "rgba(10,10,12,0.7)",
@@ -2349,9 +2349,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                       <RichText text={openPost.title} inline />
                     </h2>
-                    {openPost.body && (
+                    {stripClipLink(openPost.body) && (
                       <div className="mt-2 text-[13px] leading-relaxed" style={{ color: "rgba(238,238,245,0.85)" }}>
-                        <RichText text={openPost.body} />
+                        <RichText text={stripClipLink(openPost.body)} />
                       </div>
                     )}
                     {/* Replay threads get the VOD player inline — the

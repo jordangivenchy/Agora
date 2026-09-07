@@ -3041,3 +3041,19 @@ html.reduce-motion .nav-sparkle {
   .cm-rail { margin-top: 10px !important; }
   .cm-board-head { padding: 0 12px 12px !important; }
 }
+
+/* Clip tiles: the "More clips" row under a clip (src/components/clips/
+   ClipTile.tsx). Twitch-style — thumbnail, duration badge, title, who
+   clipped it and the view count. Two columns on phones, denser type. */
+.clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px 14px; }
+.clip-tile { display: block; color: inherit; text-decoration: none; min-width: 0; }
+.clip-tile-thumb { position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #15151b; }
+.clip-tile-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.clip-tile-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s ease; }
+.clip-tile:hover .clip-tile-play, .clip-tile:focus-visible .clip-tile-play { opacity: 1; }
+.clip-tile-title { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: #eeeef5; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clip-tile:hover .clip-tile-title { color: #ffb700; }
+@media (max-width: 639px) {
+  .clip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
+  .clip-tile-title { font-size: 12px; }
+}
