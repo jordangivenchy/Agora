@@ -4448,8 +4448,21 @@ body { background: transparent; }
 .explore-banner-stats { display: flex; gap: 28px; flex-shrink: 0; }
 
 .explore-stat { text-align: right; }
-.explore-stat-val   { display: block; font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.85); }
-.explore-stat-label { font-size: 10px; color: rgba(255,255,255,0.28); text-transform: uppercase; letter-spacing: 0.07em; }
+/* The figures are the banner's colour: brand yellow, heavy, tabular so
+   they don't jitter as they count up. */
+.explore-stat-val {
+  display: block; font-family: 'Space Grotesk', sans-serif;
+  font-size: 30px; line-height: 1; font-weight: 800; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums; color: #ffb700;
+  transform-origin: 100% 60%;
+}
+.explore-stat-val.is-pop { animation: exploreStatPop 420ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes exploreStatPop {
+  0%   { transform: scale(1.22); filter: brightness(1.35); }
+  100% { transform: none; filter: none; }
+}
+.explore-stat-label { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 3px; display: block; }
+@media (prefers-reduced-motion: reduce) { .explore-stat-val.is-pop { animation: none; } }
 
 /* Search bar */
 .explore-search-wrap {
@@ -6371,9 +6384,9 @@ body { background: transparent; }
 @media (max-width: 639px) {
   html .explore-banner { display: block !important; padding: 4px 0 6px !important; }
   html .explore-banner-stats { display: flex; gap: 16px; margin-top: 6px; }
-  html .explore-stat { text-align: left; display: flex; align-items: baseline; gap: 5px; }
-  html .explore-stat-val { font-size: 14px; }
-  html .explore-stat-label { font-size: 9.5px; }
+  html .explore-stat { text-align: left; display: flex; align-items: baseline; gap: 6px; }
+  html .explore-stat-val { font-size: 20px; transform-origin: 0 60%; }
+  html .explore-stat-label { font-size: 9.5px; margin-top: 0; }
   html .explore-search-wrap { padding: 6px 0 8px; border-bottom: none; }
   html .explore-search-icon { left: 12px; font-size: 14px; }
   html .explore-search-input { height: 38px; font-size: 13px; padding: 0 12px 0 34px; border-radius: 10px; }

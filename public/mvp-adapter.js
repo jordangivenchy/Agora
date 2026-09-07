@@ -122,15 +122,37 @@
       if (typeof renderELOModule === 'function') renderELOModule();
     }
 
-    /* Live platform stats (explore banner): real rooms / members / viewers. */
+    /* Live platform stats (explore banner): real rooms / members / viewers.
+       The figures count up to their value and pop when they land. */
     if (D.stats) {
       var vals = document.querySelectorAll('.explore-stat-val');
       var labels = document.querySelectorAll('.explore-stat-label');
-      if (vals[0]) vals[0].textContent = String(D.stats.activeRooms);
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var countTo = function (el, target) {
+        if (!el) return;
+        var to = Math.max(0, Number(target) || 0);
+        var from = parseInt(el.textContent, 10);
+        if (isNaN(from)) from = 0;
+        if (reduce || from === to) { el.textContent = String(to); return; }
+        var t0 = performance.now(), dur = 700;
+        var tick = function (now) {
+          var k = Math.min(1, (now - t0) / dur);
+          var e = 1 - Math.pow(1 - k, 3); /* ease-out */
+          el.textContent = String(Math.round(from + (to - from) * e));
+          if (k < 1) requestAnimationFrame(tick);
+          else {
+            el.classList.remove('is-pop');
+            void el.offsetWidth; /* restart the pop */
+            el.classList.add('is-pop');
+          }
+        };
+        requestAnimationFrame(tick);
+      };
+      countTo(vals[0], D.stats.activeRooms);
       if (labels[0]) labels[0].textContent = 'Active rooms';
-      if (vals[1]) vals[1].textContent = String(D.stats.members);
+      countTo(vals[1], D.stats.members);
       if (labels[1]) labels[1].textContent = 'Members';
-      if (vals[2]) vals[2].textContent = String(D.stats.watching);
+      countTo(vals[2], D.stats.watching);
       if (labels[2]) labels[2].textContent = 'Watching now';
     }
   }
