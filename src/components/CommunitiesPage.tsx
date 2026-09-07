@@ -1825,9 +1825,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                 aria-expanded={plusOpen}
                 title="New post or community"
                 className="cursor-pointer inline-flex items-center justify-center border-none"
-                style={{ width: 32, height: 32, borderRadius: 999, background: "#ffb700", color: "#1a0e00" }}
+                style={{ width: 40, height: 40, borderRadius: 999, background: "#ffb700", color: "#1a0e00" }}
               >
-                <Icon name="plus" size={16} />
+                <Icon name="plus" size={20} />
               </button>
               {plusOpen && (
                 <>
@@ -1836,7 +1836,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     role="menu"
                     className="absolute flex flex-col"
                     style={{
-                      top: 38, right: 0, minWidth: 190, zIndex: 999,
+                      top: 46, right: 0, minWidth: 190, zIndex: 999,
                       background: "#000", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12,
                       boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
                     }}
