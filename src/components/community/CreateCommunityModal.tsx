@@ -75,12 +75,15 @@ const field: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
 };
+/* Same section label as the create-discussion modal's FieldGroup. */
 const label: CSSProperties = {
   display: "block",
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 600,
-  color: "rgba(238,238,245,0.7)",
-  marginBottom: 6,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: "rgba(255,255,255,0.4)",
+  marginBottom: 8,
 };
 const hintStyle: CSSProperties = { fontSize: 11.5, color: "rgba(238,238,245,0.42)", marginTop: 5 };
 
@@ -252,7 +255,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         aria-modal="true"
         aria-labelledby="ccm-title"
         style={{
-          maxWidth: 560,
+          maxWidth: 540, /* the create-discussion panel's width */
           maxHeight: "92vh",
           background: "#000",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -319,7 +322,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         </div>
 
         {/* Body */}
-        <div className="ccm-body" style={{ padding: "18px 24px 8px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="ccm-body" style={{ padding: "20px 24px 4px", display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Gate: the database would refuse this account right now. */}
           {gate && !gate.allowed && gate.reason && (
             <div className="ccm-gate" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "26px 12px 18px" }}>

@@ -96,7 +96,7 @@ body {
 /* Create-community steps: the new step slides in from the side it came from. */
 @keyframes ccmStepFwd { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
 @keyframes ccmStepBack { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
-.ccm-step { display: flex; flex-direction: column; gap: 18px; animation: ccmStepFwd 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.ccm-step { display: flex; flex-direction: column; gap: 20px; animation: ccmStepFwd 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .ccm-step-back { animation-name: ccmStepBack; }
 @media (prefers-reduced-motion: reduce) { .ccm-step { animation: none; } }
 /* Type cards: the hint shows one line at rest and unfolds to the full
