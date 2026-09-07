@@ -93,6 +93,7 @@ body {
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
 /* Create-community steps: the new step slides in from the side it came from. */
 @keyframes ccmStepFwd { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
 @keyframes ccmStepBack { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
@@ -101,11 +102,10 @@ body {
 @media (prefers-reduced-motion: reduce) { .ccm-step { animation: none; } }
 /* Type cards: the hint shows one line at rest and unfolds to the full
    text on hover, on focus, and on the chosen card (phones have no hover). */
-.ccm-kind-hint { max-height: 15px; overflow: hidden; transition: max-height 0.22s ease; }
+.ccm-kind-hint { max-height: 15px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: max-height 0.22s ease; }
 .ccm-kind:hover .ccm-kind-hint,
 .ccm-kind:focus-visible .ccm-kind-hint,
-.ccm-kind[aria-pressed="true"] .ccm-kind-hint { max-height: 90px; }
-}
+.ccm-kind[aria-pressed="true"] .ccm-kind-hint { max-height: 90px; white-space: normal; }
 /* Phone search entrance (see the phone block near the end of the file). */
 @keyframes searchPillIn {
   from { opacity: 0; transform: translateX(14px) scale(0.96); }
