@@ -213,8 +213,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   /* Author label → unified user context menu (needs an id; system posts skip
      it). Renders the display name when one exists (no @ prefix), otherwise
      the @handle; the raw username still flows to openUserMenu. */
-  const authorLabel = (dn: string | null, username: string) =>
-    dn?.trim() || `@${username}`;
+  /* Boards name people by handle (see PostCard.authorLabel). */
+  const authorLabel = (_dn: string | null, username: string) => `@${username}`;
   const authorSpan = (authorId: string | null, username: string, dn: string | null) =>
     authorId ? (
       <span
