@@ -208,8 +208,7 @@ interface PostCardProps<P extends PostRow> {
   /** Muted "why you're seeing this" line above the title. */
   reason?: string | null;
   /** The board's art — its avatar, or a coloured tile with its initial —
-      drawn just before the board's name in the meta line (only when the
-      name is shown). Replaces the author's picture. */
+      a 30px mark at the left of the post. Replaces the author's picture. */
   communityArt?: { name: string; color?: string | null; avatarUrl?: string | null };
   compact?: boolean;
   className?: string;
@@ -245,6 +244,15 @@ export default function PostCard<P extends PostRow>({
       onClick={() => onOpen(p)}
     >
       {onVote && <VoteBox post={p} onVote={onVote} />}
+      {communityArt && (
+        <span
+          className="shrink-0"
+          style={{ marginTop: 2, cursor: onOpenCommunity ? "pointer" : undefined }}
+          onClick={(e) => { if (!onOpenCommunity) return; e.stopPropagation(); onOpenCommunity(p.community_id); }}
+        >
+          <CommunityTile name={communityArt.name} color={communityArt.color} avatarUrl={communityArt.avatarUrl} />
+        </span>
+      )}
       <div className="flex-1 min-w-0">
         {reason && (
           <p className="m-0 mb-1 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.38)" }}>
@@ -261,7 +269,6 @@ export default function PostCard<P extends PostRow>({
                   title={`Go to ${p.community_name}`}
                   style={{ color: "#e2b96b", textDecoration: "underline dotted rgba(226,185,107,0.4)", textUnderlineOffset: 2 }}
                 >
-                  {communityArt && <CommunityTile name={communityArt.name} color={communityArt.color} avatarUrl={communityArt.avatarUrl} size={16} />}
                   {p.community_name}
                 </span>
                 <span>·</span>
