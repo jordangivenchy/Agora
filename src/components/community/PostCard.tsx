@@ -278,17 +278,27 @@ export default function PostCard<P extends PostRow>({
           votes (the score centred on the community tile), the tile level
           with the community name, then the text. */}
       {reason && (
-        <div className="relative flex gap-3 mb-3 cm-card-row">
-          {/* A spacer the width of the vote column puts the text's first
-              letter exactly on the tile's left edge; the sparkle is pinned
-              in the gap between the score and the tile. */}
-          {onVote && <span aria-hidden="true" className="vote-box shrink-0" style={{ width: 34 }} />}
-          <p className="m-0 text-[10.5px] min-w-0" style={{ color: "rgba(238,238,245,0.38)", lineHeight: "16px" }}>
-            {onVote && (
-              <span aria-hidden="true" className="cm-caption-icon" style={{ position: "absolute", left: 34.5, top: 2.5, lineHeight: 0 }}>
-                <Icon name="sparkles" size={11} />
-              </span>
-            )}
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+          {/* A blank exactly as wide as the vote column plus the row gap
+              puts the first letter on the tile's left edge; the sparkle
+              rides at the blank's right end, in the gap between the score
+              and the tile. Inline layout — nothing here for a reset to
+              override. */}
+          {onVote && (
+            <span
+              aria-hidden="true"
+              className="cm-caption-spacer"
+              style={{
+                /* vote column + row gap: 34 + 12 here, 28 + 10 on phones (globals.css) */
+                width: 46, flexShrink: 0, boxSizing: "border-box", paddingRight: 2,
+                display: "inline-flex", alignItems: "center", justifyContent: "flex-end",
+                color: "rgba(238,238,245,0.38)", lineHeight: 0,
+              }}
+            >
+              <Icon name="sparkles" size={11} />
+            </span>
+          )}
+          <p style={{ margin: 0, minWidth: 0, fontSize: 10.5, lineHeight: "16px", color: "rgba(238,238,245,0.38)" }}>
             {reason}
           </p>
         </div>

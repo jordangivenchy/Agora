@@ -2991,7 +2991,7 @@ html.reduce-motion .nav-sparkle {
   .shell-page .feed-body > section.mb-5 { margin-bottom: 12px !important; }
   .cm-card .cm-card-row { gap: 10px !important; }
   .cm-card .vote-box { width: 28px !important; }
-  .cm-card .cm-caption-icon { left: 27.5px !important; }
+  .cm-card .cm-caption-spacer { width: 38px !important; }
   .cm-card .vote-box button { min-height: 22px !important; min-width: 28px !important; padding: 0 !important; }
   .cm-card .vote-box svg { width: 16px !important; height: 16px !important; }
   .cm-card .vote-box > span { font-size: 12px !important; }
