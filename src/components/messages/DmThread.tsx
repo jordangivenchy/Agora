@@ -838,6 +838,12 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                   {dayLabel(m.created_at)}
                 </div>
               )}
+              {/* Their name over the first bubble of each of their runs, iMessage-style. */}
+              {!mine && (i === 0 || msgs[i - 1].sender_id !== m.sender_id) && (
+                <div style={{ alignSelf: "flex-start", marginLeft: 34, marginBottom: 2, fontSize: 11.5, color: "rgba(238,238,245,0.5)" }}>
+                  {displayName(hydratedPeer)}
+                </div>
+              )}
               <div
                 id={`dm-msg-${m.id}`}
                 className="dm-msg-row"
