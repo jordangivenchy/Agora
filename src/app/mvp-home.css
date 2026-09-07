@@ -6365,10 +6365,9 @@ body { background: transparent; }
   .carousel-item.has-thumb .carousel-lower-third { right: 0; }
 }
 
-/* ═══ Explore on phones: the filters were a 500px wall of wrapped pills
-   before a single result. Each group is now one row that scrolls
-   sideways (like the Browse chips), the stats tuck under the title, and
-   the search, filters and results run flush with the title. ═══ */
+/* ═══ Explore on phones: every option stays on screen (the pills wrap),
+   but the stats tuck under the title in a line and the search, filters
+   and results run flush with the title instead of 32px in. ═══ */
 @media (max-width: 639px) {
   html .explore-banner { display: block !important; padding: 4px 0 6px !important; }
   html .explore-banner-stats { display: flex; gap: 16px; margin-top: 6px; }
@@ -6377,19 +6376,15 @@ body { background: transparent; }
   html .explore-stat-label { font-size: 9.5px; }
   html .explore-search-wrap { padding: 6px 0 8px; border-bottom: none; }
   html .explore-search-icon { left: 12px; font-size: 14px; }
-  html .explore-search-input { height: 36px; font-size: 13px; padding: 0 12px 0 34px; border-radius: 10px; }
-  html .explore-filter-bar { padding: 4px 0 2px; border-bottom: none; }
-  html .explore-filter-group { margin-bottom: 6px; }
-  html .explore-filter-group-label { font-size: 9.5px; margin-bottom: 4px; }
-  html .explore-filter-pills {
-    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px;
-    margin: 0 -12px; padding: 0 12px 2px;
-  }
-  html .explore-filter-pills::-webkit-scrollbar { display: none; }
-  html .explore-pill { height: 30px; padding: 0 12px; line-height: 28px; box-sizing: border-box; font-size: 12px; flex-shrink: 0; }
-  html .explore-filter-divider { margin: 4px 0 6px; }
-  html .explore-filter-row { flex-direction: column; gap: 6px; }
-  html .explore-filter-group-inline { gap: 4px; }
+  html .explore-search-input { height: 38px; font-size: 13px; padding: 0 12px 0 34px; border-radius: 10px; }
+  html .explore-filter-bar { padding: 6px 0 4px; border-bottom: none; }
+  html .explore-filter-group { margin-bottom: 10px; }
+  html .explore-filter-group-label { font-size: 10px; margin-bottom: 6px; }
+  html .explore-filter-pills { flex-wrap: wrap; gap: 6px; }
+  html .explore-pill { height: 30px; padding: 0 12px; line-height: 28px; box-sizing: border-box; font-size: 12px; }
+  html .explore-filter-divider { margin: 6px 0 10px; }
+  html .explore-filter-row { flex-direction: column; gap: 10px; }
+  html .explore-filter-group-inline { gap: 6px; }
   html .explore-results-wrap { padding: 6px 0 24px; }
   html .explore-results-meta { font-size: 11px; margin-bottom: 8px; }
   html .explore-results-grid { grid-template-columns: 1fr; gap: 8px; }
