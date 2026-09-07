@@ -911,7 +911,10 @@ export default function ProfileView({
 
           {/* Right column: the action buttons (social icons ride the name
               line, above). */}
-          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "flex-end" }} ref={menuRef}>
+          {/* The column reaches 10px into the card's bottom padding so the
+              buttons hug the bottom-right corner the way the dots hug the
+              top-right one (14px from the edge, both). */}
+          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "flex-end", marginBottom: -10 }} ref={menuRef}>
             {isSelf && (
               <div className="flex items-center gap-2.5">
                 <button
