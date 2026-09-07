@@ -1814,10 +1814,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           >
             Communities
           </h1>
-          {/* One "+" beside the title: a menu with the two things you can
-              add. Hidden inside a post. */}
+          {/* One "+" at the far right of the header: a menu with the two
+              things you can add. Hidden inside a post. */}
           {!openPost && (
-            <span className="relative inline-flex cm-head-plus" style={{ marginLeft: -2 }}>
+            <span className="relative inline-flex ml-auto cm-head-plus">
               <button
                 onClick={() => setPlusOpen((v) => !v)}
                 aria-label="Add"
@@ -1836,7 +1836,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     role="menu"
                     className="absolute flex flex-col"
                     style={{
-                      top: 38, left: 0, minWidth: 190, zIndex: 999,
+                      top: 38, right: 0, minWidth: 190, zIndex: 999,
                       background: "#000", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12,
                       boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
                     }}
