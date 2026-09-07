@@ -911,7 +911,7 @@ export default function ProfileView({
 
           {/* Right column: the action buttons (social icons ride the name
               line, above). */}
-          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "center" }} ref={menuRef}>
+          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "flex-end" }} ref={menuRef}>
             {isSelf && (
               <div className="flex items-center gap-2.5">
                 <button
@@ -956,11 +956,35 @@ export default function ProfileView({
               </div>
             )}
 
-            {/* Actions ride the card's vertical middle (the column above
-                centres them), beside the info column, instead of hanging
-                off the top corner. */}
+            {/* Viewers: the ⋯ menu in the card's top-right corner, the
+                friend/message buttons in the bottom-right; the block
+                fills the column's height to hold the two apart. */}
             {!isSelf && (
-              <div className="flex flex-col items-end gap-2 relative">
+              <div className="flex flex-col items-end relative" style={{ flex: 1, justifyContent: "space-between", gap: 12 }}>
+              {viewerId ? (
+                <button
+                  onClick={() => setMenuOpen((o) => !o)}
+                  aria-label="More options"
+                  aria-expanded={menuOpen}
+                  className="cursor-pointer"
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    background: menuOpen ? "#1a1a1f" : "#0b0b0d",
+                    color: "#c9c9d2",
+                    fontFamily: "inherit",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="more-horizontal" size={16} />
+                </button>
+              ) : (
+                <span aria-hidden />
+              )}
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleFollow}
@@ -1003,34 +1027,12 @@ export default function ProfileView({
                     <Icon name="message-circle" size={13} /> Message
                   </button>
                 )}
-                {viewerId && (
-                  <button
-                    onClick={() => setMenuOpen((o) => !o)}
-                    aria-label="More options"
-                    aria-expanded={menuOpen}
-                    className="cursor-pointer"
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 999,
-                      border: "1px solid rgba(255,255,255,0.14)",
-                      background: menuOpen ? "#1a1a1f" : "#0b0b0d",
-                      color: "#c9c9d2",
-                      fontFamily: "inherit",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Icon name="more-horizontal" size={16} />
-                  </button>
-                )}
               </div>
               {menuOpen && (
                 <div
                   className="absolute z-50"
                   style={{
-                    top: 42,
+                    top: 40,
                     right: 0,
                     minWidth: 190,
                     background: "#000",
