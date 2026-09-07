@@ -2383,7 +2383,8 @@ html.reduce-motion .nav-sparkle {
     transition: --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   }
   :root:has(#sidebar:hover) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar),
-  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
+  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar),
+  :root:has(#sidebar.friends-overlay-open) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     --sidebar-width: 240px;
   }
   /* Hover intent: the pointer has to rest on the rail for a beat before
@@ -2394,9 +2395,14 @@ html.reduce-motion .nav-sparkle {
   :root:has(#sidebar:hover) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     transition-delay: 140ms;
   }
-  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
+  :root:has(#sidebar :focus-visible) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar),
+  :root:has(#sidebar.friends-overlay-open) :is(#sidebar, .sidebar, .sidebar-link, .main, .shell-page, .profile-beside-sidebar, .replay-beside-sidebar, .messages-beside-sidebar) {
     transition-delay: 0s;
   }
+  /* The Friends panel fills the rail (position: absolute; inset: 0), so
+     the rail has to stay open for as long as the panel is up — with the
+     pointer anywhere. Otherwise the panel is squeezed into the 64px
+     resting rail, one word per line. */
 }
 
 /* ═══ Phones (<640px) ═══════════════════════════════════════════════
