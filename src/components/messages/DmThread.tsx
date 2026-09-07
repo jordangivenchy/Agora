@@ -32,6 +32,7 @@ import { createClient } from "@/lib/supabase-browser";
 import UserAvatar from "../UserAvatar";
 import { displayName } from "@/lib/names";
 import { uploadPostImage } from "@/lib/postImages";
+import { imageFromDataTransfer } from "@/lib/pasteImage";
 import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
 import { CommunityTile } from "@/components/community/PostCard";
@@ -1172,6 +1173,17 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                 e.preventDefault();
                 send();
               }
+            }}
+            /* A copied screenshot or a dragged picture attaches the way
+               the image button does; text pastes stay text. */
+            onPaste={(e) => {
+              const f = imageFromDataTransfer(e.clipboardData);
+              if (f) { e.preventDefault(); pickFile(f); }
+            }}
+            onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}
+            onDrop={(e) => {
+              const f = imageFromDataTransfer(e.dataTransfer);
+              if (f) { e.preventDefault(); pickFile(f); }
             }}
             /* iOS scrolls the document to reveal the composer behind the
                keyboard and can leave it there; put the page back. */
