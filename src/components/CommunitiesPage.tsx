@@ -41,6 +41,8 @@ import InviteFriends from "./community/InviteFriends";
 import ReplayEmbed from "./community/ReplayEmbed";
 import ClipEmbed from "./community/ClipEmbed";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
+import ActionSheet, { type SheetItem } from "./community/ActionSheet";
+import { createLongPress } from "@/lib/longPress";
 import PostComposer from "./community/PostComposer";
 
 interface Props {
@@ -299,6 +301,16 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const [repostFor, setRepostFor] = useState<Post | null>(null);
   /* The ⋯ menu under a post (pin / delete), anchored to its button. */
   const [postMenu, setPostMenu] = useState<{ id: string; top: number; right: number } | null>(null);
+  /* Phones: press-and-hold on a post or a comment opens its action sheet. */
+  const [sheet, setSheet] = useState<null | { kind: "post"; post: Post } | { kind: "comment"; comment: Comment }>(null);
+  const [pressComment] = useState(() => createLongPress<Comment>((c) => {
+    if (navigator.vibrate) navigator.vibrate(8);
+    setSheet({ kind: "comment", comment: c });
+  }));
+  const [pressPost] = useState(() => createLongPress<Post>((p) => {
+    if (navigator.vibrate) navigator.vibrate(8);
+    setSheet({ kind: "post", post: p });
+  }));
   const [repostCommunity, setRepostCommunity] = useState<string>("");
 
   // Application to a private board — the message dialog.
@@ -1520,7 +1532,13 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             selection keep their own click. */}
         <div
           className={`px-4 py-3 cm-comment${isCollapsed ? " is-collapsed" : ""}`}
+          onPointerDown={(e) => pressComment.onPointerDown(e, c)}
+          onPointerMove={pressComment.onPointerMove}
+          onPointerUp={pressComment.onPointerUp}
+          onPointerCancel={pressComment.onPointerCancel}
+          onContextMenu={(e) => { if (pressComment.lastPointerType() !== "mouse") e.preventDefault(); }}
           onClick={(e) => {
+            if (pressComment.consumeClick()) { e.preventDefault(); return; }
             const t = e.target as HTMLElement;
             if (t.closest("a, button, input, textarea, [contenteditable='true'], .rich-editor, .cm-popover-host, img, video")) return;
             if (window.getSelection()?.toString()) return;
@@ -1697,7 +1715,56 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const isMod = selectedCommunity?.my_role === "owner" || selectedCommunity?.my_role === "moderator";
   const isOwner = selectedCommunity?.my_role === "owner";
 
+  const sheetItems = (): SheetItem[] => {
+    if (!sheet) return [];
+    if (sheet.kind === "comment") {
+      const c = sheet.comment;
+      const items: SheetItem[] = [
+        { icon: "message-circle", label: "Reply", run: () => {
+          if (!requireAuth()) return;
+          setCollapsed((prev) => { if (!prev.has(c.id)) return prev; const n = new Set(prev); n.delete(c.id); return n; });
+          setReplyTo(c.id); setReplyText(""); pickReplyImage(null); setReplyGifUrl(null);
+        } },
+        { icon: "copy", label: "Copy text", run: () => { void navigator.clipboard?.writeText(c.body); } },
+        { icon: "share", label: "Copy link", run: () => { void shareComment(c); } },
+        { icon: collapsed.has(c.id) ? "chevron-down" : "chevron-up", label: collapsed.has(c.id) ? "Show comment" : "Hide comment", run: () => toggleCollapse(c.id) },
+      ];
+      if (!c.parent_id && openPost && canModerate(openPost.community_id)) {
+        items.push({ icon: "pin", label: c.pinned_at ? "Unpin" : "Pin", run: () => { void togglePin(c); } });
+      }
+      if (c.author_id === userId || (openPost && canModerate(openPost.community_id))) {
+        items.push({ icon: "trash", label: c.author_id === userId ? "Delete" : "Remove (mod)", run: () => { void deleteComment(c); }, danger: true });
+      }
+      return items;
+    }
+    const p = sheet.post;
+    const items: SheetItem[] = [
+      { icon: "share", label: "Copy link", run: () => { void sharePost(p); } },
+      { icon: "repeat", label: "Repost", run: () => {
+        if (!requireAuth()) return;
+        setRepostFor(p);
+        setRepostComment("");
+        const options = communities.filter((c) => c.joined && c.id !== p.community_id);
+        setRepostCommunity(options[0]?.id ?? "");
+      } },
+      { icon: "copy", label: "Copy text", run: () => { void navigator.clipboard?.writeText([p.title, p.body].filter(Boolean).join("\n\n")); } },
+    ];
+    if (canModerate(p.community_id)) items.push({ icon: "pin", label: p.pinned_at ? "Unpin post" : "Pin post", run: () => { void togglePostPin(p); } });
+    if (p.author_id === userId || canModerate(p.community_id)) {
+      items.push({ icon: "trash", label: p.author_id === userId ? "Delete post" : "Remove post (mod)", run: () => { void deletePost(p); }, danger: true });
+    }
+    return items;
+  };
+
   return (
+    <>
+    {sheet && (
+      <ActionSheet
+        title={sheet.kind === "comment" ? `@${sheet.comment.author_username}'s comment` : sheet.post.title}
+        items={sheetItems()}
+        onClose={() => setSheet(null)}
+      />
+    )}
     <div
       className="fixed overflow-y-auto shell-page cm-overlay"
       style={{
@@ -2215,7 +2282,16 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
               /* ── post detail ── */
               <div>
                 {/* (the header's Back pill handles navigation) */}
-                <div className="p-4 mb-4 flex gap-3" style={card}>
+                <div
+                  className="p-4 mb-4 flex gap-3"
+                  style={card}
+                  onPointerDown={(e) => pressPost.onPointerDown(e, openPost)}
+                  onPointerMove={pressPost.onPointerMove}
+                  onPointerUp={pressPost.onPointerUp}
+                  onPointerCancel={pressPost.onPointerCancel}
+                  onContextMenu={(e) => { if (pressPost.lastPointerType() !== "mouse") e.preventDefault(); }}
+                  onClickCapture={(e) => { if (pressPost.consumeClick()) { e.preventDefault(); e.stopPropagation(); } }}
+                >
                   <VoteBox post={openPost} onVote={vote} size={14} />
                   <div className="flex-1 min-w-0">
                     <p className="m-0 text-[11px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.5)" }}>
@@ -2998,6 +3074,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     })()}
                     actions={postActions(p, false)}
                     embed={repostEmbed(p)}
+                    onLongPress={(post) => {
+                      if (navigator.vibrate) navigator.vibrate(8);
+                      setSheet({ kind: "post", post });
+                    }}
                   />
                 ))}
 
@@ -3153,5 +3233,6 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         </div>
       )}
     </div>
+    </>
   );
 }

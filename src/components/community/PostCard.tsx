@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef, useState } from "react";
+import { createLongPress } from "@/lib/longPress";
+
 /* One community post as a feed card — shared by the Communities board
    and the home feed so both render the identical thing. The card owns
    the layout (vote column, meta line, title, clamped body, image,
@@ -193,6 +196,8 @@ export function RepostEmbed({ post: p, onOpenOriginal }: { post: PostRow; onOpen
 interface PostCardProps<P extends PostRow> {
   post: P;
   onOpen: (post: P) => void;
+  /** Phones: press-and-hold on the card (the caller opens its action sheet). */
+  onLongPress?: (post: P) => void;
   /** Vote column is rendered only when a handler is supplied. */
   onVote?: (post: P, value: number) => void;
   /** Show the community name before the author (board-wide lists). */
@@ -234,13 +239,26 @@ export function CommunityTile({ name, color, avatarUrl, size = 30 }: { name: str
 }
 
 export default function PostCard<P extends PostRow>({
-  post: p, onOpen, onVote, showCommunity, onOpenCommunity, author, actions, embed, reason, communityArt, compact, className,
+  post: p, onOpen, onVote, showCommunity, onOpenCommunity, author, actions, embed, reason, communityArt, compact, className, onLongPress,
 }: PostCardProps<P>) {
+  const onLongPressRef = useRef(onLongPress);
+  onLongPressRef.current = onLongPress;
+  /* Touch/pen only — the helper ignores mouse pointers. The click the
+     browser synthesises after a press is swallowed. */
+  const [press] = useState(() => createLongPress<P>((post) => onLongPressRef.current?.(post)));
   return (
     <div
       className={`cm-card ${compact ? "p-3" : "p-4"} mb-3 flex gap-3 cursor-pointer${className ? ` ${className}` : ""}`}
       style={postCardStyle}
-      onClick={() => onOpen(p)}
+      onClick={(e) => {
+        if (press.consumeClick()) { e.preventDefault(); return; }
+        onOpen(p);
+      }}
+      onPointerDown={onLongPress ? (e) => press.onPointerDown(e, p) : undefined}
+      onPointerMove={onLongPress ? press.onPointerMove : undefined}
+      onPointerUp={onLongPress ? press.onPointerUp : undefined}
+      onPointerCancel={onLongPress ? press.onPointerCancel : undefined}
+      onContextMenu={onLongPress ? (e) => { if (press.lastPointerType() !== "mouse") e.preventDefault(); } : undefined}
     >
       {onVote && <VoteBox post={p} onVote={onVote} />}
       {communityArt && (

@@ -1782,6 +1782,15 @@ html.reduce-motion .nav-sparkle {
 .rich-editor[data-frameless] .ProseMirror { min-height: 100%; max-height: none; padding: 4px 2px 16px; line-height: 1.5; overflow: visible; }
 .rich-editor[data-frameless] .ProseMirror p.is-editor-empty:first-child::before { color: rgba(238,238,245,0.38); }
 .composer-sheet { display: flex; flex-direction: column; }
+@keyframes sheetUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.action-sheet { animation: sheetUp 0.18s ease-out both; }
+@media (max-width: 639px) {
+  /* Press-and-hold opens the action sheet, so the native callout and
+     text selection stand down on the held cards (the editor inside a
+     comment keeps its own). */
+  .cm-comment, .cm-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  .cm-comment .ProseMirror, .cm-comment input, .cm-comment textarea { -webkit-user-select: text; user-select: text; }
+}
 @media (max-width: 639px) {
   /* Full-screen sheet; 16px text so iOS doesn't zoom the page on focus. */
   .composer-sheet { position: fixed !important; inset: 0; max-width: none !important; border-radius: 0 !important; border: none !important; }
