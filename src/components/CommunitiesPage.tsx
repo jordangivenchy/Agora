@@ -1514,31 +1514,40 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const hidden = commentTree.subtreeSize(c.id);
     return (
       <div key={c.id} className="cm-node" id={`comment-${c.id}`}>
-        <div className="px-4 py-3" style={{
-          ...card, borderRadius: 14,
-          ...(flashCommentId === c.id
-            ? { boxShadow: "0 0 0 1px rgba(226,185,107,0.55), 0 0 18px rgba(226,185,107,0.18)", transition: "box-shadow 0.3s" }
-            : { transition: "box-shadow 1.2s" }),
-        }}>
-            <div className="flex items-center gap-2 flex-wrap">
-              {kids.length > 0 && (
-                <button
-                  onClick={() => toggleCollapse(c.id)}
-                  className="cursor-pointer bg-transparent border-none p-0 text-[11px]"
-                  style={{ color: "rgba(238,238,245,0.32)", fontFamily: "inherit", width: 16 }}
-                  aria-label={isCollapsed ? "Expand thread" : "Collapse thread"}
-                >
-                  {isCollapsed ? "[+]" : "[–]"}
-                </button>
-              )}
+        {/* Reddit's collapse: click anywhere on the comment to fold it (and
+            its replies) into one line, click again to open — at any depth,
+            replies or not. Links, buttons, the editor, and a text selection
+            keep their own click. */}
+        <div
+          className={`px-4 py-3 cm-comment${isCollapsed ? " is-collapsed" : ""}`}
+          onClick={(e) => {
+            const t = e.target as HTMLElement;
+            if (t.closest("a, button, input, textarea, [contenteditable='true'], .rich-editor, .cm-popover-host, img, video")) return;
+            if (window.getSelection()?.toString()) return;
+            toggleCollapse(c.id);
+          }}
+          style={{
+            ...card, borderRadius: 14,
+            ...(isCollapsed ? { paddingTop: 8, paddingBottom: 8 } : null),
+            ...(flashCommentId === c.id
+              ? { boxShadow: "0 0 0 1px rgba(226,185,107,0.55), 0 0 18px rgba(226,185,107,0.18)", transition: "box-shadow 0.3s" }
+              : { transition: "box-shadow 1.2s" }),
+          }}
+        >
+            <div className="flex items-center gap-2 flex-wrap" style={{ cursor: "pointer" }}>
               <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                 {authorSpan(c.author_id, c.author_username, c.author_display_name)} · {timeAgo(c.created_at)}
               </span>
               <RoleBadge role={c.author_role} />
               {c.pinned_at && <PinnedBadge />}
+              {isCollapsed && (
+                <span className="text-[11px] min-w-0 flex-1" style={{ color: "rgba(238,238,245,0.38)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {(c.body || "").replace(/\s+/g, " ").trim() || (c.image_url ? "Image" : "")}
+                </span>
+              )}
               {isCollapsed && hidden > 0 && (
-                <span className="text-[10px]" style={{ color: "#e2b96b" }}>
-                  {hidden} repl{hidden === 1 ? "y" : "ies"} hidden
+                <span className="text-[10.5px] shrink-0" style={{ color: "rgba(238,238,245,0.45)", fontWeight: 600 }}>
+                  {hidden} repl{hidden === 1 ? "y" : "ies"}
                 </span>
               )}
             </div>
