@@ -3086,3 +3086,13 @@ html.reduce-motion .nav-sparkle {
   .clip-channel { gap: 10px; margin-top: 16px; padding-top: 14px; }
   .clip-channel > button { padding: 0 14px !important; height: 32px !important; font-size: 12.5px !important; }
 }
+
+/* Profile social links (ProfileView): a row of round icon links under
+   the stats. Hover lifts the ring and the glyph; phones keep them a
+   touch smaller. */
+.profile-social { transition: border-color 0.15s ease, color 0.15s ease; }
+.profile-social:hover { border-color: rgba(255,255,255,0.4) !important; color: #fff !important; }
+@media (max-width: 639px) {
+  .profile-socials { margin-top: 10px !important; gap: 6px !important; }
+  .profile-social { width: 34px !important; height: 34px !important; }
+}

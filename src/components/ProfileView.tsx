@@ -154,7 +154,7 @@ function socialLabel(url: string): string {
 
 /* Brand marks for the header's icon row. Hand-inlined paths for the
    big platforms; anything else gets the globe. */
-function socialIcon(url: string): React.ReactElement {
+function socialIcon(url: string, size = 15): React.ReactElement {
   const label = socialLabel(url);
   const name: IconName =
     label === "X" ? "brand-x"
@@ -163,7 +163,7 @@ function socialIcon(url: string): React.ReactElement {
     : label === "YouTube" ? "brand-youtube"
     : label === "GitHub" ? "brand-github"
     : "globe";
-  return <Icon name={name} size={15} />;
+  return <Icon name={name} size={size} />;
 }
 
 /* social_links is jsonb — trust nothing about its shape. */
@@ -792,32 +792,6 @@ export default function ProfileView({
                 {displayName(profile)}
               </h1>
               {profile.verified && <VerifiedBadge size={20} />}
-              {/* Social links: far right of the name line. */}
-              {socialLinks.length > 0 && (
-                <span className="inline-flex items-center gap-1.5" style={{ marginLeft: "auto", paddingLeft: 12 }}>
-                  {socialLinks.map((url) => (
-                    <a
-                      key={url}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      title={socialLabel(url)}
-                      aria-label={socialLabel(url)}
-                      className="inline-flex items-center justify-center no-underline transition-colors"
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 999,
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        background: "#0b0b0d",
-                        color: "#a9a9b4",
-                      }}
-                    >
-                      {socialIcon(url)}
-                    </a>
-                  ))}
-                </span>
-              )}
               {/* Live: the same red badge a room card wears, with the
                   discussion's title as a quiet link beside it — one flat
                   pill carrying both read as a mislabelled button. */}
@@ -906,6 +880,34 @@ export default function ProfileView({
                   </span>
                 ))}
               </p>
+            )}
+            {/* Social links: their own row under the stats, left with the
+                name, big enough to read at a glance — not tucked at the far
+                end of the name line where they floated free of everything. */}
+            {socialLinks.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap profile-socials" style={{ marginTop: 14 }}>
+                {socialLinks.map((url) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    title={socialLabel(url)}
+                    aria-label={socialLabel(url)}
+                    className="inline-flex items-center justify-center no-underline profile-social"
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      background: "#0b0b0d",
+                      color: "#d5d5dc",
+                    }}
+                  >
+                    {socialIcon(url, 19)}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
 
