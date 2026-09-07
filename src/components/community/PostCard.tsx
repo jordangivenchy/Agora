@@ -118,7 +118,7 @@ export function TagChip({ name, color, small }: { name: string; color: string | 
 
 /* Vote column shared by feed cards and the detail view. */
 export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
-  post, onVote, size = 13, centerOn,
+  post, onVote, size = 13, centerOn, selfCenter = false,
 }: {
   post: P;
   onVote: (p: P, v: number) => void;
@@ -127,6 +127,8 @@ export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
       tile): the column takes that height and the arrows overflow it
       evenly above and below. */
   centerOn?: { height: number; offset?: number };
+  /** Centre the column in the row instead (cards with nothing above the tile). */
+  selfCenter?: boolean;
 }) {
   return (
     <div
@@ -134,6 +136,7 @@ export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
       style={{
         width: 34,
         ...(centerOn ? { height: centerOn.height, marginTop: centerOn.offset ?? 0, justifyContent: "center", overflow: "visible" } : {}),
+        ...(selfCenter ? { alignSelf: "center" } : {}),
       }}
     >
       <button
@@ -305,7 +308,16 @@ export default function PostCard<P extends PostRow>({
         </div>
       )}
       <div className="flex gap-3 cm-card-row">
-      {onVote && <VoteBox post={p} onVote={onVote} centerOn={communityArt ? { height: 30, offset: 2 } : undefined} />}
+      {/* With a caption above, the score sits level with the tile; without
+          one the column is centred in the card. */}
+      {onVote && (
+        <VoteBox
+          post={p}
+          onVote={onVote}
+          centerOn={communityArt && reason ? { height: 30, offset: 2 } : undefined}
+          selfCenter={!reason}
+        />
+      )}
       {communityArt && (
         <span
           className="shrink-0"
