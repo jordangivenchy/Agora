@@ -278,11 +278,15 @@ export default function PostCard<P extends PostRow>({
           votes (the score centred on the community tile), the tile level
           with the community name, then the text. */}
       {reason && (
-        <p className="m-0 mb-3 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.38)" }}>
-          <Icon name="sparkles" size={11} /> {reason}
-        </p>
+        <div className="flex gap-3 mb-3 cm-card-row">
+          {/* Same width as the vote column, so the caption starts where the tile does. */}
+          {onVote && <span aria-hidden="true" className="vote-box shrink-0" style={{ width: 34 }} />}
+          <p className="m-0 text-[10.5px] inline-flex items-center gap-1 min-w-0" style={{ color: "rgba(238,238,245,0.38)" }}>
+            <Icon name="sparkles" size={11} /> {reason}
+          </p>
+        </div>
       )}
-      <div className="flex gap-3">
+      <div className="flex gap-3 cm-card-row">
       {onVote && <VoteBox post={p} onVote={onVote} centerOn={communityArt ? { height: 30, offset: 2 } : undefined} />}
       {communityArt && (
         <span
