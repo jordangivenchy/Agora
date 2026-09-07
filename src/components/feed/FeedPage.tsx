@@ -298,12 +298,12 @@ export default function FeedPage({ open, onClose }: Props) {
             style={{
               width: 34, height: 34, borderRadius: "50%",
               display: "inline-flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0,
-              background: r.am_set ? "rgba(226,185,107,0.92)" : "rgba(255,255,255,0.05)",
-              border: r.am_set ? "1px solid #d9a238" : "1px solid rgba(255,255,255,0.14)",
-              color: r.am_set ? "#3a2a05" : "#c9c9d2",
+              background: r.am_set ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.05)",
+              border: r.am_set ? "1px solid rgba(255,255,255,0.4)" : "1px solid rgba(255,255,255,0.14)",
+              color: r.am_set ? "#fff" : "#c9c9d2",
             }}
           >
-            <Icon name="bell" size={15} />
+            {r.am_set ? <Icon name="check" size={15} /> : <Icon name="bell" size={15} />}
           </button>
         </div>
       );
