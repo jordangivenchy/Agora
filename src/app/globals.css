@@ -2915,9 +2915,15 @@ html.reduce-motion .nav-sparkle {
   white-space: nowrap;
 }
 /* Communities: the header's + ends where the feed column ends, before
-   the 310px rail and its 20px gap (the split in CommunitiesPage). */
+   the 310px rail and its 20px gap (the split in CommunitiesPage). On the
+   overview, where the description line sits under the title, the +
+   drops to sit level with that line. */
 @media (min-width: 768px) {
-  .cm-head { padding-right: 330px; }
+  .cm-head { padding-right: 330px; position: relative; }
+  .cm-head.has-sub .cm-head-plus { position: absolute; right: 330px; top: 29px; }
+}
+@media (max-width: 639px) {
+  .cm-head-plus button { width: 40px !important; height: 40px !important; }
 }
 .page-sub {
   margin: -12px 0 16px;
