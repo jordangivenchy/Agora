@@ -934,7 +934,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     const b = inviteMeta.get(m.community_id);
                     return (
                       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 2px", minWidth: 220 }}>
-                        <CommunityTile name={b?.name ?? "Board"} color={b?.color} avatarUrl={b?.avatar_url} size={36} />
+                        <CommunityTile name={b?.name ?? "Community"} color={b?.color} avatarUrl={b?.avatar_url} size={36} />
                         <span style={{ minWidth: 0, flex: 1 }}>
                           <span style={{ display: "block", fontSize: 11, opacity: 0.7 }}>{mine ? "You invited them to join" : "Invited you to join"}</span>
                           <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b?.name ?? m.content.replace(/^Invited you to join /, "")}</span>

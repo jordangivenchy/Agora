@@ -78,7 +78,7 @@ const NAV: NavItem[] = [
   {
     id: "communities",
     label: "Communities",
-    short: "Boards",
+    short: "Communities",
     sparkles: [
       ["0.4s", "4.4s", "24%", "58%", "-5px"],
       ["1.2s", "3.9s", "65%", "32%", "6px"],

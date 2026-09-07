@@ -938,7 +938,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                       />
                       {communityId && (
                         <PillSelect
-                          label={`${communityName ?? "Board"} members`}
+                          label={`${communityName ?? "Community"} members`}
                           active={accessMode === "community"}
                           onClick={() => setAccessMode("community")}
                           activeColor="#2f7fe0"

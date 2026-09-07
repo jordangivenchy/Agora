@@ -1765,7 +1765,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         </div>
 
         {!openPost && selected === "all" && (
-          <p className="page-sub">Boards for your school, team, or topic</p>
+          <p className="page-sub">Communities for your school, team, or topic</p>
         )}
 
         {error && (
@@ -2783,7 +2783,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                           {panelLabel("ABOUT & RULES")}
                           <input
                             style={{ ...inputStyle, marginBottom: 8 }}
-                            placeholder="Description (what is this board for?)"
+                            placeholder="Description (what is this community for?)"
                             maxLength={500}
                             value={draftDescription}
                             onChange={(e) => setDraftDescription(e.target.value)}

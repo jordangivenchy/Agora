@@ -140,7 +140,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
       setTimeout(() => setPostNote(null), 2500);
     } catch (e) {
       console.warn("clip post failed", e);
-      setPostNote("Couldn't post — are you a member of that board?");
+      setPostNote("Couldn't post — are you a member of that community?");
       setTimeout(() => setPostNote(null), 3500);
     } finally {
       setPosting(null);
@@ -219,9 +219,9 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
               <button onClick={() => setPickerOpen(false)} style={{ background: "none", border: "none", color: "#8b8b94", cursor: "pointer", fontSize: 13 }}>✕</button>
             </div>
             {boards === null ? (
-              <p style={{ margin: 0, fontSize: 12.5, color: "#8b8b94" }}>Loading your boards…</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: "#8b8b94" }}>Loading your communities…</p>
             ) : boards.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12.5, color: "#8b8b94" }}>Join a community first — boards you belong to appear here.</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: "#8b8b94" }}>Join a community first — the ones you belong to appear here.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {boards.map((b) => (

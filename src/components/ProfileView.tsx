@@ -1114,7 +1114,7 @@ export default function ProfileView({
               emptyState(
                 "users",
                 isSelf ? "Not in any communities yet" : `${first} hasn't joined a community`,
-                isSelf ? "Join a board to post, comment, and get its discussions in your feed." : "Communities they join will be listed here.",
+                isSelf ? "Join a community to post, comment, and get its discussions in your feed." : "Communities they join will be listed here.",
                 isSelf ? { label: "Browse communities", href: "/communities" } : undefined,
               )
             ) : (

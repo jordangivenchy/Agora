@@ -1171,7 +1171,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             : deniedGate.mode === "followers"
               ? `This room is open to people who follow ${who}.`
               : deniedGate.mode === "community"
-                ? `This room is for members of ${deniedGate.communityName ?? "its community"} — join the board to enter.`
+                ? `This room is for members of ${deniedGate.communityName ?? "its community"} — join the community to enter.`
                 : "This room is invite-only — enter the code to join."}
           {!currentUser && " Sign in if that's you."}
         </p>

@@ -20,10 +20,10 @@ interface Candidate {
 
 const ERRORS: Record<string, string> = {
   not_friends: "You can only invite friends — people who follow you back.",
-  mods_only: "Only moderators can invite people to a private board.",
+  mods_only: "Only moderators can invite people to a private community.",
   invite_rate_limit: "That's a lot of invites — try again in an hour.",
-  already_member: "They're already in the board.",
-  not_a_member: "Join the board before inviting people to it.",
+  already_member: "They're already in the community.",
+  not_a_member: "Join the community before inviting people to it.",
 };
 
 export default function InviteFriends({ communityId, communityName, isPrivate }: { communityId: string; communityName: string; isPrivate: boolean }) {
@@ -108,7 +108,7 @@ export default function InviteFriends({ communityId, communityName, isPrivate }:
         </div>
       )}
       <button type="button" onClick={copyLink} className="cursor-pointer" style={{ alignSelf: "flex-start", background: "transparent", border: "none", padding: "2px 0", fontSize: 12, color: "rgba(238,238,245,0.55)", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 5 }}>
-        <Icon name={copied ? "check" : "link"} size={12} /> {copied ? "Link copied" : "Copy a link to the boards"}
+        <Icon name={copied ? "check" : "link"} size={12} /> {copied ? "Link copied" : "Copy a link to Communities"}
       </button>
     </div>
   );

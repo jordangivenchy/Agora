@@ -343,13 +343,13 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               <p style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#f5f5f0" }}>
                 {gate.reason === "email_unverified" && "Verify your email first"}
                 {gate.reason === "account_too_new" && "Your account is brand new"}
-                {gate.reason === "community_limit" && "You've made the most boards one account can"}
+                {gate.reason === "community_limit" && "You've made the most communities one account can"}
                 {gate.reason === "signed_out" && "Sign in to create a community"}
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(238,238,245,0.55)", maxWidth: 340 }}>
                 {gate.reason === "email_unverified" && <>We sent a link to <span style={{ color: "rgba(238,238,245,0.85)" }}>{userEmail ?? "your inbox"}</span>. Open it, then come back — communities need a verified address.</>}
                 {gate.reason === "account_too_new" && `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few boards and post in the meantime.`}
-                {gate.reason === "community_limit" && `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more boards are coming; for now, grow the ones you have.`}
+                {gate.reason === "community_limit" && `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more communities are coming; for now, grow the ones you have.`}
                 {gate.reason === "signed_out" && "Communities are created from an account."}
               </p>
               {gate.reason === "email_unverified" && userEmail && (
@@ -436,7 +436,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                   id="ccm-desc"
                   value={description}
                   onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
-                  placeholder="What is this board for, and who is it for?"
+                  placeholder="What is this community for, and who is it for?"
                   rows={3}
                   style={{ ...field, resize: "vertical", lineHeight: 1.45 }}
                 />
@@ -452,7 +452,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                   rows={4}
                   style={{ ...field, resize: "vertical", lineHeight: 1.45 }}
                 />
-                <p style={hintStyle}>Pinned in the board&rsquo;s sidebar. You can edit everything later in the board&rsquo;s settings.</p>
+                <p style={hintStyle}>Pinned in the community&rsquo;s sidebar. You can edit everything later in the community&rsquo;s settings.</p>
               </div>
             </div>
           )}
@@ -487,7 +487,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               <div className="ccm-images" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {([
                   ["avatar", "Avatar", "Square, shown beside the name.", avatar, avatarInput, setAvatar],
-                  ["banner", "Banner", "Wide, across the top of the board.", banner, bannerInput, setBanner],
+                  ["banner", "Banner", "Wide, across the top of the community page.", banner, bannerInput, setBanner],
                 ] as const).map(([key, title, hint, file, ref, set]) => (
                   <div key={key} style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "#0b0b0d" }}>
                     <span style={{ ...label, marginBottom: 2 }}>{title} <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></span>
@@ -581,7 +581,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                     </div>
                   ))}
                 </div>
-                <p style={hintStyle}>You&rsquo;ll be the owner. Everything here can be changed later in the board&rsquo;s settings.</p>
+                <p style={hintStyle}>You&rsquo;ll be the owner. Everything here can be changed later in the community&rsquo;s settings.</p>
               </div>
             </div>
           )}
@@ -597,7 +597,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
           {created ? (
             <>
-              <span style={{ fontSize: 12, color: "rgba(238,238,245,0.4)" }}>You can invite more people from the board any time.</span>
+              <span style={{ fontSize: 12, color: "rgba(238,238,245,0.4)" }}>You can invite more people from the community any time.</span>
               <span style={{ marginLeft: "auto" }} />
               <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }}>
                 Done
