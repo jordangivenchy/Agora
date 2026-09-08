@@ -41,6 +41,8 @@ import InviteFriends from "./community/InviteFriends";
 import ReplayEmbed from "./community/ReplayEmbed";
 import ClipEmbed, { stripClipLink } from "./community/ClipEmbed";
 import { openImage } from "@/lib/lightbox";
+import PostTopicQueue from "./community/PostTopicQueue";
+import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 import ActionSheet, { type SheetItem } from "./community/ActionSheet";
 import { createLongPress } from "@/lib/longPress";
@@ -277,6 +279,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
 
   // Composers
   const [composing, setComposing] = useState(false);
+  /* Verified accounts can attach a conversation to a post (lib/postTopics). */
+  const [meVerified, setMeVerified] = useState(false);
+  const [newTopic, setNewTopic] = useState<TopicDraft>(EMPTY_TOPIC);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
   const [newTagId, setNewTagId] = useState<string>("");
@@ -293,6 +298,25 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   const replyInputRef = useRef<RichEditorHandle | null>(null);
   const replyImageInputRef = useRef<HTMLInputElement | null>(null);
   const [composeCommunity, setComposeCommunity] = useState<string>("");
+  /* /communities?compose=profile (the profile's "New post"): open the
+     composer on my own u/ board once the list is in. */
+  const composeParamRef = useRef(false);
+  useEffect(() => {
+    if (composeParamRef.current || !communitiesLoaded || !userId) return;
+    let wanted: string | null = null;
+    try { wanted = new URLSearchParams(window.location.search).get("compose"); } catch {}
+    if (wanted !== "profile") return;
+    const mine = communities.find((c) => c.kind === "profile" && c.my_role === "owner");
+    if (!mine) return;
+    composeParamRef.current = true;
+    queueMicrotask(() => {
+      setSelected("all");
+      setComposeCommunity(mine.id);
+      setComposing(true);
+      try { window.history.replaceState(null, "", "/communities"); } catch {}
+    });
+  }, [communitiesLoaded, userId, communities]);
+
   /* "+ New community" opens CreateCommunityModal (community/). */
   const [creatingCommunity, setCreatingCommunity] = useState(false);
   /* The header's single "+" — a menu choosing between a post and a community. */
@@ -358,6 +382,12 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
+    if (uid) {
+      /* Everyone has a u/ board to post on; made on first sight, idempotent. */
+      await supabase.rpc("ensure_profile_community").then(undefined, () => {});
+      supabase.from("users").select("verified").eq("id", uid).maybeSingle()
+        .then(({ data }) => setMeVerified(!!data?.verified));
+    }
     const [commRes, tagRes, reqRes, muteRes, blockRes] = await Promise.all([
       supabase
         .from("communities")
@@ -936,28 +966,47 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         return;
       }
     }
-    const { error: err } = await supabase.from("community_posts").insert({
+    const { data: inserted, error: err } = await supabase.from("community_posts").insert({
       community_id: communityId,
       author_id: userId,
       title,
       body: newBody.trim() || null,
       tag_id: newTagId || null,
       image_url: imageUrl ?? newGifUrl,
-    });
-    setBusy(false);
+    }).select("id").single();
     if (err) {
+      setBusy(false);
       setError(err.message.includes("rate_limited")
         ? "You're posting too quickly — try again in a few minutes."
-        : err.message);
+        : err.message.includes("profile_board")
+          ? "Only the profile's owner can post there."
+          : err.message);
       return;
     }
+    if (newTopic.on && inserted) {
+      /* The post is up; the topic is a second step that can be refused
+         (unverified, bad question). Clear the draft so a retry can't
+         post twice, and say what happened. */
+      try {
+        await attachPostTopic(supabase, (inserted as { id: string }).id, newTopic, title);
+      } catch (e) {
+        setBusy(false);
+        setNewTitle(""); setNewBody(""); setNewTagId(""); setNewGifUrl(null); pickImage(null);
+        setNewTopic(EMPTY_TOPIC);
+        setError(`Posted, but the conversation wasn't attached: ${e instanceof Error ? e.message : "try again"}`);
+        loadPosts();
+        return;
+      }
+    }
+    setBusy(false);
+    setNewTopic(EMPTY_TOPIC);
     setComposing(false);
     try { window.localStorage.setItem("agora:lastPostCommunity", composeCommunity); } catch {}
     setNewTitle(""); setNewBody(""); setNewTagId("");
     setNewGifUrl(null);
     pickImage(null);
     loadPosts();
-  }, [supabase, requireAuth, selected, composeCommunity, newTitle, newBody, newTagId, newImage, newGifUrl, userId, loadPosts, pickImage]);
+  }, [supabase, requireAuth, selected, composeCommunity, newTitle, newBody, newTagId, newImage, newGifUrl, newTopic, userId, loadPosts, pickImage]);
 
   const submitComment = useCallback(async (parentId: string | null, body: string, image: File | null, gif: string | null = null) => {
     if (busy || !openPost || !requireAuth()) return; // busy: Enter can auto-repeat
@@ -2059,10 +2108,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
             {(() => {
               const q = railQuery.trim().toLowerCase();
               const match = (c: Community) => !q || c.name.toLowerCase().includes(q);
+              /* u/ boards live on profiles, not in the directory. */
               const joined = communities
-                .filter((c) => c.joined && !c.blocked && match(c))
+                .filter((c) => c.kind !== "profile" && c.joined && !c.blocked && match(c))
                 .sort((a, b) => Number(b.favorite) - Number(a.favorite));
-              const discover = communities.filter((c) => !c.joined && !c.blocked && match(c));
+              const discover = communities.filter((c) => c.kind !== "profile" && !c.joined && !c.blocked && match(c));
               const row = (c: Community) => (
                 <div
                   key={c.id}
@@ -2364,6 +2414,8 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     <ReplayEmbed postId={openPost.id} />
                     {/* Posts sharing a clip link embed the clip the same way. */}
                     <ClipEmbed body={openPost.body} />
+                    {/* A conversation attached by a verified author: queue in here. */}
+                    <PostTopicQueue postId={openPost.id} />
                     {openPost.image_url && (
                       <button type="button" onClick={(e) => { e.stopPropagation(); if (openPost.image_url) openImage(openPost.image_url); }} aria-label="Open image" style={{ display: "block", padding: 0, border: "none", background: "none", cursor: "zoom-in", marginTop: 8, maxWidth: "100%" }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2634,7 +2686,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                         )}
                         {/* Members see no badge in the header — Leave lives in
                             the ⋯ menu; the pill only exists to get you in. */}
-                        {!selectedCommunity.joined && (
+                        {!selectedCommunity.joined && selectedCommunity.kind !== "profile" && (
                           <button
                             onClick={() => toggleJoin(selectedCommunity)}
                             onMouseEnter={liftIn} onMouseLeave={liftOut}
@@ -3056,7 +3108,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                   <PostComposer
                     pickCommunity={selected === "all"
                       ? {
-                          communities: communities.filter((c) => !c.is_private || c.joined),
+                          communities: communities.filter((c) => c.kind === "profile" ? c.my_role === "owner" : (!c.is_private || c.joined)),
                           value: composeCommunity,
                           onChange: (id) => { setComposeCommunity(id); setNewTagId(""); },
                         }
@@ -3079,7 +3131,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
                     mentions={!!userId}
                     maxLength={BODY_MAX}
                     onSubmit={submitPost}
-                    onClose={() => { setComposing(false); setNewTagId(""); pickImage(null); }}
+                    onClose={() => { setComposing(false); setNewTagId(""); setNewTopic(EMPTY_TOPIC); pickImage(null); }}
+                    canAttachTopic={meVerified}
+                    topic={newTopic}
+                    onTopic={setNewTopic}
                   />
                 )}
 

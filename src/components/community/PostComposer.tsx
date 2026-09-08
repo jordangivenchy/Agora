@@ -16,7 +16,9 @@ import CommunityPicker from "@/components/community/CommunityPicker";
 import { TagChip } from "@/components/community/PostCard";
 import RichEditor, { type RichEditorHandle } from "@/components/community/RichEditor";
 import useEscapeClose from "@/lib/useEscapeClose";
-import { errorNote, modalCard, modalClose, modalOverlay, modalTitle, pillDark, pillYellow } from "@/components/messages/groups";
+import { errorNote, fieldStyle, modalCard, modalClose, modalOverlay, modalTitle, pillDark, pillYellow } from "@/components/messages/groups";
+import { TOPICS } from "@/types/database";
+import { EMPTY_TOPIC, TOPIC_QUEUE_KEYS, type TopicDraft } from "@/lib/postTopics";
 
 export const POST_TITLE_MAX = 200;
 export const POST_BODY_MAX = 10000;
@@ -45,7 +47,14 @@ export default function PostComposer({
   onSubmit,
   onClose,
   clip,
+  canAttachTopic,
+  topic,
+  onTopic,
 }: {
+  /** Verified accounts: the post can carry a conversation people queue into. */
+  canAttachTopic?: boolean;
+  topic?: TopicDraft;
+  onTopic?: (next: TopicDraft) => void;
   /** A clip riding along with the post (the clip page's "Post to
       community"): shown as a fixed attachment under the text. */
   clip?: { title: string; duration: string | null } | null;
@@ -264,6 +273,46 @@ export default function PostComposer({
             }}
           />
         </div>
+
+        {canAttachTopic && onTopic && (() => {
+          const t = topic ?? EMPTY_TOPIC;
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 0 2px", flexShrink: 0 }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12.5, color: "#eeeef5", alignSelf: "flex-start" }}>
+                <input
+                  type="checkbox"
+                  checked={t.on}
+                  onChange={(e) => onTopic({ ...t, on: e.target.checked, question: t.question || title })}
+                  style={{ accentColor: "#ffb700" }}
+                />
+                <Icon name="swords" size={13} style={{ color: "#ffb700" }} />
+                Attach a conversation people can queue into
+              </label>
+              {t.on && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <input
+                    value={t.question}
+                    onChange={(e) => onTopic({ ...t, question: e.target.value.slice(0, 200) })}
+                    placeholder="The question to argue (5–200 characters)"
+                    maxLength={200}
+                    aria-label="Conversation question"
+                    style={{ ...fieldStyle, flex: "1 1 260px", minWidth: 0 }}
+                  />
+                  <select
+                    value={t.topicKey}
+                    onChange={(e) => onTopic({ ...t, topicKey: e.target.value })}
+                    aria-label="Field"
+                    style={{ ...fieldStyle, flex: "0 0 auto", width: "auto" }}
+                  >
+                    {TOPICS.filter((x) => TOPIC_QUEUE_KEYS.has(x.key)).map((x) => (
+                      <option key={x.key} value={x.key}>{x.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {tags.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "10px 0 2px", flexShrink: 0 }}>

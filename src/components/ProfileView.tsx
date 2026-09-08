@@ -1117,6 +1117,15 @@ export default function ProfileView({
           {tabBtn("reposts", "Reposts", counts.reposts)}
           {tabBtn("comments", "Comments", counts.comments)}
           {tabBtn("communities", "Communities", counts.communities)}
+          {isSelf && (
+            <a
+              href="/communities?compose=profile"
+              className="no-underline inline-flex items-center gap-1.5"
+              style={{ marginLeft: "auto", height: 34, padding: "0 16px", borderRadius: 999, background: "#ffb700", color: "#1a0e00", fontSize: 13, fontWeight: 700 }}
+            >
+              <Icon name="plus" size={14} /> New post
+            </a>
+          )}
         </div>
 
         {/* ── Communities ── */}
@@ -1467,7 +1476,7 @@ export default function ProfileView({
                   tab === "posts"
                     ? (isSelf ? "Posts you write in any community show up here." : "Their community posts will appear here.")
                     : (isSelf ? "Repost something from a community to share it with another." : "Posts they share across communities will appear here."),
-                  isSelf ? { label: tab === "posts" ? "Write a post" : "Browse communities", href: "/communities" } : undefined,
+                  isSelf ? { label: tab === "posts" ? "Write a post" : "Browse communities", href: tab === "posts" ? "/communities?compose=profile" : "/communities" } : undefined,
                 )
               ) : (
                 rows.map(postCard)

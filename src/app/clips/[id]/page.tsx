@@ -24,6 +24,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { downloadClip } from "@/lib/clipDownload";
 import { uploadPostImage } from "@/lib/postImages";
 import PostComposer, { POST_BODY_MAX } from "@/components/community/PostComposer";
+import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
 import { giphyEnabled } from "@/components/community/GifPicker";
 import type { PickerCommunity } from "@/components/community/CommunityPicker";
 import ClipTile, { formatClipDuration, formatViews, type ClipTileData } from "@/components/clips/ClipTile";
@@ -98,6 +99,8 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   const [newGifUrl, setNewGifUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [meVerified, setMeVerified] = useState(false);
+  const [newTopic, setNewTopic] = useState<TopicDraft>(EMPTY_TOPIC);
 
   const loadHostCard = useCallback(async (h: Host) => {
     const [{ data: prof }, { data: rooms }] = await Promise.all([
@@ -262,23 +265,27 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
     setNewTitle(clip.title || "Clip");
     setComposing(true);
     if (communities.length > 0) return;
-    const [commRes, tagRes] = await Promise.all([
+    /* My u/ board exists from the first time I could post; others' stay out of the picker. */
+    await supabase.rpc("ensure_profile_community").then(undefined, () => {});
+    const [commRes, tagRes, meRes] = await Promise.all([
       supabase
         .from("communities")
-        .select("id, name, color, avatar_url, is_private, community_members(user_id, role, favorite)"),
+        .select("id, name, kind, color, avatar_url, is_private, community_members(user_id, role, favorite)"),
       supabase.from("community_tags").select("id, community_id, name, color"),
+      supabase.from("users").select("verified").eq("id", uid).maybeSingle(),
     ]);
+    setMeVerified(!!meRes.data?.verified);
     const rows = ((commRes.data ?? []) as unknown as {
-      id: string; name: string; color: string; avatar_url: string | null; is_private: boolean;
+      id: string; name: string; kind: string; color: string; avatar_url: string | null; is_private: boolean;
       community_members: { user_id: string; role: string | null; favorite: boolean | null }[] | null;
     }[]).map((c) => {
       const members = c.community_members ?? [];
       const mine = members.find((m) => m.user_id === uid) ?? null;
       return {
-        id: c.id, name: c.name, color: c.color, avatar_url: c.avatar_url, is_private: c.is_private,
+        id: c.id, name: c.name, kind: c.kind, color: c.color, avatar_url: c.avatar_url, is_private: c.is_private,
         members: members.length, joined: !!mine, favorite: !!mine?.favorite, my_role: mine?.role ?? null,
       } satisfies PickerCommunity;
-    }).filter((c) => !c.is_private || c.joined);
+    }).filter((c) => c.kind === "profile" ? c.my_role === "owner" : (!c.is_private || c.joined));
     rows.sort((a, b) => a.name.localeCompare(b.name));
     setCommunities(rows);
     setTags((tagRes.data ?? []) as Tag[]);
@@ -337,6 +344,14 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
       })
       .select("id")
       .single();
+    if (!err && newTopic.on && data) {
+      try {
+        await attachPostTopic(supabase, (data as { id: string }).id, newTopic, title);
+      } catch (e) {
+        /* The post is up; say the topic wasn't, then go to it. */
+        console.warn("post topic failed", e);
+      }
+    }
     setBusy(false);
     if (err) {
       setError(err.message.includes("rate_limited")
@@ -349,7 +364,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
     try { window.localStorage.setItem("agora:lastPostCommunity", composeCommunity); } catch {}
     closeComposer();
     router.push(pathFor.post((data as { id: string }).id));
-  }, [clip, userId, busy, newTitle, composeCommunity, newBody, newImage, newGifUrl, newTagId, supabase, closeComposer, router]);
+  }, [clip, userId, busy, newTitle, composeCommunity, newBody, newImage, newGifUrl, newTagId, newTopic, supabase, closeComposer, router]);
 
   if (gone) {
     return (
@@ -536,6 +551,9 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
           maxLength={POST_BODY_MAX}
           onSubmit={submitPost}
           onClose={closeComposer}
+          canAttachTopic={meVerified}
+          topic={newTopic}
+          onTopic={setNewTopic}
         />
       )}
     </main>

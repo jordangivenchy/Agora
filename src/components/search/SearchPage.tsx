@@ -303,7 +303,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
     const [peopleRes, commRes, roomsRes] = await Promise.all([
       supabase.from("users").select("id, username, display_name, avatar_url")
         .or(`username.ilike.${cleaned}%,display_name.ilike.${cleaned}%`).limit(4),
-      supabase.from("communities").select("id, name, avatar_url").ilike("name", term).limit(3),
+      supabase.from("communities").select("id, name, avatar_url").neq("kind", "profile").ilike("name", term).limit(3),
       supabase.from("debate_rooms").select("id, motion, status, thumbnail_url")
         .in("status", ["live", "created", "scheduled"]).ilike("motion", term)
         .order("created_at", { ascending: false }).limit(4),

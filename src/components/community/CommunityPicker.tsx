@@ -19,9 +19,11 @@ export type PickerCommunity = {
   joined: boolean;
   favorite: boolean;
   my_role: string | null;
+  /** 'profile' for the poster's own u/ board; the picker lists it first. */
+  kind?: string;
 };
 
-const GROUP_LABEL: Record<string, string> = { fav: "Favorites", joined: "Joined", other: "Other communities" };
+const GROUP_LABEL: Record<string, string> = { profile: "Your profile", fav: "Favorites", joined: "Joined", other: "Other communities" };
 
 function Avatar({ c, size }: { c: PickerCommunity; size: number }) {
   return (
@@ -82,10 +84,12 @@ export default function CommunityPicker({
     const needle = q.trim().toLowerCase();
     const pool = needle ? communities.filter((c) => c.name.toLowerCase().includes(needle)) : communities;
     const byName = (a: PickerCommunity, b: PickerCommunity) => a.name.localeCompare(b.name);
-    const fav = pool.filter((c) => c.joined && c.favorite).sort(byName);
-    const joined = pool.filter((c) => c.joined && !c.favorite).sort(byName);
-    const other = pool.filter((c) => !c.joined).sort((a, b) => b.members - a.members || byName(a, b));
-    return [["fav", fav], ["joined", joined], ["other", other]] as const;
+    const profile = pool.filter((c) => c.kind === "profile");
+    const rest = pool.filter((c) => c.kind !== "profile");
+    const fav = rest.filter((c) => c.joined && c.favorite).sort(byName);
+    const joined = rest.filter((c) => c.joined && !c.favorite).sort(byName);
+    const other = rest.filter((c) => !c.joined).sort((a, b) => b.members - a.members || byName(a, b));
+    return [["profile", profile], ["fav", fav], ["joined", joined], ["other", other]] as const;
   }, [communities, q]);
   const flat = useMemo(() => groups.flatMap(([, xs]) => xs), [groups]);
 

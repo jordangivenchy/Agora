@@ -21,6 +21,7 @@ import { Icon } from "@/components/icons";
 import RichText from "./RichText";
 import { clipIdInBody, stripClipLink } from "./ClipEmbed";
 import { openImage } from "@/lib/lightbox";
+import PostTopicQueue from "./PostTopicQueue";
 
 export type PostRow = {
   id: string;
@@ -376,6 +377,7 @@ export default function PostCard<P extends PostRow>({
               style={{ maxHeight: compact ? 160 : 220, maxWidth: "100%", objectFit: "cover", display: "block" }} />
           </button>
         )}
+        <PostTopicQueue postId={p.id} compact />
         {embed !== undefined ? embed : <RepostEmbed post={p} />}
         {/* The actions row hangs its leading icon (14px + 4px gap) into the
             column gap, so the comment count starts on the title's first
