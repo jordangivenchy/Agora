@@ -112,8 +112,13 @@ export function FriendsCard({
         boxSizing: "border-box",
       }}
     >
+      {/* The tile doubles as the rail's icon when the sidebar is collapsed
+          (mvp-home.css .friends-ui-tile): outline glyph, no fill, with a
+          green dot when anyone is online. */}
       <span
+        className="friends-ui-tile"
         style={{
+          position: "relative",
           width: 32,
           height: 32,
           borderRadius: 9,
@@ -126,8 +131,9 @@ export function FriendsCard({
         }}
       >
         <Icon name="users" size={16} />
+        {onlineCount > 0 && <span className="friends-ui-dot" aria-hidden />}
       </span>
-      <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1, gap: 1 }}>
+      <span className="friends-ui-body" style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1, gap: 1 }}>
         <span style={{ fontFamily: FRIENDS_UI.title, fontWeight: 700, fontSize: 13, lineHeight: "16px" }}>
           Friends
         </span>
@@ -144,7 +150,7 @@ export function FriendsCard({
         </span>
       </span>
       {total > 0 && (
-        <span style={{ display: "flex", flexShrink: 0 }}>
+        <span className="friends-ui-body" style={{ display: "flex", flexShrink: 0 }}>
           {friends.slice(0, 3).map((f, i) => (
             <span
               key={f.id}
@@ -166,7 +172,7 @@ export function FriendsCard({
           ))}
         </span>
       )}
-      <span style={{ color: FRIENDS_UI.muted, display: "inline-flex", flexShrink: 0 }}>
+      <span className="friends-ui-body" style={{ color: FRIENDS_UI.muted, display: "inline-flex", flexShrink: 0 }}>
         <Icon name="chevron-right" size={14} />
       </span>
     </button>

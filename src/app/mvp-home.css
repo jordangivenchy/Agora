@@ -6214,18 +6214,56 @@ body { background: transparent; }
   }
   /* Labels wait out the rail's hover-intent delay (globals.css) too. */
   .sidebar:hover .nav-label { transition-delay: 0.19s; }
-  .sidebar-bottom-zone {
+  /* Collapsed rail: the Friends card stays, reduced to its glyph in the
+     icon column — outline, no yellow, a green dot when someone is
+     online — so friends are a tap away without opening the rail. The
+     footer and the card's text and faces fade out with the labels. */
+  .sidebar-footer,
+  .friends-ui-body {
     opacity: 0;
-    pointer-events: none;
     transition: opacity 0.16s ease;
   }
-  .sidebar:hover .sidebar-bottom-zone,
-  .sidebar:has(:focus-visible) .sidebar-bottom-zone {
+  .friends-ui-card {
+    background: transparent !important;
+    border-color: transparent !important;
+    padding-left: 4px !important;
+    transition: padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1), background 0.16s ease, border-color 0.16s ease;
+  }
+  .friends-ui-tile {
+    background: transparent !important;
+    color: rgba(238,238,245,0.56) !important;
+    transition: background 0.16s ease, color 0.16s ease;
+  }
+  .friends-ui-card:hover .friends-ui-tile { color: #fff !important; }
+  .friends-ui-dot {
+    position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
+    background: #6fd3a0; border: 2px solid #0b0b0d; box-sizing: content-box;
+  }
+  .sidebar:hover .sidebar-footer,
+  .sidebar:hover .friends-ui-body,
+  .sidebar:has(:focus-visible) .sidebar-footer,
+  .sidebar:has(:focus-visible) .friends-ui-body,
+  .sidebar.friends-overlay-open .friends-ui-body {
     opacity: 1;
-    pointer-events: auto;
     transition-delay: 0.06s;
   }
-  .sidebar:hover .sidebar-bottom-zone { transition-delay: 0.2s; }
+  .sidebar:hover .sidebar-footer,
+  .sidebar:hover .friends-ui-body { transition-delay: 0.2s; }
+  .sidebar:hover .friends-ui-card,
+  .sidebar:has(:focus-visible) .friends-ui-card,
+  .sidebar.friends-overlay-open .friends-ui-card {
+    background: rgba(255,255,255,0.03) !important;
+    border-color: rgba(255,255,255,0.10) !important;
+    padding-left: 9px !important;
+  }
+  .sidebar:hover .friends-ui-tile,
+  .sidebar:has(:focus-visible) .friends-ui-tile,
+  .sidebar.friends-overlay-open .friends-ui-tile {
+    background: #ffb700 !important;
+    color: #1a0e00 !important;
+  }
+  .sidebar:hover .friends-ui-dot,
+  .sidebar:has(:focus-visible) .friends-ui-dot { display: none; }
 }
 
 /* ── No indicator bar (2026-08-26): the active tab reads through its
