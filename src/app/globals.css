@@ -3087,12 +3087,12 @@ html.reduce-motion .nav-sparkle {
   .clip-channel > button { padding: 0 14px !important; height: 32px !important; font-size: 12.5px !important; }
 }
 
-/* Profile social links (ProfileView): a row of round icon links under
-   the stats. Hover lifts the ring and the glyph; phones keep them a
-   touch smaller. */
+/* Profile social links (ProfileView): round icon links in the header
+   card's top-right corner beside the ⋯. Hover lifts the ring and the
+   glyph; phones keep them a touch smaller. */
 .profile-social { transition: border-color 0.15s ease, color 0.15s ease; }
 .profile-social:hover { border-color: rgba(255,255,255,0.4) !important; color: #fff !important; }
 @media (max-width: 639px) {
-  .profile-socials { margin-top: 10px !important; gap: 6px !important; }
-  .profile-social { width: 34px !important; height: 34px !important; }
+  .profile-corner { gap: 6px !important; }
+  .profile-social { width: 32px !important; height: 32px !important; }
 }

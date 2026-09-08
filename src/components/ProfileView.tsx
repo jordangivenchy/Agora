@@ -881,11 +881,19 @@ export default function ProfileView({
                 ))}
               </p>
             )}
-            {/* Social links: their own row under the stats, left with the
-                name, big enough to read at a glance — not tucked at the far
-                end of the name line where they floated free of everything. */}
-            {socialLinks.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap profile-socials" style={{ marginTop: 14 }}>
+          </div>
+
+          {/* Right column: the social links and ⋯ in the top-right corner,
+              the action buttons in the bottom-right. */}
+          {/* The column reaches 10px into the card's bottom padding so the
+              buttons hug the bottom-right corner the way the dots hug the
+              top-right one (14px from the edge, both). */}
+          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "flex-end", marginBottom: -10 }} ref={menuRef}>
+            {/* Top-right corner: the social links, then the ⋯ for viewers —
+                one row of matching 34px rounds. marginBottom auto pins it
+                to the top while the buttons below sit at the bottom. */}
+            {(socialLinks.length > 0 || (!isSelf && !!viewerId)) && (
+              <div className="flex items-center gap-2 profile-corner" style={{ marginBottom: "auto" }}>
                 {socialLinks.map((url) => (
                   <a
                     key={url}
@@ -896,143 +904,41 @@ export default function ProfileView({
                     aria-label={socialLabel(url)}
                     className="inline-flex items-center justify-center no-underline profile-social"
                     style={{
-                      width: 38,
-                      height: 38,
+                      width: 34,
+                      height: 34,
                       borderRadius: 999,
                       border: "1px solid rgba(255,255,255,0.14)",
                       background: "#0b0b0d",
                       color: "#d5d5dc",
                     }}
                   >
-                    {socialIcon(url, 19)}
+                    {socialIcon(url, 17)}
                   </a>
                 ))}
-              </div>
-            )}
-          </div>
-
-          {/* Right column: the action buttons (social icons ride the name
-              line, above). */}
-          {/* The column reaches 10px into the card's bottom padding so the
-              buttons hug the bottom-right corner the way the dots hug the
-              top-right one (14px from the edge, both). */}
-          <div className="flex flex-col items-end gap-3 shrink-0 relative self-stretch" style={{ justifyContent: "flex-end", marginBottom: -10 }} ref={menuRef}>
-            {isSelf && (
-              <div className="flex items-center gap-2.5">
-                <button
-                  onClick={() => setEditOpen(true)}
-                  className="cursor-pointer"
-                  style={{
-                    padding: "8px 20px",
-                    borderRadius: 999,
-                    border: "none",
-                    background: "#3b6cf6",
-                    color: "white",
-                    fontFamily: "inherit",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  Edit profile
-                </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard
-                      .writeText(`${window.location.origin}${userPath(profile.username)}`)
-                      .then(() => {
-                        setShared(true);
-                        setTimeout(() => setShared(false), 1800);
-                      });
-                  }}
-                  className="cursor-pointer inline-flex items-center justify-center gap-1.5"
-                  style={{
-                    padding: "8px 20px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    background: "#0b0b0d",
-                    color: shared ? "#6fd3a0" : "#c9c9d2",
-                    fontFamily: "inherit",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  {shared ? <><Icon name="check" size={13} /> Link copied</> : "Share profile"}
-                </button>
-              </div>
-            )}
-
-            {/* Viewers: the ⋯ menu in the card's top-right corner, the
-                friend/message buttons in the bottom-right; the block
-                fills the column's height to hold the two apart. */}
-            {!isSelf && (
-              <div className="flex flex-col items-end relative" style={{ flex: 1, justifyContent: "space-between", gap: 12 }}>
-              {viewerId ? (
-                <button
-                  onClick={() => setMenuOpen((o) => !o)}
-                  aria-label="More options"
-                  aria-expanded={menuOpen}
-                  className="cursor-pointer"
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    background: menuOpen ? "#1a1a1f" : "#0b0b0d",
-                    color: "#c9c9d2",
-                    fontFamily: "inherit",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="more-horizontal" size={16} />
-                </button>
-              ) : (
-                <span aria-hidden />
-              )}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleFollow}
-                  disabled={busy}
-                  className="cursor-pointer"
-                  style={{
-                    height: 38,
-                    padding: "0 22px",
-                    borderRadius: 999,
-                    border: profile.is_following ? "1px solid rgba(255,255,255,0.14)" : "1px solid #2f7fe0",
-                    background: profile.is_following ? "#0b0b0d" : "#2f7fe0",
-                    color: profile.is_following ? "#c9c9d2" : "white",
-                    fontFamily: "inherit",
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                  }}
-                >
-                  {profile.is_following ? "Following" : profile.is_friend ? "Add friend back" : "Add friend"}
-                </button>
-                {profile.is_friend && (
+                {!isSelf && viewerId && (
                   <button
-                    onClick={() =>
-                      window.dispatchEvent(new CustomEvent("agora:dm", {
-                        detail: { userId: profile.id, username: profile.username, avatarUrl: profile.avatar_url ?? null },
-                      }))
-                    }
-                    className="cursor-pointer inline-flex items-center gap-1.5"
+                    onClick={() => setMenuOpen((o) => !o)}
+                    aria-label="More options"
+                    aria-expanded={menuOpen}
+                    className="cursor-pointer"
                     style={{
-                      height: 38,
-                      padding: "0 18px",
+                      width: 34,
+                      height: 34,
                       borderRadius: 999,
                       border: "1px solid rgba(255,255,255,0.14)",
-                      background: "#0b0b0d",
+                      background: menuOpen ? "#1a1a1f" : "#0b0b0d",
                       color: "#c9c9d2",
                       fontFamily: "inherit",
-                      fontSize: 13.5,
-                      fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <Icon name="message-circle" size={13} /> Message
+                    <Icon name="more-horizontal" size={16} />
                   </button>
                 )}
               </div>
+            )}
               {menuOpen && (
                 <div
                   className="absolute z-50"
@@ -1094,6 +1000,92 @@ export default function ProfileView({
                   {blockNote}
                 </p>
               )}
+            {isSelf && (
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="cursor-pointer"
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: "#3b6cf6",
+                    color: "white",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Edit profile
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(`${window.location.origin}${userPath(profile.username)}`)
+                      .then(() => {
+                        setShared(true);
+                        setTimeout(() => setShared(false), 1800);
+                      });
+                  }}
+                  className="cursor-pointer inline-flex items-center justify-center gap-1.5"
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    background: "#0b0b0d",
+                    color: shared ? "#6fd3a0" : "#c9c9d2",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  {shared ? <><Icon name="check" size={13} /> Link copied</> : "Share profile"}
+                </button>
+              </div>
+            )}
+            {!isSelf && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleFollow}
+                  disabled={busy}
+                  className="cursor-pointer"
+                  style={{
+                    height: 38,
+                    padding: "0 22px",
+                    borderRadius: 999,
+                    border: profile.is_following ? "1px solid rgba(255,255,255,0.14)" : "1px solid #2f7fe0",
+                    background: profile.is_following ? "#0b0b0d" : "#2f7fe0",
+                    color: profile.is_following ? "#c9c9d2" : "white",
+                    fontFamily: "inherit",
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  {profile.is_following ? "Following" : profile.is_friend ? "Add friend back" : "Add friend"}
+                </button>
+                {profile.is_friend && (
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("agora:dm", {
+                        detail: { userId: profile.id, username: profile.username, avatarUrl: profile.avatar_url ?? null },
+                      }))
+                    }
+                    className="cursor-pointer inline-flex items-center gap-1.5"
+                    style={{
+                      height: 38,
+                      padding: "0 18px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      background: "#0b0b0d",
+                      color: "#c9c9d2",
+                      fontFamily: "inherit",
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Icon name="message-circle" size={13} /> Message
+                  </button>
+                )}
               </div>
             )}
           </div>
