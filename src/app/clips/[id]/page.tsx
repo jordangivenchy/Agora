@@ -3,9 +3,10 @@
 /* /clips/<id> — a clip's own page: the ReplayPlayer plays just the
    saved window of the room's recording, with share (copy link),
    download (client-side HLS→MP4, see lib/clipDownload), and
-   post-to-community, which opens the real post composer with the clip
-   attached so people can write a title and text around it instead of
-   the bare link going up on its own. Under the clip, Twitch-style: a
+   post-to-community, which opens the post composer sheet (components/
+   community/GlobalPostComposer.tsx) with the clip attached so people
+   can write a title and text around it instead of the bare link going
+   up on its own. Under the clip, Twitch-style: a
    grid of other clips — the same discussion's first, then the most
    viewed. Uploaded-file clips (video_url set) play the file directly
    and skip the transmux download for a plain file save. */
@@ -18,15 +19,10 @@ import SiteChrome from "@/components/SiteChrome";
 import UserAvatar from "@/components/UserAvatar";
 import { Icon } from "@/components/icons";
 import { roomPath, replayPath } from "@/lib/urls";
-import { pathFor } from "@/lib/routes";
 import { TOPICS } from "@/types/database";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { downloadClip } from "@/lib/clipDownload";
-import { uploadPostImage } from "@/lib/postImages";
-import PostComposer, { POST_BODY_MAX } from "@/components/community/PostComposer";
-import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
-import { giphyEnabled } from "@/components/community/GifPicker";
-import type { PickerCommunity } from "@/components/community/CommunityPicker";
+import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import ClipTile, { formatClipDuration, formatViews, type ClipTileData } from "@/components/clips/ClipTile";
 
 interface ClipRow {
@@ -69,8 +65,6 @@ const MORE_SELECT =
 
 type MoreRow = ClipTileData & { room_id: string | null };
 
-type Tag = { id: string; community_id: string; name: string; color: string | null };
-
 export default function ClipPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -85,22 +79,6 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   const [hostCard, setHostCard] = useState<HostCard | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
 
-  /* Post composer (community/PostComposer.tsx) with the clip attached. */
-  const [composing, setComposing] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [communities, setCommunities] = useState<PickerCommunity[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [composeCommunity, setComposeCommunity] = useState("");
-  const [newTitle, setNewTitle] = useState("");
-  const [newBody, setNewBody] = useState("");
-  const [newTagId, setNewTagId] = useState("");
-  const [newImage, setNewImage] = useState<File | null>(null);
-  const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
-  const [newGifUrl, setNewGifUrl] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [meVerified, setMeVerified] = useState(false);
-  const [newTopic, setNewTopic] = useState<TopicDraft>(EMPTY_TOPIC);
 
   const loadHostCard = useCallback(async (h: Host) => {
     const [{ data: prof }, { data: rooms }] = await Promise.all([
@@ -242,129 +220,6 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [clip, src, range, dlState]);
 
-  const pickImage = useCallback((file: File | null) => {
-    setNewImage(file);
-    setNewImagePreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return file ? URL.createObjectURL(file) : null;
-    });
-    if (file) setNewGifUrl(null);
-  }, []);
-
-  /* "Post to community": the same composer as a new post, prefilled
-     with the clip's title and carrying the clip as a fixed attachment.
-     Communities come grouped the way the picker expects (favorites,
-     joined, the rest) — private ones only when joined. */
-  const openComposer = useCallback(async () => {
-    if (!clip) return;
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { window.location.href = "/login"; return; }
-    const uid = auth.user.id;
-    setUserId(uid);
-    setError(null);
-    setNewTitle(clip.title || "Clip");
-    setComposing(true);
-    if (communities.length > 0) return;
-    /* My u/ board exists from the first time I could post; others' stay out of the picker. */
-    await supabase.rpc("ensure_profile_community").then(undefined, () => {});
-    const [commRes, tagRes, meRes] = await Promise.all([
-      supabase
-        .from("communities")
-        .select("id, name, kind, color, avatar_url, is_private, community_members(user_id, role, favorite)"),
-      supabase.from("community_tags").select("id, community_id, name, color"),
-      supabase.from("users").select("verified").eq("id", uid).maybeSingle(),
-    ]);
-    setMeVerified(!!meRes.data?.verified);
-    const rows = ((commRes.data ?? []) as unknown as {
-      id: string; name: string; kind: string; color: string; avatar_url: string | null; is_private: boolean;
-      community_members: { user_id: string; role: string | null; favorite: boolean | null }[] | null;
-    }[]).map((c) => {
-      const members = c.community_members ?? [];
-      const mine = members.find((m) => m.user_id === uid) ?? null;
-      return {
-        id: c.id, name: c.name, kind: c.kind, color: c.color, avatar_url: c.avatar_url, is_private: c.is_private,
-        members: members.length, joined: !!mine, favorite: !!mine?.favorite, my_role: mine?.role ?? null,
-      } satisfies PickerCommunity;
-    }).filter((c) => c.kind === "profile" ? c.my_role === "owner" : (!c.is_private || c.joined));
-    rows.sort((a, b) => a.name.localeCompare(b.name));
-    setCommunities(rows);
-    setTags((tagRes.data ?? []) as Tag[]);
-    let last: string | null = null;
-    try { last = window.localStorage.getItem("agora:lastPostCommunity"); } catch {}
-    const pick =
-      rows.find((c) => c.id === last && c.joined) ??
-      rows.find((c) => c.joined && c.favorite) ??
-      rows.find((c) => c.joined) ??
-      rows[0];
-    setComposeCommunity(pick?.id ?? "");
-  }, [clip, supabase, communities.length]);
-
-  const closeComposer = useCallback(() => {
-    setComposing(false);
-    setNewTagId("");
-    setNewBody("");
-    setNewGifUrl(null);
-    pickImage(null);
-  }, [pickImage]);
-
-  const submitPost = useCallback(async () => {
-    if (!clip || !userId || busy) return;
-    const title = newTitle.trim();
-    if (!composeCommunity || !title) return;
-    if (newBody.length > POST_BODY_MAX) {
-      setError(`Post body is too long (${newBody.length.toLocaleString()} / ${POST_BODY_MAX.toLocaleString()} characters).`);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    let imageUrl: string | null = null;
-    if (newImage) {
-      try {
-        imageUrl = await uploadPostImage(supabase, userId, newImage);
-      } catch (e) {
-        setBusy(false);
-        setError(e instanceof Error ? e.message : "Image upload failed.");
-        return;
-      }
-    }
-    /* The clip link rides at the end of the body: that is what every
-       post surface keys the clip player / chip off (ClipEmbed.tsx), and
-       it is stripped from the text they show. */
-    const link = `${window.location.origin}/clips/${clip.id}`;
-    const body = [newBody.trim(), link].filter(Boolean).join("\n\n");
-    const { data, error: err } = await supabase
-      .from("community_posts")
-      .insert({
-        community_id: composeCommunity,
-        author_id: userId,
-        title,
-        body,
-        tag_id: newTagId || null,
-        image_url: imageUrl ?? newGifUrl,
-      })
-      .select("id")
-      .single();
-    if (!err && newTopic.on && data) {
-      try {
-        await attachPostTopic(supabase, (data as { id: string }).id, newTopic, title);
-      } catch (e) {
-        /* The post is up; say the topic wasn't, then go to it. */
-        console.warn("post topic failed", e);
-      }
-    }
-    setBusy(false);
-    if (err) {
-      setError(err.message.includes("rate_limited")
-        ? "You're posting too quickly — try again in a few minutes."
-        : err.message.includes("row-level security")
-          ? "You can't post there — join that community first."
-          : err.message);
-      return;
-    }
-    try { window.localStorage.setItem("agora:lastPostCommunity", composeCommunity); } catch {}
-    closeComposer();
-    router.push(pathFor.post((data as { id: string }).id));
-  }, [clip, userId, busy, newTitle, composeCommunity, newBody, newImage, newGifUrl, newTagId, newTopic, supabase, closeComposer, router]);
 
   if (gone) {
     return (
@@ -375,7 +230,6 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const composerTags = tags.filter((t) => t.community_id === composeCommunity);
   const topic = clip?.room?.topic_key ? TOPICS.find((t) => t.key === clip.room?.topic_key) ?? null : null;
   const live = clip?.room?.status === "live";
   const fullVideo = clip?.room
@@ -449,7 +303,11 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
               <Icon name="download" size={13} style={{ marginRight: 6 }} />
               {dlState === "busy" ? `Preparing… ${Math.round(dlPct * 100)}%` : dlState === "err" ? "Download failed — retry" : "Download"}
             </button>
-            <button onClick={openComposer} disabled={!clip} style={pill("#26262e", "#eeeef5")}>
+            <button
+            onClick={() => clip && openPostComposer({ clip: { id: clip.id, title: clip.title || "Clip", duration: formatClipDuration(clip.duration_seconds) } })}
+            disabled={!clip}
+            style={pill("#26262e", "#eeeef5")}
+          >
               <Icon name="message-square" size={13} style={{ marginRight: 6 }} />
               Post to community
             </button>
@@ -524,38 +382,6 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
       </div>
       </div>
 
-      {composing && clip && (
-        <PostComposer
-          clip={{ title: clip.title || "Clip", duration: formatClipDuration(clip.duration_seconds) }}
-          pickCommunity={{
-            communities,
-            value: composeCommunity,
-            onChange: (cid) => { setComposeCommunity(cid); setNewTagId(""); },
-          }}
-          title={newTitle}
-          onTitle={setNewTitle}
-          body={newBody}
-          onBody={setNewBody}
-          tags={composerTags}
-          tagId={newTagId}
-          onTagId={(tid) => setNewTagId(newTagId === tid ? "" : tid)}
-          imagePreview={newImagePreview}
-          gifUrl={newGifUrl}
-          onPickImage={pickImage}
-          onGif={setNewGifUrl}
-          busy={busy}
-          error={error}
-          canSubmit={!busy && !!newTitle.trim() && !!composeCommunity}
-          giphyEnabled={giphyEnabled}
-          mentions={!!userId}
-          maxLength={POST_BODY_MAX}
-          onSubmit={submitPost}
-          onClose={closeComposer}
-          canAttachTopic={meVerified}
-          topic={newTopic}
-          onTopic={setNewTopic}
-        />
-      )}
     </main>
     </SiteChrome>
   );

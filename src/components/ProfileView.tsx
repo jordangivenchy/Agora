@@ -18,6 +18,7 @@ import { roomPath, replayPath, userPath } from "@/lib/urls";
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import { Icon, type IconName } from "@/components/icons";
 import FollowListModal from "@/components/FollowListModal";
 import Wordmark from "@/components/Wordmark";
@@ -288,6 +289,14 @@ export default function ProfileView({
 
   /* Tab data — loaded lazily, once per profile. */
   const uid = profile?.id;
+  /* A post made from this page (the New post sheet) lands in the tab at once. */
+  const [postsTick, setPostsTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setPostsTick((n) => n + 1);
+    window.addEventListener("agora:post-created", bump);
+    return () => window.removeEventListener("agora:post-created", bump);
+  }, []);
+
   useEffect(() => {
     if (!uid) return;
     (async () => {
@@ -354,7 +363,7 @@ export default function ProfileView({
       });
       setPosts((postRows ?? []) as unknown as PostRow[]);
     })();
-  }, [uid, supabase]);
+  }, [uid, supabase, postsTick]);
 
   /* Comments + communities — new RPCs from migration 20260843. Errors
      (e.g. 42883 before the migration lands) degrade to empty lists so
@@ -485,7 +494,7 @@ export default function ProfileView({
   const communityHref = (name: string) => pathFor.community(slugify(name));
 
   /* Empty states for the tabs: icon, title, hint, optional CTA. */
-  const emptyState = (icon: IconName, title: string, hint: string, cta?: { label: string; href: string }) => (
+  const emptyState = (icon: IconName, title: string, hint: string, cta?: { label: string; href: string; onClick?: () => void }) => (
     <div className="flex flex-col items-center text-center" style={{ ...card, padding: "36px 24px" }}>
       <span
         className="flex items-center justify-center"
@@ -498,6 +507,7 @@ export default function ProfileView({
       {cta && (
         <a
           href={cta.href}
+          onClick={cta.onClick ? (e) => { e.preventDefault(); cta.onClick?.(); } : undefined}
           className="no-underline mt-4"
           style={{
             padding: "8px 18px", borderRadius: 999, fontSize: 12.5, fontWeight: 600,
@@ -1118,13 +1128,14 @@ export default function ProfileView({
           {tabBtn("comments", "Comments", counts.comments)}
           {tabBtn("communities", "Communities", counts.communities)}
           {isSelf && (
-            <a
-              href="/communities?compose=profile"
-              className="no-underline inline-flex items-center gap-1.5"
-              style={{ marginLeft: "auto", height: 34, padding: "0 16px", borderRadius: 999, background: "#ffb700", color: "#1a0e00", fontSize: 13, fontWeight: 700 }}
+            <button
+              type="button"
+              onClick={() => openPostComposer({ to: "profile" })}
+              className="cursor-pointer inline-flex items-center gap-1.5"
+              style={{ marginLeft: "auto", height: 34, padding: "0 16px", borderRadius: 999, border: "none", background: "#ffb700", color: "#1a0e00", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}
             >
               <Icon name="plus" size={14} /> New post
-            </a>
+            </button>
           )}
         </div>
 
@@ -1476,7 +1487,11 @@ export default function ProfileView({
                   tab === "posts"
                     ? (isSelf ? "Posts you write in any community show up here." : "Their community posts will appear here.")
                     : (isSelf ? "Repost something from a community to share it with another." : "Posts they share across communities will appear here."),
-                  isSelf ? { label: tab === "posts" ? "Write a post" : "Browse communities", href: tab === "posts" ? "/communities?compose=profile" : "/communities" } : undefined,
+                  isSelf
+                    ? tab === "posts"
+                      ? { label: "Write a post", href: "/communities?compose=profile", onClick: () => openPostComposer({ to: "profile" }) }
+                      : { label: "Browse communities", href: "/communities" }
+                    : undefined,
                 )
               ) : (
                 rows.map(postCard)

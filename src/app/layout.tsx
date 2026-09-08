@@ -7,6 +7,7 @@ import PresenceBoot from "@/components/PresenceBoot";
 import MessagesDock from "@/components/messages/MessagesDock";
 import ImageLightbox from "@/components/ImageLightbox";
 import CreateMenu from "@/components/CreateMenu";
+import GlobalPostComposer from "@/components/community/GlobalPostComposer";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({
           <MessagesDock />
           <ImageLightbox />
           <CreateMenu />
+          <GlobalPostComposer />
         </UserMenuProvider>
       </body>
     </html>

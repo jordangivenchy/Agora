@@ -12,6 +12,7 @@ import { createPortal } from "react-dom";
 import { Icon, type IconName } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import ActionSheet from "@/components/community/ActionSheet";
+import { openPostComposer } from "@/components/community/GlobalPostComposer";
 
 type Anchor = { top: number; right: number };
 
@@ -31,7 +32,7 @@ const ITEMS: { icon: IconName; label: string; hint: string; run: () => void }[] 
     icon: "pencil",
     label: "Write a post",
     hint: "On your profile or in a community",
-    run: () => { window.location.href = "/communities?compose=1"; },
+    run: () => openPostComposer(),
   },
   {
     icon: "users-round",
