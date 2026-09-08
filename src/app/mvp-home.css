@@ -6223,6 +6223,12 @@ body { background: transparent; }
     opacity: 0;
     transition: opacity 0.16s ease;
   }
+  /* The footer keeps one line at every width (the rail clips it), so the
+     card above it sits at the same height collapsed and open — only its
+     horizontal shape changes. Same for the card's own two lines. */
+  .sidebar-footer { white-space: nowrap; }
+  .friends-ui-card { white-space: nowrap; }
+  .friends-ui-card, .friends-ui-tile { min-height: 32px; }
   .friends-ui-card {
     background: transparent !important;
     border-color: transparent !important;
