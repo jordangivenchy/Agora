@@ -286,7 +286,7 @@ export default function PostComposer({
                   style={{ accentColor: "#ffb700" }}
                 />
                 <Icon name="swords" size={13} style={{ color: "#ffb700" }} />
-                Attach a conversation people can queue into
+                Attach a Queue
               </label>
               {t.on && (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
