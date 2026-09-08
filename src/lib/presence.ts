@@ -14,8 +14,16 @@
    heartbeat out to every client — N writes × N listeners per interval,
    ~N² messages — where polling is one linear query per client. Presence
    latency of up to ~a minute is the accepted trade. Hidden tabs skip the
-   poll (and catch up immediately on becoming visible); the heartbeat
-   keeps running so the user stays online. The local user's own state is
+   poll (and catch up immediately on becoming visible).
+
+   "Online" means someone is actually looking: the heartbeat only fires
+   while the tab is visible and the person has touched it (pointer, key,
+   scroll, touch) within the last few minutes. A tab hidden or left idle
+   stops beating, and a hidden tab clears its row after a short grace, so
+   the person reads as offline within about a minute instead of for as
+   long as a forgotten tab stays open. The one exception is a live room:
+   someone in a call keeps their presence while the tab is hidden, since
+   the call itself is the activity. The local user's own state is
    reflected optimistically right after each heartbeat, so self-presence
    never waits for a poll. Rebuilding from a full fresh SELECT also prunes
    stale rows, so no separate prune tick is needed.
@@ -35,6 +43,11 @@ const STALE_MS = 90_000;
 const HEARTBEAT_MS = 45_000;
 const POLL_MS = 45_000;
 const POLL_JITTER_MS = 5_000;
+/* No input for this long and the tab counts as unattended. */
+const IDLE_MS = 5 * 60_000;
+/* A hidden tab clears its row after this, so leaving reads as offline
+   quickly rather than at the end of the staleness window. */
+const HIDDEN_CLEAR_MS = 30_000;
 
 type Row = { user_id: string; room_id: string | null; queued?: boolean | null; last_seen_at: string };
 
@@ -44,6 +57,57 @@ let selfId: string | null = null;
 let selfRoom: string | null = null;
 let selfQueued = false;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
+let lastActivity = 0;
+let activityHooked = false;
+let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* Looking at the tab: visible, and touched within IDLE_MS. A live room
+   counts as attention on its own. */
+function attending(): boolean {
+  if (typeof document === "undefined") return true;
+  if (selfRoom) return true;
+  if (document.visibilityState !== "visible") return false;
+  return Date.now() - lastActivity < IDLE_MS;
+}
+
+function hookActivity() {
+  if (activityHooked || typeof document === "undefined") return;
+  activityHooked = true;
+  lastActivity = Date.now();
+  let last = 0;
+  const mark = () => {
+    const now = Date.now();
+    if (now - last < 1000) return; // pointermove fires constantly; sample it
+    last = now;
+    const wasIdle = now - lastActivity >= IDLE_MS;
+    lastActivity = now;
+    // Back from idle (or a fresh visit): say so at once rather than at the next tick.
+    if (wasIdle && selfId && document.visibilityState === "visible") beat();
+  };
+  for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart", "scroll"]) {
+    window.addEventListener(ev, mark, { passive: true, capture: true });
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
+      lastActivity = Date.now();
+      if (selfId) beat();
+    } else if (selfId && !selfRoom) {
+      // Gone from the tab: drop the row after a grace so a quick
+      // tab-switch doesn't flicker, but leaving reads as offline soon.
+      if (hiddenTimer) clearTimeout(hiddenTimer);
+      hiddenTimer = setTimeout(() => {
+        hiddenTimer = null;
+        if (document.visibilityState === "visible" || !selfId || selfRoom) return;
+        const id = selfId;
+        createClient().rpc("clear_presence").then(() => {
+          rows.delete(id);
+          rebuildSnapshot();
+        }, () => {});
+      }, HIDDEN_CLEAR_MS);
+    }
+  });
+}
 
 /* Live rows by user id; the exported snapshot only includes fresh ones. */
 const rows = new Map<string, { room_id: string | null; queued: boolean; lastSeen: number }>();
@@ -73,6 +137,7 @@ function ingest(row: Row) {
 
 async function beat() {
   if (!selfId) return;
+  if (!attending()) return; // a background or idle tab is not "online"
   const id = selfId;
   const room = selfRoom;
   const queued = selfQueued;
@@ -155,6 +220,7 @@ export function ensurePresence(userId: string | null, roomId: string | null) {
   }
 
   if (selfId) {
+    hookActivity();
     if (!heartbeat) heartbeat = setInterval(beat, HEARTBEAT_MS);
     if (roomChanged) beat();
   } else if (heartbeat) {
