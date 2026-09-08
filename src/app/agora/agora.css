@@ -3099,7 +3099,6 @@
 .ag-ctl--chat { display: none; }
 .ag-sheet-scrim { display: none; }
 .ag-more-layout { display: none; }
-.ag-watch { display: inline-flex; align-items: center; gap: 6px; }
 .ag-audio-prompt { border-color: #f4d47c; bottom: 140px; }
 
 @media (max-width: 639px) {
@@ -3134,9 +3133,7 @@
   }
   .ag-back { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
   .ag-topbar-info { order: 3; flex: 1 1 100%; min-width: 0; }
-  .ag-watch { width: 30px; height: 30px; padding: 0; justify-content: center; }
   .ag-live-tag { font-size: 9.5px; letter-spacing: 0.12em; }
-  .ag-watch-label { display: none; }
   .ag-motion {
     margin: 1px 0 2px;
     font-size: 13.5px;

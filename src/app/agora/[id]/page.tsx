@@ -26,7 +26,7 @@ import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall, tileKey } from "@/components/agora/useAgoraCall";
 import { CallGallery, CallMultiSpeaker, type LayoutTile } from "@/components/agora/CallLayouts";
 import HostControls from "@/components/agora/HostControls";
-import HlsPlayer, { HlsBroadcastSurface } from "@/components/agora/HlsPlayer";
+import { HlsBroadcastSurface } from "@/components/agora/HlsPlayer";
 import DebateReplay from "@/components/agora/DebateReplay";
 import SiteChrome from "@/components/SiteChrome";
 import { roomPath } from "@/lib/urls";
@@ -234,7 +234,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /* Audience overflow: watch the composited HLS stream instead of WebRTC. */
-  const [hlsOpen, setHlsOpen] = useState(false);
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   useEffect(() => {
     setViewSettled(false);
@@ -1494,16 +1493,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             </div>
           </div>
           <div className="ag-topbar-actions">
-            {room.hls_url && !onStage(myRole) && (
-              <button
-                className="ag-follow ag-watch"
-                title="Watch the broadcast stream instead of the live call"
-                onClick={() => setHlsOpen(true)}
-              >
-                <Icon name="play" size={13} />
-                <span className="ag-watch-label">Watch stream</span>
-              </button>
-            )}
             <button
               className={`ag-follow ${following ? "on" : ""}`}
               onClick={() => setFollowing((f) => !f)}
@@ -1651,9 +1640,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {hlsOpen && room.hls_url && (
-          <HlsPlayer src={room.hls_url} onClose={() => setHlsOpen(false)} />
-        )}
 
         {/* ── Stage closed: everyone gets walked out ── */}
         {room?.status === "ended" && !broadcast && (
