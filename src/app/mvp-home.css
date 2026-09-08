@@ -6229,12 +6229,15 @@ body { background: transparent; }
     padding-left: 4px !important;
     transition: padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1), background 0.16s ease, border-color 0.16s ease;
   }
+  /* Same 32px tile, unfilled: a yellow outline with the glyph in yellow;
+     the rail's hover fills it back in. */
   .friends-ui-tile {
     background: transparent !important;
-    color: rgba(238,238,245,0.56) !important;
-    transition: background 0.16s ease, color 0.16s ease;
+    color: #ffb700 !important;
+    box-shadow: inset 0 0 0 1.5px #ffb700;
+    transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
   }
-  .friends-ui-card:hover .friends-ui-tile { color: #fff !important; }
+  .friends-ui-card:hover .friends-ui-tile { background: rgba(255,183,0,0.12) !important; }
   .friends-ui-dot {
     position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
     background: #6fd3a0; border: 2px solid #0b0b0d; box-sizing: content-box;
@@ -6261,6 +6264,7 @@ body { background: transparent; }
   .sidebar.friends-overlay-open .friends-ui-tile {
     background: #ffb700 !important;
     color: #1a0e00 !important;
+    box-shadow: none;
   }
   .sidebar:hover .friends-ui-dot,
   .sidebar:has(:focus-visible) .friends-ui-dot { display: none; }
