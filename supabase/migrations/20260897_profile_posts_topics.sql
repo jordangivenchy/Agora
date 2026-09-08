@@ -299,3 +299,12 @@ update public.communities c
 set name = '@' || u.username
 from public.users u
 where c.kind = 'profile' and c.created_by = u.id and c.name <> '@' || u.username;
+
+-- On a profile board the author is always its owner; the role badge
+-- says nothing there, so the post readers return null for it.
+-- (get_community_posts, get_community_post and feed_post_payload are
+-- redefined with `case when c.kind = 'profile' then null else (role) end`
+-- as the author_role expression; bodies otherwise unchanged. Applied
+-- as 20260897d_no_owner_badge_on_profile_boards.)
+-- (get_post_comments likewise, joined to communities for the kind —
+-- applied as 20260897e_no_owner_badge_on_profile_comments.)

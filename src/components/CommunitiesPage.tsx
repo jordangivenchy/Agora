@@ -1065,7 +1065,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         created_at: inserted.created_at,
         score: 0,
         my_vote: null,
-        author_role: communities.find((x) => x.id === openPost.community_id)?.my_role ?? null,
+        author_role: (() => {
+          const board = communities.find((x) => x.id === openPost.community_id);
+          return board && board.kind !== "profile" ? board.my_role ?? null : null;
+        })(),
         image_url: inserted.image_url,
         pinned_at: null,
       };
