@@ -278,15 +278,22 @@ export default function PostComposer({
           const t = topic ?? EMPTY_TOPIC;
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 0 2px", flexShrink: 0 }}>
-              <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12.5, color: "#eeeef5", alignSelf: "flex-start" }}>
+              <label style={{ display: "inline-flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontSize: 12.5, color: "#eeeef5", alignSelf: "flex-start" }}>
                 <input
                   type="checkbox"
                   checked={t.on}
                   onChange={(e) => onTopic({ ...t, on: e.target.checked, question: t.question || title })}
-                  style={{ accentColor: "#ffb700" }}
+                  style={{ accentColor: "#ffb700", marginTop: 2 }}
                 />
-                <Icon name="swords" size={13} style={{ color: "#ffb700" }} />
-                Attach a Queue
+                <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <Icon name="swords" size={13} style={{ color: "#ffb700" }} />
+                    Attach a Queue
+                  </span>
+                  <span style={{ fontSize: 11.5, color: "rgba(238,238,245,0.5)", lineHeight: 1.4 }}>
+                    Readers pick a side and line up from your post; two opposite sides get matched into a live room.
+                  </span>
+                </span>
               </label>
               {t.on && (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
