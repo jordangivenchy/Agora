@@ -253,3 +253,49 @@ as $function$
     case cm.role when 'owner' then 0 when 'moderator' then 1 else 2 end,
     c.name asc;
 $function$;
+
+-- The board is named after the handle: @username, not u/username.
+create or replace function public.ensure_profile_community()
+returns uuid
+language plpgsql security definer
+set search_path to 'public'
+as $function$
+declare
+  v_me   uuid := auth.uid();
+  v_id   uuid;
+  v_name text;
+begin
+  if v_me is null then raise exception 'not_authenticated' using errcode = '28000'; end if;
+  select id into v_id from public.communities where kind = 'profile' and created_by = v_me;
+  if v_id is not null then return v_id; end if;
+  select username into v_name from public.users where id = v_me;
+  if v_name is null then raise exception using errcode = 'P0001', message = 'no_username: Pick a username first.'; end if;
+  insert into public.communities (name, kind, description, color, created_by, is_private)
+  values ('@' || v_name, 'profile', 'Posts by @' || v_name, '#ffb700', v_me, false)
+  returning id into v_id;
+  insert into public.community_members (community_id, user_id, role)
+  values (v_id, v_me, 'owner')
+  on conflict do nothing;
+  return v_id;
+end;
+$function$;
+
+create or replace function public.rename_profile_community()
+returns trigger
+language plpgsql security definer
+set search_path to 'public'
+as $function$
+begin
+  if new.username is distinct from old.username then
+    update public.communities
+    set name = '@' || new.username, description = 'Posts by @' || new.username
+    where kind = 'profile' and created_by = new.id;
+  end if;
+  return new;
+end;
+$function$;
+
+update public.communities c
+set name = '@' || u.username
+from public.users u
+where c.kind = 'profile' and c.created_by = u.id and c.name <> '@' || u.username;
