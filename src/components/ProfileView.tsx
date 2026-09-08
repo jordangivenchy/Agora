@@ -132,6 +132,7 @@ function socialLabel(url: string): string {
       case "instagram.com":
         return "Instagram";
       case "youtube.com":
+      case "youtu.be":
         return "YouTube";
       case "tiktok.com":
         return "TikTok";
@@ -153,17 +154,23 @@ function socialLabel(url: string): string {
 }
 
 /* Brand marks for the header's icon row. Hand-inlined paths for the
-   big platforms; anything else gets the globe. */
+   platforms we know; anything else gets the globe — and, in the
+   header, its hostname spelled out beside it (socialHasMark). */
+const SOCIAL_MARKS: Record<string, IconName> = {
+  X: "brand-x",
+  Instagram: "brand-instagram",
+  LinkedIn: "brand-linkedin",
+  YouTube: "brand-youtube",
+  GitHub: "brand-github",
+  TikTok: "brand-tiktok",
+  Twitch: "brand-twitch",
+  Discord: "brand-discord",
+};
+function socialHasMark(url: string): boolean {
+  return socialLabel(url) in SOCIAL_MARKS;
+}
 function socialIcon(url: string, size = 15): React.ReactElement {
-  const label = socialLabel(url);
-  const name: IconName =
-    label === "X" ? "brand-x"
-    : label === "Instagram" ? "brand-instagram"
-    : label === "LinkedIn" ? "brand-linkedin"
-    : label === "YouTube" ? "brand-youtube"
-    : label === "GitHub" ? "brand-github"
-    : "globe";
-  return <Icon name={name} size={size} />;
+  return <Icon name={SOCIAL_MARKS[socialLabel(url)] ?? "globe"} size={size} />;
 }
 
 /* social_links is jsonb — trust nothing about its shape. */
@@ -893,7 +900,10 @@ export default function ProfileView({
                 one row of matching 34px rounds. marginBottom auto pins it
                 to the top while the buttons below sit at the bottom. */}
             {(socialLinks.length > 0 || (!isSelf && !!viewerId)) && (
-              <div className="flex items-center gap-2 profile-corner" style={{ marginBottom: "auto" }}>
+              <div className="flex items-center gap-2 profile-corner" style={{ marginBottom: "auto", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {/* A known platform is its mark alone; any other site is
+                    the globe with the hostname beside it, so three
+                    unknown links never read as three identical globes. */}
                 {socialLinks.map((url) => (
                   <a
                     key={url}
@@ -904,15 +914,23 @@ export default function ProfileView({
                     aria-label={socialLabel(url)}
                     className="inline-flex items-center justify-center no-underline profile-social"
                     style={{
-                      width: 34,
                       height: 34,
+                      width: socialHasMark(url) ? 34 : undefined,
+                      padding: socialHasMark(url) ? 0 : "0 12px 0 10px",
+                      gap: 7,
                       borderRadius: 999,
                       border: "1px solid rgba(255,255,255,0.14)",
                       background: "#0b0b0d",
                       color: "#d5d5dc",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      maxWidth: 200,
                     }}
                   >
                     {socialIcon(url, 17)}
+                    {!socialHasMark(url) && (
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{socialLabel(url)}</span>
+                    )}
                   </a>
                 ))}
                 {!isSelf && viewerId && (
