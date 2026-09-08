@@ -251,7 +251,10 @@
       if (e.target.closest('#searchBtn')) {
         e.stopPropagation();
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent('agora:create'));
+        /* The Create menu (components/CreateMenu.tsx): discussion, post
+           or community — anchored under the button. */
+        var r = e.target.closest('#searchBtn').getBoundingClientRect();
+        window.dispatchEvent(new CustomEvent('agora:create-menu', { detail: { top: r.bottom, right: window.innerWidth - r.right } }));
       } else if (e.target.closest('.nav-logo')) {
         // Logo → home (closes any open React tab and shows the home feed;
         // the sidebar nav itself is React-owned now, see HomeSidebar.tsx).

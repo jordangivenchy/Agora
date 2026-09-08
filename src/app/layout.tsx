@@ -6,6 +6,7 @@ import SettingsBoot from "@/components/SettingsBoot";
 import PresenceBoot from "@/components/PresenceBoot";
 import MessagesDock from "@/components/messages/MessagesDock";
 import ImageLightbox from "@/components/ImageLightbox";
+import CreateMenu from "@/components/CreateMenu";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -57,6 +58,7 @@ export default function RootLayout({
           {children}
           <MessagesDock />
           <ImageLightbox />
+          <CreateMenu />
         </UserMenuProvider>
       </body>
     </html>

@@ -284,19 +284,16 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
         return (
           <>
             {tabs.slice(0, mid).map(tab)}
-            {/* Centre action: create a room. /?create=1 opens the create
-                modal on the home shell (signed-out users land on /login). */}
+            {/* Centre action: the Create sheet (components/CreateMenu.tsx —
+                discussion, post or community). /?create=1 is the no-script
+                fallback. */}
             <a
               className="mobile-tab mobile-tab-create"
               href="/?create=1"
-              aria-label="Create a room"
+              aria-label="Create"
               onClick={(e) => {
-                /* On the home shell the modal can open in place; the
-                   href is the fallback from every other route. */
-                if (document.getElementById("createModal")) {
-                  e.preventDefault();
-                  window.dispatchEvent(new CustomEvent("agora:create"));
-                }
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent("agora:create-menu"));
               }}
             >
               <span className="mobile-tab-icon">

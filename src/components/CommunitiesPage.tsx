@@ -305,13 +305,21 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     if (composeParamRef.current || !communitiesLoaded || !userId) return;
     let wanted: string | null = null;
     try { wanted = new URLSearchParams(window.location.search).get("compose"); } catch {}
-    if (wanted !== "profile") return;
+    if (wanted !== "profile" && wanted !== "1") return;
     const mine = communities.find((c) => c.kind === "profile" && c.my_role === "owner");
-    if (!mine) return;
+    let target = mine?.id ?? null;
+    if (wanted === "1") {
+      /* Generic "Write a post": the board you last posted to, else your u/ board. */
+      let last: string | null = null;
+      try { last = window.localStorage.getItem("agora:lastPostCommunity"); } catch {}
+      const ok = communities.find((c) => c.id === last && c.joined);
+      target = ok?.id ?? mine?.id ?? communities.find((c) => c.joined)?.id ?? null;
+    }
+    if (!target) return;
     composeParamRef.current = true;
     queueMicrotask(() => {
       setSelected("all");
-      setComposeCommunity(mine.id);
+      setComposeCommunity(target as string);
       setComposing(true);
       try { window.history.replaceState(null, "", "/communities"); } catch {}
     });
