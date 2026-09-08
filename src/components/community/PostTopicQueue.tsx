@@ -1,11 +1,11 @@
 "use client";
 
-/* The conversation a post carries: its question, who is waiting, and
-   the two ways in — argue PRO or CON. Queueing uses queue_for_topic
-   (instant room if someone is already waiting on the other side,
-   otherwise a spot in line polled with check_topic_match), the same
-   path as the rail's "Queue a conversation". Renders nothing for a
-   post without a topic, so cards can mount it unconditionally. */
+/* The conversation a post carries: its question, how many are waiting,
+   and one way in — Queue. Stanceless like the rail's "Queue a
+   conversation": queue_for_topic pairs you with whoever is already in
+   line (instant room) or holds your place, polled with
+   check_topic_match. Renders nothing for a post without a topic, so
+   cards can mount it unconditionally. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -16,7 +16,7 @@ import { refreshPostTopic, usePostTopic } from "@/lib/postTopics";
 export default function PostTopicQueue({ postId, compact }: { postId: string; compact?: boolean }) {
   const [supabase] = useState(() => createClient());
   const topic = usePostTopic(postId);
-  const [busy, setBusy] = useState<"PRO" | "CON" | "leave" | null>(null);
+  const [busy, setBusy] = useState<"queue" | "leave" | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -45,13 +45,14 @@ export default function PostTopicQueue({ postId, compact }: { postId: string; co
     return stopPoll;
   }, [topic?.am_queued, ensurePoll, stopPoll]);
 
-  const queue = useCallback(async (stance: "PRO" | "CON") => {
+  const queue = useCallback(async () => {
     if (!topic || busy) return;
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { window.location.href = "/login"; return; }
-    setBusy(stance);
+    setBusy("queue");
     setNote(null);
-    const { data, error } = await supabase.rpc("queue_for_topic", { p_topic: topic.topic_id, p_stance: stance });
+    /* Stanceless: the server seats the joiner opposite whoever is waiting. */
+    const { data, error } = await supabase.rpc("queue_for_topic", { p_topic: topic.topic_id, p_stance: "PRO" });
     setBusy(null);
     if (error) { setNote(error.message.replace(/^[a-z_]+:\s*/, "")); return; }
     const res = data as { status?: string; room_id?: string } | null;
@@ -90,16 +91,16 @@ export default function PostTopicQueue({ postId, compact }: { postId: string; co
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 800, letterSpacing: "0.06em", color: "#ffb700", flexShrink: 0 }}>
-          <Icon name="swords" size={12} /> DEBATE THIS
+          <Icon name="swords" size={12} /> QUEUE A CONVERSATION
         </span>
         {field && (
           <span style={{ fontSize: 10.5, fontWeight: 600, color: field.color, flexShrink: 0 }}>{field.label}</span>
         )}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(238,238,245,0.5)", whiteSpace: "nowrap" }}>
           {topic.am_queued
-            ? "You're in line"
+            ? "In line"
             : waiting > 0
-              ? `${waiting} waiting · ${topic.pro_count} pro · ${topic.con_count} con`
+              ? `${waiting} waiting to talk`
               : "No one waiting yet"}
         </span>
       </div>
@@ -111,21 +112,16 @@ export default function PostTopicQueue({ postId, compact }: { postId: string; co
           <>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#ffb700", fontWeight: 600 }}>
               <span className="feed-live-dot" aria-hidden />
-              Waiting for someone to argue {topic.my_stance === "CON" ? "PRO" : "CON"}…
+              In line — waiting for a match…
             </span>
             <button type="button" onClick={leave} disabled={busy !== null} className="cursor-pointer" style={quiet}>
-              {busy === "leave" ? "…" : "Leave line"}
+              {busy === "leave" ? "…" : "Leave"}
             </button>
           </>
         ) : (
-          <>
-            <button type="button" onClick={() => queue("PRO")} disabled={busy !== null} className="cursor-pointer" style={side("#2f7fe0", topic.con_count > 0)}>
-              {busy === "PRO" ? "…" : topic.con_count > 0 ? "Argue PRO · match now" : "Argue PRO"}
-            </button>
-            <button type="button" onClick={() => queue("CON")} disabled={busy !== null} className="cursor-pointer" style={side("#e05a5a", topic.pro_count > 0)}>
-              {busy === "CON" ? "…" : topic.pro_count > 0 ? "Argue CON · match now" : "Argue CON"}
-            </button>
-          </>
+          <button type="button" onClick={queue} disabled={busy !== null} className="cursor-pointer" style={queueBtn(waiting > 0)}>
+            {busy === "queue" ? "…" : waiting > 0 ? "Queue · match now" : "Queue"}
+          </button>
         )}
         {note && <span style={{ fontSize: 11.5, color: "#ff9d92" }}>{note}</span>}
       </div>
@@ -138,12 +134,12 @@ const quiet: React.CSSProperties = {
   background: "#000", color: "#c9c9d2", fontSize: 12, fontWeight: 600, fontFamily: "inherit",
 };
 
-/* A side's button: its colour, and yellow when someone on the other
-   side is waiting, so the instant match reads as the obvious tap. */
-function side(color: string, hot: boolean): React.CSSProperties {
+/* The rail's colours: blue to start a line, yellow when someone is
+   already waiting and a tap means a room right now. */
+function queueBtn(hot: boolean): React.CSSProperties {
   return {
-    height: 30, padding: "0 14px", borderRadius: 999, border: "none",
-    background: hot ? "#ffb700" : color, color: hot ? "#1a0e00" : "#fff",
+    height: 30, padding: "0 16px", borderRadius: 999, border: "none",
+    background: hot ? "#ffb700" : "#2f7fe0", color: hot ? "#1a0e00" : "#fff",
     fontSize: 12, fontWeight: 700, fontFamily: "inherit", whiteSpace: "nowrap",
   };
 }

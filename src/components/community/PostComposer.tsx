@@ -291,7 +291,7 @@ export default function PostComposer({
                     Attach a Queue
                   </span>
                   <span style={{ fontSize: 11.5, color: "rgba(238,238,245,0.5)", lineHeight: 1.4 }}>
-                    Readers pick a side and line up from your post; two opposite sides get matched into a live room.
+                    Readers can queue into a conversation from your post; the next two in line get matched into a live room.
                   </span>
                 </span>
               </label>
