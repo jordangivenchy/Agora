@@ -20,7 +20,7 @@ const onHomeShell = () => typeof document !== "undefined" && !!document.getEleme
 const ITEMS: { icon: IconName; label: string; hint: string; run: () => void }[] = [
   {
     icon: "sparkles",
-    label: "Start a discussion",
+    label: "Create a Discussion",
     hint: "Open a live room now or schedule one",
     run: () => {
       if (onHomeShell()) window.dispatchEvent(new CustomEvent("agora:create"));
