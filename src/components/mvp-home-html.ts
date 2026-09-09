@@ -211,15 +211,15 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
       <span class="explore-filter-group-label">Category</span>
       <div class="explore-filter-pills" id="epCategoryFilter">
         <button class="explore-pill active" onclick="_epFilter(this,'category')">All</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-politics-law", 14)}Politics</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-economics", 14)}Economics</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-science-tech", 14)}Science &amp; Tech</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-philosophy", 14)}Philosophy</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-foreign-policy", 14)}Foreign Policy</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-culture", 14)}Culture</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("topic-sports", 14)}Sports</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("scale", 14)}Law</button>
-        <button class="explore-pill" onclick="_epFilter(this,'category')">${iconSvg("hourglass", 14)}History</button>
+        <button class="explore-pill" style="--tc:#4a9eff" onclick="_epFilter(this,'category')">${iconSvg("topic-politics-law", 14)}Politics</button>
+        <button class="explore-pill" style="--tc:#00b894" onclick="_epFilter(this,'category')">${iconSvg("topic-economics", 14)}Economics</button>
+        <button class="explore-pill" style="--tc:#00cec9;--ink:#062a29" onclick="_epFilter(this,'category')">${iconSvg("topic-science-tech", 14)}Science &amp; Tech</button>
+        <button class="explore-pill" style="--tc:#fdcb6e;--ink:#1a0e00" onclick="_epFilter(this,'category')">${iconSvg("topic-philosophy", 14)}Philosophy</button>
+        <button class="explore-pill" style="--tc:#1976D2" onclick="_epFilter(this,'category')">${iconSvg("topic-foreign-policy", 14)}Foreign Policy</button>
+        <button class="explore-pill" style="--tc:#e056b8" onclick="_epFilter(this,'category')">${iconSvg("topic-culture", 14)}Culture</button>
+        <button class="explore-pill" style="--tc:#fd9644;--ink:#2a1200" onclick="_epFilter(this,'category')">${iconSvg("topic-sports", 14)}Sports</button>
+        <button class="explore-pill" style="--tc:#9d8fd9" onclick="_epFilter(this,'category')">${iconSvg("scale", 14)}Law</button>
+        <button class="explore-pill" style="--tc:#e0956a;--ink:#2a1200" onclick="_epFilter(this,'category')">${iconSvg("hourglass", 14)}History</button>
       </div>
     </div>
 
