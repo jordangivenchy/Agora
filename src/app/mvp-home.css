@@ -6281,6 +6281,11 @@ body { background: transparent; }
   }
   .sidebar:hover .friends-ui-dot,
   .sidebar:has(:focus-visible) .friends-ui-dot { display: none; }
+  /* The fill waits out the rail's hover-intent beat like the labels do
+     (the width starts after 140ms, labels show at 190ms); leaving still
+     collapses at once — the resting rules carry no delay. */
+  .sidebar:hover .friends-ui-card { transition-delay: 0.14s; }
+  .sidebar:hover .friends-ui-tile { transition-delay: 0.19s; }
 }
 
 /* ── No indicator bar (2026-08-26): the active tab reads through its
