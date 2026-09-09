@@ -125,7 +125,6 @@ function SiteNavbar() {
             window.dispatchEvent(new CustomEvent("agora:create-menu", { detail: { top: r.bottom, right: window.innerWidth - r.right } }));
           }}
         >
-          <span className="create-icon"><Icon name="sparkles" size={16} /></span>
           <span className="create-label"><span>C</span><span>r</span><span>e</span><span>a</span><span>t</span><span>e</span></span>
         </button>
       </div>

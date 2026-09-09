@@ -24,7 +24,6 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
     <div class="search-active-indicator"></div>
     <input type="text" id="searchInput" placeholder="Search topics, people, or keywords…" aria-label="Search" autocomplete="off">
     <button class="create-btn nav-search-btn" id="searchBtn" type="button" aria-label="Create a discussion">
-      <span class="create-icon">${iconSvg("sparkles", 16)}</span>
       <span class="create-label"><span>C</span><span>r</span><span>e</span><span>a</span><span>t</span><span>e</span></span>
     </button>
   </div>
