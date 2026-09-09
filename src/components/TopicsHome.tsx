@@ -105,6 +105,19 @@ const rowCard: React.CSSProperties = {
   borderRadius: 12,
 };
 
+/* Relative luminance of a hex colour; above ~0.4 the fill is light
+   enough that dark ink reads better than white (the same split the
+   Explore pills use). */
+function darkInkOn(hex: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return false;
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(m[1].slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4;
+}
+
 export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [supabase] = useState(() => createClient());
   const { openUserMenu } = useUserMenu();
@@ -430,6 +443,9 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       >
         {TOPICS.map((cat) => {
           const active = cat.key === selCat.key;
+          /* The pill fills with the field's colour when chosen; light fields
+             take dark ink so the label stays readable. */
+          const ink = darkInkOn(cat.color) ? "#1a0e00" : "#fff";
           const catTopics = topics.filter((t) => t.topic_key === cat.key);
           const waiting = catTopics.reduce((n, t) => n + t.queue_count, 0);
           const queuedHere = catTopics.some((t) => t.am_queued);
@@ -456,25 +472,28 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               onClick={() => { setSelectedKey(cat.key); setShowAllQuestions(false); setShowAllRooms(false); setShowAllScheduled(false); }}
               className="cursor-pointer shrink-0 px-4 py-2 text-left"
               style={{
-                background: active ? "#ffb700" : "#0b0b0d",
-                border: active ? "1px solid #ffb700" : "0.5px solid rgba(255,255,255,0.14)",
+                background: active ? cat.color : "#0b0b0d",
+                border: active ? `1px solid ${cat.color}` : "0.5px solid rgba(255,255,255,0.14)",
                 borderRadius: 999,
                 fontFamily: "inherit",
               }}
             >
               {/* Icon left of the whole text block; label + status stack beside it. */}
-              <span className="flex items-center gap-2.5" style={{ color: active ? "#1a0e00" : "#f5f5f0" }}>
-                <TopicIcon topicKey={cat.key} size={17} />
+              <span className="flex items-center gap-2.5" style={{ color: active ? ink : "#f5f5f0" }}>
+                {/* The glyph wears the field's colour at rest. */}
+                <span style={{ color: active ? ink : cat.color, display: "inline-flex" }}>
+                  <TopicIcon topicKey={cat.key} size={17} />
+                </span>
                 <span className="flex flex-col items-start">
-                  <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: active ? "#1a0e00" : "#f5f5f0", whiteSpace: "nowrap" }}>
+                  <span className="flex items-center gap-1.5 text-[12.5px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: active ? ink : "#f5f5f0", whiteSpace: "nowrap" }}>
                     {cat.label}
-                    {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: active ? "#1a0e00" : "#f4d47c" }}>●</span>}
+                    {queuedHere && <span className="animate-pulse text-[9px]" style={{ color: active ? ink : "#f4d47c" }}>●</span>}
                   </span>
                   {status && (
                     <span
                       className="flex items-center gap-1 mt-0.5"
                       style={{
-                        color: active ? "#1a0e00" : status.color,
+                        color: active ? ink : status.color,
                         whiteSpace: "nowrap",
                         fontSize: 9,
                         fontWeight: 700,
@@ -487,7 +506,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                           width: 5,
                           height: 5,
                           borderRadius: 999,
-                          background: active ? "#1a0e00" : status.color,
+                          background: active ? ink : status.color,
                           boxShadow: active ? "none" : `0 0 6px ${status.color}`,
                           flexShrink: 0,
                         }}
