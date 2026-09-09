@@ -6,9 +6,14 @@
  * Signals, strongest first:
  *   1. coverage — near-duplicate headlines from different outlets are
  *      clustered into one story; more outlets = bigger story
- *   2. hard-news vocabulary in the headline (conflict, disasters,
- *      elections, economy shocks…)
+ *   2. headline vocabulary: hard news (conflict, disasters, elections,
+ *      economy shocks…) and, because the feed seeds debates, contested
+ *      ground (policy, rights, tech, culture, question-shaped headlines)
  *   3. recency
+ * Minus: rolling live blogs, accidents / crime / verdicts (news, not an
+ * argument) and commerce (deals, product roundups). After ranking, one
+ * outlet can hold at most a few slots, so a single paper's regional desk
+ * can't fill the ticker.
  */
 
 export interface RankSource { name: string; domain: string }
@@ -90,6 +95,49 @@ export function clusterStories(articles: RankArticle[], threshold = 0.5): RankAr
   return clusters.map((c) => c.story);
 }
 
+/* Contested ground — what people can actually take sides on. Weighted
+   like the tier-2 hard news; the two are capped together. */
+const DEBATE = [
+  "should", " ban", "rights", "abortion", "immigra", "migrant", "gun ", "guns", "climate",
+  " ai ", "artificial intelligence", "free speech", "censor", "privacy", "tax", "healthcare",
+  "health care", "wage", "housing", "rent ", "education", "school", "universit", "religio",
+  "gender", "trans ", "racis", "regulat", "supreme court", "ruling", " law", "policy",
+  "trade war", "trump", "democrat", "republican", "labour", "tory", "tories", "far-right",
+  "far right", "populis", "union", "boycott", "ethic", "moral", "surveillance",
+  "misinformation", "social media", "tiktok", "big tech", "monopol", "antitrust", "settlement",
+];
+/* Accidents, crime and court outcomes: news, but nothing to argue. */
+const NOISE = [
+  "crash", "recovered", "killed", " dead", "dies", "died", "verdict", "arrested", "sentenced",
+  "found guilty", "plea deal", "murder", "stabbing", "shooting", "earthquake", "flood",
+  "wildfire", "hurricane", "typhoon", "collision", "derail", "missing",
+];
+/* Commerce and listicles: keep them out of the hero entirely. */
+const COMMERCE = [
+  "best ", "deals", "products", "first look", "review:", "we tested", "our editors", "gift guide",
+  "% off", " sale", "buy ", "cyber monday", "black friday", "prime day", "coupon", "headphones",
+];
+
+export function debateScore(headline: string): number {
+  const h = ` ${headline.toLowerCase()} `;
+  const kw = DEBATE.reduce((n, w) => (h.includes(w) ? n + 2 : n), 0);
+  return kw + (/\?\s*$/.test(headline) ? 2 : 0);
+}
+
+export function noiseScore(headline: string): number {
+  const h = ` ${headline.toLowerCase()} `;
+  return (NOISE.some((w) => h.includes(w)) ? 1.5 : 0) + (COMMERCE.some((w) => h.includes(w)) ? 3 : 0);
+}
+
+/** newsdata.io hands back "YYYY-MM-DD HH:MM:SS" in UTC with no zone; make
+    it unambiguous ISO so it parses the same on every machine. Other
+    shapes pass through. */
+export function toUtcIso(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/.exec(s.trim());
+  return m ? `${m[1]}T${m[2]}Z` : s;
+}
+
 export function hardNewsScore(headline: string): number {
   const h = ` ${headline.toLowerCase()} `;
   return (
@@ -101,18 +149,33 @@ export function hardNewsScore(headline: string): number {
 /** Rank clustered stories; the top `majorCount` are flagged `major`. */
 export function rankStories(
   articles: RankArticle[],
-  opts: { majorCount?: number; now?: number } = {}
+  opts: { majorCount?: number; now?: number; perOutletCap?: number } = {}
 ): RankedStory[] {
-  const { majorCount = 3, now = Date.now() } = opts;
+  const { majorCount = 3, now = Date.now(), perOutletCap = 4 } = opts;
   const scored = clusterStories(articles).map((s) => {
     const ageH = s.publishedAt ? Math.max(0, (now - Date.parse(s.publishedAt)) / 3_600_000) : 24;
     const recency = Number.isFinite(ageH) ? Math.max(0, 1 - ageH / 48) : 0; // 1 → fresh, 0 → 2 days old
     // Rolling live blogs ("… – US politics live", "live updates") are feeds,
     // not stories — keep them out of the hero.
     const liveBlog = /(\blive\s*(updates?|blog)?\s*$)|(\blive updates\b)/i.test(s.headline) ? 2.5 : 0;
-    const score = s.sources.length * 3 + Math.min(4, hardNewsScore(s.headline)) + recency - liveBlog;
+    // Coverage stays the strongest signal: a second outlet is worth more
+    // than any amount of vocabulary (which is capped at 5 in total).
+    const coverage = 3 + 6 * (s.sources.length - 1);
+    const words = Math.min(5, hardNewsScore(s.headline) + debateScore(s.headline));
+    const score = coverage + words + recency - liveBlog - noiseScore(s.headline);
     return { ...s, score, major: false };
   });
   scored.sort((a, b) => b.score - a.score);
-  return scored.map((s, i) => ({ ...s, major: i < majorCount }));
+  // One outlet can hold only so many slots: a paper's regional desk
+  // shouldn't be the whole ticker. Multi-outlet stories count for their
+  // first (earliest) outlet.
+  const perOutlet = new Map<string, number>();
+  const kept = scored.filter((s) => {
+    const key = (s.sources[0]?.name ?? "").toLowerCase();
+    const n = perOutlet.get(key) ?? 0;
+    if (n >= perOutletCap) return false;
+    perOutlet.set(key, n + 1);
+    return true;
+  });
+  return kept.map((s, i) => ({ ...s, major: i < majorCount }));
 }

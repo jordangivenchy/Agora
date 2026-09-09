@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clusterStories, hardNewsScore, rankStories, similarity, titleTokens } from "./newsRank";
+import { clusterStories, debateScore, hardNewsScore, noiseScore, rankStories, similarity, titleTokens, toUtcIso } from "./newsRank";
 
 const NOW = Date.parse("2026-08-21T12:00:00Z");
 const art = (id: string, headline: string, source: string, hoursAgo = 1) => ({
@@ -83,5 +83,50 @@ describe("rankStories", () => {
   it("hard-news vocabulary counts", () => {
     expect(hardNewsScore("Earthquake kills dozens; troops evacuate region")).toBeGreaterThanOrEqual(3);
     expect(hardNewsScore("Gandhi notes sold at auction")).toBe(0);
+  });
+});
+
+describe("debate tuning", () => {
+  it("prefers contested ground over an accident at equal coverage", () => {
+    const ranked = rankStories(
+      [
+        art("crash", "Flight recorders recovered from devastating cargo plane crash", "bbc", 1),
+        art("policy", "Should social media ban under-16s? Senate weighs a national age law", "npr", 1),
+      ],
+      { majorCount: 1, now: NOW }
+    );
+    expect(ranked[0].id).toBe("policy");
+    expect(debateScore("Should social media ban under-16s?")).toBeGreaterThanOrEqual(4);
+    expect(noiseScore("Flight recorders recovered from cargo plane crash")).toBeGreaterThan(0);
+  });
+  it("keeps commerce out of the hero", () => {
+    const ranked = rankStories(
+      [
+        art("shop", "First Look: Sony's new headphones, an old favorite is back", "cnn", 0.5),
+        art("news", "Parliament passes sanctions bill", "bbc", 3),
+      ],
+      { majorCount: 1, now: NOW }
+    );
+    expect(ranked[0].id).toBe("news");
+  });
+  it("caps one outlet's share of the list", () => {
+    const heads = [
+      "Council approves new tram line through the city centre",
+      "Farmers warn of harvest losses after the dry summer",
+      "Hospital trust apologises over waiting times",
+      "Museum reopens after a three-year refurbishment",
+      "Fishing quota talks stall in the North Sea",
+      "Village school saved from closure by parents' campaign",
+      "Rail operator fined for cancelled services",
+    ];
+    const many = heads.map((h, i) => art(`g${i}`, h, "guardian", i));
+    const ranked = rankStories([...many, art("bbc", "BBC story on a different subject entirely", "bbc", 1)], { now: NOW, perOutletCap: 4 });
+    expect(ranked.filter((s) => s.sources[0].name === "guardian")).toHaveLength(4);
+    expect(ranked.some((s) => s.id === "bbc")).toBe(true);
+  });
+  it("makes newsdata's zone-less timestamps unambiguous UTC", () => {
+    expect(toUtcIso("2026-09-08 08:31:01")).toBe("2026-09-08T08:31:01Z");
+    expect(toUtcIso("2026-09-08T08:31:01Z")).toBe("2026-09-08T08:31:01Z");
+    expect(toUtcIso(null)).toBeNull();
   });
 });

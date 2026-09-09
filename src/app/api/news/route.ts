@@ -34,13 +34,15 @@
  * ticker shows the rest, no overlap.
  */
 
-/* 20 min: free tiers allow 100–200 requests/day and the upstream fetches
-   below use Next's shared data cache (revalidate), so every serverless
-   instance reuses one fetch — ~72 upstream calls/day max. */
-import { rankStories } from "@/lib/newsRank";
+/* The upstream fetches use Next's shared data cache (revalidate), so
+   every serverless instance reuses one fetch per window. */
+import { rankStories, toUtcIso } from "@/lib/newsRank";
 
-const TTL_MS = 20 * 60_000;
-const UPSTREAM_REVALIDATE_S = 20 * 60;
+/* 40 min: two newsdata request sets × two pages = 4 credits a refresh,
+   36 refreshes a day = 144 of the free tier's 200, leaving headroom for
+   local runs against the same key. */
+const TTL_MS = 40 * 60_000;
+const UPSTREAM_REVALIDATE_S = 40 * 60;
 let cache: { at: number; body: NewsPayload } | null = null;
 
 type Source = { name: string; domain: string };
@@ -81,6 +83,11 @@ function normalizeParticle(json: unknown): Story[] {
 
 /* NewsData title-cases source names ("The Bbc"); restore the real marks. */
 const OUTLET_NAMES: Record<string, string> = {
+  cnn: "CNN",
+  npr: "NPR",
+  politico: "Politico",
+  nytimes: "The New York Times",
+  washingtonpost: "The Washington Post",
   "the bbc": "BBC", "bbc": "BBC", "aljazeera": "Al Jazeera", "al jazeera": "Al Jazeera",
   "the guardian": "The Guardian", "reuters": "Reuters", "apnews": "AP", "ap news": "AP",
   "associated press": "AP",
@@ -108,7 +115,7 @@ function normalizeNewsData(json: unknown): Story[] {
       id: String(r.article_id ?? url),
       headline,
       url,
-      publishedAt: (r.pubDate as string | undefined) ?? null,
+      publishedAt: toUtcIso(r.pubDate as string | undefined),
       sources: name ? [{ name, domain }] : [],
       imageUrl: upgradeImage(img && /^https:\/\//.test(img) ? img : null),
       summary: clip(r.description as string | undefined),
@@ -200,39 +207,51 @@ export async function GET() {
 
   const newsdataKey = process.env.NEWSDATA_API_KEY;
   if (newsdataKey) {
-    try {
-      /* Global affairs, not a regional firehose: the world desk of a
-         curated set of international outlets (NewsData's free tier allows
-         five domains per request). No country filter on purpose. */
+    /* Two request sets, so the ranker's coverage signal has something to
+       cluster: the world desks of the international outlets, and the
+       politics / tech / business / science desks of the US ones (the
+       free tier allows five domains per request). Two pages each. No
+       country filter on purpose. */
+    const SETS = [
+      { category: "world", domain: "bbc,aljazeera,theguardian,reuters,apnews" },
+      { category: "politics,technology,business,science", domain: "nytimes,washingtonpost,cnn,npr,politico" },
+    ];
+    const fetchSet = async (set: { category: string; domain: string }): Promise<Story[]> => {
       const params = new URLSearchParams({
         apikey: newsdataKey,
         language: "en",
-        category: "world",
-        domain: "bbc,aljazeera,theguardian,reuters,apnews",
+        category: set.category,
+        domain: set.domain,
         removeduplicate: "1",
       });
-      // Two pages (20 articles, 2 credits) give the ranker enough overlap
-      // across outlets to cluster the big stories; still ~144 credits/day
-      // at the 20-minute cadence, under the free tier's 200.
       const res = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
         signal: AbortSignal.timeout(8000),
         next: { revalidate: UPSTREAM_REVALIDATE_S },
       });
-      if (res.ok) {
-        const first = await res.json();
-        let articles = normalizeNewsData(first);
-        const nextPage = (first as { nextPage?: string })?.nextPage;
-        if (nextPage) {
-          try {
-            const res2 = await fetch(`https://newsdata.io/api/1/latest?${params}&page=${encodeURIComponent(nextPage)}`, {
-              signal: AbortSignal.timeout(8000),
-              next: { revalidate: UPSTREAM_REVALIDATE_S },
-            });
-            if (res2.ok) articles = articles.concat(normalizeNewsData(await res2.json()));
-          } catch { /* one page is fine */ }
-        }
-        if (articles.length > 0) body = { sample: false, stories: rankStories(articles) };
+      if (!res.ok) return [];
+      const first = await res.json();
+      let articles = normalizeNewsData(first);
+      const nextPage = (first as { nextPage?: string })?.nextPage;
+      if (nextPage) {
+        try {
+          const res2 = await fetch(`https://newsdata.io/api/1/latest?${params}&page=${encodeURIComponent(nextPage)}`, {
+            signal: AbortSignal.timeout(8000),
+            next: { revalidate: UPSTREAM_REVALIDATE_S },
+          });
+          if (res2.ok) articles = articles.concat(normalizeNewsData(await res2.json()));
+        } catch { /* one page is fine */ }
       }
+      return articles;
+    };
+    try {
+      const sets = await Promise.all(SETS.map((set) => fetchSet(set).catch(() => [] as Story[])));
+      const seenUrl = new Set<string>();
+      const articles = sets.flat().filter((a) => {
+        if (!a.url || seenUrl.has(a.url)) return false;
+        seenUrl.add(a.url);
+        return true;
+      });
+      if (articles.length > 0) body = { sample: false, stories: rankStories(articles) };
     } catch {
       /* upstream down → fall through (GNews, Particle, then sample) */
     }
