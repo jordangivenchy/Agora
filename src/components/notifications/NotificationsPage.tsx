@@ -149,7 +149,7 @@ export default function NotificationsPage() {
     return (
       <SiteChrome>
         <main
-          className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar flex flex-col items-center justify-center gap-4"
+          className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar beside-rail--reading flex flex-col items-center justify-center gap-4"
           style={{ minHeight: "60vh", fontFamily: "'DM Sans', sans-serif" }}
         >
           <p className="m-0" style={{ color: "#8b8b94" }}>Sign in to see your notifications.</p>
@@ -161,7 +161,7 @@ export default function NotificationsPage() {
 
   return (
     <SiteChrome>
-      <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar beside-rail--reading" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
           <div>
             <h1 className="page-title">Notifications</h1>

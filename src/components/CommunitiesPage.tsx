@@ -1847,7 +1847,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         background: "rgba(6,6,8,0.45)",
       }}
     >
-      <div className="shell-page-inner" style={{ maxWidth: 1440, margin: 0, padding: "20px 24px" }}>
+      <div className="shell-page-inner" style={{ maxWidth: 1800, margin: 0, padding: "20px 24px" }}>
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
@@ -1951,8 +1951,9 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           onCreated={(c) => { setSelected(c.id); loadCommunities(); }}
         />
 
-        {/* Reddit-style split: feed left, rail right (rail first on mobile). */}
-        <div className="flex gap-5 items-start flex-col md:flex-row-reverse">
+        {/* Reddit-style split: feed left at a reading width, rail at the
+            far right (rail first on mobile). */}
+        <div className="flex gap-5 items-start flex-col md:flex-row-reverse md:justify-between">
 
           {/* community rail — right side */}
           <nav className="w-full md:w-[310px] shrink-0 cm-rail">
@@ -2374,7 +2375,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
           </nav>
 
           {/* main column */}
-          <main className="flex-1 min-w-0 w-full cm-main">
+          <main className="flex-1 min-w-0 w-full max-w-[960px] cm-main">
 
             {openPost ? (
               /* ── post detail ── */

@@ -406,7 +406,7 @@ export default function FeedPage({ open, onClose }: Props) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div className="shell-page-inner" style={{ maxWidth: 1440, margin: 0, padding: "20px 24px" }}>
+      <div className="shell-page-inner" style={{ maxWidth: 1800, margin: 0, padding: "20px 24px" }}>
         <div className="page-head feed-head">
           <h1 className="page-title">Your feed</h1>
           <div className="flex gap-2 flex-1 flex-wrap feed-filters">
@@ -442,8 +442,10 @@ export default function FeedPage({ open, onClose }: Props) {
         )}
 
         {userId && (
-          <div className="flex gap-5 items-start feed-body">
-          <div className="flex-1 min-w-0">
+          <div className="flex gap-5 items-start justify-between feed-body">
+          {/* The feed keeps a reading width however wide the page gets;
+              the rail sits at the far edge, as on the profile. */}
+          <div className="flex-1 min-w-0 max-w-[960px]">
             {error && (
               <p className="text-[12px] px-4 py-3 mb-3 rounded-xl" style={{ background: "rgba(226,120,120,0.08)", border: "0.5px solid rgba(226,120,120,0.3)", color: "#f09595" }}>
                 {error}

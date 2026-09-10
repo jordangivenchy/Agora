@@ -310,7 +310,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
           arbitrary ones like max-w-[1280px] silently fail there). */}
       {/* Same frame as Trending / Communities / Feed: 1440 wide, the same
           gutters (12px on phones via .shell-page-inner), title top-left. */}
-      <div className="shell-page-inner" style={{ maxWidth: 1440, margin: 0, padding: "20px 24px 40px", boxSizing: "border-box" }}>
+      <div className="shell-page-inner" style={{ maxWidth: 1800, margin: 0, padding: "20px 24px 40px", boxSizing: "border-box" }}>
         <div className="page-head news-head">
           <h1 className="page-title">News</h1>
           <span className="text-[12px] news-sub" style={{ color: "#8b8b94" }}>Today's headlines, turned into topics</span>

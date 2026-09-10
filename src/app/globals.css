@@ -1714,6 +1714,11 @@ html.reduce-motion .nav-sparkle {
        empty band between the rail and the content. */
     margin-inline: calc(var(--sidebar-width, 220px) + 12px) 24px !important;
   }
+  /* Pages that are one column of text (notifications): the same hug,
+     at a reading width. */
+  .profile-beside-sidebar.beside-rail--reading {
+    max-width: 940px !important;
+  }
 }
 
 /* SiteChrome routes: the content sits directly on the page ground —
@@ -3115,7 +3120,7 @@ html.reduce-motion .nav-sparkle {
    sized to the viewport so it fills the screen without pushing the
    info below the fold, and centred; the info row, the host card and
    the "More clips" grid share its width. */
-.clip-page-col { max-width: 1400px; margin: 0 auto; padding: 10px 20px 60px; }
+.clip-page-col { max-width: 1600px; margin: 0 24px 0 calc(var(--sidebar-width, 220px) + 12px); padding: 10px 20px 60px; }
 .clip-stage {
   width: min(100%, calc((100vh - var(--nav-height, 60px) - 270px) * 16 / 9));
   min-width: min(100%, 640px);
