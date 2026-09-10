@@ -2267,17 +2267,8 @@ html.reduce-motion .nav-sparkle {
   background: radial-gradient(ellipse at center, rgba(0,0,0,0.92), rgba(0,0,0,0.7) 42%, transparent 70%);
 }
 /* The AS mark: the A of "Agora" and the S of "Sphere", cut straight
-   from the wordmark (public/logo.png, 2039×274) so they are the logo's
-   own letters. Both crops share the band y 13–214 of the image so they
-   sit on one baseline; --h is that band's height on screen. */
-.ld-mark { --h: 66px; display: flex; gap: calc(var(--h) * 0.16); height: var(--h); }
-.ld-mark i {
-  display: block; height: 100%;
-  background: url(/logo.png) no-repeat;
-  background-size: calc(var(--h) * 2039 / 202) auto;
-}
-.ld-mark .ld-mark-a { width: calc(var(--h) * 226 / 202); background-position: calc(var(--h) * -1 / 202) calc(var(--h) * -13 / 202); }
-.ld-mark .ld-mark-s { width: calc(var(--h) * 188 / 202); background-position: calc(var(--h) * -940 / 202) calc(var(--h) * -13 / 202); }
+   from the wordmark (public/as-mark.png, 446×202). */
+.ld-mark { height: 66px; width: auto; display: block; }
 .ld-label {
   margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
   display: flex; align-items: baseline; white-space: nowrap;
@@ -2289,7 +2280,7 @@ html.reduce-motion .nav-sparkle {
 .ld-ellipsis i:nth-child(2) { animation-delay: 0.2s; }
 .ld-ellipsis i:nth-child(3) { animation-delay: 0.4s; }
 @media (max-width: 639px) {
-  .ld-mark { --h: 52px; }
+  .ld-mark { height: 52px; }
 }
 /* Boot splash (components/BootSplash.tsx): over all the chrome, then a
    fade. */

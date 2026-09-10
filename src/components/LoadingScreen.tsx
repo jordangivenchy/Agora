@@ -35,8 +35,9 @@ export default function LoadingScreen({ label }: { label?: string }) {
       <canvas ref={trailsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
       <canvas ref={headsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
       <div ref={centerRef} className="ld-center" suppressHydrationWarning>
-        {/* The A and the S, cut from the wordmark itself (globals.css). */}
-        <span className="ld-mark" role="img" aria-label="AgoraSphere"><i className="ld-mark-a" /><i className="ld-mark-s" /></span>
+        {/* The A and the S, cut from the wordmark (public/as-mark.png). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/as-mark.png" alt="AgoraSphere" className="ld-mark" width={446} height={202} />
         {label && (
           <p className="ld-label">
             {label}
