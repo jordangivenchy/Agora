@@ -235,6 +235,8 @@ document.addEventListener('click', function (e) {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
   if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+  var href = a.getAttribute('href') || '';
+  if (href.charAt(0) === '#') return; // in-page: menus, "#" placeholders
   var u;
   try { u = new URL(a.href, location.href); } catch (err) { return; }
   if (u.origin !== location.origin) return;
