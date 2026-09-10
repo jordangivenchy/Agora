@@ -23,6 +23,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import "./debate-replay.css";
 import { sessionUser } from "@/lib/session";
 import { navigateTo } from "@/lib/progress";
+import { useCoarsePointer } from "@/lib/pointer";
 
 type Person = {
   id: string;
@@ -250,6 +251,8 @@ export default function DebateReplay({
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  /* A finger has no ⌘↩: the composer keeps the hint for a keyboard. */
+  const coarse = useCoarsePointer();
   const [query, setQuery] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
   const [discussBusy, setDiscussBusy] = useState(false);
@@ -776,7 +779,7 @@ export default function DebateReplay({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitReplayComment();
               }}
-              placeholder={signedIn ? "Add a comment… (⌘↩ to post)" : "Sign in to comment"}
+              placeholder={signedIn ? (coarse ? "Add a comment…" : "Add a comment… (⌘↩ to post)") : "Sign in to comment"}
               rows={2}
               maxLength={4000}
             />

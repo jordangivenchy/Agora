@@ -51,6 +51,7 @@ import { sessionUser } from "@/lib/session";
 import { usePathname, useRouter } from "next/navigation";
 import { requestCreate } from "@/components/GlobalActions";
 import { navigateTo } from "@/lib/progress";
+import { useCoarsePointer } from "@/lib/pointer";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -225,7 +226,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
   const router = useRouter();
   const pathname = usePathname();
   /* A finger has no ⌘↩: the composers' placeholders keep the hint for a keyboard. */
-  const [coarse] = useState(() => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches);
+  const coarse = useCoarsePointer();
   const close = onClose ?? (() => navigateTo(router, "/"));
   const onStartDiscussion = startDiscussion ?? ((communityId: string, communityName: string) => requestCreate({ motion: "", topic: "", communityId, communityName }));
   const { openUserMenu } = useUserMenu();
