@@ -2545,8 +2545,7 @@ html.reduce-motion .nav-sparkle {
 .cm-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-height: 24px; cursor: pointer; }
 .cm-comment.is-collapsed .cm-head { opacity: 0.72; }
 .cm-avatar { display: inline-flex; flex: 0 0 auto; cursor: pointer; }
-/* The post's author: a yellow ring and the word, where Reddit would pin "OP". */
-.cm-avatar.is-author > * { box-shadow: 0 0 0 1.5px #0a0a0d, 0 0 0 3px #ffb700; }
+/* The post's author: the word in yellow after the handle, where Reddit would pin "OP". */
 .cm-author-tag { font-size: 10.5px; font-weight: 700; color: #ffb700; }
 .cm-author { font-size: 12px; font-weight: 600; color: #c3c3ce; }
 .cm-time { font-size: 11.5px; color: #71717e; }

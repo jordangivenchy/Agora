@@ -1665,7 +1665,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         >
             <div className="cm-head">
               <span
-                className={isAuthor ? "cm-avatar is-author" : "cm-avatar"}
+                className="cm-avatar"
                 onClick={(e) => {
                   if (!c.author_id) return;
                   e.stopPropagation();
