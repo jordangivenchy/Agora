@@ -4,20 +4,21 @@
    load. The inline starter rendered after the markup runs as soon as
    the HTML is parsed — before any bundle, before hydration — so the
    sky is already turning while the app loads: it decides whether this
-   is the session's first load (the full showing, the AS mark arriving)
-   or a reload (a short one, the sky alone), notes when it started, and
-   starts the sky. The app is ready once the effect runs; from then on
-   the splash stays only to reach its floor, then fades. Client-side
-   navigations never remount the root layout, so it shows at most once
-   per load. Nothing here touches React state — the takedown is a
-   class and a display change on its own node — so it cannot disturb
-   hydration of whatever is loading beneath it. */
+   is the session's first load (the full showing, the AS mark arriving
+   after a second of sky) or a reload (a short one, the mark almost at
+   once), notes when it started, and starts the sky. The app is ready
+   once the effect runs; from then on the splash stays only to reach
+   its floor, then fades. Client-side navigations never remount the
+   root layout, so it shows at most once per load. Nothing here touches
+   React state — the takedown is a class and a display change on its
+   own node — so it cannot disturb hydration of whatever is loading
+   beneath it. */
 
 import { useEffect, useRef } from "react";
 import LoadingScreen from "./LoadingScreen";
 
-const FULL_MS = 1700;  // the mark is up at 1s (skySplash); a beat with it, then the fade
-const SHORT_MS = 800;
+const FULL_MS = 1700;  // the mark is up at 1s; a beat with it, then the fade
+const SHORT_MS = 900;  // the mark is up at a quarter second
 const FADE_MS = 500;
 const SEEN = "ag-splash-seen";
 
@@ -29,7 +30,7 @@ const STARTER = `(function () {
   if (!full) b.classList.add('ld-boot--short');
   b.dataset.t0 = String(performance.now());
   var c = b.querySelectorAll('canvas');
-  window.__agoraSky(c[0], c[1], b.querySelector('.ld-center'));
+  window.__agoraSky(c[0], c[1], b.querySelector('.ld-center'), { markAt: full ? 1000 : 250 });
 })();`;
 
 export default function BootSplash() {
@@ -41,7 +42,7 @@ export default function BootSplash() {
     let t0 = Number(el.dataset.t0);
     if (!t0) {
       // The starter didn't run; decide here (the sky starts from
-      // LoadingScreen's own effect).
+      // LoadingScreen's own effect, with the mark at its usual second).
       t0 = performance.now();
       let full = true;
       try {
