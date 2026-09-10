@@ -123,16 +123,21 @@ body {
 /* Route-transition skeleton (PageSkeleton.tsx) — Kick's 2s pulse, and
    the top bar's trickle: quick to a third, then ever slower, never done
    on its own (the skeleton unmounting is what finishes it). */
-@keyframes skPulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.45; }
-}
 @keyframes skTrickle {
   0%   { transform: scaleX(0); }
   12%  { transform: scaleX(0.35); }
   40%  { transform: scaleX(0.7); }
   100% { transform: scaleX(0.92); }
 }
+
+/* Loading screen (components/LoadingScreen.tsx). */
+@keyframes ldIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ldSpin { to { transform: rotateY(360deg); } }
+@keyframes ldOrbit { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+@keyframes ldPass { 0%, 44% { opacity: 1; } 52%, 92% { opacity: 0.3; } 100% { opacity: 1; } }
+@keyframes ldTwinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes ldDot { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+
 /* DM per-message menu pops from its bubble. */
 @keyframes dmMenuIn {
   from { opacity: 0; transform: scale(0.94); }
@@ -2228,11 +2233,10 @@ html.reduce-motion .nav-sparkle {
    — live with the other keyframes at the top of this file: declared down
    here they were dropped from the build.) */
 
-/* ── Route transitions (Kick's pattern) ───────────────────────────────
+/* ── Route transitions ────────────────────────────────────────────────
    .sk-progress: a 3px bar along the top that trickles while a
-   navigation is in flight — inside PageSkeleton (app/loading.tsx), and
-   injected by the MVP shell before a full-page jump. PageSkeleton: the
-   chrome stays, the content is pulsing placeholders. */
+   navigation is in flight — inside LoadingScreen (app/⋯/loading.tsx),
+   and injected by the MVP shell before a full-page jump. */
 .sk-progress {
   position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 4000;
   background: linear-gradient(90deg, #ffb700, #ffd45c);
@@ -2242,49 +2246,79 @@ html.reduce-motion .nav-sparkle {
   pointer-events: none;
 }
 
-.sk-page { min-height: 100dvh; background: #000; color: transparent; }
-.sk-bone {
-  background: rgba(255,255,255,0.07);
-  animation: skPulse 2s cubic-bezier(.4,0,.6,1) infinite;
+/* ── Loading screen (components/LoadingScreen.tsx) ───────────────────
+   A black sky of stars, a wireframe sphere turning under two
+   satellites, the wordmark, a word for what is coming. All motion is
+   CSS. The sky is three box-shadow layers (far, mid, near) that
+   breathe at their own pace; the sphere is meridians and parallels in
+   a preserve-3d group; the satellites ride 2D ellipses (offset-path)
+   so they stay round, dimming on the far side of their rounds. */
+.ld-screen {
+  position: fixed; inset: 0; z-index: 60;
+  background: #000; color: #9aa0ac;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
-.sk-nav {
-  position: fixed; top: 0; left: 0; right: 0; height: var(--nav-height, 60px); z-index: 10;
-  display: flex; align-items: center; gap: 12px; padding: 0 24px;
-  background: rgba(0,0,0,0.9);
+.ld-sky { position: absolute; inset: 0; pointer-events: none; }
+.ld-stars { position: absolute; top: 0; left: 0; border-radius: 50%; }
+.ld-stars--0 { animation: ldTwinkle 5.5s ease-in-out infinite; }
+.ld-stars--1 { animation: ldTwinkle 3.8s ease-in-out 0.6s infinite; }
+.ld-stars--2 { animation: ldTwinkle 2.6s ease-in-out 1.1s infinite; }
+.ld-center {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  animation: ldIn 0.6s cubic-bezier(.2,.7,.2,1) 0.08s both;
 }
-.sk-nav-logo { height: 24px; width: auto; display: block; }
-.sk-nav-search { flex: 1 1 auto; max-width: 480px; margin: 0 auto; }
-.sk-nav-cluster { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.sk-circle { width: 36px; height: 36px; border-radius: 50%; }
-.sk-body {
-  max-width: 1100px; margin: 0 auto;
-  padding: calc(var(--nav-height, 60px) + 20px) 24px 40px;
-  display: flex; flex-direction: column; gap: 16px;
+.ld-stage {
+  --ld-r: 78px;
+  position: relative;
+  width: calc(var(--ld-r) * 2); height: calc(var(--ld-r) * 2);
+  perspective: 720px;
+  margin-bottom: 30px;
 }
-.sk-hero { width: 100%; aspect-ratio: 16 / 7; border-radius: 12px; max-height: 440px; }
-.sk-chips { display: flex; gap: 10px; overflow: hidden; }
-.sk-list { display: flex; flex-direction: column; gap: 14px; }
-.sk-row { display: flex; align-items: center; gap: 12px; }
-.sk-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
-.sk-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.sk-tabbar { display: none; }
+.ld-core {
+  position: absolute; inset: 13%; border-radius: 50%;
+  background: radial-gradient(circle at 42% 38%, rgba(47,127,224,0.34), rgba(47,127,224,0.08) 58%, transparent 72%);
+}
+.ld-tilt { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(-16deg) rotateZ(14deg); }
+.ld-spin { position: absolute; inset: 0; transform-style: preserve-3d; animation: ldSpin 12s linear infinite; }
+.ld-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255,183,0,0.4); }
+.ld-ring--equator { border-color: rgba(47,127,224,0.75); transform: rotateX(90deg); }
+.ld-ring--parallel { border-color: rgba(47,127,224,0.3); }
+.ld-orbit { position: absolute; inset: 0; pointer-events: none; }
+.ld-orbit--a { transform: rotate(-22deg); }
+.ld-orbit--b { transform: rotate(34deg) scaleX(-1); }
+.ld-orbit i {
+  position: absolute; top: 0; left: 0;
+  width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+  background: #ffb700; box-shadow: 0 0 10px 2px rgba(255,183,0,0.55);
+  /* An ellipse round the stage's centre (78,78), wider than the sphere. */
+  offset-path: path("M -30 78 a 108 34 0 1 0 216 0 a 108 34 0 1 0 -216 0");
+  offset-rotate: 0deg;
+  animation: ldOrbit 5.2s linear infinite, ldPass 5.2s linear infinite;
+}
+.ld-orbit--b i {
+  width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px;
+  background: #6fb0ff; box-shadow: 0 0 10px 2px rgba(47,127,224,0.6);
+  animation-duration: 7.4s, 7.4s; animation-delay: -2s, -2s;
+}
+.ld-wordmark { width: 176px; height: auto; display: block; mix-blend-mode: screen; }
+.ld-label {
+  margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
+  display: flex; align-items: baseline;
+}
+.ld-ellipsis i {
+  display: inline-block; width: 3px; height: 3px; margin-left: 3px; border-radius: 50%;
+  background: currentColor; animation: ldDot 1.4s ease-in-out infinite;
+}
+.ld-ellipsis i:nth-child(2) { animation-delay: 0.2s; }
+.ld-ellipsis i:nth-child(3) { animation-delay: 0.4s; }
 @media (max-width: 639px) {
-  .sk-nav { padding: 0 12px; gap: 10px; }
-  .sk-nav-logo { height: 20px; }
-  .sk-nav-search { display: none; }
-  .sk-body { padding: calc(var(--nav-height, 60px) + 12px) 12px calc(80px + env(safe-area-inset-bottom)); gap: 14px; }
-  .sk-hero { aspect-ratio: 4 / 3; border-radius: 16px; }
-  .sk-tabbar {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    height: calc(58px + env(safe-area-inset-bottom)); padding: 0 8px env(safe-area-inset-bottom);
-    display: flex; align-items: center; justify-content: space-around;
-    background: rgba(8,8,10,0.96); border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .sk-tab { width: 24px; height: 24px; border-radius: 7px; }
-  .sk-tab--create { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,183,0,0.35); }
+  .ld-stage { transform: scale(0.82); margin-bottom: 12px; }
+  .ld-wordmark { width: 150px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sk-bone { animation: none; }
+  .ld-spin, .ld-orbit i, .ld-stars, .ld-ellipsis i, .ld-center { animation: none; }
   .sk-progress { animation: none; transform: scaleX(0.6); }
 }
 

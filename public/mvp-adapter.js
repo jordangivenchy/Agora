@@ -4,7 +4,7 @@
    Exposes window.__agoraApplyData so React can push live updates. */
 (function () {
   /* Full-page jumps out of the shell: drop the top progress bar in (the
-     same .sk-progress the route skeleton uses) so the tap answers at
+     same .sk-progress the loading screen uses) so the tap answers at
      once, then navigate on the next frame so it paints. The page stays
      put — the same feel as an in-app navigation. */
   function go(url) {

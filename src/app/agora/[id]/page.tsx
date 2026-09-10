@@ -16,6 +16,7 @@ import { parseRoomParam } from "@/lib/urls";
 import { displayName } from "@/lib/names";
 import type { DebateRoom } from "@/types/database";
 import { TOPICS } from "@/types/database";
+import LoadingScreen from "@/components/LoadingScreen";
 import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
@@ -95,9 +96,7 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
 
   if (!resolvedId) {
     return (
-      <div className="ag-root ag-loading">
-        <div className="ag-spinner" />
-      </div>
+      <LoadingScreen label="Entering the Agora" />
     );
   }
   return <AgoraRoom roomId={resolvedId} />;
@@ -1368,10 +1367,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   if (!loaded || !room) {
     return (
-      <div className="ag-root ag-loading">
-        <div className="ag-spinner" />
-        <span>{roomUnreadable ? "Checking access…" : "Entering the Agora…"}</span>
-      </div>
+      <LoadingScreen label={roomUnreadable ? "Checking access" : "Entering the Agora"} />
     );
   }
 
