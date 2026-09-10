@@ -1,13 +1,14 @@
 "use client";
 
-/* Homepage — MVP design (WorkingIndexV5) driven by real AgoraSphere data.
-   The visual layer is the original MVP HTML/CSS/JS carried over verbatim;
-   mvp-adapter.js swaps its demo data for the rooms fetched here and routes
-   clicks to the real app (rooms, login, create modal). */
+/* Homepage: the home shell — starfield, navbar, hero carousel, the
+   daily topics and Explore — with the section panels (feed, trending,
+   communities, news, search) as overlays. The shell's look is the
+   original MVP stylesheet (mvp-home.css); its markup and behaviour are
+   React now, driven by the rooms fetched here. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { writeNavUser } from "@/lib/navUserCache";
+import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import LoadingScreen from "@/components/LoadingScreen";
 import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
@@ -18,13 +19,14 @@ import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
 import SiteNavbar from "@/components/SiteNavbar";
 import Starfield from "@/components/Starfield";
 import HeroCarousel, { type HeroRoom } from "@/components/HeroCarousel";
+import ShootingStars from "@/components/ShootingStars";
+import KeyboardGuard from "@/components/KeyboardGuard";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage, { topicFor } from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
 import SearchPage, { type SearchKeyHandler } from "@/components/search/SearchPage";
 import useNavbarSearch from "@/components/search/useNavbarSearch";
 import ExplorePage, { type ShellStats } from "@/components/ExplorePage";
-import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
 import { parseHomeRoute, canonicalPath, pathFor, sectionTitle, setSectionTitle, type HomeRoute } from "@/lib/routes";
 import "./mvp-home.css";
@@ -65,9 +67,6 @@ const PANEL_TABS: readonly string[] = ["feed", "trending", "communities", "news"
 const isPanelTab = (s: string): s is PanelTab => PANEL_TABS.includes(s);
 const HOME_CHOSEN_KEY = "agora:home-chosen";
 
-function fmtViewers(n: number): string {
-  return n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n);
-}
 
 
 export default function Home() {
@@ -125,15 +124,15 @@ export default function Home() {
   } | null>(null);
   const [booted, setBooted] = useState(false);
 
-  /* The shell's own loading screen: up until the data has landed, the
-     engine and adapter have run against the markup and the hero's news
-     fetch has settled — so the page never reveals itself half-built —
-     then a short fade. Capped so a stalled script can't trap the page.
+  /* The shell's own loading screen: up until the data has landed and the
+     hero's news fetch has settled — so the page never reveals itself
+     half-built — then a short fade. Capped so a stalled fetch can't trap
+     the page.
      Its sky continues the boot splash's on a full load and the chrome's
      overlay on a client-side arrival (they share a session). */
   const [shellReady, setShellReady] = useState(false);
   const waitRef = useRef<HTMLDivElement>(null);
-  const waitFlags = useRef({ adapter: false, hero: false, done: false });
+  const waitFlags = useRef({ hero: false, done: false });
   useEffect(() => {
     if (shellReady) return;
     const f = waitFlags.current;
@@ -143,36 +142,20 @@ export default function Home() {
       waitRef.current?.classList.add("is-leaving");
       window.setTimeout(() => setShellReady(true), 420);
     };
-    const check = () => { if (booted && f.adapter && f.hero) finish(); };
-    const onAdapter = () => { f.adapter = true; check(); };
+    const check = () => { if (booted && f.hero) finish(); };
     const onHero = () => { f.hero = true; check(); };
-    window.addEventListener("agora:adapter-ready", onAdapter);
     window.addEventListener("agora:hero-settled", onHero);
     const cap = window.setTimeout(finish, 7000);
     check();
     return () => {
-      window.removeEventListener("agora:adapter-ready", onAdapter);
       window.removeEventListener("agora:hero-settled", onHero);
       clearTimeout(cap);
     };
   }, [booted, shellReady]);
   const [dbOffline, setDbOffline] = useState(false);
   const dataLandedRef = useRef(false);
-  const hostRef = useRef<HTMLDivElement>(null);
-
-  /* Inject the MVP markup imperatively, outside React's diffing, so state
-     changes (e.g. opening the create modal) can never rewrite it and wipe
-     the mutations made by the MVP scripts and adapter. */
-  useEffect(() => {
-    if (hostRef.current && !hostRef.current.firstChild) {
-      hostRef.current.innerHTML = MVP_HOME_HTML;
-    }
-    // Portal targets living inside the MVP markup: the Browse section
-    // below the carousel, and the navbar's notification bell slot.
-    setFieldsHost(document.getElementById("fieldsSection"));
-    setCarouselHost(document.getElementById("carouselHost"));
-    setExploreHost(document.getElementById("exploreHost"));
-  }, []);
+  /** The signed-in user's id, for the navbar's own-profile jump. */
+  const meIdRef = useRef<string | null>(null);
 
   /* Fetch real rooms + auth + platform stats, expose to the MVP scripts.
      Called on boot, on realtime changes, and every 30s as a live tracker. */
@@ -190,21 +173,9 @@ export default function Home() {
         ]);
 
         const rooms = roomsData ?? [];
-        const votesByRoom: Record<string, { pro: number; con: number }> = {};
-        if (rooms.length) {
-          const { data: votes } = await supabase
-            .from("debate_votes")
-            .select("room_id, stance")
-            .in("room_id", rooms.map((r) => r.id));
-          for (const v of votes ?? []) {
-            const rec = (votesByRoom[v.room_id] ??= { pro: 0, con: 0 });
-            if (v.stance === "PRO") rec.pro++;
-            else rec.con++;
-          }
-        }
 
         /* Community-hosted rooms are presented under the community's name.
-           The color lands inside mvp-home.js innerHTML templates, so only a
+           The colour lands in a CSS variable on the hero's chip, so only a
            strict hex value may pass (the DB also constrains the format). */
         const safeColor = (c: string | null) =>
           c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : null;
@@ -218,55 +189,48 @@ export default function Home() {
           for (const c of comms ?? []) communityById.set(c.id, { name: c.name, color: safeColor(c.color) });
         }
 
-        const debates = rooms.map((room, i) => {
-          const active = (room.participants ?? []).filter(
-            (p: { left_at: string | null }) => !p.left_at
-          );
-          const debaters = active.filter((p: { role: string }) => p.role === "debater");
-          const audienceCount = active.filter((p: { role: string }) => p.role === "spectator").length;
-          const proD = debaters.find((p: { stance: string | null }) => p.stance === "PRO");
-          const conD = debaters.find((p: { stance: string | null }) => p.stance === "CON");
-          const key = TOPIC_MAP[room.topic_key] ?? "culture";
-          const v = votesByRoom[room.id] ?? { pro: 0, con: 0 };
-          const total = v.pro + v.con;
-          return {
-            motion: room.motion,
-            debater1: proD?.user ? displayName(proD.user) : "Open seat",
-            // Mirror debater1's fallback: an empty string renders its initial as
-            // literal "undefined" in the card avatar.
-            debater2: conD?.user ? displayName(conD.user) : "Open seat",
-            color1: PALETTE[i % PALETTE.length],
-            color2: PALETTE[(i + 3) % PALETTE.length],
-            elo: "—",
-            viewers: fmtViewers(room.viewer_count ?? 0),
-            viewersNum: room.viewer_count ?? 0,
-            progress: total ? Math.round((v.pro / total) * 100) : 50,
-            topicKey: key,
-            secondaryTopics: (room.secondary_topics ?? []).map((k: string) => TOPIC_MAP[k] ?? k),
-            subTags: [],
-            gradient: GRADIENTS[i % GRADIENTS.length],
-            liveSince: room.started_at ?? room.created_at ?? null,
-            speakerCount: debaters.length,
-            audienceCount,
+        /* The hero features live rooms only, ranked by viewers — its slide
+           says "Watch Live", so anything else up there would lie. Colours
+           and gradients are keyed to the room's place in the list. */
+        const hero: HeroRoom[] = rooms
+          .map((room, i) => ({ room, i }))
+          .filter(({ room }) => room.status === "live")
+          .sort((a, b) => (b.room.viewer_count ?? 0) - (a.room.viewer_count ?? 0))
+          .slice(0, 4)
+          .map(({ room, i }) => {
+            const active = (room.participants ?? []).filter(
+              (p: { left_at: string | null }) => !p.left_at
+            );
+            const debaters = active.filter((p: { role: string }) => p.role === "debater");
+            const audienceCount = active.filter((p: { role: string }) => p.role === "spectator").length;
+            const proD = debaters.find((p: { stance: string | null }) => p.stance === "PRO");
+            const conD = debaters.find((p: { stance: string | null }) => p.stance === "CON");
+            const host = room.host as { avatar_url?: string | null } | { avatar_url?: string | null }[] | null;
+            const hostAvatar = Array.isArray(host) ? host[0]?.avatar_url : host?.avatar_url;
             // Same fallback as the room cards: uploaded thumbnail, else the host's avatar.
-            thumbnailUrl: (() => {
-              const host = room.host as { avatar_url?: string | null } | { avatar_url?: string | null }[] | null;
-              const hostAvatar = Array.isArray(host) ? host[0]?.avatar_url : host?.avatar_url;
-              const pick = room.thumbnail_url || hostAvatar || null;
-              return typeof pick === "string" && /^https:\/\//.test(pick) ? pick : null;
-            })(),
-            debater1Stance: "PRO",
-            debater2Stance: "CON",
-            status: room.status === "live" ? "live" : room.scheduled_start ? "scheduled" : "queue",
-            format: FORMAT_LABEL[room.format] ?? "Open",
-            language: (room.language ?? "EN").toUpperCase().slice(0, 2),
-            votesPro: v.pro,
-            votesCon: v.con,
-            roomId: room.id,
-            community: room.community_id ? (communityById.get(room.community_id)?.name ?? null) : null,
-            communityColor: room.community_id ? (communityById.get(room.community_id)?.color ?? null) : null,
-          };
-        });
+            const pick = room.thumbnail_url || hostAvatar || null;
+            return {
+              roomId: room.id,
+              motion: room.motion,
+              // "Open seat" rather than an empty string: the panel shows its initial.
+              debater1: proD?.user ? displayName(proD.user) : "Open seat",
+              debater2: conD?.user ? displayName(conD.user) : "Open seat",
+              color1: PALETTE[i % PALETTE.length],
+              color2: PALETTE[(i + 3) % PALETTE.length],
+              gradient: GRADIENTS[i % GRADIENTS.length],
+              thumbnailUrl: typeof pick === "string" && /^https:\/\//.test(pick) ? pick : null,
+              topicKey: TOPIC_MAP[room.topic_key] ?? "culture",
+              secondaryTopics: (room.secondary_topics ?? []).map((k: string) => TOPIC_MAP[k] ?? k),
+              format: FORMAT_LABEL[room.format] ?? "Open",
+              language: (room.language ?? "EN").toUpperCase().slice(0, 2),
+              community: room.community_id ? (communityById.get(room.community_id)?.name ?? null) : null,
+              communityColor: room.community_id ? (communityById.get(room.community_id)?.color ?? null) : null,
+              liveSince: room.started_at ?? room.created_at ?? null,
+              speakerCount: debaters.length,
+              audienceCount,
+              viewersNum: room.viewer_count ?? 0,
+            };
+          });
 
         const user = auth?.user;
         setSignedIn(!!user);
@@ -287,7 +251,6 @@ export default function Home() {
         }
         const liveRooms = rooms.filter((r) => r.status === "live");
         const data = {
-          debates,
           user: user ? { id: user.id, name: profileName ?? user.user_metadata?.name ?? user.email ?? "U", username: profileUsername, avatarUrl: profileAvatar } : null,
           stats: {
             activeRooms: rooms.length,
@@ -297,36 +260,16 @@ export default function Home() {
         };
         writeNavUser(data.user);
         setShellStats(data.stats);
-        /* The hero features live rooms only, ranked by viewers — its slide
-           says "Watch Live", so anything else up there would lie. Replaced
-           only when something changed, so the 30s tracker doesn't rebuild
-           an unchanged strip. */
-        const hero: HeroRoom[] = debates
-          .filter((d) => d.status === "live")
-          .sort((a, b) => b.viewersNum - a.viewersNum)
-          .slice(0, 4)
-          .map((d) => ({
-            roomId: d.roomId, motion: d.motion, debater1: d.debater1, debater2: d.debater2,
-            color1: d.color1, color2: d.color2, gradient: d.gradient, thumbnailUrl: d.thumbnailUrl,
-            topicKey: d.topicKey, secondaryTopics: d.secondaryTopics, format: d.format, language: d.language,
-            community: d.community, communityColor: d.communityColor, liveSince: d.liveSince,
-            speakerCount: d.speakerCount, audienceCount: d.audienceCount, viewersNum: d.viewersNum,
-          }));
+        /* Replaced only when something changed, so the 30s tracker doesn't
+           rebuild an unchanged strip. */
         setHeroRooms((prev) => (JSON.stringify(prev) === JSON.stringify(hero) ? prev : hero));
-        const w = window as unknown as Record<string, unknown>;
-        w.__AGORA_DATA__ = data;
-        // Live update path: if the MVP engine is already running, push the
-        // fresh data straight into it.
-        if (typeof w.__agoraApplyData === "function") {
-          (w.__agoraApplyData as (d: unknown) => void)(data);
-        }
+        meIdRef.current = user?.id ?? null;
         dataLandedRef.current = true;
         setDbOffline(false);
         setBooted(true);
       } catch (e) {
         console.error("home data load failed", e);
-        // Boot anyway so the MVP demo data renders and the page isn't blank.
-        (window as unknown as Record<string, unknown>).__AGORA_DATA__ ??= { debates: [], user: null };
+        // Boot anyway so the page isn't blank.
         setDbOffline(true);
         setBooted(true);
       }
@@ -378,13 +321,11 @@ export default function Home() {
 
   /* Never let a slow or unreachable backend hold the UI hostage. Supabase's
      auth client retries with backoff for minutes when its host is down, so
-     `loadData` can hang well past any reasonable paint. Boot the visual
-     engine on a short timer regardless; real data flows in later via
-     __agoraApplyData if and when the fetch lands. */
+     `loadData` can hang well past any reasonable paint. Reveal the shell
+     on a short timer regardless; the data flows in when the fetch lands. */
   useEffect(() => {
     const t = setTimeout(() => {
       if (dataLandedRef.current) return;
-      (window as unknown as Record<string, unknown>).__AGORA_DATA__ ??= { debates: [], user: null };
       setDbOffline(true);
       setBooted(true);
     }, 3500);
@@ -408,48 +349,6 @@ export default function Home() {
     };
   }, [loadData, supabase]);
 
-  /* Load the MVP engine once, after the DOM above is in place. */
-  useEffect(() => {
-    if (!booted) return;
-    const w = window as unknown as Record<string, unknown>;
-    if (w.__MVP_BOOTED__) {
-      // Engine already loaded (client-side remount): re-init against the
-      // freshly injected DOM and re-apply the data adapter.
-      if (typeof w.init === "function") (w.init as () => void)();
-      const adapter = document.createElement("script");
-      adapter.src = "/mvp-adapter.js";
-      adapter.onload = () => window.dispatchEvent(new Event("agora:adapter-ready"));
-      document.body.appendChild(adapter);
-      return;
-    }
-    w.__MVP_BOOTED__ = true;
-
-    // Fonts come from next/font in the root layout — no injected stylesheet.
-    const three = document.createElement("script");
-    three.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
-    three.onload = () => {
-      const engine = document.createElement("script");
-      engine.src = "/mvp-home.js";
-      engine.onload = () => {
-        const adapter = document.createElement("script");
-        adapter.src = "/mvp-adapter.js";
-        adapter.onload = () => window.dispatchEvent(new Event("agora:adapter-ready"));
-        document.body.appendChild(adapter);
-      };
-      document.body.appendChild(engine);
-    };
-    document.body.appendChild(three);
-  }, [booted]);
-
-  /* Keep the MVP shell in sync with the active React tab: hide the MVP's
-     main content while a tab panel is open. (The sidebar highlight is
-     React state now — see HomeSidebar below.) */
-  useEffect(() => {
-    const main = document.querySelector(".main") as HTMLElement | null;
-    /* The search panel floats over whatever was showing; it never hides it. */
-    if (main) main.style.display = activeTab && activeTab !== "search" ? "none" : "";
-  }, [activeTab, booted]);
-
   /* Sidebar navigation: React panels for trending/communities/news;
      home and explore are this page's own state (the shell's home feed
      hides while Explore is up; ExplorePage mounts into #exploreHost). */
@@ -464,10 +363,6 @@ export default function Home() {
     setActiveTab(null);
     setMvpPage(id);
   }, []);
-  useEffect(() => {
-    const feed = document.getElementById("homeFeed");
-    if (feed) feed.style.display = mvpPage === "explore" ? "none" : "";
-  }, [mvpPage]);
 
   /* ── URL routing ──
      Sections live as state on this page; next.config rewrites
@@ -648,8 +543,7 @@ export default function Home() {
         return;
       }
       // Own profile (nav avatar → Profile): same destination.
-      const w = window as unknown as { __AGORA_DATA__?: { user?: { id?: string } } };
-      const myId = w.__AGORA_DATA__?.user?.id;
+      const myId = meIdRef.current ?? readNavUser()?.id;
       if (myId) goToProfileById(myId);
     };
     const onTab = (e: Event) => {
@@ -763,7 +657,47 @@ export default function Home() {
         ownSearch={false}
         onLogo={() => window.dispatchEvent(new CustomEvent("agora:tab", { detail: "home" }))}
       />
-      <div ref={hostRef} />
+      {/* The shell: the SVG filters mvp-home.css refers to (the avatar
+          ring's refraction, the glass modal), the shooting stars, the
+          keyboard guard, and the main column with the home feed and
+          Explore. The hosts are portal targets for the pieces rendered
+          below. The search panel floats over whatever was showing; the
+          other panels replace the main column. */}
+      <svg style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }} aria-hidden="true">
+        <defs>
+          <filter id="avatar-glass-distort" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65 0.45" numOctaves="3" seed="4" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
+      <svg style={{ display: "none", position: "absolute", width: 0, height: 0, overflow: "hidden" }} aria-hidden="true">
+        <defs>
+          <filter id="liquid-glass-modal" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox" colorInterpolationFilters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.001 0.005" numOctaves="1" seed="17" result="turbulence" />
+            <feComponentTransfer in="turbulence" result="mapped">
+              <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />
+              <feFuncG type="gamma" amplitude="0" exponent="1" offset="0" />
+              <feFuncB type="gamma" amplitude="0" exponent="1" offset="0.5" />
+            </feComponentTransfer>
+            <feGaussianBlur in="turbulence" stdDeviation="3" result="softMap" />
+            <feSpecularLighting in="softMap" surfaceScale="5" specularConstant="1" specularExponent="100" lightingColor="white" result="specLight">
+              <fePointLight x="-200" y="-200" z="300" />
+            </feSpecularLighting>
+            <feComposite in="specLight" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litImage" />
+            <feDisplacementMap in="SourceGraphic" in2="softMap" scale="120" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
+      <ShootingStars />
+      <KeyboardGuard />
+      <main className="main" style={{ display: activeTab && activeTab !== "search" ? "none" : undefined }}>
+        <div id="homeFeed" style={{ display: mvpPage === "explore" ? "none" : undefined }}>
+          <div id="carouselHost" ref={setCarouselHost} />
+          <section id="fieldsSection" ref={setFieldsHost} />
+        </div>
+        <div id="exploreHost" ref={setExploreHost} />
+      </main>
       {dbOffline && (
         <div
           style={{

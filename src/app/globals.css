@@ -2708,7 +2708,7 @@ html.reduce-motion .nav-sparkle {
     mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), rgba(0,0,0,0.94) calc(100% - 26px), rgba(0,0,0,0.78) calc(100% - 20px), rgba(0,0,0,0.5) calc(100% - 14px), rgba(0,0,0,0.22) calc(100% - 8px), rgba(0,0,0,0.06) calc(100% - 3px), transparent 100%);
   }
   .shell-page-inner { padding: 12px 12px 24px !important; }
-  /* Keyboard up (mvp-home.js sets kb-open and --kb on iOS, where the
+  /* Keyboard up (KeyboardGuard.tsx sets kb-open and --kb on iOS, where the
      keyboard covers the layout instead of shrinking it): the panels end
      at the keyboard so a field can scroll clear of it, and the tab bar
      stays behind the keyboard. */

@@ -105,9 +105,23 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
     router.push(pathFor.search(query));
   };
 
+  /* See-through at the top of the page and solid once scrolled
+     (mvp-home.css .nav:not(.is-scrolled)); toggled on the element so
+     scrolling never re-renders the bar. */
+  const navRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const apply = () => {
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      navRef.current?.classList.toggle("is-scrolled", y > 8);
+    };
+    apply();
+    window.addEventListener("scroll", apply, { passive: true });
+    return () => window.removeEventListener("scroll", apply);
+  }, []);
+
   return (
     <>
-    <nav className="nav">
+    <nav className="nav" ref={navRef}>
       <a
         className="nav-logo"
         href="/"
