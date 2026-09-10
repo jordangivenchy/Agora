@@ -54,6 +54,7 @@ import { requestCreate } from "@/components/GlobalActions";
 import { navigateTo } from "@/lib/progress";
 import { useCoarsePointer } from "@/lib/pointer";
 import { useIsClient, useMediaQuery } from "@/lib/media";
+import { readNavUser } from "@/lib/navUserCache";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -146,6 +147,13 @@ const card: React.CSSProperties = {
 
 /* Stored markdown length cap for post bodies and comments. */
 const BODY_MAX = POST_BODY_MAX;
+
+/* A comment's first line without its markdown marks — the reply sheet
+   shows it under the name of the person being answered. */
+function firstLine(md: string): string {
+  const line = md.split("\n").map((l) => l.trim()).find((l) => l && !/^!\[/.test(l)) ?? "";
+  return line.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`~>#]+/g, "").trim();
+}
 
 const inputStyle: React.CSSProperties = {
   background: "rgba(10,10,12,0.7)",
@@ -1628,6 +1636,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     const isCollapsed = collapsed.has(c.id);
     const hidden = commentTree.subtreeSize(c.id);
     const canModC = !!openPost && canModerate(openPost.community_id);
+    const isAuthor = !!openPost && !!c.author_id && c.author_id === openPost.author_id; // the post's author
     const canPinC = !c.parent_id && canModC; // mods pin root comments (children live under parents)
     const canDeleteC = c.author_id === userId || canModC;
     return (
@@ -1656,7 +1665,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         >
             <div className="cm-head">
               <span
-                className="cm-avatar"
+                className={isAuthor ? "cm-avatar is-author" : "cm-avatar"}
                 onClick={(e) => {
                   if (!c.author_id) return;
                   e.stopPropagation();
@@ -1666,6 +1675,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                 <UserAvatar size={24} username={c.author_username} avatarUrl={avatars[c.author_id ?? ""] ?? null} seed={c.author_id ?? c.author_username} />
               </span>
               <span className="cm-author">{authorSpan(c.author_id, c.author_username, c.author_display_name)}</span>
+              {isAuthor && <span className="cm-author-tag">author</span>}
               <span className="cm-time">· {timeAgo(c.created_at)}</span>
               <RoleBadge role={c.author_role} />
               {c.pinned_at && <PinnedBadge />}
@@ -1691,6 +1701,35 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     reply, then the votes. Pin and delete stay inline on wide
                     screens; the sheet carries them on phones. */}
                 <div className="cm-comment-actions">
+                  <span className="cm-votes">
+                    <button
+                      onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
+                      className="cm-act"
+                      style={c.my_vote === 1 ? { color: "#e2b96b" } : undefined}
+                      aria-label="Upvote comment"
+                    >
+                      <Icon name="chevron-up" size={16} />
+                    </button>
+                    <span className="cm-score">{c.score}</span>
+                    <button
+                      onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
+                      className="cm-act"
+                      style={c.my_vote === -1 ? { color: "#64B5F6" } : undefined}
+                      aria-label="Downvote comment"
+                    >
+                      <Icon name="chevron-down" size={16} />
+                    </button>
+                  </span>
+                  <button
+                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); setReplyGifUrl(null); } }}
+                    className="cm-act"
+                  >
+                    <Icon name="message-circle" size={13} /> Reply
+                  </button>
+                  <button onClick={() => shareComment(c)} className="cm-act" style={copiedCommentId === c.id ? { color: "#00b894" } : undefined}>
+                    {copiedCommentId === c.id ? <><Icon name="check" size={13} /> Link copied</> : <><Icon name="share" size={13} /> Share</>}
+                  </button>
+                  {/* Pin and delete stay inline on wide screens; the ⋯ sheet carries them on phones. */}
                   {(canPinC || canDeleteC) && (
                     <span className="cm-mod-inline">
                       {canPinC && (
@@ -1712,34 +1751,6 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                   >
                     <Icon name="more-horizontal" size={16} />
                   </button>
-                  <button onClick={() => shareComment(c)} className="cm-act" style={copiedCommentId === c.id ? { color: "#00b894" } : undefined}>
-                    {copiedCommentId === c.id ? <><Icon name="check" size={13} /> Link copied</> : <><Icon name="share" size={13} /> Share</>}
-                  </button>
-                  <button
-                    onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); setReplyGifUrl(null); } }}
-                    className="cm-act"
-                  >
-                    <Icon name="message-circle" size={13} /> Reply
-                  </button>
-                  <span className="cm-votes">
-                    <button
-                      onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
-                      className="cm-act"
-                      style={c.my_vote === 1 ? { color: "#e2b96b" } : undefined}
-                      aria-label="Upvote comment"
-                    >
-                      <Icon name="chevron-up" size={16} />
-                    </button>
-                    <span className="cm-score">{c.score}</span>
-                    <button
-                      onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
-                      className="cm-act"
-                      style={c.my_vote === -1 ? { color: "#64B5F6" } : undefined}
-                      aria-label="Downvote comment"
-                    >
-                      <Icon name="chevron-down" size={16} />
-                    </button>
-                  </span>
                 </div>
                 {replyTo === c.id && !phone && (
                   <div className="mt-2">
@@ -1823,8 +1834,12 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     );
   };
 
-  /* The comment a phone's reply sheet answers (its Reply set replyTo). */
+  /* The comment a phone's reply sheet answers (its Reply set replyTo),
+     the open post's board colour for the comment sheet's line, and the
+     viewer for the dock's avatar. */
   const replyTarget = phone && replyTo ? comments.find((x) => x.id === replyTo) ?? null : null;
+  const openBoardColor = (openPost && communities.find((x) => x.id === openPost.community_id)?.color) || "#ffb700";
+  const me = userId && isClient ? readNavUser() : null;
   const isMod = selectedCommunity?.my_role === "owner" || selectedCommunity?.my_role === "moderator";
   const isOwner = selectedCommunity?.my_role === "owner";
 
@@ -1887,15 +1902,21 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
           className="cm-dock-pill"
           onClick={() => { if (requireAuth()) setComposerFor(openPost.id); }}
         >
-          {userId ? "Join the conversation" : "Sign in to comment"}
+          {userId && <UserAvatar size={26} username={me?.username ?? undefined} avatarUrl={me?.avatarUrl ?? null} seed={userId} />}
+          <span>{userId ? "Take the floor" : "Sign in to comment"}</span>
         </button>
       </div>,
       document.body,
     )}
     {phone && openPost && composerFor === openPost.id && (
       <CommentSheet
-        heading={<>Commenting on <b>{openPost.title}</b></>}
-        placeholder="Join the conversation"
+        context={<>
+          <i className="cm-sheet-dot" style={{ background: openBoardColor }} aria-hidden="true" />
+          <b>{openPost.community_name}</b>
+          <span className="cm-sheet-snippet">{openPost.title}</span>
+        </>}
+        placeholder="Make your point"
+        submitLabel="Post"
         value={commentText}
         onChange={setCommentText}
         onSubmit={async () => { if (await submitComment(null, commentText, commentImage, commentGifUrl)) setComposerFor(null); }}
@@ -1912,8 +1933,13 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     )}
     {phone && openPost && replyTarget && (
       <CommentSheet
-        heading={<>Replying to <b>@{replyTarget.author_username}</b></>}
-        placeholder="Join the conversation"
+        context={<>
+          <UserAvatar size={20} username={replyTarget.author_username} avatarUrl={avatars[replyTarget.author_id ?? ""] ?? null} seed={replyTarget.author_id ?? replyTarget.author_username} />
+          <b>@{replyTarget.author_username}</b>
+          <span className="cm-sheet-snippet">{firstLine(replyTarget.body)}</span>
+        </>}
+        placeholder={`Your reply to @${replyTarget.author_username}`}
+        submitLabel="Reply"
         value={replyText}
         onChange={setReplyText}
         onSubmit={() => { void submitComment(replyTarget.id, replyText, replyImage, replyGifUrl); }}

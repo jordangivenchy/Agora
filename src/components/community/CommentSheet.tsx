@@ -1,13 +1,14 @@
 "use client";
 
-/* The phone comment composer, after Reddit's app: a sheet that rises
-   over the keyboard with what it answers up top ("Commenting on <the
-   post>", "Replying to @someone"), the text, then a row of GIF, image,
-   emoji, a divider, "Aa" for the formatting strip, and the send button
-   at the right. Sized to the visual viewport so the keyboard never
-   covers it; the expand button gives the text the whole screen. The
-   page owns the draft and the send (CommunitiesPage.tsx); this owns
-   the frame. Wide screens keep the inline composer. */
+/* The phone comment composer: a sheet that rises over the keyboard.
+   Cancel and the yellow Post pill up top like our post composer, then
+   a line naming what it answers — the board and the post for a comment,
+   the person and the first line of their comment for a reply — the
+   text, and a row of GIF, image, emoji, a divider, and "Aa" for the
+   formatting strip. Sized to the visual viewport so the keyboard never
+   covers it; it grows with the text and scrolls inside itself past the
+   viewport. The page owns the draft and the send (CommunitiesPage.tsx);
+   this owns the frame. Wide screens keep the inline composer. */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -19,8 +20,9 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { useVisualViewport } from "@/lib/media";
 
 export default function CommentSheet({
-  heading,
+  context,
   placeholder,
+  submitLabel,
   value,
   onChange,
   onSubmit,
@@ -34,8 +36,10 @@ export default function CommentSheet({
   giphyEnabled,
   mentions,
 }: {
-  heading: ReactNode;
+  /** What the text answers: the board and post, or the person and their line. */
+  context: ReactNode;
   placeholder: string;
+  submitLabel: string;
   value: string;
   onChange: (markdown: string) => void;
   onSubmit: () => void;
@@ -53,7 +57,6 @@ export default function CommentSheet({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [picker, setPicker] = useState<null | "emoji" | "gif">(null);
   const [format, setFormat] = useState(false);
-  const [tall, setTall] = useState(false);
   /* The sheet tracks the visual viewport so the keyboard never covers it. */
   const vv = useVisualViewport();
   useEscapeClose(true, onClose);
@@ -70,24 +73,14 @@ export default function CommentSheet({
 
   return createPortal(
     <div className="cm-sheet-veil" style={vv ? { top: vv.top, height: vv.height } : undefined} onClick={onClose}>
-      <div
-        role="dialog"
-        aria-label="Comment"
-        className={`cm-sheet${tall ? " is-tall" : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="cm-sheet-handle" aria-hidden="true" />
+      <div role="dialog" aria-label={submitLabel} className="cm-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="cm-sheet-head">
-          <span className="cm-sheet-title">{heading}</span>
-          <button
-            type="button"
-            className="cm-sheet-expand"
-            onClick={() => setTall((t) => !t)}
-            aria-label={tall ? "Shrink" : "Expand"}
-          >
-            <Icon name={tall ? "minimize" : "maximize"} size={18} />
+          <button type="button" className="cm-sheet-cancel" onClick={onClose}>Cancel</button>
+          <button type="button" className="cm-sheet-post" onClick={send} disabled={!canSubmit || busy}>
+            {busy ? "Posting…" : submitLabel}
           </button>
         </div>
+        <div className="cm-sheet-ctx">{context}</div>
         <div className="cm-sheet-editor">
           <RichEditor
             ref={editorRef}
@@ -140,9 +133,6 @@ export default function CommentSheet({
               <GifPicker onPick={(u) => { onGif(u); onPickImage(null); setPicker(null); }} onClose={() => setPicker(null)} />
             )}
           </span>
-          <button type="button" className="cm-sheet-send" onClick={send} disabled={!canSubmit || busy} aria-label="Send">
-            <Icon name="send" size={20} />
-          </button>
         </div>
         <input
           ref={fileRef}

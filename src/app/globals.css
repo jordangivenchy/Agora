@@ -2500,21 +2500,23 @@ html.reduce-motion .nav-sparkle {
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
 
-/* ═══ The phone comment composer, after Reddit's app (CommentSheet.tsx):
-   a dock above the tab bar — "Join the conversation" — opens a sheet
-   over the keyboard with what it answers up top, the text, then GIF,
-   image, emoji, a divider, Aa for the formatting strip, and the send
-   button at the right. The dock and the sheet are for phones (below);
-   wide screens keep the inline composer. ═══ */
+/* ═══ The phone comment composer (CommentSheet.tsx): a dock above the
+   tab bar — your avatar, "Take the floor" — opens a sheet over the
+   keyboard: Cancel and the yellow Post pill up top as in our post
+   composer, a line naming what it answers, the text, then GIF, image,
+   emoji, a divider, and Aa for the formatting strip. The dock and the
+   sheet are for phones (below); wide screens keep the inline composer. ═══ */
 .cm-dock, .cm-dock-spacer { display: none; }
 .cm-sheet-veil { position: fixed; left: 0; right: 0; top: 0; height: 100%; z-index: 1200; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(0,0,0,0.55); }
-.cm-sheet { display: flex; flex-direction: column; max-height: 100%; background: #141418; border: 1px solid #23232b; border-bottom: 0; border-radius: 22px 22px 0 0; padding: 6px 16px calc(10px + env(safe-area-inset-bottom)); }
-.cm-sheet.is-tall { height: 100%; border-radius: 0; }
-.cm-sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: #3a3a45; margin: 4px auto 10px; flex-shrink: 0; }
-.cm-sheet-head { display: flex; align-items: center; gap: 10px; min-height: 28px; flex-shrink: 0; }
-.cm-sheet-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; color: #8c8c98; }
-.cm-sheet-title b { color: #f2f2f6; font-weight: 700; }
-.cm-sheet-expand { background: none; border: 0; padding: 4px; color: #d8d8e0; cursor: pointer; display: inline-flex; }
+.cm-sheet { display: flex; flex-direction: column; max-height: 100%; background: #141418; border: 1px solid #23232b; border-bottom: 0; border-radius: 18px 18px 0 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); }
+.cm-sheet-head { display: flex; align-items: center; justify-content: space-between; min-height: 36px; flex-shrink: 0; }
+.cm-sheet-cancel { background: none; border: 0; padding: 4px 0; font: inherit; font-size: 15px; color: #c3c3ce; cursor: pointer; }
+.cm-sheet-post { height: 34px; padding: 0 16px; border-radius: 999px; border: 0; background: #ffb700; color: #1a0e00; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.cm-sheet-post:disabled { opacity: 0.45; cursor: default; }
+.cm-sheet-ctx { display: flex; align-items: center; gap: 8px; min-width: 0; margin-top: 6px; font-size: 13px; color: #8c8c98; flex-shrink: 0; }
+.cm-sheet-ctx b { color: #f2f2f6; font-weight: 700; flex-shrink: 0; }
+.cm-sheet-snippet { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cm-sheet-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .cm-sheet-editor { flex: 1 1 auto; min-height: 0; overflow: auto; margin-top: 6px; }
 .cm-sheet-editor .rich-editor-box { min-height: 48px; }
 .cm-sheet-editor .ProseMirror { font-size: 16px; } /* 16px keeps iOS from zooming into the field */
@@ -2528,8 +2530,6 @@ html.reduce-motion .nav-sparkle {
 .cm-sheet-aa { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
 .cm-sheet-aa.is-on { color: #ffb700; }
 .cm-sheet-divider { width: 1px; height: 26px; background: #2b2b34; margin: 0 6px; }
-.cm-sheet-send { margin-left: auto; width: 44px; height: 44px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center; background: #2f7fe0; color: #fff; cursor: pointer; }
-.cm-sheet-send:disabled { background: #232329; color: #6a6a76; cursor: default; }
 
 /* ═══ The comment thread, after Reddit's app: no cards — each comment is
    its avatar row, the text flush beneath, the actions to the right.
@@ -2539,21 +2539,25 @@ html.reduce-motion .nav-sparkle {
    cap a reply sits at its parent's x, joined by a bracket in the gutter
    (.cm-children--flat; phones cap sooner, below). ═══ */
 .cm-thread { display: flex; flex-direction: column; }
-.cm-node--root + .cm-node--root { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1b1b21; }
+.cm-node--root + .cm-node--root { margin-top: 20px; }
 .cm-comment { position: relative; border-radius: 10px; transition: background-color 1.2s ease, box-shadow 1.2s ease; }
 .cm-comment.is-flash { background: #1a1708; box-shadow: 0 0 0 6px #1a1708; transition: background-color .3s ease, box-shadow .3s ease; }
 .cm-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-height: 24px; cursor: pointer; }
 .cm-comment.is-collapsed .cm-head { opacity: 0.72; }
 .cm-avatar { display: inline-flex; flex: 0 0 auto; cursor: pointer; }
+/* The post's author: a yellow ring and the word, where Reddit would pin "OP". */
+.cm-avatar.is-author > * { box-shadow: 0 0 0 1.5px #0a0a0d, 0 0 0 3px #ffb700; }
+.cm-author-tag { font-size: 10.5px; font-weight: 700; color: #ffb700; }
 .cm-author { font-size: 12px; font-weight: 600; color: #c3c3ce; }
 .cm-time { font-size: 11.5px; color: #71717e; }
 .cm-body { margin-top: 3px; font-size: 13px; line-height: 1.55; color: #e6e6ee; }
-.cm-comment-actions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 2px; }
-.cm-mod-inline { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
+/* Votes on the left under the avatar column, as on the post cards; the rest to the right. */
+.cm-comment-actions { display: flex; align-items: center; gap: 14px; margin-top: 2px; }
+.cm-mod-inline { display: inline-flex; align-items: center; gap: 12px; }
 .cm-act { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11.5px; font-weight: 600; line-height: 1; color: #85858f; background: none; border: 0; padding: 4px 0; cursor: pointer; }
 .cm-act:hover { color: #e6e6ee; }
 .cm-more { display: none; }
-.cm-votes { display: inline-flex; align-items: center; gap: 1px; }
+.cm-votes { display: inline-flex; align-items: center; gap: 1px; margin-right: auto; }
 .cm-score { font-size: 11.5px; font-weight: 600; color: #c3c3ce; min-width: 16px; text-align: center; }
 
 .cm-children {
@@ -2892,7 +2896,7 @@ html.reduce-motion .nav-sparkle {
   /* The composer moves to the dock and its sheet. */
   .cm-composer-inline { display: none; }
   .cm-dock { display: block; position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 60; padding: 8px 12px 10px; background: #0a0a0d; border-top: 1px solid #1b1b21; }
-  .cm-dock-pill { display: flex; align-items: center; width: 100%; height: 42px; padding: 0 16px; border-radius: 999px; background: #17171c; border: 1px solid #26262e; color: #8c8c98; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+  .cm-dock-pill { display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 16px 0 9px; border-radius: 999px; background: #17171c; border: 1px solid #26262e; color: #8c8c98; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
   .cm-dock-spacer { display: block; height: 72px; }
   /* The post view: the send button as a pill under the box, the
      composer's toolbar a touch tighter. */
