@@ -34,16 +34,55 @@
  * ticker shows the rest, no overlap.
  */
 
-/* The upstream fetches use Next's shared data cache (revalidate), so
-   every serverless instance reuses one fetch per window. */
+/* The upstream fetches also use Next's shared data cache (revalidate),
+   so every serverless instance reuses one fetch per window. */
 import { rankStories, toUtcIso } from "@/lib/newsRank";
+import { after } from "next/server";
+import { promises as fs } from "fs";
+import os from "os";
+import path from "path";
 
 /* 40 min: two newsdata request sets × two pages = 4 credits a refresh,
    36 refreshes a day = 144 of the free tier's 200, leaving headroom for
    local runs against the same key. */
 const TTL_MS = 40 * 60_000;
 const UPSTREAM_REVALIDATE_S = 40 * 60;
-let cache: { at: number; body: NewsPayload } | null = null;
+/* The feed is answered from what we have and refreshed behind the
+   response once it is older than the TTL, so a cold cache costs one
+   background fetch, never a five-second page. Kept in memory and in a
+   file in the temp directory so a restart (dev) or a new instance
+   (production, while the file lasts) starts from the last feed
+   instead of waiting on the providers. */
+const CACHE_FILE = path.join(os.tmpdir(), "agorasphere-news-cache.json");
+type Cached = { at: number; body: NewsPayload };
+let cache: Cached | null = null;
+let refreshing: Promise<void> | null = null;
+
+async function readFileCache(): Promise<Cached | null> {
+  try {
+    const c = JSON.parse(await fs.readFile(CACHE_FILE, "utf8")) as Cached;
+    if (c && typeof c.at === "number" && c.body && Array.isArray(c.body.stories)) return c;
+  } catch { /* none yet, or unreadable */ }
+  return null;
+}
+
+async function remember(body: NewsPayload) {
+  cache = { at: Date.now(), body };
+  console.log(`[news] feed refreshed: ${body.stories.length} stories${body.sample ? " (sample)" : ""}`);
+  try { await fs.writeFile(CACHE_FILE, JSON.stringify(cache)); } catch { /* read-only disk: memory only */ }
+}
+
+/* One refresh at a time; callers share it. */
+function refresh(): Promise<void> {
+  if (!refreshing) {
+    console.log("[news] refreshing the feed");
+    refreshing = fetchFeed()
+      .then(remember)
+      .catch((e) => { console.error("[news] refresh failed; serving the last feed", e); })
+      .finally(() => { refreshing = null; });
+  }
+  return refreshing;
+}
 
 type Source = { name: string; domain: string };
 type Story = { id: string; headline: string; url: string | null; publishedAt: string | null; sources: Source[]; imageUrl?: string | null; summary?: string | null; category?: string | null; major?: boolean };
@@ -196,11 +235,8 @@ const SAMPLE: Story[] = [
     sources: [{ name: "NASA", domain: "nasa.gov" }, { name: "Space.com", domain: "space.com" }, { name: "NYT", domain: "nytimes.com" }] },
 ];
 
-export async function GET() {
-  if (cache && Date.now() - cache.at < TTL_MS) {
-    return Response.json(cache.body);
-  }
-
+/* The providers, in order of preference; the sample feed when none answers. */
+async function fetchFeed(): Promise<NewsPayload> {
   const key = process.env.PARTICLE_API_KEY;
   const url = process.env.PARTICLE_API_URL ?? "https://api.particle.news/v1/stories/top";
   let body: NewsPayload = { sample: true, stories: SAMPLE };
@@ -288,6 +324,18 @@ export async function GET() {
     }
   }
 
-  cache = { at: Date.now(), body };
-  return Response.json(body);
+  return body;
+}
+
+export async function GET() {
+  const known = cache ?? (cache = await readFileCache());
+  if (known) {
+    // Past the TTL: answer with what we have, refresh behind the response.
+    if (Date.now() - known.at >= TTL_MS) after(refresh);
+    return Response.json(known.body);
+  }
+  // Nothing known yet (the first request after a cold start with no file):
+  // the one time the fetch is waited for.
+  await refresh();
+  return Response.json(cache?.body ?? { sample: true, stories: SAMPLE });
 }
