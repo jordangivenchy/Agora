@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import { roomPath, replayPath, userPath } from "@/lib/urls";
+import LoadingScreen, { LoadingLine } from "@/components/LoadingScreen";
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -660,9 +661,10 @@ export default function ProfileView({
   }
 
   if (!profile) {
+    if (!embedded) return <LoadingScreen label="Opening the profile" />;
     return (
-      <div className={`${embedded ? "h-full py-24" : "min-h-screen"} flex items-center justify-center`} style={{ background: embedded ? "transparent" : "var(--bg-primary, #0a0a0c)" }}>
-        <div className="animate-spin" style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #3b6cf6", borderTopColor: "transparent" }} />
+      <div className="h-full py-24 flex items-center justify-center">
+        <LoadingLine label="Loading the profile" />
       </div>
     );
   }

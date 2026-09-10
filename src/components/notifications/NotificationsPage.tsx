@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { LoadingLine } from "@/components/LoadingScreen";
 import SiteChrome from "@/components/SiteChrome";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
@@ -209,7 +210,7 @@ export default function NotificationsPage() {
 
         {loading && (
           <div className="py-20 flex justify-center">
-            <div className="animate-spin" style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #3b6cf6", borderTopColor: "transparent" }} />
+            <LoadingLine label="Loading notifications" />
           </div>
         )}
 

@@ -2273,6 +2273,10 @@ html.reduce-motion .nav-sparkle {
   margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
   display: flex; align-items: baseline; white-space: nowrap;
 }
+.ld-line {
+  margin: 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
+  display: inline-flex; align-items: baseline;
+}
 .ld-ellipsis i {
   display: inline-block; width: 3px; height: 3px; margin-left: 3px; border-radius: 50%;
   background: currentColor; animation: ldDot 1.4s ease-in-out infinite;

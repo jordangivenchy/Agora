@@ -15,6 +15,17 @@
 
 import { useEffect, useRef } from "react";
 
+/* In-page waits (a list still arriving, a panel's data): a line with the
+   same ticking ellipsis, never a spinner. */
+export function LoadingLine({ label = "Loading" }: { label?: string }) {
+  return (
+    <p className="ld-line" role="status">
+      {label}
+      <span className="ld-ellipsis" aria-hidden="true"><i /><i /><i /></span>
+    </p>
+  );
+}
+
 export default function LoadingScreen({ label }: { label?: string }) {
   const trailsRef = useRef<HTMLCanvasElement>(null);
   const headsRef = useRef<HTMLCanvasElement>(null);

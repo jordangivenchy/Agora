@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import LoadingScreen from "@/components/LoadingScreen";
 import { Icon } from "@/components/icons";
 import NotificationsBell from "@/components/NotificationsBell";
 import useNavbarSearch from "@/components/search/useNavbarSearch";
@@ -236,6 +237,15 @@ function SiteNavbar() {
   );
 }
 
+const SECTION_LABEL: Record<HomeNavId, string> = {
+  home: "Going home",
+  feed: "Opening the feed",
+  trending: "Opening Trending",
+  explore: "Opening Explore",
+  communities: "Opening Communities",
+  news: "Opening News",
+};
+
 export default function SiteChrome({
   activeId = null,
   children,
@@ -244,16 +254,27 @@ export default function SiteChrome({
   children: ReactNode;
 }) {
   const router = useRouter();
+  /* Every tab leads to the home shell (lib/routes.ts: its section
+     paths all rewrite to "/"), a route with no loading fallback of its
+     own (its tabs switch client-side and its boot does not tolerate
+     one), so this page shows the sky itself until the shell arrives
+     and this chrome unmounts with the page. */
+  const [leaving, setLeaving] = useState<HomeNavId | null>(null);
+  const go = (id: HomeNavId) => {
+    setLeaving(id);
+    router.push(pathFor.section(id));
+  };
 
   return (
     <div className="min-h-screen site-chrome" style={{ background: "#000", fontFamily: "'DM Sans', sans-serif" }}>
       <Starfield />
       <SiteNavbar />
+      {leaving && <LoadingScreen label={SECTION_LABEL[leaving]} />}
 
       {/* Always mounted: the desktop rail at lg+, an off-canvas drawer
           (hamburger-driven) below — never simply gone. */}
       <div>
-        <HomeSidebar activeId={activeId} onNavigate={(id) => router.push(pathFor.section(id))} />
+        <HomeSidebar activeId={activeId} onNavigate={go} />
       </div>
 
       {/* .nav is position:fixed (60px), so the page content starts below

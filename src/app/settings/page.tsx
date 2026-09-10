@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { validateNewPassword } from "@/lib/passwordPolicy";
+import LoadingScreen from "@/components/LoadingScreen";
 import EditProfileModal from "@/components/EditProfileModal";
 import SiteChrome from "@/components/SiteChrome";
 import DataAndCoachPanel from "@/components/DataAndCoachPanel";
@@ -1012,13 +1013,7 @@ export default function SettingsPage() {
 
   /* ── frame ── */
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center" style={{ width: "100vw", height: "100vh", background: "var(--bg-primary, #0a0a0c)" }}>
-        <div className="animate-spin" style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid var(--accent-blue, #3b82f6)", borderTopColor: "transparent" }} />
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen label="Opening settings" />;
 
   if (loadError) {
     return (
