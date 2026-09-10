@@ -353,8 +353,7 @@ function newsSlideHTML(c, i, total) {
       <div class="carousel-news-shade"></div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">${escHTML(c.headline)}</div>
-        <div class="carousel-news-chips">${chips}</div>
-        <a class="carousel-news-link" href="/news">Go to the News page ›</a>
+        <div class="carousel-news-chips">${chips}<a class="carousel-news-link" href="/news">Go to the News page ›</a></div>
       </div>
       <div class="carousel-panel carousel-news-card">
         <div class="carousel-news-byline">
