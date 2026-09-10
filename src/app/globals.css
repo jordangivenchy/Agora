@@ -2242,19 +2242,16 @@ html.reduce-motion .nav-sparkle {
 }
 
 /* ── Loading screen (components/LoadingScreen.tsx) ───────────────────
-   A time-lapse of the night sky on a canvas — a fresh disc of stars,
-   centred and fitting the screen, turning, each star drawing its arc —
-   and the AS mark coming up at the centre as the exposure ends. The
-   disc's rim dissolves through a radial mask on the canvas. */
+   A time-lapse of the night sky on two canvases (trails, heads) — a
+   fresh sky over the whole screen turning about the centre, each star
+   drawing its arc behind a bright head — and the AS mark coming up at
+   the centre. */
 .ld-screen {
   position: fixed; inset: 0; z-index: 60;
   background: #000; color: #9aa0ac;
   overflow: hidden;
 }
-.ld-sky {
-  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
-  mask-image: radial-gradient(circle closest-side at center, #000 68%, transparent 100%);
-}
+.ld-sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .ld-center {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%) scale(0.94);
