@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
-import Wordmark from "@/components/Wordmark";
+import AuthShell from "@/components/auth/AuthShell";
+import { LoadingLine } from "@/components/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import AvatarCropModal from "@/components/AvatarCropModal";
@@ -174,49 +175,28 @@ export default function WelcomePage() {
   const canContinue =
     !saving && !uploading && availability !== "taken" && availability !== "invalid";
 
+  const hint =
+    availability === "checking" ? "Checking availability…"
+    : availability === "ok" ? "Available"
+    : availability === "taken" ? "Already taken — try another"
+    : availability === "invalid" ? "3–20 characters: a–z, 0–9, underscores"
+    : "3–20 characters: lowercase letters, numbers, underscores";
+
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-4 py-10"
-      style={{ background: "var(--bg-primary)" }}
-    >
-      {/* Ambient glow */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          width: "720px",
-          height: "720px",
-          top: "-360px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          background:
-            "radial-gradient(circle, rgba(59,130,246,0.14) 0%, rgba(59,130,246,0.05) 40%, transparent 70%)",
-        }}
-      />
-
-      <main className="relative flex flex-col items-center w-full" style={{ maxWidth: "420px" }}>
-        {/* Brand */}
-        <Wordmark size={22} className="mb-7" />
-
+    <>
+      <AuthShell
+        width={420}
+        brandHref={null}
+        footer={
+          <button type="button" onClick={() => router.replace("/")} className="auth-quiet">
+            {step === "follow" ? "Skip" : "Skip for now"}
+          </button>
+        }
+      >
         {step === "follow" && (
-          <div
-            className="w-full"
-            style={{
-              background: "rgba(18,18,21,0.7)",
-              border: "1px solid var(--border)",
-              borderRadius: "20px",
-              padding: "32px 24px 26px",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-              backdropFilter: "blur(16px)",
-              WebkitBackdropFilter: "blur(16px)",
-            }}
-          >
-            <h1
-              className="text-center"
-              style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: "22px", letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: "6px" }}
-            >
-              Follow a few people
-            </h1>
-            <p className="text-center" style={{ color: "var(--text-muted)", fontSize: "13px", lineHeight: 1.55, marginBottom: "18px" }}>
+          <>
+            <h1 className="auth-title">Follow a few people</h1>
+            <p className="auth-sub">
               Their discussions and posts will show up in your feed. Optional — you can always find more under People.
             </p>
             <PeopleSuggestions
@@ -226,367 +206,100 @@ export default function WelcomePage() {
               onLoaded={(n) => { if (n === 0) router.replace("/"); }}
               onFollowChange={(_, f) => setFollowed((c) => Math.max(0, c + (f ? 1 : -1)))}
             />
-            <button
-              onClick={() => router.replace("/")}
-              className="w-full cursor-pointer transition-all"
-              style={{
-                marginTop: "18px",
-                background: "var(--accent-blue)",
-                border: "none",
-                borderRadius: "100px",
-                color: "#fff",
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: "14px",
-                fontWeight: 600,
-                padding: "12px 20px",
-              }}
-            >
+            <button onClick={() => router.replace("/")} className="auth-primary" style={{ marginTop: 18 }}>
               {followed > 0 ? `Continue (${followed} followed)` : "Continue"}
             </button>
-          </div>
+          </>
         )}
 
         {step === "profile" && (
-        <div
-          className="w-full"
-          style={{
-            background: "rgba(18,18,21,0.7)",
-            border: "1px solid var(--border)",
-            borderRadius: "20px",
-            padding: "32px 32px 26px",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-          }}
-        >
-          <h1
-            className="text-center"
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 700,
-              fontSize: "22px",
-              letterSpacing: "-0.02em",
-              color: "var(--text-primary)",
-              marginBottom: "6px",
-            }}
-          >
-            Set up your profile
-          </h1>
-          <p
-            className="text-center"
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "13px",
-              lineHeight: 1.55,
-              marginBottom: "26px",
-            }}
-          >
-            This is how other speakers will see you. You can change it anytime.
-          </p>
+          <>
+            <h1 className="auth-title">Set up your profile</h1>
+            <p className="auth-sub">This is how other speakers will see you. You can change it anytime.</p>
+            {error && <div className="auth-error">{error}</div>}
 
-          {error && (
-            <div
-              style={{
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                borderRadius: "10px",
-                color: "#fca5a5",
-                fontSize: "12.5px",
-                lineHeight: 1.5,
-                padding: "10px 14px",
-                marginBottom: "18px",
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          {!loaded ? (
-            <div className="flex items-center justify-center py-14">
-              <div
-                className="animate-spin"
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  border: "2px solid var(--accent-blue)",
-                  borderTopColor: "transparent",
-                }}
-              />
-            </div>
-          ) : (
-            <>
-              {/* Avatar */}
-              <div className="flex flex-col items-center mb-6">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="relative cursor-pointer group"
-                  style={{ background: "none", border: "none", padding: 0 }}
-                  title="Change photo"
-                >
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarUrl}
-                      alt="Your avatar"
-                      className="rounded-full object-cover"
-                      style={{
-                        width: 92,
-                        height: 92,
-                        border: "2px solid var(--border-hover)",
-                      }}
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div
-                      className="rounded-full flex items-center justify-center"
-                      style={{
-                        width: 92,
-                        height: 92,
-                        background: "rgba(255,255,255,0.05)",
-                        border: "2px dashed var(--border-hover)",
-                        color: "var(--text-dim)",
-                      }}
-                    >
-                      <Icon name="user" size={30} strokeWidth={1.5} />
-                    </div>
-                  )}
-                  {/* Camera badge */}
-                  <span
-                    className="absolute flex items-center justify-center"
-                    style={{
-                      width: 30,
-                      height: 30,
-                      right: -2,
-                      bottom: -2,
-                      borderRadius: "50%",
-                      background: "var(--accent-blue)",
-                      border: "2.5px solid var(--bg-secondary)",
-                      color: "#fff",
-                    }}
+            {!loaded ? (
+              <div className="auth-wait"><LoadingLine label="Loading your profile" /></div>
+            ) : (
+              <>
+                <div className="auth-avatar">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="auth-avatar-btn"
+                    title="Change photo"
                   >
-                    <Icon name="camera" size={13} />
-                  </span>
-                </button>
-                <span
-                  style={{
-                    marginTop: 10,
-                    fontSize: "11.5px",
-                    color: "var(--text-dim)",
-                    fontWeight: 500,
-                  }}
-                >
-                  {uploading ? "Uploading…" : "Click to upload a photo"}
-                </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleAvatarPick(f);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="Your avatar" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="auth-avatar-empty"><Icon name="user" size={32} strokeWidth={1.5} /></div>
+                    )}
+                    <span className="auth-avatar-badge"><Icon name="camera" size={14} /></span>
+                  </button>
+                  <span className="auth-avatar-caption">{uploading ? "Uploading…" : "Add a photo"}</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleAvatarPick(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
 
-              {/* Display name */}
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "11.5px",
-                  fontWeight: 600,
-                  letterSpacing: "0.02em",
-                  color: "var(--text-muted)",
-                  marginBottom: "6px",
-                }}
-              >
-                Display name{" "}
-                <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>(optional)</span>
-              </label>
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value.slice(0, 40))}
-                placeholder="e.g. Jordan J."
-                className="w-full outline-none transition-all"
-                style={{
-                  height: "42px",
-                  padding: "0 14px",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "10px",
-                  color: "var(--text-primary)",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "13.5px",
-                  marginBottom: "14px",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border)";
-                }}
-              />
-
-              {/* Username */}
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "11.5px",
-                  fontWeight: 600,
-                  letterSpacing: "0.02em",
-                  color: "var(--text-muted)",
-                  marginBottom: "6px",
-                }}
-              >
-                Username
-              </label>
-              <div className="relative">
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 14,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--text-dim)",
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: 13.5,
-                  }}
-                >
-                  @
-                </span>
-                <input
-                  value={username}
-                  onChange={(e) =>
-                    setUsername(
-                      e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20)
-                    )
-                  }
-                  placeholder="your_handle"
-                  className="w-full outline-none transition-all"
-                  style={{
-                    height: "42px",
-                    padding: "0 14px 0 32px",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "10px",
-                    color: "var(--text-primary)",
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: "13.5px",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--border)";
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  minHeight: 18,
-                  fontSize: "11.5px",
-                  marginTop: 5,
-                  marginBottom: 14,
-                  color:
-                    availability === "ok"
-                      ? "#22c55e"
-                      : availability === "taken" || availability === "invalid"
-                        ? "#fca5a5"
-                        : "var(--text-dim)",
-                }}
-              >
-                {availability === "checking" && "Checking availability…"}
-                {availability === "ok" && "✓ Available"}
-                {availability === "taken" && "Already taken — try another"}
-                {availability === "invalid" && "3–20 chars: a–z, 0–9, underscores"}
-                {availability === "idle" && "3–20 chars: lowercase letters, numbers, underscores"}
-              </div>
-
-              {/* Bio */}
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "11.5px",
-                  fontWeight: 600,
-                  letterSpacing: "0.02em",
-                  color: "var(--text-muted)",
-                  marginBottom: "6px",
-                }}
-              >
-                Bio <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>(optional)</span>
-              </label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, 240))}
-                placeholder="Tell the community something about you…"
-                rows={3}
-                className="w-full outline-none transition-all"
-                style={{
-                  padding: "10px 14px",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "10px",
-                  color: "var(--text-primary)",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "13px",
-                  resize: "none",
-                  marginBottom: "20px",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border)";
-                }}
-              />
-
-              <button
-                onClick={handleContinue}
-                disabled={!canContinue}
-                className="w-full cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: "var(--accent-blue)",
-                  border: "none",
-                  borderRadius: "100px",
-                  color: "#fff",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  padding: "12px 20px",
-                }}
-                onMouseEnter={(e) => {
-                  if (canContinue)
-                    e.currentTarget.style.background = "var(--accent-purple-light)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--accent-blue)";
-                }}
-              >
-                {saving ? "Saving…" : "Continue"}
-              </button>
-            </>
-          )}
-        </div>
+                <div className="auth-form">
+                  <div className="auth-field-group">
+                    <label className="auth-label" htmlFor="display-name">Display name <small>optional</small></label>
+                    <input
+                      id="display-name"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value.slice(0, 40))}
+                      placeholder="e.g. Jordan J."
+                      className="auth-field"
+                    />
+                  </div>
+                  <div className="auth-field-group">
+                    <label className="auth-label" htmlFor="username">Username</label>
+                    <div className="auth-handle">
+                      <span aria-hidden="true">@</span>
+                      <input
+                        id="username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))}
+                        placeholder="your_handle"
+                        autoComplete="username"
+                        className="auth-field is-mono"
+                      />
+                    </div>
+                    <div className={`auth-hint${availability === "ok" ? " is-ok" : availability === "taken" || availability === "invalid" ? " is-bad" : ""}`}>
+                      {hint}
+                    </div>
+                  </div>
+                  <div className="auth-field-group">
+                    <label className="auth-label" htmlFor="bio">Bio <small>optional</small></label>
+                    <textarea
+                      id="bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value.slice(0, 240))}
+                      placeholder="Tell the community something about you…"
+                      rows={3}
+                      className="auth-field"
+                    />
+                  </div>
+                  <button onClick={handleContinue} disabled={!canContinue} className="auth-primary">
+                    {saving ? "Saving…" : "Continue"}
+                  </button>
+                </div>
+              </>
+            )}
+          </>
         )}
-
-        <button
-          onClick={() => router.replace("/")}
-          className="cursor-pointer transition-colors"
-          style={{
-            marginTop: "16px",
-            background: "none",
-            border: "none",
-            fontSize: "12.5px",
-            color: "var(--text-muted)",
-            fontWeight: 500,
-          }}
-        >
-          {step === "follow" ? "Skip" : "Skip for now"}
-        </button>
-      </main>
+      </AuthShell>
 
       <AvatarCropModal
         open={!!cropSrc}
@@ -594,6 +307,6 @@ export default function WelcomePage() {
         onCancel={closeCrop}
         onApply={handleCroppedUpload}
       />
-    </div>
+    </>
   );
 }
