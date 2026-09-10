@@ -18,7 +18,6 @@ import { DEFAULT_SETTINGS, fetchSettingsInitial, type BlockedUser, type ProfileR
 import { validateNewPassword } from "@/lib/passwordPolicy";
 import LoadingScreen from "@/components/LoadingScreen";
 import EditProfileModal from "@/components/EditProfileModal";
-import SiteChrome from "@/components/SiteChrome";
 import DataAndCoachPanel from "@/components/DataAndCoachPanel";
 import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
@@ -965,7 +964,7 @@ export default function SettingsPage({ initial }: {
   }
 
   return (
-    <SiteChrome>
+    <>
     <div className="replay-beside-sidebar settings-shell" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="settings-inner" style={{ maxWidth: 980, margin: 0, padding: "24px 20px" }}>
 
@@ -1063,6 +1062,6 @@ export default function SettingsPage({ initial }: {
         />
       )}
     </div>
-    </SiteChrome>
+    </>
   );
 }

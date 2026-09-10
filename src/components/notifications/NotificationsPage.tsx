@@ -12,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { LoadingLine } from "@/components/LoadingScreen";
 import { NOTIF_PAGE, type NotificationsInitial } from "@/lib/notificationsData";
-import SiteChrome from "@/components/SiteChrome";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
 import {
@@ -153,7 +152,7 @@ export default function NotificationsPage({ initial }: {
     /* Same chrome as the signed-in page (and as /messages signed out), so
        the top bar, search and phone tab bar are there on every route. */
     return (
-      <SiteChrome>
+      <>
         <main
           className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar beside-rail--reading flex flex-col items-center justify-center gap-4"
           style={{ minHeight: "60vh", fontFamily: "'DM Sans', sans-serif" }}
@@ -161,12 +160,12 @@ export default function NotificationsPage({ initial }: {
           <p className="m-0" style={{ color: "#8b8b94" }}>Sign in to see your notifications.</p>
           <Link href="/login" style={{ color: "#9cc4f0", fontSize: 14 }}>Sign in →</Link>
         </main>
-      </SiteChrome>
+      </>
     );
   }
 
   return (
-    <SiteChrome>
+    <>
       <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar beside-rail--reading" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
           <div>
@@ -318,6 +317,6 @@ export default function NotificationsPage({ initial }: {
           </div>
         )}
       </main>
-    </SiteChrome>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-/* Shared page chrome for every route, the home page included: the top navbar (logo, search bar, Create, messages, bell, avatar menu — the
+/* The chrome, rendered once by app/(chrome)/layout.tsx and kept across
+   the routes under it: the top navbar (logo, search bar, Create, messages, bell, avatar menu — the
    exact mvp-home markup/classes, styled by mvp-home.css which arrives
    through the sidebar's home-sidebar.css layer) plus the glass sidebar.
    Used everywhere except the live room (amphitheater) and the focused
@@ -8,10 +9,9 @@
    the rail brings its own offset class (profile-beside-sidebar /
    replay-beside-sidebar). */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import LoadingScreen from "@/components/LoadingScreen";
+import { usePathname, useRouter } from "next/navigation";
 import SiteNavbar from "@/components/SiteNavbar";
 import GlobalActions from "@/components/GlobalActions";
 import { markHomeChosen } from "@/lib/homeChoice";
@@ -27,44 +27,42 @@ import "@/components/home-sidebar.css";
 const HomeSidebar = dynamic(() => import("@/components/HomeSidebar"), { ssr: false });
 const Starfield = dynamic(() => import("@/components/Starfield"), { ssr: false });
 
-const SECTION_LABEL: Record<HomeNavId, string> = {
-  home: "Going home",
-  feed: "Opening the feed",
-  trending: "Opening Trending",
-  explore: "Opening Explore",
-  communities: "Opening Communities",
-  news: "Opening News",
-};
+/* Which sidebar item the address belongs to. */
+function activeFor(pathname: string | null): HomeNavId | null {
+  if (!pathname) return null;
+  if (pathname === "/") return "home";
+  if (pathname.startsWith("/feed")) return "feed";
+  if (pathname.startsWith("/trending")) return "trending";
+  if (pathname.startsWith("/explore")) return "explore";
+  if (pathname.startsWith("/communities") || pathname.startsWith("/posts")) return "communities";
+  if (pathname.startsWith("/news")) return "news";
+  return null;
+}
 
-export default function SiteChrome({
-  activeId = null,
-  children,
-}: {
-  activeId?: HomeNavId | null;
-  children: ReactNode;
-}) {
+export default function SiteChrome({ children }: { children: ReactNode }) {
   const router = useRouter();
-  /* The sections are routes with loading screens of their own; this
-     overlay covers the beat before the router has one to show, and
-     unmounts with the page. */
-  const [leaving, setLeaving] = useState<HomeNavId | null>(null);
-  const leaveTimer = useRef(0);
-  useEffect(() => () => clearTimeout(leaveTimer.current), []);
+  const pathname = usePathname();
+  const activeId = activeFor(pathname);
+  /* A tab tap navigates in place: the frame stays, the content swaps
+     when the route is ready, and the thin bar at the top shows the wait
+     in between (the sidebar's links prefetch, so in production there
+     is rarely one). */
+  const [pending, startTransition] = useTransition();
+  const [target, setTarget] = useState<string | null>(null);
   const go = (id: HomeNavId) => {
-    // A quarter second's grace: a shell that arrives that fast needs no
-    // curtain, and this page stays up until it does.
-    clearTimeout(leaveTimer.current);
-    leaveTimer.current = window.setTimeout(() => setLeaving(id), 250);
     if (id === "home") markHomeChosen();
-    router.push(pathFor.section(id));
+    const path = pathFor.section(id);
+    setTarget(path);
+    startTransition(() => { router.push(path); });
   };
+  const waiting = pending && target !== null && pathname !== target;
 
   return (
     <div className="min-h-screen site-chrome" style={{ background: "#000", fontFamily: "'DM Sans', sans-serif" }}>
       <Starfield />
       <SiteNavbar />
       <GlobalActions />
-      {leaving && <LoadingScreen label={SECTION_LABEL[leaving]} />}
+      {waiting && <div className="sk-progress" aria-hidden="true" />}
 
       {/* Always mounted: the desktop rail at lg+, an off-canvas drawer
           (hamburger-driven) below — never simply gone. */}

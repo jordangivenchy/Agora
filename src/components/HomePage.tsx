@@ -6,8 +6,9 @@
    The route (app/page.tsx) fetches the first view on the server and
    decides the redirects; this keeps it live — realtime changes and a
    30s heartbeat refresh the hero — and owns the hero's queue button.
-   The sections are routes of their own; the chrome (SiteChrome)
-   carries the navbar, the sidebar and the site-wide actions. */
+   The sections are routes of their own; the chrome (app/(chrome)/
+   layout.tsx) carries the navbar, the sidebar and the site-wide
+   actions and stays put between them. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -15,7 +16,6 @@ import { writeNavUser } from "@/lib/navUserCache";
 import { sessionUser } from "@/lib/session";
 import { fetchHeroRooms, fetchNavUser, type HomeInitial } from "@/lib/homeData";
 import LoadingScreen from "@/components/LoadingScreen";
-import SiteChrome from "@/components/SiteChrome";
 import TopicsHome from "@/components/TopicsHome";
 import HeroCarousel, { type HeroRoom } from "@/components/HeroCarousel";
 import ShootingStars from "@/components/ShootingStars";
@@ -33,12 +33,17 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
   /* The navbar's cache starts from what the route knew. */
   useEffect(() => { writeNavUser(initial.navUser); }, [initial.navUser]);
 
-  /* The page's own loading screen: up until the hero's news fetch has
-     settled — so the strip never pops in under a page already shown —
-     then a short fade. Capped so a stalled fetch can't trap the page.
-     Its sky continues the boot splash's on a full load and the route
-     fallback's on a client-side arrival (they share a session). */
-  const [shellReady, setShellReady] = useState(false);
+  /* The page's own loading screen on a full load: up until the hero's
+     news fetch has settled — so the strip never pops in under a page
+     already shown — then a short fade. Capped so a stalled fetch can't
+     trap the page. Its sky continues the boot splash's (they share a
+     session). */
+  /* Only a full load waits: the boot splash is up then, and this keeps
+     its sky until the hero has settled. A client-side arrival — a tab
+     tap — shows the page at once and lets the strip fill in. */
+  const [shellReady, setShellReady] = useState(
+    () => typeof document !== "undefined" && !!document.getElementById("ag-boot")?.classList.contains("is-done"),
+  );
   const waitRef = useRef<HTMLDivElement>(null);
   const waitDone = useRef(false);
   useEffect(() => {
@@ -149,7 +154,7 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
   }, [supabase]);
 
   return (
-    <SiteChrome activeId="home">
+    <>
       {!shellReady && (
         <div ref={waitRef} className="ld-page-wait">
           <LoadingScreen />
@@ -222,6 +227,6 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
         container={fieldsHost}
         onCreateLobby={(topic, schedule) => requestCreate({ motion: "", topic, schedule })}
       />
-    </SiteChrome>
+    </>
   );
 }

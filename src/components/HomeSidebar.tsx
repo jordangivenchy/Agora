@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import FriendsSection from "@/components/friends/FriendsSection";
+import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { pathFor } from "@/lib/routes";
 import "./home-sidebar.css";
@@ -207,10 +208,11 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
         <div className="sidebar-top-zone">
           <nav className="sidebar-nav" id="mvNav">
             {NAV.map((item) => (
-              <a
+              <Link
                 key={item.id}
                 className={`sidebar-link${activeId === item.id ? " active" : ""}`}
                 href={pathFor.section(item.id)}
+                prefetch
                 data-page={item.page}
                 data-nav-id={item.id}
                 onClick={(e) => {
@@ -240,7 +242,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
                   <span className="nav-icon-wrap">{item.icon}</span>
                   <span className="nav-label">{item.label}</span>
                 </div>
-              </a>
+              </Link>
             ))}
           </nav>
         </div>
@@ -266,10 +268,11 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
       {(() => {
         const tabs = NAV.filter((item) => item.phoneTab !== false);
         const tab = (item: NavItem) => (
-          <a
+          <Link
             key={item.id}
             className={`mobile-tab${activeId === item.id ? " active" : ""}`}
-            href="#"
+            href={pathFor.section(item.id)}
+            prefetch
             data-nav-id={item.id}
             aria-current={activeId === item.id ? "page" : undefined}
             onClick={(e) => {
@@ -279,7 +282,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
           >
             <span className="mobile-tab-icon">{item.icon}</span>
             <span className="mobile-tab-label">{item.short ?? item.label}</span>
-          </a>
+          </Link>
         );
         const mid = Math.ceil(tabs.length / 2);
         return (
