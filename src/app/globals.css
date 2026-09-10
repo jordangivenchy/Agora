@@ -2522,7 +2522,9 @@ html.reduce-motion .nav-sparkle {
     --sidebar-width: 0px;
   }
 
-  /* Kick-style bottom tab bar: solid, safe-area aware, yellow active. */
+  /* Kick-style bottom tab bar: see-through, safe-area aware, yellow
+     active. No fill and no hairline, so the starfield shows behind the
+     tabs the way it does behind the top bar. */
   .mobile-tabbar {
     display: flex;
     position: fixed;
@@ -2531,8 +2533,8 @@ html.reduce-motion .nav-sparkle {
     bottom: 0;
     height: calc(58px + env(safe-area-inset-bottom));
     padding: 0 10px env(safe-area-inset-bottom);
-    background: #0e0e12;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    border-top: none;
     z-index: 120;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
