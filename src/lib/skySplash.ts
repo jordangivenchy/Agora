@@ -17,12 +17,13 @@
    timer of its own so it still arrives in a background tab. Returns
    { stop, elapsed }. A canvas already running is left alone.
 
-   Skies continue each other: a route's fallback gives way to the
+   Skies hand over to each other: a route's fallback gives way to the
    page's own loading state, and both show the sky. So the scatter is
    seeded and the clock shared (window.__agoraSkySession): a sky
-   started within a couple of seconds of the last one stopping draws
-   the same stars at the angle they have reached, with the mark already
-   up if it was due, and turns on from there. */
+   started within a beat of the last one stopping — a hand-off, not a
+   new arrival — draws the same stars at the angle they have reached,
+   with the mark already up if it was due, and turns on from there.
+   Anything later opens a fresh, still sky and turns from rest. */
 
 export const SKY_SPLASH_JS = `
 window.__agoraSky = function (trails, heads, center, o) {
@@ -38,7 +39,7 @@ window.__agoraSky = function (trails, heads, center, o) {
   var w = window.innerWidth, h = window.innerHeight;
   var now0 = performance.now();
   var S = window.__agoraSkySession;
-  if (!S || now0 - (S.lastStop || S.start) > 2500 || S.w !== w || S.h !== h) {
+  if (!S || now0 - (S.lastStop || S.start) > 400 || S.w !== w || S.h !== h) {
     S = window.__agoraSkySession = { seed: (Math.random() * 4294967296) >>> 0, start: now0, w: w, h: h, lastStop: 0 };
   }
   S.lastStop = 0;
@@ -129,9 +130,9 @@ window.__agoraSky = function (trails, heads, center, o) {
   ctx.clearRect(0, 0, w, h);
   ctx.lineCap = 'round';
   sweep(0, 0.0001);
+  // Reduced motion: the still sky, stars as points, the mark at once.
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    sweep(0, 0.9);
-    drawHeads(0.9);
+    drawHeads(0);
     showMark(true);
     return { stop: stop, elapsed: elapsed0 };
   }
