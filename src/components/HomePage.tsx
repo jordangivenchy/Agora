@@ -2,12 +2,12 @@
 
 /* The home page: the hero carousel (the busiest live rooms and the
    day's stories) and the daily topics, in the home shell's look
-   (mvp-home.css). The route (app/page.tsx) fetches the first view on
-   the server and decides the redirects; this keeps it live — realtime
-   changes and a 30s heartbeat refresh the hero — and owns the hero's
-   queue button. The sections are routes of their own; the chrome
-   (SiteChrome) carries the navbar, the sidebar and the site-wide
-   actions. */
+   (mvp-home.css, which arrives with the chrome like everywhere else).
+   The route (app/page.tsx) fetches the first view on the server and
+   decides the redirects; this keeps it live — realtime changes and a
+   30s heartbeat refresh the hero — and owns the hero's queue button.
+   The sections are routes of their own; the chrome (SiteChrome)
+   carries the navbar, the sidebar and the site-wide actions. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -22,7 +22,6 @@ import ShootingStars from "@/components/ShootingStars";
 import KeyboardGuard from "@/components/KeyboardGuard";
 import { requestCreate } from "@/components/GlobalActions";
 import { topicFor } from "@/components/NewsPage";
-import "@/app/mvp-home.css";
 
 export default function HomePage({ initial }: { initial: HomeInitial }) {
   const [supabase] = useState(() => createClient());

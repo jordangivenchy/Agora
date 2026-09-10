@@ -1,9 +1,10 @@
-/* The homepage stylesheet, demoted into a cascade layer for routes that
-   only borrow the glass sidebar (see HomeSidebar.tsx). Unlayered, its
-   universal reset (star selector, margin and padding zero) beats
-   Tailwind's layered utilities and zeroes every spacing class on the
-   page; inside this layer — declared before tailwind's in globals.css —
-   the sidebar's own classes still apply, but conflicts resolve in the
-   utilities' favor. The homepage itself keeps importing mvp-home.css
-   directly, unlayered, unchanged. */
+/* The shell's stylesheet (mvp-home.css: the navbar, the sidebar and
+   tab bar, the hero, the topics, Explore, the boards' look), in a
+   cascade layer for every route — the home page included, since it
+   renders inside the chrome like the rest. Unlayered, its universal
+   reset (star selector, margin and padding zero) would beat Tailwind's
+   layered utilities and zero every spacing class on the page; inside
+   this layer, declared before tailwind's in globals.css, its classes
+   apply and conflicts resolve in the utilities' favour. Imported by
+   SiteChrome and HomeSidebar. */
 @import url("../app/mvp-home.css") layer(mvp-home);
