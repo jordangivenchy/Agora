@@ -18,6 +18,8 @@ interface Options {
   onKey: (e: KeyboardEvent, value: string) => boolean | void;
   /** The × inside the box was clicked (text already cleared). */
   onCloseRequest: () => void;
+  /** false: don't bind the box at all (the host wires #searchInput itself). */
+  enabled?: boolean;
 }
 
 export interface NavbarSearch {
@@ -30,7 +32,7 @@ export interface NavbarSearch {
   focus: () => void;
 }
 
-export default function useNavbarSearch({ onKey, onCloseRequest }: Options): NavbarSearch {
+export default function useNavbarSearch({ onKey, onCloseRequest, enabled = true }: Options): NavbarSearch {
   const [query, setQueryState] = useState("");
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -64,6 +66,7 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
 
   /* Bind to the box once it exists. */
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     let tries = 0;
     let cleanup: (() => void) | null = null;
@@ -171,7 +174,7 @@ export default function useNavbarSearch({ onKey, onCloseRequest }: Options): Nav
     };
     tick();
     return () => { cancelled = true; cleanup?.(); };
-  }, []);
+  }, [enabled]);
 
   /* Ring + × while the panel is open. */
   useEffect(() => {

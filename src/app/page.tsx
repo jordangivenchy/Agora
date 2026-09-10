@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { readNavUser, writeNavUser, type CachedNavUser } from "@/lib/navUserCache";
+import { writeNavUser } from "@/lib/navUserCache";
 import LoadingScreen from "@/components/LoadingScreen";
 import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
@@ -15,7 +15,8 @@ import CreateCommunityModal from "@/components/community/CreateCommunityModal";
 import TrendingPage from "@/components/TrendingPage";
 import TopicsHome from "@/components/TopicsHome";
 import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
-import NotificationsBell from "@/components/NotificationsBell";
+import SiteNavbar from "@/components/SiteNavbar";
+import Starfield from "@/components/Starfield";
 import NewsTicker from "@/components/NewsTicker";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage, { topicFor } from "@/components/NewsPage";
@@ -68,39 +69,6 @@ function fmtViewers(n: number): string {
   return n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n);
 }
 
-/* The signed-in navbar, painted the moment the shell's markup is in
-   place from the last known user (lib/navUserCache.ts, or the data a
-   previous visit left on window), so the shell never greets a signed-in
-   visitor with "Log in" while the real session loads. Mirrors the
-   adapter's auth block (mvp-adapter.js), which reconciles when the
-   data lands — and reverts this if the session turns out to be gone. */
-function paintNavUser(host: HTMLElement, u: CachedNavUser | null) {
-  if (!u) return;
-  for (const sel of [".btn-ghost", ".btn-signup"]) {
-    const b = host.querySelector<HTMLElement>(sel);
-    if (b) b.style.display = "none";
-  }
-  const wrap = host.querySelector<HTMLElement>("#profileAvatarWrap");
-  if (wrap) wrap.style.display = "";
-  const initial = host.querySelector<HTMLElement>(".avatar-initial");
-  if (initial) initial.textContent = (u.name || "U").charAt(0).toUpperCase();
-  const head = host.querySelector<HTMLElement>("#avatarMenuHead");
-  if (head) {
-    head.style.display = "";
-    const name = host.querySelector("#avatarMenuName");
-    const sub = host.querySelector("#avatarMenuSub");
-    if (name) name.textContent = u.name || "You";
-    if (sub) sub.textContent = u.username ? "@" + u.username : "";
-  }
-  if (u.avatarUrl && initial && initial.parentElement && !initial.parentElement.querySelector(".avatar-photo")) {
-    const img = document.createElement("img");
-    img.className = "avatar-photo";
-    img.alt = "";
-    img.src = u.avatarUrl;
-    img.onload = () => { initial.style.display = "none"; };
-    initial.parentElement.insertBefore(img, initial);
-  }
-}
 
 export default function Home() {
   const [supabase] = useState(() => createClient());
@@ -145,7 +113,6 @@ export default function Home() {
   /* Which MVP-rendered page is showing when no React tab is open; the
      sidebar highlights activeTab ?? mvpPage. */
   const [mvpPage, setMvpPage] = useState<"home" | "explore">("home");
-  const [bellHost, setBellHost] = useState<HTMLElement | null>(null);
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [exploreHost, setExploreHost] = useState<HTMLElement | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{
@@ -196,14 +163,9 @@ export default function Home() {
     if (hostRef.current && !hostRef.current.firstChild) {
       hostRef.current.innerHTML = MVP_HOME_HTML;
     }
-    if (hostRef.current) {
-      const known = (window as unknown as { __AGORA_DATA__?: { user?: CachedNavUser | null } }).__AGORA_DATA__?.user;
-      paintNavUser(hostRef.current, known ?? readNavUser());
-    }
     // Portal targets living inside the MVP markup: the Browse section
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
-    setBellHost(document.getElementById("notifBellHost"));
     setNewsHost(document.getElementById("newsTickerHost"));
     setExploreHost(document.getElementById("epResultsGrid"));
   }, []);
@@ -781,6 +743,14 @@ export default function Home() {
           <LoadingScreen />
         </div>
       )}
+      {/* The starfield and the navbar are React (phase 1 of retiring the
+          shell's scripts); the shell's own search wiring below binds the
+          navbar's box, so the navbar leaves search to it. */}
+      <Starfield />
+      <SiteNavbar
+        ownSearch={false}
+        onLogo={() => window.dispatchEvent(new CustomEvent("agora:tab", { detail: "home" }))}
+      />
       <div ref={hostRef} />
       {dbOffline && (
         <div
@@ -805,7 +775,6 @@ export default function Home() {
           Supabase project to be running.
         </div>
       )}
-      <NotificationsBell container={bellHost} />
       <NewsTicker container={newsHost} />
       <ExploreGrid container={exploreHost} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />

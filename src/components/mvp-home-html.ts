@@ -11,58 +11,11 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 </svg>
 
 <!-- ─── STARFIELD BACKGROUND ─── -->
-<canvas id="star-canvas" aria-hidden="true"></canvas>
+<!-- The star canvas is React now (components/Starfield.tsx, rendered by
+     app/page.tsx); the shooting stars still paint into this svg. -->
 <svg id="shooting-svg" aria-hidden="true"></svg>
 
-<!-- ─── TOP NAV ─── -->
-<nav class="nav">
-  <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
-  <a class="nav-logo" href="#" aria-label="AgoraSphere">
-    <img src="/logo.png" alt="AgoraSphere">
-  </a>
-  <div class="nav-search agora-search-shell" id="navSearchWrap">
-    <div class="search-active-indicator"></div>
-    <input type="text" id="searchInput" placeholder="Search topics, people, or keywords…" aria-label="Search" autocomplete="off">
-    <button class="create-btn nav-search-btn" id="searchBtn" type="button" aria-label="Create a discussion">
-      <span class="create-label"><span>C</span><span>r</span><span>e</span><span>a</span><span>t</span><span>e</span></span>
-    </button>
-  </div>
-  <div class="nav-auth">
-    <a class="nav-search-icon" href="/search" aria-label="Search">${iconSvg("search", 17)}</a>
-    <button class="btn-ghost">Log in</button>
-    <button class="btn-signup">Sign up</button>
-    <button class="nav-messages-btn" id="nav-messages-btn" type="button" aria-label="Messages">
-      ${iconSvg("message-circle", 16)}
-    </button>
-    <!-- Notification bell — React portal target (NotificationsBell.tsx) -->
-    <div id="notifBellHost" style="display:flex;align-items:center;"></div>
-    <div class="nav-avatar" id="profileAvatarWrap">
-      <button class="avatar-btn" id="profileAvatarBtn" aria-label="Profile menu" aria-expanded="false" aria-haspopup="true">
-        <div class="avatar-neon-ring"></div>
-        <span class="avatar-initial">J</span>
-      </button>
-      <div class="avatar-dropdown" id="profileDropdown" role="menu">
-        <div class="avatar-menu-head" id="avatarMenuHead" style="display:none">
-          <span class="avatar-menu-head-name" id="avatarMenuName"></span>
-          <span class="avatar-menu-head-sub" id="avatarMenuSub"></span>
-        </div>
-        <a class="avatar-menu-item" href="#profile" role="menuitem">
-          <span class="avatar-menu-icon">${iconSvg("user", 14)}</span>Profile
-        </a>
-        <a class="avatar-menu-item" href="#settings" role="menuitem">
-          <span class="avatar-menu-icon">${iconSvg("settings", 14)}</span>Settings
-        </a>
-        <a class="avatar-menu-item" href="#friends" role="menuitem">
-          <span class="avatar-menu-icon">${iconSvg("users", 14)}</span>Friends
-        </a>
-        <div class="avatar-dropdown-divider"></div>
-        <a class="avatar-menu-item avatar-menu-item--danger" href="#logout" role="menuitem">
-          <span class="avatar-menu-icon">${iconSvg("log-out", 14)}</span>Log out
-        </a>
-      </div>
-    </div>
-  </div>
-</nav>
+<!-- ─── TOP NAV ─── React now (components/SiteNavbar.tsx, rendered by app/page.tsx). -->
 
 <!-- ─── CREATE/QUEUE MODAL ─── -->
 <div id="createModal" class="create-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

@@ -172,75 +172,12 @@
     else if (typeof _origOpen === 'function') { _origOpen(i); }
   };
 
-  /* Auth area */
-  var D0 = window.__AGORA_DATA__ || {};
-  var loginBtn = document.querySelector('.btn-ghost');
-  var signupBtn = document.querySelector('.btn-signup');
-  if (D0.user) {
-    if (loginBtn) loginBtn.style.display = 'none';
-    if (signupBtn) signupBtn.style.display = 'none';
-    var initial = document.querySelector('.avatar-initial');
-    if (initial) initial.textContent = (D0.user.name || 'U').charAt(0).toUpperCase();
-    /* Identity header at the top of the avatar menu. */
-    var menuHead = document.getElementById('avatarMenuHead');
-    if (menuHead) {
-      menuHead.style.display = '';
-      var headName = document.getElementById('avatarMenuName');
-      var headSub = document.getElementById('avatarMenuSub');
-      if (headName) headName.textContent = D0.user.name || 'You';
-      if (headSub) headSub.textContent = D0.user.username ? '@' + D0.user.username : '';
-    }
-    /* Real profile photo when there is one; the initial stays as fallback.
-       (page.tsx may have painted one already from the last known user —
-       replace it, in case the account changed.) */
-    var oldPhoto = initial && initial.parentNode ? initial.parentNode.querySelector('.avatar-photo') : null;
-    if (oldPhoto) { oldPhoto.remove(); if (initial) initial.style.display = ''; }
-    if (D0.user.avatarUrl && initial) {
-      var img = document.createElement('img');
-      img.className = 'avatar-photo';
-      img.alt = '';
-      img.src = D0.user.avatarUrl;
-      img.onload = function () { initial.style.display = 'none'; };
-      initial.parentNode.insertBefore(img, initial);
-    }
-  } else {
-    /* Undo an early paint from a stale last-known user (page.tsx). */
-    if (loginBtn) loginBtn.style.display = '';
-    if (signupBtn) signupBtn.style.display = '';
-    if (loginBtn) loginBtn.addEventListener('click', function () { go('/login'); });
-    if (signupBtn) signupBtn.addEventListener('click', function () { go('/login'); });
-    var avWrap = document.getElementById('profileAvatarWrap');
-    if (avWrap) avWrap.style.display = 'none';
-    var msgBtn = document.getElementById('nav-messages-btn');
-    if (msgBtn) msgBtn.style.display = 'none';
-  }
-
-  /* Avatar dropdown → real destinations */
-  document.querySelectorAll('.avatar-menu-item').forEach(function (a) {
-    a.addEventListener('click', function (e) {
-      e.preventDefault();
-      var href = a.getAttribute('href');
-      if (href === '#logout') window.dispatchEvent(new CustomEvent('agora:logout'));
-      else if (href === '#settings') go('/settings');
-      else if (href === '#friends') window.dispatchEvent(new CustomEvent('agora:friends'));
-      else if (href === '#profile') window.dispatchEvent(new CustomEvent('agora:profile'));
-    });
-  });
+  /* The navbar — auth state, avatar menu, messages, Create, logo — is
+     React now (components/SiteNavbar.tsx). */
 
   /* Phone search icon (.nav-search-icon) is handled by the React search
      hook (useNavbarSearch.ts): it reveals the navbar box, focuses it in
      the tap and opens the panel in place. */
-
-  /* Messages button goes to the dedicated page. */
-  var msgWrap = document.getElementById('nav-messages-btn');
-  if (msgWrap) {
-    msgWrap.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      go('/messages');
-    });
-  }
-
 
   /* Friends section is rendered by React (FriendsSection) — the demo
      renderer stays idle. */
@@ -268,24 +205,5 @@
     };
     applyNavScroll();
     window.addEventListener('scroll', applyNavScroll, { passive: true });
-  }
-  if (!window.__agoraCreateHooked) {
-    window.__agoraCreateHooked = true;
-    document.addEventListener('click', function (e) {
-      if (!e.target || !e.target.closest) return;
-      if (e.target.closest('#searchBtn')) {
-        e.stopPropagation();
-        e.preventDefault();
-        /* The Create menu (components/CreateMenu.tsx): discussion, post
-           or community — anchored under the button. */
-        var r = e.target.closest('#searchBtn').getBoundingClientRect();
-        window.dispatchEvent(new CustomEvent('agora:create-menu', { detail: { top: r.bottom, right: window.innerWidth - r.right } }));
-      } else if (e.target.closest('.nav-logo')) {
-        // Logo → home (closes any open React tab and shows the home feed;
-        // the sidebar nav itself is React-owned now, see HomeSidebar.tsx).
-        e.preventDefault();
-        window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'home' }));
-      }
-    }, true);
   }
 })();
