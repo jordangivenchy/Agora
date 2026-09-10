@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { LoadingLine } from "@/components/LoadingScreen";
+import { NOTIF_PAGE, type NotificationsInitial } from "@/lib/notificationsData";
 import SiteChrome from "@/components/SiteChrome";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
@@ -19,7 +20,7 @@ import {
   type NotifFilter, type NotifRow,
 } from "@/lib/notifications";
 
-const PAGE = 30;
+const PAGE = NOTIF_PAGE;
 
 const FILTERS: { id: NotifFilter; label: string }[] = [
   { id: "all", label: "All" },
@@ -38,14 +39,18 @@ function dayLabel(iso: string): string {
   return "Earlier";
 }
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ initial }: {
+  /** The first view, fetched by the route on the server: the page
+      renders with it at once and refreshes in the browser as before. */
+  initial?: NotificationsInitial;
+}) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
-  const [userId, setUserId] = useState<string | null | undefined>(undefined);
-  const [items, setItems] = useState<NotifRow[]>([]);
+  const [userId, setUserId] = useState<string | null | undefined>(initial ? initial.userId : undefined);
+  const [items, setItems] = useState<NotifRow[]>(initial?.items ?? []);
   const [filter, setFilter] = useState<NotifFilter>("all");
-  const [loading, setLoading] = useState(true);
-  const [more, setMore] = useState(true);
+  const [loading, setLoading] = useState(!initial);
+  const [more, setMore] = useState(initial ? initial.more : true);
   const [busyMore, setBusyMore] = useState(false);
   const sentinel = useRef<HTMLDivElement | null>(null);
 

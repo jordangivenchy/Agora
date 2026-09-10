@@ -276,8 +276,13 @@ export default function SiteChrome({
      one), so this page shows the sky itself until the shell arrives
      and this chrome unmounts with the page. */
   const [leaving, setLeaving] = useState<HomeNavId | null>(null);
+  const leaveTimer = useRef(0);
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
   const go = (id: HomeNavId) => {
-    setLeaving(id);
+    // A quarter second's grace: a shell that arrives that fast needs no
+    // curtain, and this page stays up until it does.
+    clearTimeout(leaveTimer.current);
+    leaveTimer.current = window.setTimeout(() => setLeaving(id), 250);
     router.push(pathFor.section(id));
   };
 

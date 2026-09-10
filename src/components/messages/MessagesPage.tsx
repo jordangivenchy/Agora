@@ -28,6 +28,7 @@ import GroupThread from "./GroupThread";
 import GroupTile from "./GroupTile";
 import NewGroupModal from "./NewGroupModal";
 import { groupPreview, type GroupRow } from "./groups";
+import type { MessagesInitial } from "@/lib/messagesData";
 
 const WIDE_MIN = 900;
 
@@ -36,15 +37,19 @@ type RailItem = { kind: "dm"; at: string; t: Thread } | { kind: "group"; at: str
 export default function MessagesPage({
   initialUsername,
   initialGroupId,
+  initial,
 }: {
   initialUsername?: string;
   initialGroupId?: string;
+  /** The inbox as fetched by the route on the server: the page renders
+      with it at once and keeps refreshing in the browser as before. */
+  initial?: MessagesInitial;
 }) {
   const [supabase] = useState(() => createClient());
-  const [me, setMe] = useState<string | null | undefined>(undefined); // undefined = loading
+  const [me, setMe] = useState<string | null | undefined>(initial ? initial.me : undefined); // undefined = loading
   const [wide, setWide] = useState(true);
-  const [threads, setThreads] = useState<Thread[] | null>(null);
-  const [groups, setGroups] = useState<GroupRow[] | null>(null);
+  const [threads, setThreads] = useState<Thread[] | null>(initial?.threads ?? null);
+  const [groups, setGroups] = useState<GroupRow[] | null>(initial?.groups ?? null);
   const [search, setSearch] = useState("");
   const [peer, setPeer] = useState<Peer | null>(null);
   const [group, setGroup] = useState<GroupRow | null>(null);
