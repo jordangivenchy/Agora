@@ -191,6 +191,22 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   const anyQueued = Object.keys(queued).length > 0;
 
   /* Friends lists show "In queue" while we wait — clear it on unmount. */
+  /* A hero tap on a phone arrives with ?story=<id>: scroll that card
+     into view and ring it for a moment, then drop the param. */
+  useEffect(() => {
+    if (!stories || stories.length === 0) return;
+    let id: string | null = null;
+    try { id = new URLSearchParams(window.location.search).get("story"); } catch {}
+    if (!id) return;
+    const el = document.querySelector<HTMLElement>(`[data-story-id="${CSS.escape(id)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center" });
+    el.classList.add("news-story--hit");
+    const t = setTimeout(() => el.classList.remove("news-story--hit"), 2400);
+    try { window.history.replaceState(null, "", window.location.pathname); } catch {}
+    return () => clearTimeout(t);
+  }, [stories]);
+
   useEffect(() => { setPresenceQueued(anyQueued); }, [anyQueued]);
   useEffect(() => () => setPresenceQueued(false), []);
   useEffect(() => {
@@ -388,7 +404,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 <p className="m-0 mb-2.5 text-[11px] font-bold" style={{ color: "#9a9aa4", letterSpacing: "0.09em" }}>MAJOR STORIES</p>
                 <div className="grid mb-6 news-major-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(440px, 100%), 1fr))", gap: 16 }}>
                   {majors.map((st) => (
-                    <div key={st.id} className="flex flex-col overflow-hidden" style={card}>
+                    <div key={st.id} data-story-id={st.id} className="news-story flex flex-col overflow-hidden" style={card}>
                       <div style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#0d1b3e,#1e0533)", position: "relative", overflow: "hidden" }}>
                         {st.imageUrl && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -452,7 +468,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
                 <p className="m-0 mb-2.5 text-[11px] font-bold" style={{ color: "#9a9aa4", letterSpacing: "0.09em" }}>MORE HEADLINES</p>
                 <div className="flex flex-col gap-2.5 mb-6">
                   {rest.map((st) => (
-                    <div key={st.id} className="flex items-center gap-4 flex-wrap" style={{ ...card, padding: "14px 18px" }}>
+                    <div key={st.id} data-story-id={st.id} className="news-story flex items-center gap-4 flex-wrap" style={{ ...card, padding: "14px 18px" }}>
                       {st.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img

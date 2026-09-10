@@ -6406,17 +6406,8 @@ body { background: transparent; }
      the phone floor. */
   html .carousel-news-chip { font-size: 12.5px !important; }
   /* Phones hide the slide's side panel (Read at / Queue): the whole
-     slide opens the News page on a tap (mvp-home.js), and a quiet
-     chevron chip at the right end of the chip row — the outlet chip's
-     own look — is the hint. */
-  html .carousel-news-link {
-    display: inline-flex;
-    margin-left: auto;
-    align-self: center;
-    text-decoration: none;
-    font-weight: 700;
-    line-height: 1;
-  }
+     slide opens the News page on a tap, with that story scrolled to and
+     lit (mvp-home.js → NewsPage.tsx ?story=). */
   html .nav-auth .btn-ghost,
   html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }
 
@@ -6518,5 +6509,7 @@ body { background: transparent; }
   html .explore-empty { padding: 32px 12px; font-size: 13px; }
 }
 
-/* The phone slide's "Go to the News page" pill; desktop has the panel. */
-.carousel-news-link { display: none; }
+/* The story a hero tap arrived at (NewsPage.tsx): a yellow ring that
+   lets go after a moment. Transition, not keyframes. */
+.news-story { transition: box-shadow 0.9s ease; }
+.news-story--hit { box-shadow: 0 0 0 2px #ffb700, 0 0 24px rgba(255,183,0,0.35) !important; }

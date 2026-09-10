@@ -51,6 +51,7 @@
       newsSlides = (majors.length ? majors : stories).slice(0, 3).map(function (s, i) {
         return {
           kind: 'news',
+          id: s.id || null,
           headline: s.headline,
           category: s.category || null,
           url: s.url,

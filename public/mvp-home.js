@@ -348,12 +348,12 @@ function newsSlideHTML(c, i, total) {
          onerror="this.remove()" />`
     : '';
   return `
-    <div class="carousel-item news" role="group" aria-label="Slide ${i+1} of ${total}">
+    <div class="carousel-item news" role="group" aria-label="Slide ${i+1} of ${total}" data-story="${escHTML(c.id || '')}">
       <div class="carousel-bg" style="background:${c.gradient};">${img}</div>
       <div class="carousel-news-shade"></div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">${escHTML(c.headline)}</div>
-        <div class="carousel-news-chips">${chips}<a class="carousel-news-chip carousel-news-link" href="/news" aria-label="News page">›</a></div>
+        <div class="carousel-news-chips">${chips}</div>
       </div>
       <div class="carousel-panel carousel-news-card">
         <div class="carousel-news-byline">
@@ -474,14 +474,16 @@ function renderCarousel() {
   });
 
   // Phones: the slide itself is the way in — a tap anywhere on a news
-  // slide (not on one of its controls) opens the News page. Desktop has
+  // slide (not on one of its controls) opens the News page with that
+  // story scrolled to and lit (NewsPage.tsx reads ?story=). Desktop has
   // the side panel's buttons instead.
   if (window.matchMedia('(max-width: 639px)').matches) {
     track.querySelectorAll('.carousel-item.news').forEach(slide => {
       slide.style.cursor = 'pointer';
       slide.addEventListener('click', (e) => {
         if (e.target && e.target.closest && e.target.closest('button, a')) return;
-        window.location.href = '/news';
+        var id = slide.getAttribute('data-story');
+        window.location.href = id ? '/news?story=' + encodeURIComponent(id) : '/news';
       });
     });
   }
