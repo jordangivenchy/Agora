@@ -3123,3 +3123,23 @@ html.reduce-motion .nav-sparkle {
   .profile-corner { gap: 6px !important; }
   .profile-social { width: 32px !important; height: 32px !important; }
 }
+
+/* Chats (DmThread / GroupThread, page and dock): messages dissolve into
+   the composer the way the phone pages dissolve into the tab bar — the
+   list's last 32px fade on an eased curve and a whisper of blur eases
+   in over them; the composer's hairline is gone, the fade is the seam.
+   The typing strip sits above the blur layer so it stays crisp. */
+.dm-list {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), rgba(0,0,0,0.94) calc(100% - 26px), rgba(0,0,0,0.78) calc(100% - 20px), rgba(0,0,0,0.5) calc(100% - 14px), rgba(0,0,0,0.22) calc(100% - 8px), rgba(0,0,0,0.06) calc(100% - 3px), transparent 100%);
+}
+.dm-composer::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 32px;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+  mask-image: linear-gradient(to bottom, transparent, rgba(0,0,0,0.12) 30%, rgba(0,0,0,0.45) 60%, #000);
+}

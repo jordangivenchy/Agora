@@ -597,6 +597,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
       {/* Messages */}
       <div
         ref={listRef}
+        className="dm-list"
         onScroll={(e) => {
           const el = e.currentTarget;
           pinnedRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
@@ -723,7 +724,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
       {/* Typing strip — outside the scroller so it doesn't retrigger auto-scroll. */}
       <div
         onTransitionEnd={repin}
-        style={{ height: typingLabel ? 22 : 0, overflow: "hidden", transition: "height 0.15s ease", display: "flex", alignItems: "center", gap: 6, padding: page ? "0 18px" : "0 14px", flexShrink: 0 }}
+        style={{ position: "relative", zIndex: 1, height: typingLabel ? 22 : 0, overflow: "hidden", transition: "height 0.15s ease", display: "flex", alignItems: "center", gap: 6, padding: page ? "0 18px" : "0 14px", flexShrink: 0 }}
         aria-live="polite"
       >
         {typingLabel && (
@@ -741,7 +742,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
       {sendError && <p style={{ margin: 0, padding: "6px 12px", color: "#ff9d92", fontSize: 11.5 }}>{sendError}</p>}
 
       {/* Composer */}
-      <div className="dm-composer" style={{ position: "relative", borderTop: "1px solid rgba(255,255,255,0.08)", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
+      <div className="dm-composer" style={{ position: "relative", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
         {replyTo && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, padding: "4px 8px", borderLeft: `2px solid ${YELLOW}`, borderRadius: 6, background: "rgba(255,183,0,0.08)" }}>
             <div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.3 }}>

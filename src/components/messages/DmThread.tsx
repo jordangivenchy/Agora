@@ -915,6 +915,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
       {/* Messages */}
       <div
         ref={listRef}
+        className="dm-list"
         onScroll={(e) => {
           const el = e.currentTarget;
           pinnedRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
@@ -1174,6 +1175,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
       <div
         onTransitionEnd={repin}
         style={{
+          position: "relative",
+          zIndex: 1,
           height: peerTyping ? 22 : 0,
           overflow: "hidden",
           transition: "height 0.15s ease",
@@ -1204,7 +1207,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
       {sendError && <p style={{ margin: 0, padding: "6px 12px", color: "#ff9d92", fontSize: 11.5 }}>{sendError}</p>}
 
       {/* Composer */}
-      <div className="dm-composer" style={{ position: "relative", borderTop: "1px solid rgba(255,255,255,0.08)", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
+      <div className="dm-composer" style={{ position: "relative", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
         {replyTo && (
           <div
             style={{
