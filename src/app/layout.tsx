@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
+import BootSplash from "@/components/BootSplash";
 import UserMenuProvider from "@/components/UserContextMenu";
 import SettingsBoot from "@/components/SettingsBoot";
 import PresenceBoot from "@/components/PresenceBoot";
@@ -53,6 +54,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-full flex flex-col font-[family-name:var(--font-dm-sans)]">
+        <BootSplash />
         <SettingsBoot />
         <PresenceBoot />
         <UserMenuProvider>
