@@ -447,7 +447,7 @@ export default function MessagesPage({
           />
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+      <div className="msgs-rail-list" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         {loaded && total === 0 && (
           <p style={{ color: "#8b8b94", fontSize: 12.5, textAlign: "center", padding: "32px 20px", lineHeight: 1.5 }}>
             No conversations yet. Open a friend&apos;s profile and hit <b>Message</b>, or start a group with{" "}

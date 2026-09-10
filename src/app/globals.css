@@ -2509,6 +2509,11 @@ html.reduce-motion .nav-sparkle {
   html.msgs-thread-open,
   html.msgs-thread-open body { overflow: hidden !important; }
   .msgs-thread-open .mobile-tabbar { display: none !important; }
+  /* The inbox list ends at the tab bar and dissolves there the way the
+     home page and the tab overlays do (same eased curve). */
+  .msgs-rail-list {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), rgba(0,0,0,0.94) calc(100% - 26px), rgba(0,0,0,0.78) calc(100% - 20px), rgba(0,0,0,0.5) calc(100% - 14px), rgba(0,0,0,0.22) calc(100% - 8px), rgba(0,0,0,0.06) calc(100% - 3px), transparent 100%);
+  }
   .msgs-thread-pane { animation: msgsThreadIn 240ms cubic-bezier(.2,.7,.2,1) both; }
   .msgs-rail-pane { animation: msgsRailIn 220ms cubic-bezier(.2,.7,.2,1) both; }
   /* Thumb-sized back control in the thread header. */
