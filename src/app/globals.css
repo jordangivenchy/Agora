@@ -2256,19 +2256,19 @@ html.reduce-motion .nav-sparkle {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%) scale(0.94);
   display: flex; flex-direction: column; align-items: center;
-  padding: 24px 32px;
+  padding: 16px 24px;
   opacity: 0;
   transition: opacity 0.8s ease, transform 0.8s cubic-bezier(.2,.7,.2,1);
 }
 .ld-center.is-on { opacity: 1; transform: translate(-50%, -50%); }
 /* A pool of dark under the mark so it reads over the trails. */
 .ld-center::before {
-  content: ""; position: absolute; inset: -28px -36px; z-index: -1; border-radius: 50%;
+  content: ""; position: absolute; inset: -18px -28px; z-index: -1; border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(0,0,0,0.92), rgba(0,0,0,0.7) 42%, transparent 70%);
 }
 /* The AS mark: the A of "Agora" and the S of "Sphere", cut straight
    from the wordmark (public/as-mark.png, 446×202). */
-.ld-mark { height: 66px; width: auto; display: block; }
+.ld-mark { height: 28px; width: auto; display: block; }
 .ld-label {
   margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
   display: flex; align-items: baseline; white-space: nowrap;
@@ -2280,7 +2280,7 @@ html.reduce-motion .nav-sparkle {
 .ld-ellipsis i:nth-child(2) { animation-delay: 0.2s; }
 .ld-ellipsis i:nth-child(3) { animation-delay: 0.4s; }
 @media (max-width: 639px) {
-  .ld-mark { height: 52px; }
+  .ld-mark { height: 22px; }
 }
 /* Boot splash (components/BootSplash.tsx): over all the chrome, then a
    fade. */
