@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import { roomPath, replayPath, userPath } from "@/lib/urls";
 import LoadingScreen, { LoadingLine } from "@/components/LoadingScreen";
+import { fetchDebates, fetchProfile, type DebateRow, type Profile, type ProfileInitial } from "@/lib/profileData";
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -29,46 +30,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
 import { TagChip } from "@/components/community/PostCard";
 
-interface Profile {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  created_at: string;
-  username_changed_at: string | null;
-  follower_count: number;
-  following_count: number;
-  is_following: boolean;
-  is_friend: boolean;
-  verified: boolean;
-  /* Added by migration 20260843 — optional so the page tolerates a
-     live get_user_profile that predates it. */
-  banner_url?: string | null;
-  social_links?: unknown;
-  karma?: number | null;
-  live_room_id?: string | null;
-  live_room_motion?: string | null;
-  mutual_names?: string[] | null;
-}
-
-type DebateRow = {
-  id: string;
-  motion: string | null;
-  topic_key: string | null;
-  status: string;
-  created_at: string;
-  scheduled_start: string | null;
-  viewer_count: number | null;
-  thumbnail_url?: string | null;
-  recording_url?: string | null;
-  role: string;
-  /** For rooms this user debated in (not hosted): who hosted them. */
-  host_username?: string | null;
-  host_display_name?: string | null;
-  host_avatar_url?: string | null;
-  host_id?: string | null;
-};
+/* Profile and DebateRow: lib/profileData.ts. */
 
 /* Rows from get_community_posts(p_author): scores, tags, images, and
    the embedded original for reposts — private-board posts already
@@ -201,22 +163,26 @@ function timeAgo(iso: string): string {
 export default function ProfileView({
   username: rawUsername,
   embedded = false,
+  initial,
 }: {
   username: string;
   /** Drawer mode inside a room: no top bar, transparent shell. */
   embedded?: boolean;
+  /** The first view, fetched by the route on the server: the page
+      renders with it at once instead of mounting and then fetching. */
+  initial?: ProfileInitial;
 }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [viewerId, setViewerId] = useState<string | null>(null);
-  const [viewerIsMod, setViewerIsMod] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(initial?.profile ?? null);
+  const [notFound, setNotFound] = useState(initial ? !initial.profile : false);
+  const [viewerId, setViewerId] = useState<string | null>(initial?.viewerId ?? null);
+  const [viewerIsMod, setViewerIsMod] = useState(initial?.viewerIsMod ?? false);
   const [busy, setBusy] = useState(false);
 
   const [tab, setTab] = useState<Tab>("debates");
-  const [debates, setDebates] = useState<DebateRow[] | null>(null);
+  const [debates, setDebates] = useState<DebateRow[] | null>(initial?.debates ?? null);
   const [posts, setPosts] = useState<PostRow[] | null>(null);
   const [listMode, setListMode] = useState<null | "followers" | "following">(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -257,23 +223,16 @@ export default function ProfileView({
   }, [menuOpen]);
 
   const loadProfile = useCallback(async () => {
-    const uname = decodeURIComponent(rawUsername);
-    const { data: row } = await supabase
-      .from("users")
-      .select("id")
-      .ilike("username", uname)
-      .maybeSingle();
-    if (!row) {
-      setNotFound(true);
-      return;
-    }
-    const { data } = await supabase.rpc("get_user_profile", { p_user: row.id });
-    const p = Array.isArray(data) ? data[0] : data;
+    const p = await fetchProfile(supabase, rawUsername);
     if (!p) setNotFound(true);
-    else setProfile(p as Profile);
+    else setProfile(p);
   }, [rawUsername, supabase]);
 
+  /* Seeded by the route: nothing to fetch on mount. (The username only
+     changes with a remount — the route keys on it.) */
+  const seeded = !!initial;
   useEffect(() => {
+    if (seeded) return;
     loadProfile();
     (async () => {
       const { data: auth } = await supabase.auth.getUser();
@@ -286,7 +245,7 @@ export default function ProfileView({
         .maybeSingle();
       setViewerIsMod(!!me?.is_moderator);
     })();
-  }, [loadProfile, supabase]);
+  }, [seeded, loadProfile, supabase]);
 
   /* Tab data — loaded lazily, once per profile. */
   const uid = profile?.id;
@@ -298,61 +257,14 @@ export default function ProfileView({
     return () => window.removeEventListener("agora:post-created", bump);
   }, []);
 
+  /* The rooms came with the page when seeded; later runs (a new post)
+     refresh them along with the posts. */
+  const debatesSeeded = useRef(!!initial?.debates);
   useEffect(() => {
     if (!uid) return;
     (async () => {
-      const [{ data: parts }, { data: hosted }] = await Promise.all([
-        supabase
-          .from("debate_participants")
-          .select("role, room:debate_rooms(id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, host_id)")
-          .eq("user_id", uid)
-          .eq("role", "debater"),
-        supabase
-          .from("debate_rooms")
-          .select("id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url")
-          .eq("host_id", uid)
-          .order("created_at", { ascending: false })
-          .limit(40),
-      ]);
-      const seen = new Map<string, DebateRow>();
-      for (const r of (hosted ?? []) as Omit<DebateRow, "role">[]) {
-        seen.set(r.id, { ...r, role: "host" });
-      }
-      const hostIds = new Set<string>();
-      for (const p of (parts ?? []) as unknown as {
-        role: string;
-        room: (Omit<DebateRow, "role"> & { host_id: string | null }) | null;
-      }[]) {
-        if (p.room && !seen.has(p.room.id)) {
-          seen.set(p.room.id, { ...p.room, role: "debater" });
-          if (p.room.host_id) hostIds.add(p.room.host_id);
-        }
-      }
-      // Resolve host names for the debated-in rooms so rows can say
-      // "hosted by @x" (hosted rooms use the profile's own name).
-      if (hostIds.size > 0) {
-        const { data: hostRows } = await supabase
-          .from("users")
-          .select("id, username, display_name, avatar_url")
-          .in("id", [...hostIds]);
-        type HostRow = { id: string; username: string; display_name: string | null; avatar_url: string | null };
-        const hosts = new Map((hostRows ?? []).map((h: HostRow) => [h.id, h]));
-        for (const row of seen.values()) {
-          const hid = (row as DebateRow & { host_id?: string | null }).host_id;
-          if (row.role === "debater" && hid) {
-            const h = hosts.get(hid);
-            row.host_id = hid;
-            row.host_username = h?.username ?? null;
-            row.host_display_name = h?.display_name ?? null;
-            row.host_avatar_url = h?.avatar_url ?? null;
-          }
-        }
-      }
-      setDebates(
-        [...seen.values()].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
-      );
+      if (debatesSeeded.current) debatesSeeded.current = false;
+      else setDebates(await fetchDebates(supabase, uid));
 
       /* Community posts via the feed RPC: scores + repost embeds come
          along, and private-board posts are filtered server-side. */
