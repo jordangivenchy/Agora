@@ -2266,12 +2266,9 @@ html.reduce-motion .nav-sparkle {
   content: ""; position: absolute; inset: -28px -36px; z-index: -1; border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(0,0,0,0.92), rgba(0,0,0,0.7) 42%, transparent 70%);
 }
-.ld-mark {
-  display: flex; line-height: 1;
-  font-family: 'Space Grotesk', 'DM Sans', sans-serif; font-weight: 700; font-size: 72px;
-  letter-spacing: -0.02em; color: #f5f5f0;
-}
-.ld-mark-s { color: #3b7df5; }
+/* The AS letters from the app icon (src/app/icon.png), keyed off its
+   background. */
+.ld-mark { height: 68px; width: auto; display: block; }
 .ld-label {
   margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
   display: flex; align-items: baseline; white-space: nowrap;
@@ -2283,12 +2280,14 @@ html.reduce-motion .nav-sparkle {
 .ld-ellipsis i:nth-child(2) { animation-delay: 0.2s; }
 .ld-ellipsis i:nth-child(3) { animation-delay: 0.4s; }
 @media (max-width: 639px) {
-  .ld-mark { font-size: 58px; }
+  .ld-mark { height: 54px; }
 }
 /* Boot splash (components/BootSplash.tsx): over all the chrome, then a
    fade. */
 .ld-boot .ld-screen { z-index: 5000; transition: opacity 0.5s ease; }
 .ld-boot.is-done .ld-screen { opacity: 0; pointer-events: none; }
+/* The short showing (a reload within the session): the sky alone. */
+.ld-boot.ld-boot--short .ld-center { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .ld-ellipsis i { animation: none; }
   .ld-center { transition: none; }

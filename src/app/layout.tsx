@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 import BootSplash from "@/components/BootSplash";
+import { SKY_SPLASH_JS } from "@/lib/skySplash";
 import UserMenuProvider from "@/components/UserContextMenu";
 import SettingsBoot from "@/components/SettingsBoot";
 import PresenceBoot from "@/components/PresenceBoot";
@@ -45,6 +46,9 @@ export default function RootLayout({
             __html: `window.addEventListener("load",function(){setTimeout(function(){try{var nav=performance.getEntriesByType("navigation")[0];var dead=!self.__next_f||self.__next_f.length===0;if(nav&&nav.type==="back_forward"&&dead){if(!sessionStorage.getItem("ag-bf-reload")){sessionStorage.setItem("ag-bf-reload","1");location.reload();}}else{sessionStorage.removeItem("ag-bf-reload");}}catch(e){}},150);});`,
           }}
         />
+        {/* The loading screen's sky (lib/skySplash.ts), inline so the boot
+            splash can start it as soon as its markup is parsed. */}
+        <script dangerouslySetInnerHTML={{ __html: SKY_SPLASH_JS }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Literal font-family names ('Space Grotesk', 'DM Sans', 'DM Mono')
