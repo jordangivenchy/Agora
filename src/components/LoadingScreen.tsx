@@ -19,8 +19,8 @@
 
 import { useEffect, useRef } from "react";
 
-const SPEED = 0.5;         // radians per second once the sky is up to speed
-const RAMP_S = 0.45;       // how long it takes to get there
+const SPEED = 0.8;         // radians per second once the sky is up to speed
+const RAMP_S = 0.4;        // how long it takes to get there
 const SETTLE_MS = 120;     // a beat of still sky before it turns
 const MARK_AT_MS = 1200;   // the mark comes up from here
 
