@@ -6430,7 +6430,7 @@ body { background: transparent; }
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 28px !important;
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), rgba(0,0,0,0.55) calc(100% - 12px), transparent 100%);
   }
   /* Phones keep an 8px gap under the bar (above); the painted band matches. */
   /* Phones: the bar is see-through — no fill, no painted gap band — so
