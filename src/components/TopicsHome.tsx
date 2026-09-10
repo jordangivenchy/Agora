@@ -23,6 +23,7 @@ import { roomPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
 import { setPresenceQueued } from "@/lib/presence";
 import UserAvatar from "./UserAvatar";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   container: HTMLElement | null;
@@ -234,7 +235,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
   const load = useCallback(async () => {
     const [{ data: auth }, topicsRes, roomsRes] = await Promise.all([
-      supabase.auth.getUser(),
+      sessionUser(supabase),
       supabase.rpc("get_debate_topics"),
       supabase
         .from("debate_rooms")

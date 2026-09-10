@@ -14,6 +14,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import type { ModInitial, ModReport } from "@/lib/modData";
+import { sessionUser } from "@/lib/session";
 
 type Report = ModReport;
 
@@ -89,7 +90,7 @@ export default function ModPage({ initial }: {
   /* Gate: signed-in moderators only. Server enforces regardless. */
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await sessionUser(supabase);
       if (!user) { router.replace("/login"); return; }
       const { data: row } = await supabase
         .from("users").select("is_moderator").eq("id", user.id).maybeSingle();

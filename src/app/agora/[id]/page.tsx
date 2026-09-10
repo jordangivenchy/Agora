@@ -37,6 +37,7 @@ import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortReques
 import type { User } from "@supabase/supabase-js";
 import { Icon } from "@/components/icons";
 import "../agora.css";
+import { sessionUser } from "@/lib/session";
 
 /* Phone breakpoint shared with agora.css: below it the chat rail is a
    bottom sheet driven by `chatOpen`, and the rail-collapse button closes
@@ -325,7 +326,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.auth.getUser();
+        const { data } = await sessionUser(supabase);
         setCurrentUser(data.user);
       } catch {
         /* signed-out guests are fine */

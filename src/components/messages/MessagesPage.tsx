@@ -29,6 +29,7 @@ import GroupTile from "./GroupTile";
 import NewGroupModal from "./NewGroupModal";
 import { groupPreview, type GroupRow } from "./groups";
 import type { MessagesInitial } from "@/lib/messagesData";
+import { sessionUser } from "@/lib/session";
 
 const WIDE_MIN = 900;
 
@@ -72,7 +73,7 @@ export default function MessagesPage({
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+    sessionUser(supabase).then(({ data }) => setMe(data.user?.id ?? null));
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_e, s) => setMe(s?.user?.id ?? null));

@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
+import { sessionUser } from "@/lib/session";
 
 const GOLD = "#e2b96b";
 const MIN_LEN = 3;
@@ -134,7 +135,7 @@ export default function ClipEditor({
     setErr(null);
     try {
       const supabase = createClient();
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth.user) {
         window.location.href = "/login";
         return;

@@ -35,6 +35,7 @@ import GroupThread from "./GroupThread";
 import GroupTile from "./GroupTile";
 import NewGroupModal from "./NewGroupModal";
 import { groupPreview, type GroupRow } from "./groups";
+import { sessionUser } from "@/lib/session";
 
 const WIDE_MIN = 760;
 const LIST_WIDTH = 230;
@@ -149,7 +150,7 @@ export default function MessagesDock() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+    sessionUser(supabase).then(({ data }) => setMe(data.user?.id ?? null));
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_e, s) => setMe(s?.user?.id ?? null));

@@ -19,6 +19,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { Icon, type IconName } from "@/components/icons";
 import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import InviteFriends from "./InviteFriends";
+import { sessionUser } from "@/lib/session";
 
 export const COMMUNITY_KINDS: { key: string; label: string; icon: IconName; hint: string }[] = [
   { key: "topic-circle", label: "Topic circle", icon: "users-round", hint: "People around an interest" },
@@ -130,7 +131,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
     setStep(0); setName(""); setKind(COMMUNITY_KINDS[0].key); setDescription("");
     setColor(COLORS[0]); setAvatar(null); setBanner(null); setIsPrivate(false);
     setPrompt(""); setRules(""); setBusy(false); setError(null); setGate(null); setResent(false); setCreated(null);
-    supabase.auth.getUser().then(({ data }) => {
+    sessionUser(supabase).then(({ data }) => {
       setUserId(data.user?.id ?? null);
       setUserEmail(data.user?.email ?? null);
     });

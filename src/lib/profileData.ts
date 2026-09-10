@@ -1,9 +1,12 @@
-/* The profile page's first view, fetched in one go: the header
-   (get_user_profile, with the viewer's relationship to it) and the
-   rooms of the default tab. The route (app/users/[username]/page.tsx)
-   runs this on the server so the page arrives complete behind a single
-   loading screen; ProfileView runs the same functions in the browser
-   for reloads (after a follow, an edit) and for the in-room drawer. */
+/* The profile page's first view: the header (get_user_profile, with
+   the viewer's relationship to it), the viewer's own id and moderator
+   flag, and the rooms of the default tab. The route
+   (app/users/[username]/page.tsx) runs fetchProfileInitial on the
+   server so the page arrives complete behind a single loading screen —
+   one database call (get_profile_page, migration 20260898) rather than
+   four round trips in a row. ProfileView runs fetchProfile and
+   fetchDebates in the browser for reloads (after a follow, an edit) and
+   for the in-room drawer. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -119,13 +122,35 @@ export async function fetchDebates(supabase: SupabaseClient, uid: string): Promi
   );
 }
 
-/* Everything the route needs, as the viewer. */
+/* Everything the route needs, as the viewer, in one call. The long way
+   round stays as the fallback for a database that predates the function. */
 export async function fetchProfileInitial(supabase: SupabaseClient, rawUsername: string): Promise<ProfileInitial> {
-  const [profile, { data: auth }] = await Promise.all([
+  const uname = decodeURIComponent(rawUsername);
+  const { data, error } = await supabase.rpc("get_profile_page", { p_username: uname });
+  if (error || !data) {
+    if (error) console.error("get_profile_page failed, fetching the profile piecemeal", error.message);
+    return fetchProfileInitialPiecemeal(supabase, rawUsername);
+  }
+  const page = data as {
+    profile: Profile | null;
+    viewer_id: string | null;
+    viewer_is_mod: boolean | null;
+    debates: DebateRow[] | null;
+  };
+  return {
+    profile: page.profile ?? null,
+    viewerId: page.viewer_id ?? null,
+    viewerIsMod: !!page.viewer_is_mod,
+    debates: page.debates ?? null,
+  };
+}
+
+async function fetchProfileInitialPiecemeal(supabase: SupabaseClient, rawUsername: string): Promise<ProfileInitial> {
+  const [profile, { data: claims }] = await Promise.all([
     fetchProfile(supabase, rawUsername),
-    supabase.auth.getUser(),
+    supabase.auth.getClaims(),
   ]);
-  const viewerId = auth.user?.id ?? null;
+  const viewerId = claims?.claims.sub ?? null;
   const [debates, me] = await Promise.all([
     profile ? fetchDebates(supabase, profile.id) : Promise.resolve(null),
     viewerId

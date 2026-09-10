@@ -24,6 +24,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { downloadClip } from "@/lib/clipDownload";
 import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import ClipTile, { formatClipDuration, formatViews, type ClipTileData } from "@/components/clips/ClipTile";
+import { sessionUser } from "@/lib/session";
 
 interface ClipRow {
   id: string;
@@ -132,7 +133,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   const host = clip?.room?.host ?? null;
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setViewerId(data.user?.id ?? null));
+    sessionUser(supabase).then(({ data }) => setViewerId(data.user?.id ?? null));
   }, [supabase]);
 
   const toggleFollow = useCallback(async () => {

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { setCaptureEnabled } from "@/lib/capture/track";
 import type { ConsentCategory } from "@/lib/dataPlatform/contract";
+import { sessionUser } from "@/lib/session";
 
 type Consent = Record<ConsentCategory, boolean>;
 
@@ -36,7 +37,7 @@ export default function DataAndCoachPanel() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await sessionUser(supabase);
       if (!user) { setLoaded(true); return; }
       const { data } = await supabase
         .from("user_data_consent")
@@ -55,7 +56,7 @@ export default function DataAndCoachPanel() {
     const next = { ...consent, [key]: !consent[key] };
     setConsent(next);
     if (key === "analytics") setCaptureEnabled(next.analytics);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await sessionUser(supabase);
     if (!user) return;
     await supabase.from("user_data_consent").upsert({
       user_id: user.id,

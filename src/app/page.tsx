@@ -30,6 +30,7 @@ import ExplorePage, { type ShellStats } from "@/components/ExplorePage";
 import { displayName } from "@/lib/names";
 import { parseHomeRoute, canonicalPath, pathFor, sectionTitle, setSectionTitle, type HomeRoute } from "@/lib/routes";
 import "./mvp-home.css";
+import { sessionUser } from "@/lib/session";
 
 const TOPIC_MAP: Record<string, string> = {
   "politics-law": "politics-law",
@@ -162,7 +163,7 @@ export default function Home() {
   const loadData = useCallback(async () => {
       try {
         const [{ data: auth }, { data: roomsData }, { count: memberCount }] = await Promise.all([
-          supabase.auth.getUser(),
+          sessionUser(supabase),
           supabase
             .from("debate_rooms")
             .select(`*, host:users!host_id(avatar_url), participants:debate_participants(*, user:users(username, display_name, avatar_url))`)
@@ -282,7 +283,7 @@ export default function Home() {
       motion: string; topic: string; schedule?: boolean;
       communityId?: string; communityName?: string;
     } | null) => {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth?.user) { window.location.href = "/login"; return; }
       setCreatePrefill(prefill);
       setShowCreate(true);
@@ -529,7 +530,7 @@ export default function Home() {
   useEffect(() => {
     const onCreate = () => { openCreate(null); };
     const onCreateCommunity = async () => {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth?.user) { window.location.href = "/login"; return; }
       setShowCreate(false);
       setShowCreateCommunity(true);
@@ -613,7 +614,7 @@ export default function Home() {
       const d = (e as CustomEvent).detail as { headline?: string; category?: string; url?: string } | undefined;
       const headline = d?.headline;
       if (!headline) return;
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth.user) { window.location.href = "/login"; return; }
 
       const existing = topicByHeadline.get(headline);

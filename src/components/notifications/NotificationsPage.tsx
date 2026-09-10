@@ -19,6 +19,7 @@ import {
   actorLabel, matchesFilter, notifDetail, notifHref, notifIcon, notifText, timeAgo,
   type NotifFilter, type NotifRow,
 } from "@/lib/notifications";
+import { sessionUser } from "@/lib/session";
 
 const PAGE = NOTIF_PAGE;
 
@@ -63,7 +64,7 @@ export default function NotificationsPage({ initial }: {
   );
 
   const reload = useCallback(async () => {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
     if (!uid) { setLoading(false); return; }

@@ -73,8 +73,12 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh the auth token
-  await supabase.auth.getUser();
+  /* Keep the session cookies fresh: this refreshes the tokens when they
+     are about to expire (the only time it goes to the network) and
+     otherwise verifies the JWT here, against the project's public
+     signing key (cached ten minutes across requests). getUser() asked
+     the auth server on every request — half a second of every page. */
+  await supabase.auth.getClaims();
 
   return supabaseResponse;
 }

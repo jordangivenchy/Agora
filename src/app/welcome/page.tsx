@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase-browser";
 import AvatarCropModal from "@/components/AvatarCropModal";
 import { friendlyProfileError } from "@/lib/profileText";
 import PeopleSuggestions from "@/components/people/PeopleSuggestions";
+import { sessionUser } from "@/lib/session";
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 const AVAILABILITY_DEBOUNCE_MS = 450;
@@ -43,7 +44,7 @@ export default function WelcomePage() {
   const loadProfile = useCallback(async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await sessionUser(supabase);
     if (!user) {
       router.replace("/login");
       return;

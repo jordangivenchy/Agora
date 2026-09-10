@@ -47,6 +47,7 @@ import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
 import ActionSheet, { type SheetItem } from "./community/ActionSheet";
 import { createLongPress } from "@/lib/longPress";
 import PostComposer, { POST_BODY_MAX } from "./community/PostComposer";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   open: boolean;
@@ -387,7 +388,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
   /* ── loading ── */
 
   const loadCommunities = useCallback(async () => {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
     if (uid) {

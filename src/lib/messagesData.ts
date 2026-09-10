@@ -14,8 +14,8 @@ export type MessagesInitial = {
 };
 
 export async function fetchMessagesInitial(supabase: SupabaseClient): Promise<MessagesInitial> {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth?.user?.id ?? null;
+  const { data: claims } = await supabase.auth.getClaims(); // verified locally, no auth round trip
+  const me = claims?.claims.sub ?? null;
   if (!me) return { me: null, threads: [], groups: [] };
   const [t, g] = await Promise.all([supabase.rpc("get_dm_threads"), supabase.rpc("get_group_threads")]);
   return { me, threads: (t.data ?? []) as Thread[], groups: (g.data ?? []) as GroupRow[] };

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "./userMenuContext";
+import { sessionUser } from "@/lib/session";
 
 export type SidebarView = "home" | "explore" | "following";
 
@@ -57,7 +58,7 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard }: P
     // Single getUser() call — onAuthStateChange (below) fires INITIAL_SESSION
     // once cookies hydrate and re-runs loadFriends, so polling here would just
     // pile up extra auth-lock contention on mount.
-    const { data: u } = await supabase.auth.getUser();
+    const { data: u } = await sessionUser(supabase);
     const uid = u.user?.id ?? null;
     setMeId(uid);
     if (!uid) {

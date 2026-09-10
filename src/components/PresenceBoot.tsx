@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { ensurePresence } from "@/lib/presence";
+import { sessionUser } from "@/lib/session";
 
 function roomFromPath(path: string | null): string | null {
   const m = path?.match(/^\/(?:agora|rooms)\/([0-9a-f-]{36})/i);
@@ -21,7 +22,7 @@ export default function PresenceBoot() {
     const supabase = createClient();
     let userId: string | null = null;
 
-    supabase.auth.getUser().then(({ data }) => {
+    sessionUser(supabase).then(({ data }) => {
       userId = data.user?.id ?? null;
       ensurePresence(userId, roomFromPath(pathname));
     });

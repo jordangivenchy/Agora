@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { sessionUser } from "@/lib/session";
 
 export type Suggestion = {
   id: string;
@@ -38,7 +39,7 @@ export function useFollowToggle() {
   const [following, setFollowing] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const toggle = useCallback(async (userId: string, current?: boolean) => {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     if (!auth?.user) { window.location.href = "/login"; return null; }
     const isFollowing = following[userId] ?? current ?? false;
     setBusy(userId);

@@ -18,6 +18,7 @@ import PostComposer, { POST_BODY_MAX } from "@/components/community/PostComposer
 import { giphyEnabled } from "@/components/community/GifPicker";
 import type { PickerCommunity } from "@/components/community/CommunityPicker";
 import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
+import { sessionUser } from "@/lib/session";
 
 export type ComposeClip = { id: string; title: string; duration: string | null };
 export type ComposeRequest = { to?: "profile" | string; clip?: ComposeClip };
@@ -65,7 +66,7 @@ export default function GlobalPostComposer() {
 
   /* Open: sign-in gate, then boards (mine first-class, others' u/ boards out), tags, verified. */
   const open = useCallback(async (r: ComposeRequest) => {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     if (!auth.user) { window.location.href = "/login"; return; }
     const uid = auth.user.id;
     setUserId(uid);

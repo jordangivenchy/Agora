@@ -5,6 +5,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   open: boolean;
@@ -40,7 +41,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       const user = auth?.user;
       if (!user) return;
       const { data: row } = await supabase

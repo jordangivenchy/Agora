@@ -27,10 +27,11 @@ export type ModInitial =
   | { status: "ok"; reports: ModReport[]; loadError: string | null };
 
 export async function fetchModInitial(supabase: SupabaseClient): Promise<ModInitial> {
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth?.user;
-  if (!user) return { status: "login" };
-  const { data: row } = await supabase.from("users").select("is_moderator").eq("id", user.id).maybeSingle();
+  // The session's claims, verified here against the project's signing key — no auth round trip.
+  const { data: claims } = await supabase.auth.getClaims();
+  const uid = claims?.claims.sub;
+  if (!uid) return { status: "login" };
+  const { data: row } = await supabase.from("users").select("is_moderator").eq("id", uid).maybeSingle();
   if (!row?.is_moderator) return { status: "denied" };
   const { data, error } = await supabase.rpc("mod_list_reports", { p_status: null, p_limit: 200 });
   if (error) {

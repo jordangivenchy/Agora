@@ -9,6 +9,7 @@
 
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { sessionUser } from "@/lib/session";
 
 export default function SettingsBoot() {
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function SettingsBoot() {
         } catch {}
       };
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await sessionUser(supabase);
       if (!user) {
         // Signed out: never inherit a previous user's cached setting.
         apply(false);

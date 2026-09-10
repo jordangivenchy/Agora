@@ -19,6 +19,7 @@ import type { SearchKeyHandler } from "@/components/search/SearchPage";
 import { pathFor } from "@/lib/routes";
 import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import { userPath } from "@/lib/urls";
+import { sessionUser } from "@/lib/session";
 
 const SearchPage = dynamic(() => import("@/components/search/SearchPage"), { ssr: false });
 
@@ -70,7 +71,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
           : prev);
       });
     }
-    supabase.auth.getUser().then(async ({ data }) => {
+    sessionUser(supabase).then(async ({ data }) => {
       if (!alive) return;
       const uid = data.user?.id;
       if (!uid) { setUser(null); writeNavUser(null); return; }

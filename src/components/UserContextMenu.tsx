@@ -13,6 +13,7 @@ import {
 import ReportModal, { type ReportTarget } from "./ReportModal";
 import ProfileView from "./ProfileView";
 import { userPath } from "@/lib/urls";
+import { useRouter } from "next/navigation";
 import { displayName } from "@/lib/names";
 
 export { useUserMenu } from "./userMenuContext";
@@ -65,6 +66,7 @@ interface Relationship {
 
 export default function UserMenuProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
+  const router = useRouter();
 
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [me, setMe] = useState<{ id: string; isModerator: boolean } | null>(null);
@@ -175,7 +177,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
       case "view_profile": {
         const inRoom = /^\/(agora|rooms)\//.test(window.location.pathname);
         if (inRoom) setDrawerUsername(target.username);
-        else window.location.href = userPath(target.username);
+        else router.push(userPath(target.username)); // in place: the app stays loaded
         break;
       }
 

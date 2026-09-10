@@ -21,6 +21,7 @@ import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
 import ReplayPlayer from "./ReplayPlayer";
 import "./debate-replay.css";
+import { sessionUser } from "@/lib/session";
 
 type Person = {
   id: string;
@@ -489,7 +490,7 @@ export default function DebateReplay({
         postId = data as string;
         setRoom((r) => (r ? { ...r, discussion_post_id: postId } : r));
       }
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth.user) throw new Error("not signed in");
       const { error: insErr } = await supabase.from("community_comments").insert({
         post_id: postId,

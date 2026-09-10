@@ -35,6 +35,8 @@ import { PersonCard, useFollowToggle, type Suggestion as PersonSuggestion } from
 import { useUserMenu } from "@/components/userMenuContext";
 import { TOPICS } from "@/types/database";
 import TopicIcon from "@/components/topicIcons";
+import { sessionUser } from "@/lib/session";
+import { useRouter } from "next/navigation";
 
 export type SearchKeyHandler = (e: KeyboardEvent, value: string) => boolean | void;
 
@@ -181,6 +183,7 @@ function writeLocalRecent(list: string[]) {
 
 export default function SearchPage({ open, pinned, query: rawQuery, setQuery: setNavQuery, onClose, onPin, keyHandlerRef }: Props) {
   const [supabase] = useState(() => createClient());
+  const router = useRouter();
   const { openUserMenu } = useUserMenu();
   const [userId, setUserId] = useState<string | null | undefined>(undefined);
   /* Debounced, trimmed copy of the navbar value that drives the RPCs. */
@@ -234,7 +237,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (cancelled) return;
       const uid = auth?.user?.id ?? null;
       setUserId(uid);
@@ -407,10 +410,13 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
   const openPost = (id: string, commentId?: string | null) => { onClose(); shellNavigate(pathFor.post(id, commentId)); };
 
   const openSuggest = useCallback((s: Suggest) => {
-    if (s.kind === "person") { window.location.href = s.href_hint || userPath(s.label.replace(/^@/, "")); return; }
+    // A person: the profile route, in place — the app stays loaded and the
+    // route's own loading screen covers the fetch. (A room is a full load:
+    // the live room sets itself up from scratch, like the room cards.)
+    if (s.kind === "person") { onClose(); router.push(s.href_hint || userPath(s.label.replace(/^@/, ""))); return; }
     if (s.kind === "community") { onClose(); shellNavigate(pathFor.community(s.id)); return; }
     window.location.href = roomPath({ id: s.id, motion: s.label });
-  }, [onClose]);
+  }, [onClose, router]);
 
   /* Navbar keys. Highlight indexes: 0..n-1 suggestions, n = "See all
      results" (unpinned only). Enter with nothing highlighted pins. */

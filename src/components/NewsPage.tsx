@@ -14,6 +14,7 @@ import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { setPresenceQueued } from "@/lib/presence";
 import type { SeedNewsItem } from "@/lib/seed-content";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   open: boolean;
@@ -154,7 +155,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+    sessionUser(supabase).then(({ data }) => setUserId(data.user?.id ?? null));
   }, [open, supabase]);
 
   /* Stanceless: the server pairs you with whoever is waiting on this

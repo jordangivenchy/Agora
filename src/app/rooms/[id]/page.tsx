@@ -17,6 +17,7 @@ import NotesPopout from "@/components/NotesPanel";
 import AgoraAssistant from "@/components/AgoraAssistant";
 import ResultsScreen from "@/components/ResultsScreen";
 import type { User } from "@supabase/supabase-js";
+import { sessionUser } from "@/lib/session";
 
 type ParticipantWithUser = DebateParticipant & {
   user: { username: string; display_name?: string | null; avatar_url: string | null };
@@ -210,7 +211,7 @@ function ClassicRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await sessionUser(supabase);
         setCurrentUser(user);
         if (user) {
           const { data: us } = await supabase

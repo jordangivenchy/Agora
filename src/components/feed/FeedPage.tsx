@@ -24,6 +24,7 @@ import PostCard, { RepostEmbed, TagChip, authorLabel, timeAgo, type PostRow } fr
 import PeopleSuggestions from "@/components/people/PeopleSuggestions";
 import FeedRail from "@/components/feed/FeedRail";
 import { useUserMenu } from "@/components/userMenuContext";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   open: boolean;
@@ -138,7 +139,7 @@ export default function FeedPage({ open, onClose }: Props) {
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (cancelled) return;
       const uid = auth?.user?.id ?? null;
       setUserId(uid);

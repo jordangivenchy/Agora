@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { notifHref, type NotifRow } from "@/lib/notifications";
 import NotificationsPanel, { type PushState } from "@/components/notifications/NotificationsPanel";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   container?: HTMLElement | null;
@@ -73,7 +74,7 @@ export default function NotificationsBell({ container }: Props) {
   const unread = items.filter((n) => !n.read_at).length;
 
   const load = useCallback(async () => {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
     if (!uid) return;

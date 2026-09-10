@@ -17,6 +17,7 @@ import { useUserMenu } from "../userMenuContext";
 import { FriendsCard, FriendsOverlay, type FriendRowModel, type FriendUser } from "./FriendsPanel";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
+import { sessionUser } from "@/lib/session";
 
 type FriendRow = FriendUser;
 
@@ -85,7 +86,7 @@ export default function FriendsSection({ container, sidebar }: Props) {
   }, [sidebar, open, closing]);
 
   const load = useCallback(async () => {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     const uid = auth?.user?.id ?? null;
     setMe(uid);
     if (!uid) return;

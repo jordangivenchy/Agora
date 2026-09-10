@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import { TOPICS } from "@/types/database";
 import { refreshPostTopic, usePostTopic } from "@/lib/postTopics";
+import { sessionUser } from "@/lib/session";
 
 export default function PostTopicQueue({ postId, compact }: { postId: string; compact?: boolean }) {
   const [supabase] = useState(() => createClient());
@@ -47,7 +48,7 @@ export default function PostTopicQueue({ postId, compact }: { postId: string; co
 
   const queue = useCallback(async () => {
     if (!topic || busy) return;
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await sessionUser(supabase);
     if (!auth.user) { window.location.href = "/login"; return; }
     setBusy("queue");
     setNote(null);

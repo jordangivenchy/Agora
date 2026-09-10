@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { roomPath } from "@/lib/urls";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
 import TopicIcon from "./topicIcons";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   open: boolean;
@@ -182,7 +183,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     setError("");
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await sessionUser(supabase);
       if (!user) {
         setError("You must be signed in to create a room");
         setLoading(false);
@@ -283,7 +284,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
     if (code.length < 6 || joinBusy) return;
     setJoinBusy(true);
     setJoinErr(null);
-    const { data: { user: me } } = await supabase.auth.getUser();
+    const { data: { user: me } } = await sessionUser(supabase);
     if (!me) {
       setJoinBusy(false);
       setJoinErr("Sign in to use an invite code.");

@@ -14,6 +14,7 @@ import { displayName } from "@/lib/names";
 import { replayPath } from "@/lib/urls";
 import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
+import { sessionUser } from "@/lib/session";
 
 interface Props {
   open: boolean;
@@ -169,7 +170,7 @@ export default function TrendingPage({ open, onClose }: Props) {
   const handleUpload = useCallback(
     async (file: File) => {
       setUploadMsg("");
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth?.user) { window.location.href = "/login"; return; }
       const title = window.prompt("Title for your clip:", file.name.replace(/\.[^.]+$/, ""));
       if (!title) return;

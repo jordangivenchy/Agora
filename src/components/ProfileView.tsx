@@ -29,6 +29,7 @@ import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
 import { TagChip } from "@/components/community/PostCard";
+import { sessionUser } from "@/lib/session";
 
 /* Profile and DebateRow: lib/profileData.ts. */
 
@@ -238,7 +239,7 @@ export default function ProfileView({
     if (seeded) return;
     loadProfile();
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await sessionUser(supabase);
       if (!auth.user) return;
       setViewerId(auth.user.id);
       const { data: me } = await supabase
