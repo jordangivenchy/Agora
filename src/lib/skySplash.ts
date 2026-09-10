@@ -11,11 +11,13 @@
    drawing its arc on the trails canvas (never cleared: each frame adds
    only the sliver turned since the last, in a handful of strokes with
    stars grouped by colour and size) behind a bright head on the heads
-   canvas (redrawn every frame). It gathers speed over the first
-   moments and then turns steadily until stopped, or until nobody can
-   see it. The centre element gets `is-on` when the mark is due, on a
-   timer of its own so it still arrives in a background tab. Returns
-   { stop, elapsed }. A canvas already running is left alone.
+   canvas (redrawn every frame). The clock starts at the first frame
+   the browser paints — not when the script runs, which can be well
+   before anything is on screen — so the screen opens with still stars
+   and turns from there, gathering speed over the first moments and
+   then turning steadily until stopped, or until nobody can see it.
+   The centre element gets `is-on` a second after that first frame.
+   Returns { stop, elapsed }. A canvas already running is left alone.
 
    Skies hand over to each other: a route's fallback gives way to the
    page's own loading state, and both show the sky. So the scatter is
@@ -39,11 +41,11 @@ window.__agoraSky = function (trails, heads, center, o) {
   var w = window.innerWidth, h = window.innerHeight;
   var now0 = performance.now();
   var S = window.__agoraSkySession;
-  if (!S || now0 - (S.lastStop || S.start) > 400 || S.w !== w || S.h !== h) {
-    S = window.__agoraSkySession = { seed: (Math.random() * 4294967296) >>> 0, start: now0, w: w, h: h, lastStop: 0 };
+  if (!S || S.start == null || now0 - (S.lastStop || S.start) > 400 || S.w !== w || S.h !== h) {
+    S = window.__agoraSkySession = { seed: (Math.random() * 4294967296) >>> 0, start: null, w: w, h: h, lastStop: 0 };
   }
   S.lastStop = 0;
-  var elapsed0 = now0 - S.start;
+  var elapsed0 = S.start == null ? 0 : now0 - S.start;
   var rnd = (function (a) {
     return function () {
       a = (a + 0x6d2b79f5) >>> 0;
@@ -142,10 +144,11 @@ window.__agoraSky = function (trails, heads, center, o) {
   if (drawn > 0) sweep(0, drawn);
   drawHeads(drawn);
   if (elapsed0 >= MARK_AT) showMark(true);
-  else markTimer = setTimeout(showMark, MARK_AT - elapsed0);
+  else if (S.start != null) markTimer = setTimeout(showMark, MARK_AT - elapsed0);
   function frame(now) {
     if (stopped) return;
     if (!trails.isConnected || trails.offsetWidth === 0) { S.lastStop = performance.now(); return; }
+    if (S.start == null) { S.start = now; markTimer = setTimeout(showMark, MARK_AT); }
     var theta = turned((now - S.start) / 1000);
     if (theta > drawn) { sweep(drawn, theta); drawn = theta; drawHeads(theta); }
     raf = requestAnimationFrame(frame);
@@ -163,6 +166,6 @@ declare global {
       center: HTMLElement | null,
       options?: { speed?: number; ramp?: number; markAt?: number },
     ) => { stop: () => void; elapsed: number };
-    __agoraSkySession?: { seed: number; start: number; w: number; h: number; lastStop: number };
+    __agoraSkySession?: { seed: number; start: number | null; w: number; h: number; lastStop: number };
   }
 }

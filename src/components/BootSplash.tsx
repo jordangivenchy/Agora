@@ -39,7 +39,10 @@ export default function BootSplash() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    let t0 = Number(el.dataset.t0);
+    /* The floor counts from the sky's first painted frame when there has
+       been one (the starter's own stamp is when the HTML was parsed,
+       which can be well before anything was on screen). */
+    let t0 = window.__agoraSkySession?.start ?? Number(el.dataset.t0);
     if (!t0) {
       // The starter didn't run; decide here (the sky starts from
       // LoadingScreen's own effect, with the mark at its usual second).
