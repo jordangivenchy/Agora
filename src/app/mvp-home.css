@@ -6410,6 +6410,8 @@ body { background: transparent; }
      lit (mvp-home.js → NewsPage.tsx ?story=). Slides change by swipe;
      the arrows are desktop furniture. */
   html .carousel-arrow { display: none !important; }
+  /* Sideways moves belong to the drag; vertical ones still scroll. */
+  html .carousel-stage { touch-action: pan-y; }
   html .nav-auth .btn-ghost,
   html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }
 

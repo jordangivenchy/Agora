@@ -1410,31 +1410,65 @@ function handleSearchInput(query) {
 document.getElementById('arrowLeft').addEventListener('click', () => { goToSlide(currentSlide - 1); resetAutoPlay(); });
 document.getElementById('arrowRight').addEventListener('click', () => { goToSlide(currentSlide + 1); resetAutoPlay(); });
 
-// Phones: swipe the hero (the arrows are hidden there, mvp-home.css). A
-// touch that travels more than 40px and more sideways than down steps a
-// slide; the moment is noted so the slide's own tap-to-open (in
-// renderCarousel) ignores the tap that ends a swipe.
+// Phones: the hero follows the finger (the arrows are hidden there,
+// mvp-home.css). A touch that turns out to be sideways drags the strip
+// live under the finger; letting go past a quarter of the width, or with
+// a flick, steps a slide, otherwise it settles back — through the same
+// goToSlide the arrows use. The moment is noted so the slide's own
+// tap-to-open (in renderCarousel) ignores the tap that ends a drag.
+// touch-action: pan-y on the stage (mvp-home.css) leaves vertical page
+// scrolling to the browser and sideways moves to this.
 window.__agoraHeroSwipedAt = 0;
 (function () {
   const stage = document.querySelector('.carousel-stage') || document.getElementById('carouselTrack');
   if (!stage) return;
-  let x0 = 0, y0 = 0, tracking = false;
-  stage.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) { tracking = false; return; }
-    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; tracking = true;
-  }, { passive: true });
-  stage.addEventListener('touchend', (e) => {
-    if (!tracking) return;
-    tracking = false;
-    const t = e.changedTouches && e.changedTouches[0];
-    if (!t) return;
-    const dx = t.clientX - x0, dy = t.clientY - y0;
-    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-    window.__agoraHeroSwipedAt = Date.now();
-    goToSlide(currentSlide + (dx < 0 ? 1 : -1));
+  let x0 = 0, y0 = 0, dx = 0, vx = 0, lastX = 0, lastT = 0, basePx = 0, intent = null, active = false;
+  const track = () => document.getElementById('carouselTrack');
+  const settle = () => {
+    active = false;
+    const tr = track();
+    if (!tr) return;
+    tr.style.transition = '';
+    if (intent !== 'x') { resetAutoPlay(); return; }
+    if (Math.abs(dx) > 8) window.__agoraHeroSwipedAt = Date.now();
+    const w = stage.clientWidth || 1;
+    const flick = Math.abs(vx) > 0.5 && Math.abs(dx) > 24 && Math.sign(vx) === Math.sign(dx); // px per ms
+    if (Math.abs(dx) > w * 0.25 || flick) goToSlide(currentSlide + (dx < 0 ? 1 : -1));
+    else goToSlide(currentSlide); // eases back to where it was
     resetAutoPlay();
+  };
+  stage.addEventListener('touchstart', (e) => {
+    if (active) settle(); // a second finger landed mid-drag
+    const tr = track();
+    if (!tr || e.touches.length !== 1 || CAROUSEL_DATA.length < 2) return;
+    if (carouselSnapPending) snapCarousel(tr);
+    x0 = lastX = e.touches[0].clientX; y0 = e.touches[0].clientY; lastT = Date.now();
+    dx = 0; vx = 0;
+    basePx = -(currentSlide + 1) * stage.clientWidth;
+    intent = null; active = true;
+    clearInterval(autoPlayTimer);
   }, { passive: true });
-  stage.addEventListener('touchcancel', () => { tracking = false; }, { passive: true });
+  stage.addEventListener('touchmove', (e) => {
+    if (!active) return;
+    const tr = track();
+    if (!tr) return;
+    const x = e.touches[0].clientX, y = e.touches[0].clientY, now = Date.now();
+    const mx = x - x0, my = y - y0;
+    if (intent === null) {
+      if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+      intent = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+      if (intent === 'x') tr.style.transition = 'none';
+    }
+    if (intent !== 'x') return;
+    const w = stage.clientWidth || 1;
+    dx = Math.max(-w, Math.min(w, mx)); // the clones cover one width either side
+    const dt = now - lastT;
+    if (dt > 0) vx = vx * 0.6 + ((x - lastX) / dt) * 0.4; // recent motion, lightly smoothed
+    lastX = x; lastT = now;
+    tr.style.transform = `translateX(${basePx + dx}px)`;
+  }, { passive: true });
+  stage.addEventListener('touchend', () => { if (active) settle(); }, { passive: true });
+  stage.addEventListener('touchcancel', () => { if (active) settle(); }, { passive: true });
 })();
 
 // Category row scroll on wheel (no-op since the Browse section was removed)
