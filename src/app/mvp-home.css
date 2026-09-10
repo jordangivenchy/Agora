@@ -6407,7 +6407,9 @@ body { background: transparent; }
   html .carousel-news-chip { font-size: 12.5px !important; }
   /* Phones hide the slide's side panel (Read at / Queue): the whole
      slide opens the News page on a tap, with that story scrolled to and
-     lit (mvp-home.js → NewsPage.tsx ?story=). */
+     lit (mvp-home.js → NewsPage.tsx ?story=). Slides change by swipe;
+     the arrows are desktop furniture. */
+  html .carousel-arrow { display: none !important; }
   html .nav-auth .btn-ghost,
   html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }
 

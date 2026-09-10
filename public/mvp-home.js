@@ -482,6 +482,7 @@ function renderCarousel() {
       slide.style.cursor = 'pointer';
       slide.addEventListener('click', (e) => {
         if (e.target && e.target.closest && e.target.closest('button, a')) return;
+        if (Date.now() - (window.__agoraHeroSwipedAt || 0) < 500) return; // the tap that ended a swipe
         var id = slide.getAttribute('data-story');
         window.location.href = id ? '/news?story=' + encodeURIComponent(id) : '/news';
       });
@@ -1408,6 +1409,33 @@ function handleSearchInput(query) {
 
 document.getElementById('arrowLeft').addEventListener('click', () => { goToSlide(currentSlide - 1); resetAutoPlay(); });
 document.getElementById('arrowRight').addEventListener('click', () => { goToSlide(currentSlide + 1); resetAutoPlay(); });
+
+// Phones: swipe the hero (the arrows are hidden there, mvp-home.css). A
+// touch that travels more than 40px and more sideways than down steps a
+// slide; the moment is noted so the slide's own tap-to-open (in
+// renderCarousel) ignores the tap that ends a swipe.
+window.__agoraHeroSwipedAt = 0;
+(function () {
+  const stage = document.querySelector('.carousel-stage') || document.getElementById('carouselTrack');
+  if (!stage) return;
+  let x0 = 0, y0 = 0, tracking = false;
+  stage.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; tracking = true;
+  }, { passive: true });
+  stage.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    window.__agoraHeroSwipedAt = Date.now();
+    goToSlide(currentSlide + (dx < 0 ? 1 : -1));
+    resetAutoPlay();
+  }, { passive: true });
+  stage.addEventListener('touchcancel', () => { tracking = false; }, { passive: true });
+})();
 
 // Category row scroll on wheel (no-op since the Browse section was removed)
 var _categoryRowEl = document.getElementById('categoryRow');
