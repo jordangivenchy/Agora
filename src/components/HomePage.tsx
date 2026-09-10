@@ -14,10 +14,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { writeNavUser } from "@/lib/navUserCache";
 import { sessionUser } from "@/lib/session";
-import { fetchHeroRooms, fetchNavUser, type HomeInitial } from "@/lib/homeData";
+import { fetchDevPosts, fetchHeroRooms, fetchNavUser, type HomeInitial } from "@/lib/homeData";
 import LoadingScreen from "@/components/LoadingScreen";
 import TopicsHome from "@/components/TopicsHome";
-import HeroCarousel, { type HeroRoom } from "@/components/HeroCarousel";
+import HeroCarousel, { type HeroPost, type HeroRoom } from "@/components/HeroCarousel";
 import ShootingStars from "@/components/ShootingStars";
 import KeyboardGuard from "@/components/KeyboardGuard";
 import { requestCreate } from "@/components/GlobalActions";
@@ -26,6 +26,7 @@ import { topicFor } from "@/components/NewsPage";
 export default function HomePage({ initial }: { initial: HomeInitial }) {
   const [supabase] = useState(() => createClient());
   const [heroRooms, setHeroRooms] = useState<HeroRoom[]>(initial.heroRooms);
+  const [devPosts, setDevPosts] = useState<HeroPost[]>(initial.devPosts);
   const [carouselHost, setCarouselHost] = useState<HTMLElement | null>(null);
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
   const [dbOffline, setDbOffline] = useState(false);
@@ -81,7 +82,7 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
      and the navbar's user with the route's own fetchers. */
   const refresh = useCallback(async () => {
     try {
-      const [{ data: auth }, hero] = await Promise.all([sessionUser(supabase), fetchHeroRooms(supabase)]);
+      const [{ data: auth }, hero, posts] = await Promise.all([sessionUser(supabase), fetchHeroRooms(supabase), fetchDevPosts(supabase)]);
       const user = auth?.user;
       const navUser = await fetchNavUser(supabase, user
         ? { id: user.id, name: (user.user_metadata as { name?: string } | undefined)?.name ?? null, email: user.email ?? null }
@@ -90,6 +91,7 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
       /* Replaced only when something changed, so the tracker doesn't
          rebuild an unchanged strip. */
       setHeroRooms((prev) => (JSON.stringify(prev) === JSON.stringify(hero) ? prev : hero));
+      setDevPosts((prev) => (JSON.stringify(prev) === JSON.stringify(posts) ? prev : posts));
       setDbOffline(false);
     } catch (e) {
       console.error("home refresh failed", e);
@@ -102,6 +104,7 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "debate_participants" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "users" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "community_posts" }, refresh)
       .subscribe();
     const heartbeat = setInterval(refresh, 30000);
     return () => {
@@ -230,7 +233,7 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
           project to be running.
         </div>
       )}
-      <HeroCarousel container={carouselHost} rooms={heroRooms} />
+      <HeroCarousel container={carouselHost} rooms={heroRooms} posts={devPosts} />
       <TopicsHome
         container={fieldsHost}
         onCreateLobby={(topic, schedule) => requestCreate({ motion: "", topic, schedule })}

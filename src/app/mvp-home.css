@@ -2952,6 +2952,33 @@ body { background: transparent; }
   .carousel-item.news .carousel-lower-third { right: 0; }
 }
 
+/* ═══ Dev-post slides: the team's posts from the Agora board in the news
+   slide's frame — the post's image (else a warm gradient) under the
+   title, a "From the team" badge, the author and an excerpt in the right
+   column, "Read the post". ═══ */
+.carousel-post-badge {
+  position: absolute; top: 14px; left: 14px; z-index: 10;
+  padding: 4px 10px; border-radius: 100px;
+  background: #ffb700; color: #1a0e00;
+  font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700;
+}
+.carousel-item.post .carousel-motion { font-size: 24px; }
+.carousel-post-author { display: flex; align-items: center; gap: 10px; }
+.carousel-post-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.carousel-post-who { min-width: 0; }
+.carousel-post-name { font-size: 14px; font-weight: 700; color: #f2f2f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.carousel-post-when { font-size: 12px; color: rgba(238,238,245,0.55); }
+.carousel-item.post .carousel-news-summary { -webkit-line-clamp: 5; }
+/* Under the title where the right column is gone (phones): two lines of the post. */
+.carousel-post-excerpt { display: none; }
+@media (max-width: 900px) {
+  .carousel-post-excerpt {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-top: 6px; font-size: 13.5px; line-height: 1.45; color: rgba(238,238,245,0.82);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+  }
+}
+
 /* ═══ Live-room slides with a thumbnail ═══
    Room thumbnails are 512px squares; a square stretched across a wide
    hero turns to mush, so: a blurred, darkened copy fills the backdrop

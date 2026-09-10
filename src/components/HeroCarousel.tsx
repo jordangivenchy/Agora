@@ -27,6 +27,9 @@ import {
   type CSSProperties, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { navigateTo } from "@/lib/progress";
+import { pathFor } from "@/lib/routes";
 import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
@@ -61,8 +64,24 @@ type NewsStory = TickerStory & {
   major?: boolean;
 };
 
+/* A dev post: one of the team's posts from the Agora board (lib/homeData.ts). */
+export type HeroPost = {
+  id: string;
+  title: string;
+  excerpt: string;
+  imageUrl: string | null;
+  createdAt: string;
+  author: string;
+  authorName: string;
+  authorAvatar: string | null;
+  board: string;
+  boardColor: string | null;
+  commentCount: number;
+};
+
 type Slide =
   | { kind: "room"; key: string; room: HeroRoom }
+  | { kind: "post"; key: string; post: HeroPost; gradient: string }
   | { kind: "news"; key: string; story: NewsStory; gradient: string };
 
 type QueueState = { state: string; message?: string };
@@ -85,6 +104,12 @@ const NEWS_GRADIENTS = [
   "linear-gradient(120deg,#141020 0%,#2a1a33 55%,#12203a 100%)",
   "linear-gradient(120deg,#0e1a2a 0%,#182a45 55%,#2b1f38 100%)",
 ];
+/* The dev slides lean warm, a shade of the brand yellow in the dark. */
+const POST_GRADIENTS = [
+  "linear-gradient(120deg,#1a1300 0%,#2a1d00 50%,#101426 100%)",
+  "linear-gradient(120deg,#141020 0%,#2a1a00 55%,#1c2340 100%)",
+  "linear-gradient(120deg,#0e1a2a 0%,#241a00 55%,#2b1f38 100%)",
+];
 
 const chip = (accent: string) => ({ "--chip": accent } as CSSProperties);
 const favicon = (domain: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
@@ -102,6 +127,18 @@ function liveFor(iso: string | null): string {
   return ` for ${h}h ${m % 60}m`;
 }
 
+/* "3m", "5h", "2d" — when a post went up. */
+function ago(iso: string): string {
+  const ms = Date.now() - Date.parse(iso);
+  if (!(ms > 0)) return "now";
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 /* A full page load with the loading screen up first (the adapter's
    go(): the sky paints, then the navigation starts). */
 function leaveTo(url: string) {
@@ -109,10 +146,13 @@ function leaveTo(url: string) {
   requestAnimationFrame(() => { window.location.href = url; });
 }
 
-export default function HeroCarousel({ container, rooms }: {
+export default function HeroCarousel({ container, rooms, posts = [] }: {
   container: HTMLElement | null;
   rooms: HeroRoom[];
+  /** The team's posts (lib/homeData.ts fetchDevPosts), as slides between the rooms and the stories. */
+  posts?: HeroPost[];
 }) {
+  const router = useRouter();
   const [news, setNews] = useState<NewsStory[]>([]);
   const [ticker, setTicker] = useState<TickerStory[]>([]);
   const [queue, setQueue] = useState<Record<string, QueueState>>({});
@@ -168,16 +208,17 @@ export default function HeroCarousel({ container, rooms }: {
     return () => window.removeEventListener("agora:hero-queue-state", on);
   }, []);
 
-  /* Rooms and stories take turns: room, story, room, story… */
+  /* Rooms, the team's posts and stories take turns: room, post, story… */
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
-    const n = Math.max(rooms.length, news.length);
+    const n = Math.max(rooms.length, posts.length, news.length);
     for (let i = 0; i < n; i++) {
       if (rooms[i]) out.push({ kind: "room", key: `r:${rooms[i].roomId}`, room: rooms[i] });
+      if (posts[i]) out.push({ kind: "post", key: `p:${posts[i].id}`, post: posts[i], gradient: POST_GRADIENTS[i % POST_GRADIENTS.length] });
       if (news[i]) out.push({ kind: "news", key: `n:${news[i].id}`, story: news[i], gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length] });
     }
     return out;
-  }, [rooms, news]);
+  }, [rooms, posts, news]);
   const N = slides.length;
   const nRef = useRef(N);
   useLayoutEffect(() => { nRef.current = N; }, [N]);
@@ -235,15 +276,16 @@ export default function HeroCarousel({ container, rooms }: {
   }, [goTo, stopAuto]);
   useEffect(() => { startAuto(); return stopAuto; }, [N, startAuto, stopAuto]);
 
-  /* A new set of slides: land on the current one without animating
-     (offset one for the lead clone), the way the strip first appears. */
+  /* A new set of slides, or the strip's first appearance (the host
+     arrives after the slides do, when they came with the page): land on
+     the current one without animating, offset one for the lead clone. */
   useLayoutEffect(() => {
     window.clearTimeout(snapTimer.current);
     snapPending.current = false;
     curRef.current = Math.min(curRef.current, Math.max(0, N - 1));
     setCur(curRef.current);
     place(N > 1 ? curRef.current + 1 : 0, false);
-  }, [slides, N, place]);
+  }, [slides, N, place, container]);
 
   /* Long outlet names ("The Washington Post") shrink the "Read at"
      label until it fits its pill on one line, instead of an ellipsis. */
@@ -328,6 +370,14 @@ export default function HeroCarousel({ container, rooms }: {
     if (Date.now() - swipedAt.current < 500) return; // the tap that ended a swipe
     leaveTo(id ? `/news?story=${encodeURIComponent(id)}` : "/news");
   };
+  /* A post opens in place — the boards page lives under the chrome. */
+  const openPost = (id: string) => navigateTo(router, pathFor.post(id));
+  const tapPost = (id: string) => (e: ReactMouseEvent) => {
+    const t = e.target as HTMLElement | null;
+    if (t?.closest?.("button, a")) return;
+    if (Date.now() - swipedAt.current < 500) return;
+    openPost(id);
+  };
 
   if (!container) return null;
 
@@ -352,6 +402,23 @@ export default function HeroCarousel({ container, rooms }: {
           thumb={c.thumbnailUrl && !broken[`thumb:${c.roomId}`] ? c.thumbnailUrl : null}
           onThumbBroken={() => markBroken(`thumb:${c.roomId}`)}
           onWatch={() => leaveTo(roomPath({ id: c.roomId, motion: c.motion }))}
+        />
+      );
+    }
+    if (slide.kind === "post") {
+      const p = slide.post;
+      return (
+        <PostSlide
+          key={key}
+          post={p}
+          gradient={slide.gradient}
+          i={i}
+          total={N}
+          phone={phone}
+          image={p.imageUrl && !broken[`post:${p.id}`] ? p.imageUrl : null}
+          onImageBroken={() => markBroken(`post:${p.id}`)}
+          onOpen={() => openPost(p.id)}
+          onTap={tapPost(p.id)}
         />
       );
     }
@@ -468,6 +535,65 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
         )}
         <button type="button" className="carousel-watch-btn room-panel-watch" onClick={(e) => { e.stopPropagation(); onWatch(); }}>
           <Icon name="play" size={11} style={{ fill: "currentColor" }} /> Watch Live
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* A dev post, in the news slide's frame: the title over the post's
+   image (else a warm gradient) with a "From the team" badge, the board,
+   the author and the comment count as chips; the right column has the
+   author, an excerpt and "Read the post". */
+function PostSlide({ post: p, gradient, i, total, phone, image, onImageBroken, onOpen, onTap }: {
+  post: HeroPost;
+  gradient: string;
+  i: number;
+  total: number;
+  phone: boolean;
+  image: string | null;
+  onImageBroken: () => void;
+  onOpen: () => void;
+  onTap: (e: ReactMouseEvent) => void;
+}) {
+  return (
+    <div
+      className="carousel-item news post"
+      role="group"
+      aria-label={`Slide ${i + 1} of ${total}`}
+      style={phone ? { cursor: "pointer" } : undefined}
+      onClick={phone ? onTap : undefined}
+    >
+      <div className="carousel-bg" style={{ background: gradient }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {image && <img className="carousel-news-img" src={image} alt="" loading="eager" decoding="async" onError={onImageBroken} />}
+      </div>
+      <div className="carousel-news-shade" />
+      <div className="carousel-post-badge">From the team</div>
+      <div className="carousel-lower-third">
+        <div className="carousel-motion">{p.title}</div>
+        {/* Phones have no right column: a couple of lines of the post under the title. */}
+        {p.excerpt && <div className="carousel-post-excerpt">{p.excerpt}</div>}
+        <div className="carousel-news-chips">
+          <span className="carousel-news-chip carousel-post-board" style={chip(p.boardColor || "#4a9eff")}>{p.board}</span>
+          <span className="carousel-news-chip">@{p.author}</span>
+          <span className="carousel-news-chip">{p.commentCount} comment{p.commentCount === 1 ? "" : "s"}</span>
+        </div>
+      </div>
+      <div className="carousel-panel carousel-news-card">
+        <div className="carousel-post-author">
+          {p.authorAvatar
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img className="carousel-post-avatar" src={p.authorAvatar} alt="" />
+            : <div className="panel-avatar small carousel-post-avatar" style={{ background: "#ffb700", color: "#1a0e00" }}>{initial(p.authorName)}</div>}
+          <div className="carousel-post-who">
+            <div className="carousel-post-name">{p.authorName}</div>
+            <div className="carousel-post-when">@{p.author} · {ago(p.createdAt)}</div>
+          </div>
+        </div>
+        {p.excerpt && <p className="carousel-news-summary">{p.excerpt}</p>}
+        <button type="button" className="carousel-watch-btn carousel-queue-btn" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
+          Read the post
         </button>
       </div>
     </div>
