@@ -1,5 +1,5 @@
 /* The home page's first view: the hero's rooms — the busiest live ones,
-   shaped for the carousel — the team's posts for its dev slides, and
+   shaped for the carousel — the announcements for its post slides, and
    the signed-in user for the navbar. The route (app/page.tsx) fetches
    it on the server so the page arrives complete; the page refreshes it
    in the browser on realtime changes and every 30s with the same
@@ -13,14 +13,16 @@ export type HomeNavUser = { id: string; name: string; username: string | null; a
 
 export type HomeInitial = {
   heroRooms: HeroRoom[];
-  devPosts: HeroPost[];
+  announcements: HeroPost[];
   navUser: HomeNavUser | null;
 };
 
-/* The dev posts: the team's newest posts in the site's own board — the
-   Agora board, by the site's moderators — pinned ones first, reposts
-   left out. */
-const DEV_BOARD_ID = "856e4ac6-03f2-4fbc-9b00-3555cdd8211a";
+/* The announcements: posts in the site's own board — the Agora board —
+   tagged "Announcement" by a site moderator, pinned ones first, reposts
+   left out. The tag is the board's own (community_tags); the poster
+   picks it in the composer. */
+const ANNOUNCEMENTS_BOARD_ID = "856e4ac6-03f2-4fbc-9b00-3555cdd8211a";
+const ANNOUNCEMENT_TAG = "Announcement";
 const HERO_POSTS = 3;
 
 /* A colour that lands in a CSS variable, so only a strict hex value may
@@ -139,7 +141,7 @@ export async function fetchHeroRooms(supabase: SupabaseClient): Promise<HeroRoom
 }
 
 /* A post's opening as plain text for the slide: markdown marks, images
-   and link targets dropped, cut at a word. */
+   and bare links dropped, cut at a word. */
 function excerpt(md: string, max = 200): string {
   const text = md
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
@@ -169,11 +171,12 @@ type DevPostRow = {
 };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
-export async function fetchDevPosts(supabase: SupabaseClient): Promise<HeroPost[]> {
+export async function fetchAnnouncements(supabase: SupabaseClient): Promise<HeroPost[]> {
   const { data } = await supabase
     .from("community_posts")
-    .select("id, title, body, image_url, created_at, author:users!author_id!inner(username, display_name, avatar_url), community:communities!community_id(name, color), comments:community_comments(count)")
-    .eq("community_id", DEV_BOARD_ID)
+    .select("id, title, body, image_url, created_at, tag:community_tags!tag_id!inner(name), author:users!author_id!inner(username, display_name, avatar_url), community:communities!community_id(name, color), comments:community_comments(count)")
+    .eq("community_id", ANNOUNCEMENTS_BOARD_ID)
+    .eq("tag.name", ANNOUNCEMENT_TAG)
     .eq("author.is_moderator", true)
     .or("is_repost.is.null,is_repost.eq.false")
     .order("pinned_at", { ascending: false, nullsFirst: false })
@@ -222,11 +225,11 @@ export async function fetchNavUser(
 /* Everything the route needs, as the viewer (the session's verified
    claims — no auth round trip). */
 export async function fetchHomeInitial(supabase: SupabaseClient): Promise<HomeInitial> {
-  const [{ data: claims }, heroRooms, devPosts] = await Promise.all([supabase.auth.getClaims(), fetchHeroRooms(supabase), fetchDevPosts(supabase)]);
+  const [{ data: claims }, heroRooms, announcements] = await Promise.all([supabase.auth.getClaims(), fetchHeroRooms(supabase), fetchAnnouncements(supabase)]);
   const c = claims?.claims;
   const viewer = c?.sub
     ? { id: c.sub, name: (c.user_metadata as { name?: string } | undefined)?.name ?? null, email: c.email ?? null }
     : null;
   const navUser = await fetchNavUser(supabase, viewer);
-  return { heroRooms, devPosts, navUser };
+  return { heroRooms, announcements, navUser };
 }

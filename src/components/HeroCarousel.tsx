@@ -64,7 +64,7 @@ type NewsStory = TickerStory & {
   major?: boolean;
 };
 
-/* A dev post: one of the team's posts from the Agora board (lib/homeData.ts). */
+/* An announcement: a post tagged so in the Agora board (lib/homeData.ts). */
 export type HeroPost = {
   id: string;
   title: string;
@@ -104,7 +104,7 @@ const NEWS_GRADIENTS = [
   "linear-gradient(120deg,#141020 0%,#2a1a33 55%,#12203a 100%)",
   "linear-gradient(120deg,#0e1a2a 0%,#182a45 55%,#2b1f38 100%)",
 ];
-/* The dev slides lean warm, a shade of the brand yellow in the dark. */
+/* The announcement slides lean warm, a shade of the brand yellow in the dark. */
 const POST_GRADIENTS = [
   "linear-gradient(120deg,#1a1300 0%,#2a1d00 50%,#101426 100%)",
   "linear-gradient(120deg,#141020 0%,#2a1a00 55%,#1c2340 100%)",
@@ -149,7 +149,7 @@ function leaveTo(url: string) {
 export default function HeroCarousel({ container, rooms, posts = [] }: {
   container: HTMLElement | null;
   rooms: HeroRoom[];
-  /** The team's posts (lib/homeData.ts fetchDevPosts), as slides between the rooms and the stories. */
+  /** The announcements (lib/homeData.ts fetchAnnouncements), as slides between the rooms and the stories. */
   posts?: HeroPost[];
 }) {
   const router = useRouter();
@@ -208,7 +208,7 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
     return () => window.removeEventListener("agora:hero-queue-state", on);
   }, []);
 
-  /* Rooms, the team's posts and stories take turns: room, post, story… */
+  /* Rooms, announcements and stories take turns: room, post, story… */
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
     const n = Math.max(rooms.length, posts.length, news.length);
@@ -541,10 +541,10 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
   );
 }
 
-/* A dev post, in the news slide's frame: the title over the post's
-   image (else a warm gradient) with a "From the team" badge, the board,
-   the author and the comment count as chips; the right column has the
-   author, an excerpt and "Read the post". */
+/* An announcement, in the news slide's frame: the title over the
+   post's image (else a warm gradient) with an "Announcement" badge, the
+   board, the author and the comment count as chips; the right column
+   has the author, an excerpt and "Read the post". */
 function PostSlide({ post: p, gradient, i, total, phone, image, onImageBroken, onOpen, onTap }: {
   post: HeroPost;
   gradient: string;
@@ -569,7 +569,7 @@ function PostSlide({ post: p, gradient, i, total, phone, image, onImageBroken, o
         {image && <img className="carousel-news-img" src={image} alt="" loading="eager" decoding="async" onError={onImageBroken} />}
       </div>
       <div className="carousel-news-shade" />
-      <div className="carousel-post-badge">From the team</div>
+      <div className="carousel-post-badge">Announcement</div>
       <div className="carousel-lower-third">
         <div className="carousel-motion">{p.title}</div>
         {/* Phones have no right column: a couple of lines of the post under the title. */}

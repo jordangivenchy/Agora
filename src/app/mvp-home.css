@@ -2952,9 +2952,9 @@ body { background: transparent; }
   .carousel-item.news .carousel-lower-third { right: 0; }
 }
 
-/* ═══ Dev-post slides: the team's posts from the Agora board in the news
+/* ═══ Announcement slides: the Agora board's posts tagged so, in the news
    slide's frame — the post's image (else a warm gradient) under the
-   title, a "From the team" badge, the author and an excerpt in the right
+   title, an "Announcement" badge, the author and an excerpt in the right
    column, "Read the post". ═══ */
 .carousel-post-badge {
   position: absolute; top: 14px; left: 14px; z-index: 10;
