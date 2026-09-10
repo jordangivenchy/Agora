@@ -171,11 +171,13 @@ export type RichEditorProps = {
   toolbarPosition?: "top" | "bottom";
   /** No box around the text — the editor fills its container (sheets). */
   frameless?: boolean;
+  /** The formatting strip; false hides it (the comment sheet shows it behind "Aa"). */
+  toolbar?: boolean;
 };
 
 const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEditor({
   value, onChange, placeholder, compact = false, autoFocus = false, onSubmit, onImage, onGif, onEmoji, trailing, style, mentions = true, onFocus,
-  toolbarPosition = "top", frameless = false,
+  toolbarPosition = "top", frameless = false, toolbar = true,
 }, ref) {
   const toolbarBelow = toolbarPosition === "bottom";
   const [supabase] = useState(() => createClient());
@@ -316,7 +318,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
      narrow (phones) instead of wrapping into two ragged lines. Whatever
      the caller appends (picker hosts, hints) sits after the strip,
      outside the scroll clip so popovers aren't cut. */
-  const toolbar = (
+  const toolbarEl = (
     <div className={`flex items-center ${toolbarBelow ? "mt-1.5" : "mb-1.5"}`} style={{ gap: 4 }}>
       <div className="rt-toolbar--scroll flex items-center min-w-0" style={{ gap: 2 }} role="toolbar" aria-label="Formatting">
         {groups.map((g, gi) => (
@@ -344,7 +346,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
       data-frameless={frameless ? "" : undefined}
       onKeyDown={onWrapperKeyDown}
     >
-      {!toolbarBelow && toolbar}
+      {toolbar && !toolbarBelow && toolbarEl}
       {a?.table && !compact && (
         <div className="flex items-center flex-wrap mb-1.5" style={{ gap: 2 }} aria-label="Table">
           {tableOps.map((b) => (
@@ -396,7 +398,7 @@ const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(function RichEd
       <div className="rich-editor-box" style={style}>
         <EditorContent editor={editor} />
       </div>
-      {toolbarBelow && toolbar}
+      {toolbar && toolbarBelow && toolbarEl}
     </div>
   );
 });

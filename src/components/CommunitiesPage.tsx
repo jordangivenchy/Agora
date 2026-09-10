@@ -44,6 +44,7 @@ import { openImage } from "@/lib/lightbox";
 import PostTopicQueue from "./community/PostTopicQueue";
 import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
 import RichEditor, { type RichEditorHandle } from "./community/RichEditor";
+import CommentSheet from "./community/CommentSheet";
 import ActionSheet, { type SheetItem } from "./community/ActionSheet";
 import { createLongPress } from "@/lib/longPress";
 import PostComposer, { POST_BODY_MAX } from "./community/PostComposer";
@@ -52,6 +53,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { requestCreate } from "@/components/GlobalActions";
 import { navigateTo } from "@/lib/progress";
 import { useCoarsePointer } from "@/lib/pointer";
+import { useIsClient, useMediaQuery } from "@/lib/media";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -227,6 +229,13 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
   const pathname = usePathname();
   /* A finger has no ⌘↩: the composers' placeholders keep the hint for a keyboard. */
   const coarse = useCoarsePointer();
+  /* Phones compose in a sheet over the keyboard (CommentSheet.tsx),
+     opened from a dock above the tab bar or a comment's Reply; wide
+     screens keep the inline composers. `composerFor` is the post whose
+     sheet is up, so a sheet never outlives its post. */
+  const phone = useMediaQuery("(max-width: 639px)");
+  const isClient = useIsClient();
+  const [composerFor, setComposerFor] = useState<string | null>(null);
   const close = onClose ?? (() => navigateTo(router, "/"));
   const onStartDiscussion = startDiscussion ?? ((communityId: string, communityName: string) => requestCreate({ motion: "", topic: "", communityId, communityName }));
   const { openUserMenu } = useUserMenu();
@@ -1113,6 +1122,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
       p.id === openPost.id ? { ...p, comment_count: p.comment_count + 1 } : p;
     setPosts((ps) => ps.map(bump));
     setOpenPost((p) => (p ? bump(p) : p));
+    return true;
   }, [busy, supabase, requireAuth, openPost, userId, communities, getMyIdentity, fetchAvatars, loadComments, pickCommentImage, pickReplyImage]);
 
   /* Mods can delete anything in their board (RLS-backed). */
@@ -1731,7 +1741,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     </button>
                   </span>
                 </div>
-                {replyTo === c.id && (
+                {replyTo === c.id && !phone && (
                   <div className="mt-2">
                     <div className="flex gap-2 items-end cm-composer-row">
                       <span className="relative flex-1 min-w-0">
@@ -1813,6 +1823,8 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     );
   };
 
+  /* The comment a phone's reply sheet answers (its Reply set replyTo). */
+  const replyTarget = phone && replyTo ? comments.find((x) => x.id === replyTo) ?? null : null;
   const isMod = selectedCommunity?.my_role === "owner" || selectedCommunity?.my_role === "moderator";
   const isOwner = selectedCommunity?.my_role === "owner";
 
@@ -1864,6 +1876,56 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         title={sheet.kind === "comment" ? `@${sheet.comment.author_username}'s comment` : sheet.post.title}
         items={sheetItems()}
         onClose={() => setSheet(null)}
+      />
+    )}
+    {/* Phones: the dock above the tab bar opens the comment sheet; a
+        comment's Reply opens it for that comment. */}
+    {openPost && isClient && createPortal(
+      <div className="cm-dock">
+        <button
+          type="button"
+          className="cm-dock-pill"
+          onClick={() => { if (requireAuth()) setComposerFor(openPost.id); }}
+        >
+          {userId ? "Join the conversation" : "Sign in to comment"}
+        </button>
+      </div>,
+      document.body,
+    )}
+    {phone && openPost && composerFor === openPost.id && (
+      <CommentSheet
+        heading={<>Commenting on <b>{openPost.title}</b></>}
+        placeholder="Join the conversation"
+        value={commentText}
+        onChange={setCommentText}
+        onSubmit={async () => { if (await submitComment(null, commentText, commentImage, commentGifUrl)) setComposerFor(null); }}
+        canSubmit={!!commentText.trim()}
+        busy={busy}
+        onClose={() => setComposerFor(null)}
+        imagePreview={commentImagePreview}
+        gifUrl={commentGifUrl}
+        onPickImage={(f) => { pickCommentImage(f); if (f) setCommentGifUrl(null); }}
+        onGif={(u) => { setCommentGifUrl(u); if (u) pickCommentImage(null); }}
+        giphyEnabled={giphyEnabled}
+        mentions={!!userId}
+      />
+    )}
+    {phone && openPost && replyTarget && (
+      <CommentSheet
+        heading={<>Replying to <b>@{replyTarget.author_username}</b></>}
+        placeholder="Join the conversation"
+        value={replyText}
+        onChange={setReplyText}
+        onSubmit={() => { void submitComment(replyTarget.id, replyText, replyImage, replyGifUrl); }}
+        canSubmit={!!replyText.trim()}
+        busy={busy}
+        onClose={() => setReplyTo(null)}
+        imagePreview={replyImagePreview}
+        gifUrl={replyGifUrl}
+        onPickImage={(f) => { pickReplyImage(f); if (f) setReplyGifUrl(null); }}
+        onGif={(u) => { setReplyGifUrl(u); if (u) pickReplyImage(null); }}
+        giphyEnabled={giphyEnabled}
+        mentions={!!userId}
       />
     )}
     <div
@@ -2477,7 +2539,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
 
                 {/* comment composer — media/emoji live in the editor toolbar; only
                     the submit button sits beside the box, bottom-aligned. */}
-                <div className="mb-4">
+                <div className="cm-composer-inline mb-4">
                   <div className="flex gap-2 items-end cm-composer-row">
                     <span className="relative flex-1 min-w-0">
                       <RichEditor
@@ -2589,6 +2651,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     {loadingMoreComments ? "Loading…" : "Load more comments"}
                   </button>
                 )}
+                <div className="cm-dock-spacer" aria-hidden="true" />
               </div>
             ) : (
               /* ── feed ── */

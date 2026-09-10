@@ -2500,6 +2500,37 @@ html.reduce-motion .nav-sparkle {
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
 
+/* ═══ The phone comment composer, after Reddit's app (CommentSheet.tsx):
+   a dock above the tab bar — "Join the conversation" — opens a sheet
+   over the keyboard with what it answers up top, the text, then GIF,
+   image, emoji, a divider, Aa for the formatting strip, and the send
+   button at the right. The dock and the sheet are for phones (below);
+   wide screens keep the inline composer. ═══ */
+.cm-dock, .cm-dock-spacer { display: none; }
+.cm-sheet-veil { position: fixed; left: 0; right: 0; top: 0; height: 100%; z-index: 1200; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(0,0,0,0.55); }
+.cm-sheet { display: flex; flex-direction: column; max-height: 100%; background: #141418; border: 1px solid #23232b; border-bottom: 0; border-radius: 22px 22px 0 0; padding: 6px 16px calc(10px + env(safe-area-inset-bottom)); }
+.cm-sheet.is-tall { height: 100%; border-radius: 0; }
+.cm-sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: #3a3a45; margin: 4px auto 10px; flex-shrink: 0; }
+.cm-sheet-head { display: flex; align-items: center; gap: 10px; min-height: 28px; flex-shrink: 0; }
+.cm-sheet-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; color: #8c8c98; }
+.cm-sheet-title b { color: #f2f2f6; font-weight: 700; }
+.cm-sheet-expand { background: none; border: 0; padding: 4px; color: #d8d8e0; cursor: pointer; display: inline-flex; }
+.cm-sheet-editor { flex: 1 1 auto; min-height: 0; overflow: auto; margin-top: 6px; }
+.cm-sheet-editor .rich-editor-box { min-height: 48px; }
+.cm-sheet-editor .ProseMirror { font-size: 16px; } /* 16px keeps iOS from zooming into the field */
+.cm-sheet-attach { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-shrink: 0; }
+.cm-sheet-attach img { height: 48px; border-radius: 8px; }
+.cm-sheet-attach button { background: none; border: 0; color: #8c8c98; font: inherit; font-size: 12px; cursor: pointer; }
+.cm-sheet-row { display: flex; align-items: center; gap: 4px; padding-top: 6px; flex-shrink: 0; }
+.cm-sheet-tool { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 12px; color: #f2f2f6; cursor: pointer; font: inherit; }
+.cm-sheet-tool:active { background: #1f1f26; }
+.cm-sheet-gif { font-size: 12px; font-weight: 800; letter-spacing: 0.02em; }
+.cm-sheet-aa { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.cm-sheet-aa.is-on { color: #ffb700; }
+.cm-sheet-divider { width: 1px; height: 26px; background: #2b2b34; margin: 0 6px; }
+.cm-sheet-send { margin-left: auto; width: 44px; height: 44px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center; background: #2f7fe0; color: #fff; cursor: pointer; }
+.cm-sheet-send:disabled { background: #232329; color: #6a6a76; cursor: default; }
+
 /* ═══ The comment thread, after Reddit's app: no cards — each comment is
    its avatar row, the text flush beneath, the actions to the right.
    Replies hang off a rail from under the parent's avatar, and an elbow
@@ -2858,6 +2889,11 @@ html.reduce-motion .nav-sparkle {
   .cm-mod-inline { display: none; }
   .cm-comment-actions { gap: 16px; }
   .cm-act { padding: 6px 0; }
+  /* The composer moves to the dock and its sheet. */
+  .cm-composer-inline { display: none; }
+  .cm-dock { display: block; position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 60; padding: 8px 12px 10px; background: #0a0a0d; border-top: 1px solid #1b1b21; }
+  .cm-dock-pill { display: flex; align-items: center; width: 100%; height: 42px; padding: 0 16px; border-radius: 999px; background: #17171c; border: 1px solid #26262e; color: #8c8c98; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+  .cm-dock-spacer { display: block; height: 72px; }
   /* The post view: the send button as a pill under the box, the
      composer's toolbar a touch tighter. */
   .cm-send { height: 34px !important; padding: 0 16px !important; border-radius: 999px !important; font-size: 12.5px !important; margin-top: 2px; }
