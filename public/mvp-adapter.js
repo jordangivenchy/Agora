@@ -244,6 +244,20 @@
   });
   /* Create button opens the real CreateRoomModal (document-level capture
      fires before the MVP's own target listener, so we can intercept). */
+  /* The bar is see-through at the top of the page and solid once
+     scrolled (mvp-home.css .nav:not(.is-scrolled)). */
+  if (!window.__agoraNavScrollHooked) {
+    window.__agoraNavScrollHooked = true;
+    var navEl = document.querySelector('.nav');
+    var applyNavScroll = function () {
+      if (!navEl) navEl = document.querySelector('.nav');
+      if (!navEl) return;
+      var y = window.scrollY || document.documentElement.scrollTop || 0;
+      navEl.classList.toggle('is-scrolled', y > 8);
+    };
+    applyNavScroll();
+    window.addEventListener('scroll', applyNavScroll, { passive: true });
+  }
   if (!window.__agoraCreateHooked) {
     window.__agoraCreateHooked = true;
     document.addEventListener('click', function (e) {

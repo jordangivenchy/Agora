@@ -3225,7 +3225,18 @@ body { background: transparent; }
   backdrop-filter: blur(22px);
   /* position:fixed already set above — do not override */
   z-index: 100;
+  transition: background 0.2s ease;
 }
+/* At the top of the page the bar is glass-free and see-through: the
+   starfield shows behind the logo and search. It turns solid black —
+   and paints its gap band — once the page scrolls (mvp-adapter.js sets
+   .is-scrolled), so the carousel never slides under the search pill. */
+.nav:not(.is-scrolled) {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.nav:not(.is-scrolled)::after { display: none; }
 /* .sidebar — no overrides; all rules in base block above */
 .main {
   /* margin-top and margin-left already set above — preserve them */
