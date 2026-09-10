@@ -80,6 +80,9 @@ type CommunityRow = {
 };
 
 type Tab = "debates" | "scheduled" | "posts" | "reposts" | "comments" | "communities";
+/* Tabs that are lists of text: kept at a reading width however wide the
+   page gets (the replay grid, by contrast, adds columns). */
+const TEXT_TABS = new Set<Tab>(["scheduled", "posts", "reposts", "comments", "communities"]);
 
 const COMMENTS_PAGE = 30;
 
@@ -1053,6 +1056,7 @@ export default function ProfileView({
           )}
         </div>
 
+        <div className={TEXT_TABS.has(tab) ? "max-w-[920px]" : undefined}>
         {/* ── Communities ── */}
         {tab === "communities" && (
           <div className="flex flex-col gap-2.5">
@@ -1487,6 +1491,7 @@ export default function ProfileView({
             )}
           </div>
         )}
+        </div>
         </div>
         {!embedded && <FeedRail userId={viewerId} />}
        </div>
