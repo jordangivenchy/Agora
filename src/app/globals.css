@@ -2261,6 +2261,8 @@ html.reduce-motion .nav-sparkle {
   transition: opacity 0.8s ease, transform 0.8s cubic-bezier(.2,.7,.2,1);
 }
 .ld-center.is-on { opacity: 1; transform: translate(-50%, -50%); }
+/* Already up in the sky this one continues: no fade in. */
+.ld-center.is-still { transition: none; }
 /* A pool of dark under the mark so it reads over the trails. */
 .ld-center::before {
   content: ""; position: absolute; inset: -18px -28px; z-index: -1; border-radius: 50%;

@@ -15,27 +15,52 @@
    moments and then turns steadily until stopped, or until nobody can
    see it. The centre element gets `is-on` when the mark is due, on a
    timer of its own so it still arrives in a background tab. Returns
-   { stop }. A canvas already running is left alone. */
+   { stop, elapsed }. A canvas already running is left alone.
+
+   Skies continue each other: a route's fallback gives way to the
+   page's own loading state, and both show the sky. So the scatter is
+   seeded and the clock shared (window.__agoraSkySession): a sky
+   started within a couple of seconds of the last one stopping draws
+   the same stars at the angle they have reached, with the mark already
+   up if it was due, and turns on from there. */
 
 export const SKY_SPLASH_JS = `
 window.__agoraSky = function (trails, heads, center, o) {
   o = o || {};
   var SPEED = o.speed || 1.3, RAMP = o.ramp || 0.2, MARK_AT = o.markAt == null ? 1000 : o.markAt;
-  var none = { stop: function () {} };
+  var none = { stop: function () {}, elapsed: 0 };
   if (!trails || !heads || trails.dataset.live) return none;
   var ctx = trails.getContext('2d'), hctx = heads.getContext('2d');
   if (!ctx || !hctx) return none;
   trails.dataset.live = '1';
+
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  var w = window.innerWidth, h = window.innerHeight;
+  var now0 = performance.now();
+  var S = window.__agoraSkySession;
+  if (!S || now0 - (S.lastStop || S.start) > 2500 || S.w !== w || S.h !== h) {
+    S = window.__agoraSkySession = { seed: (Math.random() * 4294967296) >>> 0, start: now0, w: w, h: h, lastStop: 0 };
+  }
+  S.lastStop = 0;
+  var elapsed0 = now0 - S.start;
+  var rnd = (function (a) {
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  })(S.seed);
+
   var stopped = false, raf = 0, markTimer = 0;
   var stop = function () {
     stopped = true;
     cancelAnimationFrame(raf);
     clearTimeout(markTimer);
     delete trails.dataset.live;
+    S.lastStop = performance.now();
   };
-
-  var dpr = Math.min(2, window.devicePixelRatio || 1);
-  var w = window.innerWidth, h = window.innerHeight;
   [[trails, ctx], [heads, hctx]].forEach(function (p) {
     p[0].width = Math.round(w * dpr);
     p[0].height = Math.round(h * dpr);
@@ -50,14 +75,14 @@ window.__agoraSky = function (trails, heads, center, o) {
   var count = Math.max(220, Math.round(w * h * 0.00035));
   var m = Math.hypot(w, h) * 0.06;
   for (var i = 0; i < count; i++) {
-    var x = -m + Math.random() * (w + 2 * m), y = -m + Math.random() * (h + 2 * m);
+    var x = -m + rnd() * (w + 2 * m), y = -m + rnd() * (h + 2 * m);
     var r = Math.hypot(x - px, y - py);
     if (r < 12) continue;
-    var t = Math.random();
+    var t = rnd();
     var size = SIZES[t < 0.7 ? 0 : t < 0.94 ? 1 : 2];
-    var c = Math.random();
+    var c = rnd();
     var col = COLOURS[c < 0.62 ? 0 : c < 0.84 ? 1 : c < 0.95 ? 2 : 3];
-    var alpha = (size[1] * (Math.random() < 0.5 ? 0.72 : 1)).toFixed(2);
+    var alpha = (size[1] * (rnd() < 0.5 ? 0.72 : 1)).toFixed(2);
     var style = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + alpha + ')';
     var k = style + '/' + size[0];
     var g = key[k];
@@ -94,31 +119,38 @@ window.__agoraSky = function (trails, heads, center, o) {
       hctx.fill();
     }
   }
-  function showMark() { if (center) center.classList.add('is-on'); }
+  function showMark(atOnce) {
+    if (!center) return;
+    if (atOnce) center.classList.add('is-still');
+    center.classList.add('is-on');
+  }
+  function turned(s) { return SPEED * (s - RAMP + RAMP * Math.exp(-s / RAMP)); }
 
   ctx.clearRect(0, 0, w, h);
   ctx.lineCap = 'round';
   sweep(0, 0.0001);
-  drawHeads(0);
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     sweep(0, 0.9);
     drawHeads(0.9);
-    showMark();
-    return { stop: stop };
+    showMark(true);
+    return { stop: stop, elapsed: elapsed0 };
   }
   ctx.lineCap = 'butt';
-  markTimer = setTimeout(showMark, MARK_AT);
-  var t0 = 0, drawn = 0;
-  function turned(s) { return SPEED * (s - RAMP + RAMP * Math.exp(-s / RAMP)); }
+  // The sky as it stands, if this continues an earlier one.
+  var drawn = turned(elapsed0 / 1000);
+  if (drawn > 0) sweep(0, drawn);
+  drawHeads(drawn);
+  if (elapsed0 >= MARK_AT) showMark(true);
+  else markTimer = setTimeout(showMark, MARK_AT - elapsed0);
   function frame(now) {
-    if (stopped || !trails.isConnected || trails.offsetWidth === 0) return;
-    if (!t0) t0 = now;
-    var theta = turned((now - t0) / 1000);
+    if (stopped) return;
+    if (!trails.isConnected || trails.offsetWidth === 0) { S.lastStop = performance.now(); return; }
+    var theta = turned((now - S.start) / 1000);
     if (theta > drawn) { sweep(drawn, theta); drawn = theta; drawHeads(theta); }
     raf = requestAnimationFrame(frame);
   }
   raf = requestAnimationFrame(frame);
-  return { stop: stop };
+  return { stop: stop, elapsed: elapsed0 };
 };
 `;
 
@@ -129,6 +161,7 @@ declare global {
       heads: HTMLCanvasElement,
       center: HTMLElement | null,
       options?: { speed?: number; ramp?: number; markAt?: number },
-    ) => { stop: () => void };
+    ) => { stop: () => void; elapsed: number };
+    __agoraSkySession?: { seed: number; start: number; w: number; h: number; lastStop: number };
   }
 }

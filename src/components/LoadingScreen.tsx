@@ -31,16 +31,20 @@ export default function LoadingScreen({ label }: { label?: string }) {
   const headsRef = useRef<HTMLCanvasElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
 
+  const barRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const trails = trailsRef.current, heads = headsRef.current;
     if (!trails || !heads || trails.dataset.live || !window.__agoraSky) return;
     const sky = window.__agoraSky(trails, heads, centerRef.current);
+    // Continuing an earlier sky: the bar picks up where it was too.
+    if (sky.elapsed > 0 && barRef.current) barRef.current.style.animationDelay = `-${Math.round(sky.elapsed)}ms`;
     return () => sky.stop();
   }, []);
 
   return (
     <div className="ld-screen" role="status" aria-label={label || "Loading"}>
-      <div className="sk-progress" aria-hidden="true" />
+      <div ref={barRef} className="sk-progress" aria-hidden="true" />
       {/* The boot splash's starter sizes the canvases and marks the
           centre before hydration; those attributes are meant to differ. */}
       <canvas ref={trailsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
