@@ -1,14 +1,14 @@
 /* "/". Decided here on the server, before anything renders — and
    before any Suspense boundary, so they are real HTTP redirects: the
    legacy query links (?nav=, ?post=, ?profile=, ?dm=) go to the routes
-   they mean, and a signed-in visitor on a bare "/" who hasn't picked
-   Home this session (lib/homeChoice.ts) gets their feed. Everyone else
+   they mean, and a signed-in visitor opening a bare "/" directly who
+   hasn't picked Home this session (lib/homeChoice.ts) gets their feed. Everyone else
    gets the home page, its first view — the hero's rooms and the
    navbar's user — fetched as the viewer (lib/homeData.ts) while the
    shell streams. */
 
 import { Suspense } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchHomeInitial } from "@/lib/homeData";
@@ -43,9 +43,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<Par
     redirect(data?.username ? pathFor.messages(data.username) : "/");
   }
 
+  /* The feed redirect is for a direct load only: opening the site,
+     typing the address, a reload. An in-app navigation to "/" — the
+     Home tab, the logo — is the visitor asking for Home, and so is the
+     router's prefetch of it (a prefetched redirect would be replayed on
+     the tap, and Home would look dead). Those carry the router's
+     headers; a document request does not. */
   if (Object.keys(sp).length === 0) {
+    const h = await headers();
+    const inApp = h.has("rsc") || h.has("next-router-prefetch");
     const chosen = (await cookies()).get(HOME_COOKIE)?.value === "1";
-    if (!chosen) {
+    if (!inApp && !chosen) {
       // The session's claims, verified locally — no auth round trip.
       const { data } = await supabase.auth.getClaims();
       if (data?.claims?.sub) redirect(pathFor.section("feed"));
