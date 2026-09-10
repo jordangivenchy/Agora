@@ -5,10 +5,12 @@
    it turns about the centre the way a long exposure records it, each
    star drawing its arc behind a bright head, and the AS mark comes up
    at the centre. The sky itself is window.__agoraSky (lib/skySplash.ts,
-   inlined in the root layout): route fallbacks (app/⋯/loading.tsx)
-   and the live room's entrance start it from the effect here, with a
-   word for what is coming; the boot splash (BootSplash.tsx) starts it
-   before React is even loaded and the effect then leaves it be. It
+   inlined in the root layout): the live room's entrance and the home
+   page's first-load wait start it from the effect here; the boot
+   splash (BootSplash.tsx) starts it before React is even loaded and
+   the effect then leaves it be. Routes inside the chrome show a
+   loading line instead (RouteLoading.tsx): the sky is the site's
+   opening, once a session. It
    never touches React state — the sky is two canvases and the mark's
    arrival is a class on its own node — so it cannot disturb hydration
    of whatever is loading beneath it. */

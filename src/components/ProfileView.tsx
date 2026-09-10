@@ -16,7 +16,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import { roomPath, replayPath, userPath } from "@/lib/urls";
-import LoadingScreen, { LoadingLine } from "@/components/LoadingScreen";
+import { LoadingLine } from "@/components/LoadingScreen";
+import RouteLoading from "@/components/RouteLoading";
 import { fetchDebates, fetchProfile, type DebateRow, type Profile, type ProfileInitial } from "@/lib/profileData";
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
@@ -578,7 +579,7 @@ export default function ProfileView({
   }
 
   if (!profile) {
-    if (!embedded) return <LoadingScreen label="Opening the profile" />;
+    if (!embedded) return <RouteLoading label="Opening the profile" />;
     return (
       <div className="h-full py-24 flex items-center justify-center">
         <LoadingLine label="Loading the profile" />

@@ -27,28 +27,15 @@
    with the mark already up if it was due, and turns on from there.
    Anything later opens a fresh, still sky and turns from rest.
 
-   Full page loads are covered too: window.__agoraLeave() puts the boot
-   splash back up with a live sky the moment a same-origin link is
-   clicked (a document click listener; the shell's go() and the home
-   page's profile jump call it directly), and hands the sky's seed and
-   clock to the next document through sessionStorage, where this script
-   picks them up before the boot starter runs — one sky across the
-   whole navigation. */
+   The sky is the site's opening: the boot splash shows it on the
+   first document of a browser session and hides itself at parse time on
+   every later one (components/BootSplash.tsx). A full page load inside
+   a session gets the thin bar at the top instead: window.__agoraLeave()
+   drops it the moment a same-origin link is clicked (the click listener
+   below; the hero's Watch Live calls it directly) and the next document
+   takes over from there. */
 
 export const SKY_SPLASH_JS = `
-(function () {
-  // A sky handed over by the page we just left (see __agoraLeave).
-  try {
-    var raw = sessionStorage.getItem('ag-sky-handoff');
-    if (raw) {
-      sessionStorage.removeItem('ag-sky-handoff');
-      var H = JSON.parse(raw);
-      if (H && Date.now() - H.at < 4000 && H.w === window.innerWidth && H.h === window.innerHeight) {
-        window.__agoraSkySession = { seed: H.seed, start: performance.now() - (Date.now() - H.startEpoch), w: H.w, h: H.h, lastStop: performance.now(), live: 0 };
-      }
-    }
-  } catch (e) {}
-})();
 window.__agoraSky = function (trails, heads, center, o) {
   o = o || {};
   var SPEED = o.speed || 1.3, RAMP = o.ramp || 0.2, MARK_AT = o.markAt == null ? 1000 : o.markAt;
@@ -196,38 +183,16 @@ window.__agoraSky = function (trails, heads, center, o) {
   return { stop: stop, elapsed: elapsed0 };
 };
 
-/* Leaving for a full page load: the boot splash back up, a live sky on
-   it, the seed and clock saved for the next document at pagehide. Taken
-   down again if the navigation never happens. */
+/* Leaving for a full page load inside a session: the thin bar at the
+   top of the page until the next document takes over. */
 window.__agoraLeave = function () {
-  var b = document.getElementById('ag-boot');
-  if (!b || b.__leaving) return;
-  var c = b.querySelectorAll('canvas');
-  if (c.length < 2) return;
-  b.__leaving = true;
-  b.classList.remove('is-done');
-  b.classList.remove('ld-boot--short');
-  b.style.display = '';
-  var sky = window.__agoraSky(c[0], c[1], b.querySelector('.ld-center'), { markAt: 700 });
-  var save = function () {
-    var S = window.__agoraSkySession;
-    if (!S) return;
-    try {
-      sessionStorage.setItem('ag-sky-handoff', JSON.stringify({
-        seed: S.seed, w: S.w, h: S.h, at: Date.now(),
-        startEpoch: Date.now() - (S.start == null ? 0 : performance.now() - S.start)
-      }));
-    } catch (e) {}
-  };
-  window.addEventListener('pagehide', save, { once: true });
-  setTimeout(function () {
-    if (!b.__leaving) return;
-    b.__leaving = false;
-    window.removeEventListener('pagehide', save);
-    sky.stop();
-    b.classList.add('is-done');
-    setTimeout(function () { b.style.display = 'none'; }, 500);
-  }, 8000);
+  if (document.querySelector('.sk-progress[data-leave]')) return;
+  var bar = document.createElement('div');
+  bar.className = 'sk-progress';
+  bar.setAttribute('data-leave', '1');
+  bar.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(bar);
+  setTimeout(function () { bar.remove(); }, 8000);
 };
 // Any same-origin link that will load a whole page (Next's own links
 // call preventDefault and route in place — those are skipped). On the
@@ -261,7 +226,7 @@ declare global {
     __agoraSkySession?: { seed: number; start: number | null; w: number; h: number; lastStop: number; live: number };
     /** Skies currently drawing; the page starfields hold still while > 0. */
     __agoraSkyLiveCount?: number;
-    /** Put the boot splash back up for a full page load (see skySplash.ts). */
+    /** The thin bar at the top for a full page load inside a session (see skySplash.ts). */
     __agoraLeave?: () => void;
   }
 }

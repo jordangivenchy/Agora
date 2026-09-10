@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { DEFAULT_SETTINGS, fetchSettingsInitial, type BlockedUser, type ProfileRow, type SettingsInitial, type SettingsRow } from "@/lib/settingsData";
 import { validateNewPassword } from "@/lib/passwordPolicy";
-import LoadingScreen from "@/components/LoadingScreen";
+import RouteLoading from "@/components/RouteLoading";
 import EditProfileModal from "@/components/EditProfileModal";
 import DataAndCoachPanel from "@/components/DataAndCoachPanel";
 import type { User } from "@supabase/supabase-js";
@@ -952,7 +952,7 @@ export default function SettingsPage({ initial }: {
 
   /* ── frame ── */
 
-  if (loading) return <LoadingScreen label="Opening settings" />;
+  if (loading) return <RouteLoading label="Opening settings" />;
 
   if (loadError) {
     return (

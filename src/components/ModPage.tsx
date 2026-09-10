@@ -10,7 +10,7 @@
    filtered client-side so the tab counts come for free. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import LoadingScreen from "@/components/LoadingScreen";
+import RouteLoading from "@/components/RouteLoading";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import type { ModInitial, ModReport } from "@/lib/modData";
@@ -128,7 +128,7 @@ export default function ModPage({ initial }: {
     }
   }
 
-  if (!checked) return <LoadingScreen label="Opening the mod tools" />;
+  if (!checked) return <RouteLoading label="Opening the mod tools" />;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary, #0a0a0c)", fontFamily: "'DM Sans', sans-serif" }}>

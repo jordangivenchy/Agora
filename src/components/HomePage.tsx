@@ -38,9 +38,10 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
      already shown — then a short fade. Capped so a stalled fetch can't
      trap the page. Its sky continues the boot splash's (they share a
      session). */
-  /* Only a full load waits: the boot splash is up then, and this keeps
-     its sky until the hero has settled. A client-side arrival — a tab
-     tap — shows the page at once and lets the strip fill in. */
+  /* Only the session's first load waits: the boot splash is up then,
+     and this keeps its sky until the hero has settled. Every other
+     arrival — a tab tap, a later full load — shows the page at once and
+     lets the strip fill in. */
   const [shellReady, setShellReady] = useState(
     () => typeof document !== "undefined" && !!document.getElementById("ag-boot")?.classList.contains("is-done"),
   );
