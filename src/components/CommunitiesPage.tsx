@@ -224,6 +224,8 @@ function fmtWhen(iso: string | null): string {
 export default function CommunitiesPage({ open = true, onClose, onStartDiscussion: startDiscussion }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  /* A finger has no ⌘↩: the composers' placeholders keep the hint for a keyboard. */
+  const [coarse] = useState(() => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches);
   const close = onClose ?? (() => navigateTo(router, "/"));
   const onStartDiscussion = startDiscussion ?? ((communityId: string, communityName: string) => requestCreate({ motion: "", topic: "", communityId, communityName }));
   const { openUserMenu } = useUserMenu();
@@ -1732,7 +1734,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                           autoFocus
                           value={replyText}
                           onChange={setReplyText}
-                          placeholder={`Reply to @${c.author_username}… (⌘↩ to send)`}
+                          placeholder={coarse ? `Reply to @${c.author_username}…` : `Reply to @${c.author_username}… (⌘↩ to send)`}
                           onSubmit={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                           onImage={() => replyImageInputRef.current?.click()}
                           onGif={giphyEnabled ? () => setGifPickerFor(gifPickerFor === "reply" ? null : "reply") : undefined}
@@ -1760,8 +1762,8 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       <button
                         onClick={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                         disabled={busy || !replyText.trim()}
-                        className="cursor-pointer text-[11px] px-3 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-default"
-                        style={{ ...btnBlue, borderRadius: 10, height: 40 }}
+                        className="cm-send cursor-pointer text-[12px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+                        style={{ ...btnBlue, height: 34, borderRadius: 999, padding: "0 16px", fontWeight: 600 }}
                       >
                         Reply
                       </button>
@@ -1899,10 +1901,11 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
           )}
           <h1
             className="page-title cursor-pointer"
-            title="Back to all posts"
+            title={openPost ? `Back to ${openPost.community_name}` : "Back to all posts"}
+            style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
             onClick={() => { closePostDetail(); setSelected("all"); }}
           >
-            Communities
+            {openPost ? openPost.community_name : "Communities"}
           </h1>
           {/* One "+" at the far right of the header: a menu with the two
               things you can add. Hidden inside a post. */}
@@ -2475,7 +2478,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         compact
                         value={commentText}
                         onChange={setCommentText}
-                        placeholder={userId ? "Add a comment… (@ to mention, ⌘↩ to send)" : "Sign in to comment"}
+                        placeholder={userId ? (coarse ? "Add a comment…" : "Add a comment… (@ to mention, ⌘↩ to send)") : "Sign in to comment"}
                         onSubmit={() => submitComment(null, commentText, commentImage, commentGifUrl)}
                         mentions={!!userId}
                         onFocus={() => { if (!userId) window.location.href = "/login"; }}
@@ -2505,8 +2508,8 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     <button
                       onClick={() => submitComment(null, commentText, commentImage, commentGifUrl)}
                       disabled={busy || !commentText.trim()}
-                      className="cursor-pointer text-[12px] px-4 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-default"
-                      style={{ ...btnBlue, height: 40 }}
+                      className="cm-send cursor-pointer text-[12.5px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+                      style={{ ...btnBlue, height: 36, borderRadius: 999, padding: "0 18px", fontWeight: 600 }}
                     >
                       Comment
                     </button>
@@ -2535,8 +2538,11 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
 
                 {/* comments */}
                 {commentTree.roots.length > 0 && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>Sort:</span>
+                  <div className="flex items-center gap-2 mb-3 cm-comments-head">
+                    <span className="text-[12px]" style={{ color: "rgba(238,238,245,0.5)", fontWeight: 600 }}>
+                      {(() => { const n = comments.length; return `${n} comment${n === 1 ? "" : "s"}`; })()}
+                    </span>
+                    <span className="ml-auto flex items-center gap-1.5">
                     {(["top", "new"] as const).map((cs) => (
                       <button
                         key={cs}
@@ -2552,6 +2558,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         {cs === "top" ? "Top" : "New"}
                       </button>
                     ))}
+                    </span>
                   </div>
                 )}
                 {commentTree.roots.length === 0 ? (

@@ -2798,6 +2798,12 @@ html.reduce-motion .nav-sparkle {
   html .cm-children .cm-children .cm-children { margin-left: 0 !important; padding-left: 0 !important; }
   html .cm-children .cm-children .cm-children > .cm-child::before,
   html .cm-children .cm-children .cm-children > .cm-child::after { display: none; }
+  /* The post view: a quieter thread line, the send button as a pill
+     under the box, the composer's toolbar a touch tighter. */
+  html .cm-child::before, html .cm-child::after { opacity: 0.55; }
+  .cm-send { height: 34px !important; padding: 0 16px !important; border-radius: 999px !important; font-size: 12.5px !important; margin-top: 2px; }
+  .cm-composer-row .rich-editor [role="toolbar"] button { width: 30px; height: 30px; min-width: 30px; }
+  .cm-comments-head { margin-top: 4px; }
   .rich-text { overflow-wrap: anywhere; }
   .rich-editor > .absolute { left: 0; right: 0; flex-wrap: wrap; }
   .rich-editor > .absolute input { flex: 1 1 100%; width: auto !important; }
