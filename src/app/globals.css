@@ -2666,7 +2666,7 @@ html.reduce-motion .nav-sparkle {
     overflow-x: hidden !important;
     /* The foot fades to nothing just above the tab bar (unprefixed
        only — the compiler adds -webkit-). */
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent 100%);
   }
   .shell-page-inner { padding: 12px 12px 24px !important; }
   /* The progressive blur over that fading foot. */
@@ -2676,7 +2676,7 @@ html.reduce-motion .nav-sparkle {
     left: 0;
     right: 0;
     bottom: 100%;
-    height: 64px;
+    height: 36px;
     pointer-events: none;
     backdrop-filter: blur(8px) !important;
     mask-image: linear-gradient(to bottom, transparent, #000 65%);
