@@ -29,6 +29,34 @@ import {
   VideoQuality,
 } from "livekit-client";
 
+/* iOS unlocks audio without LiveKit's startAudio(). LiveKit's iOS path
+   builds a silent MediaStream track out of a Web Audio oscillator and
+   plays it beside the call; on iOS 18.7 / Safari 26 that kills the tab
+   the moment it is played inside a gesture (the room telemetry showed
+   the crash right after the "tap to listen" prompt, or after the first
+   touch anywhere, which is the same unlock). A plain silent <audio>
+   element played in the gesture unlocks the audio session just as well,
+   with no Web Audio at all. */
+const IOS_TOUCH =
+  typeof navigator !== "undefined" &&
+  (/iPhone|iPad|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+let silentWav: string | null = null;
+function silentWavUrl(): string {
+  if (silentWav) return silentWav;
+  const rate = 8000, samples = 800; // 0.1s of 16-bit mono silence
+  const buf = new ArrayBuffer(44 + samples * 2);
+  const v = new DataView(buf);
+  const str = (o: number, t: string) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, "RIFF"); v.setUint32(4, 36 + samples * 2, true); str(8, "WAVE");
+  str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, "data"); v.setUint32(40, samples * 2, true);
+  silentWav = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  return silentWav;
+}
+
 /* Disconnects that are a verdict, not an accident — no automatic reconnect. */
 const NO_RECONNECT = new Set<DisconnectReason>([
   DisconnectReason.CLIENT_INITIATED,
@@ -141,6 +169,8 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   }, [highQuality, canPublish]);
 
   const roomRef = useRef<Room | null>(null);
+
+  const unlockRef = useRef<() => void>(() => {});
   /* One guest identity per mount, so reconnects don't multiply "viewers". */
   const guestIdRef = useRef(`guest-${Math.random().toString(36).slice(2, 10)}`);
   /* Display name only — read through a ref so it settling (Guest → real
@@ -250,10 +280,31 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       armed = false;
       gestures.forEach((g) => document.removeEventListener(g, unlock));
     }
-    function unlock() {
-      room.startAudio().catch(() => {});
+    async function unlock() {
       disarm();
+      if (!IOS_TOUCH) {
+        room.startAudio().catch(() => {});
+        return;
+      }
+      try {
+        const el = document.createElement("audio");
+        el.setAttribute("playsinline", "");
+        el.src = silentWavUrl();
+        el.volume = 0.01;
+        await el.play();
+        setTimeout(() => { el.pause(); el.remove(); }, 400);
+      } catch {
+        /* the gesture may not count; the remote elements below decide */
+      }
+      let blocked = false;
+      for (const el of audioEls) {
+        el.muted = false;
+        try { await el.play(); } catch { blocked = true; }
+      }
+      setAudioBlocked(blocked);
+      if (blocked) arm();
     }
+    unlockRef.current = () => { void unlock(); };
     function arm() {
       if (armed) return;
       armed = true;
@@ -266,7 +317,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
         setAudioBlocked(!room.canPlaybackAudio);
         if (!room.canPlaybackAudio) arm();
       });
-      room.startAudio().catch(() => {});
+      if (!IOS_TOUCH) room.startAudio().catch(() => {});
     }
 
     const attachAudio = (track: RemoteTrack) => {
@@ -681,8 +732,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       };
     },
     enableAudio: () => {
-      const room = roomRef.current;
-      if (room) room.startAudio().catch(() => {});
+      unlockRef.current();
     },
     clearMediaError: () => setMediaError(null),
     toggleMic,
