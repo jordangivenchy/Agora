@@ -6439,6 +6439,10 @@ body { background: transparent; }
     padding-bottom: 28px !important;
     mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), rgba(0,0,0,0.94) calc(100% - 26px), rgba(0,0,0,0.78) calc(100% - 20px), rgba(0,0,0,0.5) calc(100% - 14px), rgba(0,0,0,0.22) calc(100% - 8px), rgba(0,0,0,0.06) calc(100% - 3px), transparent 100%);
   }
+  /* Keyboard up (mvp-home.js sets kb-open and --kb on iOS): the box ends
+     at the keyboard so a field can scroll clear of it; the tab bar stays
+     behind the keyboard. */
+  html.kb-open .main { bottom: var(--kb, 0px) !important; }
   /* Phones keep an 8px gap under the bar (above); the painted band matches. */
   /* Phones: the bar is see-through — no fill, no painted gap band — so
      the page shows straight through behind the logo and search. */
