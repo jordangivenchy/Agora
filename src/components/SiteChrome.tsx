@@ -19,6 +19,7 @@ import NotificationsBell from "@/components/NotificationsBell";
 import useNavbarSearch from "@/components/search/useNavbarSearch";
 import type { SearchKeyHandler } from "@/components/search/SearchPage";
 import { pathFor } from "@/lib/routes";
+import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import { userPath } from "@/lib/urls";
 import type { HomeNavId } from "@/components/HomeSidebar";
 /* Statically, not via the sidebar's dynamic chunk: the navbar renders on
@@ -63,16 +64,30 @@ function SiteNavbar() {
 
   useEffect(() => {
     let alive = true;
+    /* The last known user first (lib/navUserCache.ts), so a signed-in
+       visitor sees their avatar at once; the session confirms or clears
+       it below. */
+    const cached = readNavUser();
+    if (cached) {
+      queueMicrotask(() => {
+        if (!alive) return;
+        setUser((prev) => prev === undefined
+          ? { id: cached.id, username: cached.username ?? "", display_name: cached.name, avatar_url: cached.avatarUrl }
+          : prev);
+      });
+    }
     supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
       const uid = data.user?.id;
-      if (!uid) { setUser(null); return; }
+      if (!uid) { setUser(null); writeNavUser(null); return; }
       const { data: row } = await supabase
         .from("users")
         .select("id, username, display_name, avatar_url")
         .eq("id", uid)
         .maybeSingle();
-      if (alive) setUser((row as NavUser | null) ?? null);
+      const u = (row as NavUser | null) ?? null;
+      if (alive) setUser(u);
+      writeNavUser(u ? { id: u.id, name: u.display_name || u.username, username: u.username, avatarUrl: u.avatar_url } : null);
     });
     return () => { alive = false; };
   }, [supabase]);
@@ -212,6 +227,7 @@ function SiteNavbar() {
                   onClick={async (e) => {
                     e.preventDefault();
                     setMenuOpen(false);
+                    writeNavUser(null);
                     await supabase.auth.signOut();
                     window.location.href = "/";
                   }}

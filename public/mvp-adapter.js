@@ -187,7 +187,11 @@
       if (headName) headName.textContent = D0.user.name || 'You';
       if (headSub) headSub.textContent = D0.user.username ? '@' + D0.user.username : '';
     }
-    /* Real profile photo when there is one; the initial stays as fallback. */
+    /* Real profile photo when there is one; the initial stays as fallback.
+       (page.tsx may have painted one already from the last known user —
+       replace it, in case the account changed.) */
+    var oldPhoto = initial && initial.parentNode ? initial.parentNode.querySelector('.avatar-photo') : null;
+    if (oldPhoto) { oldPhoto.remove(); if (initial) initial.style.display = ''; }
     if (D0.user.avatarUrl && initial) {
       var img = document.createElement('img');
       img.className = 'avatar-photo';
@@ -197,6 +201,9 @@
       initial.parentNode.insertBefore(img, initial);
     }
   } else {
+    /* Undo an early paint from a stale last-known user (page.tsx). */
+    if (loginBtn) loginBtn.style.display = '';
+    if (signupBtn) signupBtn.style.display = '';
     if (loginBtn) loginBtn.addEventListener('click', function () { go('/login'); });
     if (signupBtn) signupBtn.addEventListener('click', function () { go('/login'); });
     var avWrap = document.getElementById('profileAvatarWrap');
