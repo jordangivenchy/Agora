@@ -1424,9 +1424,12 @@
     bottom: calc(var(--ag-controls-h) + var(--ag-controls-lift) + 58px);
   }
   /* Phone: no room beside the main picture — the column becomes a row
-     underneath it. */
+     underneath it. The pictures are boxes, like Discord's call: the main
+     tile is square (width-driven, capped so the thumb row still fits),
+     the thumbs are squares, and a duo stacks two squares. */
   .ag-cast--focus { flex-direction: column; }
-  .ag-cast-main { height: auto; width: 100%; }
+  .ag-cast-main { height: auto; width: 100%; aspect-ratio: 1 / 1; max-height: calc(100% - 108px); }
+  .ag-cast-main--pinned { max-height: 100%; }
   .ag-cast-side,
   .ag-cast-side--stretch {
     flex-direction: row;
@@ -1435,10 +1438,15 @@
   }
   .ag-cast-side .ag-cast-thumb,
   .ag-cast-side--stretch .ag-cast-thumb {
-    flex: 1 1 0;
-    aspect-ratio: 16 / 9;
+    flex: 0 0 96px;
+    width: 96px;
+    aspect-ratio: 1 / 1;
     min-height: 0;
   }
+  .ag-cast-side,
+  .ag-cast-side--stretch { overflow-x: auto; scrollbar-width: none; justify-content: flex-start; }
+  .ag-cast-duo { flex-direction: column; gap: 10px; perspective: none; }
+  .ag-cast-pane { width: auto; height: calc(50% - 5px); aspect-ratio: 1 / 1; max-width: 100%; --pane-rot: 0deg; }
 }
 
 /* ── Call settings: the chat card's twin, in the same rail ── */
