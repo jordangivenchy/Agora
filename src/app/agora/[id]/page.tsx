@@ -72,10 +72,25 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
       if (!parsed.uuid && !parsed.prefix) router.replace("/");
       return;
     }
-    supabase.rpc("resolve_room_prefix", { p_prefix: parsed.prefix }).then(({ data }) => {
-      if (data) setResolvedId(data as string);
-      else router.replace("/");
-    });
+    /* The slug lookup runs on every load, including the reload after a
+       phone tab crash, when the request can fail before the radio is
+       back. A failed request is not "no such room": retry a few times
+       and only a definite null sends anyone home. */
+    let stale = false;
+    const attempt = (n: number) => {
+      supabase.rpc("resolve_room_prefix", { p_prefix: parsed.prefix }).then(({ data, error }) => {
+        if (stale) return;
+        if (data) { setResolvedId(data as string); return; }
+        if (error && n < 4) { setTimeout(() => attempt(n + 1), 800 * (n + 1)); return; }
+        router.replace("/");
+      }, () => {
+        if (stale) return;
+        if (n < 4) setTimeout(() => attempt(n + 1), 800 * (n + 1));
+        else router.replace("/");
+      });
+    };
+    attempt(0);
+    return () => { stale = true; };
   }, [parsed, router, supabase]);
 
   if (!resolvedId) {

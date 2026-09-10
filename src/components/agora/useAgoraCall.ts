@@ -227,7 +227,11 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     const phone = typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
     const room = new Room({
       dynacast: true,
-      videoCaptureDefaults: { resolution: (phone ? VideoPresets.h540 : VideoPresets.h720).resolution },
+      /* Remote video is decoded at the size it is shown, not the size it
+         is sent — on a phone with several tiles that is the difference
+         between a call and a tab crash. */
+      adaptiveStream: true,
+      videoCaptureDefaults: { resolution: (phone ? VideoPresets.h360 : VideoPresets.h720).resolution },
       publishDefaults: phone ? { simulcast: false, videoCodec: "h264" } : { simulcast: true },
     });
     roomRef.current = room;
