@@ -8,7 +8,9 @@
      once, then navigate on the next frame so it paints. The page stays
      put — the same feel as an in-app navigation. */
   function go(url) {
-    if (!document.querySelector('.sk-progress')) {
+    if (window.__agoraLeave) {
+      window.__agoraLeave(); // the loading screen, handed on to the next page
+    } else if (!document.querySelector('.sk-progress')) {
       var bar = document.createElement('div');
       bar.className = 'sk-progress';
       bar.setAttribute('aria-hidden', 'true');

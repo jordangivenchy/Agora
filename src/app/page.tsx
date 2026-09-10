@@ -375,7 +375,10 @@ export default function Home() {
         .eq("id", id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data?.username) window.location.href = userPath(data.username);
+          if (data?.username) {
+            window.__agoraLeave?.();
+            window.location.href = userPath(data.username);
+          }
         });
     },
     [supabase]

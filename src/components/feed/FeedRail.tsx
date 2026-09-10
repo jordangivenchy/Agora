@@ -8,6 +8,7 @@
    Upcoming (rooms you set reminders for). */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
@@ -179,7 +180,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
         <>
           {sectionLabel("LIVE NOW", <span className="feed-live-dot" aria-hidden="true" />)}
           {live.map((r) => (
-            <a key={r.id} href={roomPath(r)} className="flex items-center gap-2.5 mb-1 px-3.5 py-2 no-underline" style={liveRow}>
+            <Link key={r.id} href={roomPath(r)} className="flex items-center gap-2.5 mb-1 px-3.5 py-2 no-underline" style={liveRow}>
               <UserAvatar size={26} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[12.5px] truncate" style={{ color: "#eeeef5" }}>{r.motion}</span>
@@ -188,7 +189,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
                 </span>
               </span>
               <Icon name="play" size={12} style={{ color: "#e84040", flexShrink: 0 }} />
-            </a>
+            </Link>
           ))}
         </>
       )}
@@ -198,13 +199,13 @@ export default function FeedRail({ userId }: { userId: string | null }) {
           {sectionLabel("WHO TO FOLLOW")}
           {people.map((p) => (
             <div key={p.id} className="flex items-center gap-2.5 mb-1 px-3.5 py-2" style={{ borderRadius: 10 }}>
-              <a href={userPath(p.username)} className="no-underline shrink-0">
+              <Link href={userPath(p.username)} className="no-underline shrink-0">
                 <UserAvatar size={26} username={p.username} avatarUrl={p.avatar_url} seed={p.id} />
-              </a>
+              </Link>
               <span className="min-w-0 flex-1">
-                <a href={userPath(p.username)} className="block text-[12.5px] truncate no-underline" style={{ color: "#eeeef5" }}>
+                <Link href={userPath(p.username)} className="block text-[12.5px] truncate no-underline" style={{ color: "#eeeef5" }}>
                   {p.display_name || p.username}
-                </a>
+                </Link>
                 <span className="block text-[10px] truncate" style={{ color: "rgba(238,238,245,0.32)" }}>{p.reason}</span>
               </span>
               <button
@@ -259,12 +260,12 @@ export default function FeedRail({ userId }: { userId: string | null }) {
         <>
           {sectionLabel("UPCOMING")}
           {upcoming.map((r) => (
-            <a key={r.id} href={roomPath(r)} className="block mb-1 px-3.5 py-2 no-underline" style={quietRow}>
+            <Link key={r.id} href={roomPath(r)} className="block mb-1 px-3.5 py-2 no-underline" style={quietRow}>
               <span className="block text-[12.5px] truncate" style={{ color: "#eeeef5" }}>{r.motion}</span>
               <span className="block text-[10px]" style={{ color: "#8b5cf6" }}>
                 {new Date(r.scheduled_start).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })}
               </span>
-            </a>
+            </Link>
           ))}
         </>
       )}
