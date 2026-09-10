@@ -568,7 +568,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     userId: currentUser?.id ?? null,
     username: myUsername,
     canPublish: onStage(myRole),
-    ready: loaded && !!room && !gated,
+    /* An ended room is a replay: never ask LiveKit for a token for it —
+       the token route refuses (403 room_ended) and the refusal logged as
+       a failed connect on every replay opened. */
+    ready: loaded && !!room && room.status !== "ended" && !gated,
     /* Big tiles deserve the high simulcast layer: the close-up 3D
        vantage as before, multi-speaker always (its featured tiles are
        large), and gallery when tiles are few enough to render big.
@@ -957,7 +960,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   }, [currentUser, myParticipation]);
   useEffect(() => {
     if (broadcast) return; // the egress compositor is not a participant
-    const beacon = () => {
+    const beacon = (e: Event) => {
+      /* A pagehide into the back-forward cache is not a departure — the
+         page may come straight back (phones do this on a backgrounded
+         tab). Vacating the seat there ends a duel for both sides. Only
+         a real unload leaves. */
+      if ((e as PageTransitionEvent).persisted) return;
       if (!seatedRef.current) return;
       seatedRef.current = false; // pagehide + beforeunload can both fire
       logRoomEvent(roomId, "pagehide_beacon");
