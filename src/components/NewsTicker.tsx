@@ -1,46 +1,27 @@
 "use client";
 
-/* News ticker — scrolling headline strip under the hero carousel, fed by
-   /api/news (GNews/Particle-backed; hidden entirely until a provider key is set).
-   Each headline shows the outlets reporting the story (Particle clusters
-   articles per story, so the outlet list comes free).
+/* News ticker — the scrolling headline strip under the hero carousel.
+   The stories come from the carousel (HeroCarousel.tsx fetches
+   /api/news once and passes on what the hero didn't take); nothing
+   renders until there are some. Each headline shows the outlets
+   reporting the story.
 
-   Portaled into #newsTickerHost inside the MVP homepage markup, same
-   pattern as NotificationsBell/TopicsHome. Auto-scrolls via rAF on
-   scrollLeft — so it also stays a normal scrollable row the user can
-   wheel/drag through; pauses on hover. Content is rendered twice for a
-   seamless loop. */
+   Auto-scrolls via rAF on scrollLeft — so it also stays a normal
+   scrollable row the user can wheel/drag through; pauses on hover.
+   Content is rendered twice for a seamless loop. */
 
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef } from "react";
 
-interface Props {
-  container: HTMLElement | null;
-}
+export type TickerStory = {
+  id: string;
+  headline: string;
+  url: string | null;
+  sources: { name: string; domain: string }[];
+};
 
-type Source = { name: string; domain: string };
-type Story = { id: string; headline: string; url: string | null; sources: Source[] };
-
-export default function NewsTicker({ container }: Props) {
-  const [stories, setStories] = useState<Story[]>([]);
+export default function NewsTicker({ stories }: { stories: TickerStory[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/news")
-      .then((r) => r.json())
-      .then((j) => {
-        if (!alive) return;
-        // Sample feeds are invented headlines — render nothing instead.
-        // Ticker = everything the hero carousel didn't take (non-major).
-        const all: (Story & { major?: boolean })[] = j.sample ? [] : (j.stories ?? []);
-        const lesser = all.filter((s) => !s.major);
-        setStories(lesser.length ? lesser : all);
-      })
-      .catch(() => { /* no feed → render nothing */ });
-    return () => { alive = false; };
-  }, []);
 
   /* Auto-scroll. Half the scrollWidth is one full copy of the list;
      wrapping there is invisible because copy two is identical. Speed
@@ -76,11 +57,11 @@ export default function NewsTicker({ container }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [stories.length]);
 
-  if (!container || stories.length === 0) return null;
+  if (stories.length === 0) return null;
 
   const items = [...stories, ...stories]; // doubled for seamless loop
 
-  return createPortal(
+  return (
     <div
       style={{
         display: "flex",
@@ -154,7 +135,6 @@ export default function NewsTicker({ container }: Props) {
           </button>
         ))}
       </div>
-    </div>,
-    container
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 /* Adapter: bridges the MVP UI (mvp-home.js) to real AgoraSphere data and
    navigation. Loaded after mvp-home.js; classic script so it shares the
-   global lexical scope (DEBATES, CAROUSEL_DATA, voteCounts, userVotes).
+   global lexical scope (DEBATES, voteCounts, userVotes).
    Exposes window.__agoraApplyData so React can push live updates. */
 (function () {
   /* Full-page jumps out of the shell: drop the top progress bar in (the
@@ -19,54 +19,8 @@
     requestAnimationFrame(function () { window.location.href = url; });
   }
 
-  /* Hero carousel = popular live rooms interleaved with top news stories
-     (from /api/news, Particle-backed). Room slides and news slides are
-     built independently and merged here, so either source can arrive or
-     update at any time. */
-  var roomSlides = [];
-  var newsSlides = [];
-
-  var NEWS_GRADIENTS = [
-    'linear-gradient(120deg,#101426 0%,#1c2340 55%,#25172e 100%)',
-    'linear-gradient(120deg,#141020 0%,#2a1a33 55%,#12203a 100%)',
-    'linear-gradient(120deg,#0e1a2a 0%,#182a45 55%,#2b1f38 100%)',
-  ];
-
-  function rebuildCarousel() {
-    CAROUSEL_DATA.length = 0;
-    var n = Math.max(roomSlides.length, newsSlides.length);
-    for (var i = 0; i < n; i++) {
-      if (roomSlides[i]) CAROUSEL_DATA.push(roomSlides[i]);
-      if (newsSlides[i]) CAROUSEL_DATA.push(newsSlides[i]);
-    }
-    renderCarousel();
-  }
-
-  fetch('/api/news')
-    .then(function (r) { return r.json(); })
-    .then(function (j) {
-      // Sample feeds are invented headlines — never put them in the hero.
-      if (j.sample) return;
-      // Hero = the major stories (ranked server-side); the ticker takes the rest.
-      var stories = j.stories || [];
-      var majors = stories.filter(function (s) { return s.major; });
-      newsSlides = (majors.length ? majors : stories).slice(0, 3).map(function (s, i) {
-        return {
-          kind: 'news',
-          id: s.id || null,
-          headline: s.headline,
-          category: s.category || null,
-          url: s.url,
-          sources: s.sources || [],
-          imageUrl: s.imageUrl || null,
-          summary: s.summary || null,
-          gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length],
-        };
-      });
-      if (newsSlides.length) rebuildCarousel();
-    })
-    .catch(function () { /* no news feed → carousel stays rooms-only */ })
-    .finally(function () { window.dispatchEvent(new Event('agora:hero-settled')); });
+  /* The hero carousel (live rooms + the day's stories) is React now:
+     components/HeroCarousel.tsx, fed by the page's own data pass. */
 
   function applyData(D) {
     if (!D) return;
@@ -79,47 +33,6 @@
       });
       userVotes = new Array(DEBATES.length).fill(null);
 
-      var indexed = DEBATES.map(function (d, i) { d._i = i; return d; });
-      var live = indexed.filter(function (d) { return d.status === 'live'; });
-      live.sort(function (a, b) { return (b.viewersNum || 0) - (a.viewersNum || 0); });
-      // Hero features LIVE rooms only, ranked by viewers — the slide
-      // template says "Watch Live", so anything else up there lies.
-      // Scheduled rooms have their own rail below; with nothing live the
-      // strip goes news-only (renderCarousel hides it if news is empty too).
-      var top = live.slice(0, 4);
-      roomSlides = top.map(function (d) {
-        return {
-          debater: d.debater1,
-          initials: (d.debater1 || '?').charAt(0).toUpperCase(),
-          color: d.color1,
-          viewersDisplay: d.viewers,
-          viewersNum: d.viewersNum || 0,
-          motion: d.motion,
-          stance: d.debater1Stance || 'PRO',
-          // No factCheck: real rooms have no fact-checking yet, and stamping
-          // "verified" on them was a fabricated trust signal.
-          gradient: d.gradient,
-          thumbnailUrl: d.thumbnailUrl || null,
-          topicKey: d.topicKey,
-          debateIndex: d._i,
-          // richer panel: the matchup + room facts
-          debater2: d.debater2,
-          color2: d.color2,
-          initials2: (d.debater2 || '?').charAt(0).toUpperCase(),
-          format: d.format || 'Open',
-          language: d.language || 'EN',
-          community: d.community || null,
-          communityColor: d.communityColor || null,
-          votesPro: d.votesPro || 0,
-          votesCon: d.votesCon || 0,
-          liveSince: d.liveSince || null,
-          speakerCount: d.speakerCount || 0,
-          audienceCount: d.audienceCount || 0,
-          secondaryTopics: d.secondaryTopics || [],
-        };
-      });
-
-      rebuildCarousel();
       renderTopicButtons();
       if (typeof renderTopicStrip === 'function') renderTopicStrip();
       renderDebateGrid();

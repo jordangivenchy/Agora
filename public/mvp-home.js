@@ -115,7 +115,7 @@ const SIDEBAR_CHANNELS = [];
    hold still, the hero doesn't auto-advance. (globals.css calms the CSS.) */
 const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const CAROUSEL_DATA = [];
+// CAROUSEL_DATA — the hero carousel is React now (HeroCarousel.tsx).
 
 // ═══════════════════════════════════════════════
 //  PHASE 2: ARGUMENT DATA
@@ -212,8 +212,6 @@ let userVotes  = new Array(DEBATES.length).fill(null);
 //  STATE
 // ═══════════════════════════════════════════════
 
-let currentSlide    = 0;
-let autoPlayTimer   = null;
 let activeTopicKey  = 'all';
 let eloScope        = 'global';  // 'global' | 'topic'
 let searchQuery     = '';
@@ -316,261 +314,14 @@ function getSearchResults(query) {
 
 // News headlines come from an external API — escape before innerHTML.
 /* "Live for 14m" / "Live for 1h 20m" from a start timestamp. */
-function liveForLabel(iso) {
-  if (!iso) return ' now';
-  const ms = Date.now() - Date.parse(iso);
-  if (!(ms > 0)) return ' now';
-  const m = Math.floor(ms / 60000);
-  if (m < 1) return ' now';
-  if (m < 60) return ` for ${m}m`;
-  const h = Math.floor(m / 60);
-  return ` for ${h}h ${m % 60}m`;
-}
-
 function escHTML(s) {
   return String(s ?? '').replace(/[&<>"']/g, ch => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
   ));
 }
 
-// News slide (kind: 'news', pushed by mvp-adapter): headline + the outlets
-// reporting the story; side panel lists coverage instead of a debater.
-function newsSlideHTML(c, i, total) {
-  const chips = (c.sources || []).slice(0, 4).map(s => `
-    <span class="carousel-news-chip">
-      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="13" height="13" />` : ''}
-      ${escHTML(s.name)}
-    </span>`).join('');
-  const rows = (c.sources || []).slice(0, 5).map(s => `
-    <div class="panel-outlet-row">
-      ${s.domain ? `<img src="https://www.google.com/s2/favicons?domain=${escHTML(s.domain)}&sz=32" alt="" width="14" height="14" />` : ''}
-      <span>${escHTML(s.name)}</span>
-    </div>`).join('');
-  const hasUrl = !!(c.url && /^https:\/\//.test(c.url));
-  const img = c.imageUrl
-    ? `<img class="carousel-news-img" src="${escHTML(c.imageUrl)}" alt="" loading="eager" decoding="async"
-         onerror="this.remove()" />`
-    : '';
-  return `
-    <div class="carousel-item news" role="group" aria-label="Slide ${i+1} of ${total}" data-story="${escHTML(c.id || '')}">
-      <div class="carousel-bg" style="background:${c.gradient};">${img}</div>
-      <div class="carousel-news-shade"></div>
-      <div class="carousel-lower-third">
-        <div class="carousel-motion">${escHTML(c.headline)}</div>
-        <div class="carousel-news-chips">${chips}</div>
-      </div>
-      <div class="carousel-panel carousel-news-card">
-        <div class="carousel-news-byline">
-          <span class="panel-name">Reported by</span>
-          <div class="panel-outlets">${rows}</div>
-        </div>
-        ${c.summary ? `<p class="carousel-news-summary">${escHTML(c.summary)}</p>` : ''}
-        ${hasUrl ? `<button class="carousel-watch-btn carousel-news-btn" data-url="${escHTML(c.url)}">Read at ${escHTML((c.sources && c.sources[0] && c.sources[0].name) || 'source')} ↗</button>` : ''}
-        <button class="carousel-watch-btn carousel-queue-btn${(window.__agoraHeroQueue || {})[c.headline] === 'queued' ? ' queued' : ''}"
-          data-headline="${escHTML(c.headline)}" data-category="${escHTML(c.category || '')}" data-url="${escHTML(c.url || '')}">
-          ${(window.__agoraHeroQueue || {})[c.headline] === 'queued' ? 'In queue — tap to leave' : 'Queue a discussion'}
-        </button>
-      </div>
-    </div>`;
-}
-
-function renderCarousel() {
-  const track = document.getElementById('carouselTrack');
-  const dots  = document.getElementById('carouselDots');
-
-  // Nothing at all (no rooms, no news): hide the hero strip.
-  const cSection = document.querySelector('.carousel-section');
-  if (cSection) cSection.style.display = CAROUSEL_DATA.length ? '' : 'none';
-
-  const slideHTML = (c, i) => c.kind === 'news'
-    ? newsSlideHTML(c, i, CAROUSEL_DATA.length)
-    : `
-    <div class="carousel-item${c.thumbnailUrl ? ' has-thumb' : ''}" role="group" aria-label="Slide ${i+1} of ${CAROUSEL_DATA.length}">
-      <div class="carousel-bg" style="background:${c.gradient};">${c.thumbnailUrl
-        ? `<img class="carousel-room-backdrop" src="${escHTML(c.thumbnailUrl)}" alt="" aria-hidden="true" onerror="this.closest('.carousel-item').classList.remove('has-thumb'); this.remove();" />`
-        : ''}</div>
-      <div class="carousel-bg-grid"></div>
-      ${c.thumbnailUrl ? `<img class="carousel-room-thumb" src="${escHTML(c.thumbnailUrl)}" alt="" onerror="this.remove()" />` : ''}
-      <div class="carousel-live-badge"><div class="carousel-live-dot"></div> Live</div>
-      <div class="carousel-lower-third">
-        <div class="carousel-motion">"${escHTML(c.motion)}"</div>
-      </div>
-      <div class="carousel-panel carousel-room-panel">
-        <div class="room-panel-kicker"><span class="room-panel-livedot"></span>Live${liveForLabel(c.liveSince)}</div>
-        <div class="room-panel-watching">${c.speakerCount || 0} speaker${c.speakerCount === 1 ? '' : 's'} · ${c.audienceCount || 0} in the audience</div>
-        <div class="room-panel-facts">
-          <span class="room-panel-chip" style="--chip:${escHTML((TOPICS[c.topicKey] || {}).accent || '#4a9eff')};">${escHTML((TOPICS[c.topicKey] || {}).label || 'Discussion')}</span>
-          ${(c.secondaryTopics || []).slice(0, 2).map(k => TOPICS[k] ? `<span class="room-panel-chip" style="--chip:${escHTML(TOPICS[k].accent)};">${escHTML(TOPICS[k].label)}</span>` : '').join('')}
-          <span class="room-panel-chip">${escHTML(c.format || 'Open')}</span>
-          ${c.language ? `<span class="room-panel-chip">${escHTML(c.language)}</span>` : ''}
-        </div>
-        <div class="room-panel-label">Speakers</div>
-        <div class="room-panel-speakers">
-          <div class="room-panel-speaker">
-            <div class="panel-avatar small" style="background:${escHTML(c.color)};">${escHTML(c.initials)}</div>
-            <div class="room-panel-speaker-name">${escHTML(c.debater)}</div>
-          </div>
-          ${c.debater2 && c.debater2 !== 'Open seat' ? `<div class="room-panel-speaker">
-            <div class="panel-avatar small" style="background:${escHTML(c.color2 || '#4a9eff')};">${escHTML(c.initials2)}</div>
-            <div class="room-panel-speaker-name">${escHTML(c.debater2)}</div>
-          </div>` : ''}
-        </div>
-        ${c.community ? `<div class="room-panel-host">hosted by <span class="room-panel-community" style="--chip:${escHTML(c.communityColor || '#4a9eff')};">${escHTML(c.community)}</span></div>` : ''}
-        <button class="carousel-watch-btn room-panel-watch" data-debate-index="${c.debateIndex}">${iconSvg('play', 11, 'fill:currentColor')} Watch Live</button>
-      </div>
-    </div>
-  `;
-
-  // Infinite loop: a clone of the last slide leads and a clone of the
-  // first trails, so both directions can animate one step past the ends;
-  // goToSlide() snaps back (transition off) once that animation lands.
-  const N = CAROUSEL_DATA.length;
-  track.innerHTML = N > 1
-    ? slideHTML(CAROUSEL_DATA[N - 1], N - 1)
-      + CAROUSEL_DATA.map(slideHTML).join('')
-      + slideHTML(CAROUSEL_DATA[0], 0)
-    : CAROUSEL_DATA.map(slideHTML).join('');
-
-  // Land on the current slide without animating (offset +1 for the clone).
-  currentSlide = Math.min(currentSlide, Math.max(0, N - 1));
-  track.style.transition = 'none';
-  track.style.transform = `translateX(-${(N > 1 ? currentSlide + 1 : 0) * 100}%)`;
-  void track.offsetWidth;
-  track.style.transition = '';
-
-  dots.innerHTML = CAROUSEL_DATA.map((_, i) =>
-    `<div class="carousel-dot${i === currentSlide ? ' active' : ''}" data-index="${i}" role="button" aria-label="Go to slide ${i+1}" tabindex="0"></div>`
-  ).join('');
-
-  dots.querySelectorAll('.carousel-dot').forEach(dot => {
-    dot.addEventListener('click', () => { goToSlide(parseInt(dot.dataset.index)); resetAutoPlay(); });
-    dot.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { goToSlide(parseInt(dot.dataset.index)); resetAutoPlay(); }});
-  });
-
-  // Phase 2: wire carousel watch buttons
-  track.querySelectorAll('.carousel-watch-btn:not(.carousel-news-btn)').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const idx = parseInt(btn.dataset.debateIndex);
-      if (!isNaN(idx)) openDebateModal(idx);
-    });
-  });
-
-  // "Read article" opens the outlet's story in a new tab; slides without
-  // a link fall back to the in-app News panel (React listens on agora:tab).
-  track.querySelectorAll('.carousel-news-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const url = btn.dataset.url;
-      if (url) window.open(url, '_blank', 'noopener,noreferrer');
-      else window.dispatchEvent(new CustomEvent('agora:tab', { detail: 'news' }));
-    });
-    // Long outlet names ("The Washington Post") shrink the type until the
-    // label fits the pill on one line, instead of getting ellipsized.
-    // scrollWidth needs layout — defer a frame so the slide has a size.
-    requestAnimationFrame(() => {
-      let size = 13;
-      while (size > 10 && btn.scrollWidth > btn.clientWidth) {
-        size -= 0.5;
-        btn.style.fontSize = size + 'px';
-      }
-    });
-  });
-
-  // Phones: the slide itself is the way in — a tap anywhere on a news
-  // slide (not on one of its controls) opens the News page with that
-  // story scrolled to and lit (NewsPage.tsx reads ?story=). Desktop has
-  // the side panel's buttons instead.
-  if (window.matchMedia('(max-width: 639px)').matches) {
-    track.querySelectorAll('.carousel-item.news').forEach(slide => {
-      slide.style.cursor = 'pointer';
-      slide.addEventListener('click', (e) => {
-        if (e.target && e.target.closest && e.target.closest('button, a')) return;
-        if (Date.now() - (window.__agoraHeroSwipedAt || 0) < 500) return; // the tap that ended a swipe
-        var id = slide.getAttribute('data-story');
-        window.location.href = id ? '/news?story=' + encodeURIComponent(id) : '/news';
-      });
-    });
-  }
-
-  // "Queue a discussion" — React (page.tsx) owns the RPC + match polling;
-  // the hero just raises the event and paints whatever state comes back.
-  track.querySelectorAll('.carousel-queue-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (btn.dataset.busy) return;
-      window.dispatchEvent(new CustomEvent('agora:queue-headline', {
-        detail: { headline: btn.dataset.headline, category: btn.dataset.category, url: btn.dataset.url },
-      }));
-    });
-  });
-}
-
-// Queue-state paint: a global map survives the 30s carousel re-renders
-// (newsSlideHTML reads it for the initial label).
-window.__agoraHeroQueue = window.__agoraHeroQueue || {};
-window.addEventListener('agora:hero-queue-state', (e) => {
-  const d = e.detail || {};
-  if (!d.headline) return;
-  window.__agoraHeroQueue[d.headline] = d.state;
-  document.querySelectorAll('.carousel-queue-btn').forEach(btn => {
-    if (btn.dataset.headline !== d.headline) return;
-    delete btn.dataset.busy;
-    btn.classList.toggle('queued', d.state === 'queued');
-    if (d.state === 'busy') { btn.dataset.busy = '1'; btn.textContent = '…'; }
-    else if (d.state === 'queued') btn.textContent = 'In queue — tap to leave';
-    else if (d.state === 'error') btn.textContent = d.message || 'Couldn’t queue — try again';
-    else btn.textContent = 'Queue a discussion';
-  });
-});
-
-let carouselSnapTimer = null;
-let carouselSnapPending = false;
-
-function snapCarousel(track) {
-  track.style.transition = 'none';
-  track.style.transform = `translateX(-${(currentSlide + 1) * 100}%)`;
-  void track.offsetWidth;
-  track.style.transition = '';
-  carouselSnapPending = false;
-}
-
-function goToSlide(index) {
-  const track = document.getElementById('carouselTrack');
-  // The autoplay interval outlives the homepage DOM on SPA navigation.
-  if (!track) return;
-  const N = CAROUSEL_DATA.length;
-  if (!N) return;
-  if (N === 1) { currentSlide = 0; return; }
-  clearTimeout(carouselSnapTimer);
-  // Still parked on a clone from the previous wrap? Snap home first so
-  // this navigation animates one step, not back across the whole strip.
-  if (carouselSnapPending) snapCarousel(track);
-
-  // One step past either end is a clone; further than that is clamped.
-  if (index > N) index = N;
-  if (index < -1) index = -1;
-
-  track.style.transform = `translateX(-${(index + 1) * 100}%)`;
-  currentSlide = (index + N) % N;
-  document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === currentSlide));
-
-  // Landed on a clone: snap invisibly to the real slide it duplicates.
-  if (index === N || index === -1) {
-    carouselSnapPending = true;
-    carouselSnapTimer = setTimeout(() => snapCarousel(track), 520); // just past the 0.5s transition
-  }
-}
-
-function startAutoPlay() {
-  if (REDUCE_MOTION) return; // no auto-advance: the reader moves the strip
-  autoPlayTimer = setInterval(() => goToSlide(currentSlide + 1), 9000); // 9s: long enough to read a summary
-}
-
-function resetAutoPlay() {
-  clearInterval(autoPlayTimer);
-  startAutoPlay();
-}
+// The hero carousel (slides, dots, arrows, autoplay, the phone drag and
+// the queue button) is React now: components/HeroCarousel.tsx.
 
 // ═══════════════════════════════════════════════
 //  SIDEBAR CHANNELS
@@ -1412,69 +1163,7 @@ function handleSearchInput(query) {
 //  EVENT HANDLERS
 // ═══════════════════════════════════════════════
 
-document.getElementById('arrowLeft').addEventListener('click', () => { goToSlide(currentSlide - 1); resetAutoPlay(); });
-document.getElementById('arrowRight').addEventListener('click', () => { goToSlide(currentSlide + 1); resetAutoPlay(); });
-
-// Phones: the hero follows the finger (the arrows are hidden there,
-// mvp-home.css). A touch that turns out to be sideways drags the strip
-// live under the finger; letting go past a quarter of the width, or with
-// a flick, steps a slide, otherwise it settles back — through the same
-// goToSlide the arrows use. The moment is noted so the slide's own
-// tap-to-open (in renderCarousel) ignores the tap that ends a drag.
-// touch-action: pan-y on the stage (mvp-home.css) leaves vertical page
-// scrolling to the browser and sideways moves to this.
-window.__agoraHeroSwipedAt = 0;
-(function () {
-  const stage = document.querySelector('.carousel-stage') || document.getElementById('carouselTrack');
-  if (!stage) return;
-  let x0 = 0, y0 = 0, dx = 0, vx = 0, lastX = 0, lastT = 0, basePx = 0, intent = null, active = false;
-  const track = () => document.getElementById('carouselTrack');
-  const settle = () => {
-    active = false;
-    const tr = track();
-    if (!tr) return;
-    tr.style.transition = '';
-    if (intent !== 'x') { resetAutoPlay(); return; }
-    if (Math.abs(dx) > 8) window.__agoraHeroSwipedAt = Date.now();
-    const w = stage.clientWidth || 1;
-    const flick = Math.abs(vx) > 0.5 && Math.abs(dx) > 24 && Math.sign(vx) === Math.sign(dx); // px per ms
-    if (Math.abs(dx) > w * 0.25 || flick) goToSlide(currentSlide + (dx < 0 ? 1 : -1));
-    else goToSlide(currentSlide); // eases back to where it was
-    resetAutoPlay();
-  };
-  stage.addEventListener('touchstart', (e) => {
-    if (active) settle(); // a second finger landed mid-drag
-    const tr = track();
-    if (!tr || e.touches.length !== 1 || CAROUSEL_DATA.length < 2) return;
-    if (carouselSnapPending) snapCarousel(tr);
-    x0 = lastX = e.touches[0].clientX; y0 = e.touches[0].clientY; lastT = Date.now();
-    dx = 0; vx = 0;
-    basePx = -(currentSlide + 1) * stage.clientWidth;
-    intent = null; active = true;
-    clearInterval(autoPlayTimer);
-  }, { passive: true });
-  stage.addEventListener('touchmove', (e) => {
-    if (!active) return;
-    const tr = track();
-    if (!tr) return;
-    const x = e.touches[0].clientX, y = e.touches[0].clientY, now = Date.now();
-    const mx = x - x0, my = y - y0;
-    if (intent === null) {
-      if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
-      intent = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
-      if (intent === 'x') tr.style.transition = 'none';
-    }
-    if (intent !== 'x') return;
-    const w = stage.clientWidth || 1;
-    dx = Math.max(-w, Math.min(w, mx)); // the clones cover one width either side
-    const dt = now - lastT;
-    if (dt > 0) vx = vx * 0.6 + ((x - lastX) / dt) * 0.4; // recent motion, lightly smoothed
-    lastX = x; lastT = now;
-    tr.style.transform = `translateX(${basePx + dx}px)`;
-  }, { passive: true });
-  stage.addEventListener('touchend', () => { if (active) settle(); }, { passive: true });
-  stage.addEventListener('touchcancel', () => { if (active) settle(); }, { passive: true });
-})();
+// The carousel arrows and the phone drag live in HeroCarousel.tsx now.
 
 // Phones: with the keyboard up, iOS scrolls the whole layout to reveal
 // the focused field, so the fixed tab bar rode up onto the keyboard with
@@ -1942,14 +1631,12 @@ function init() {
     activeTopicKey = 'all';
   }
 
-  renderCarousel();
   renderSidebarChannels();
   // renderFriends() — React FriendsSection owns #friendsSection now.
   renderTopicButtons();
   renderTopicStrip();
   renderDebateGrid();
   renderELOModule();
-  startAutoPlay();
 }
 
 init();

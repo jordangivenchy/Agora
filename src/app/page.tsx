@@ -17,7 +17,7 @@ import TopicsHome from "@/components/TopicsHome";
 import HomeSidebar, { type HomeNavId } from "@/components/HomeSidebar";
 import SiteNavbar from "@/components/SiteNavbar";
 import Starfield from "@/components/Starfield";
-import NewsTicker from "@/components/NewsTicker";
+import HeroCarousel, { type HeroRoom } from "@/components/HeroCarousel";
 import CommunitiesPage from "@/components/CommunitiesPage";
 import NewsPage, { topicFor } from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
@@ -113,8 +113,10 @@ export default function Home() {
   /* Which MVP-rendered page is showing when no React tab is open; the
      sidebar highlights activeTab ?? mvpPage. */
   const [mvpPage, setMvpPage] = useState<"home" | "explore">("home");
-  const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
+  const [carouselHost, setCarouselHost] = useState<HTMLElement | null>(null);
   const [exploreHost, setExploreHost] = useState<HTMLElement | null>(null);
+  /* The hero's rooms: live ones ranked by viewers, from the data pass. */
+  const [heroRooms, setHeroRooms] = useState<HeroRoom[]>([]);
   /* Live platform figures for the Explore banner, from the data pass below. */
   const [shellStats, setShellStats] = useState<ShellStats | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{
@@ -168,7 +170,7 @@ export default function Home() {
     // Portal targets living inside the MVP markup: the Browse section
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
-    setNewsHost(document.getElementById("newsTickerHost"));
+    setCarouselHost(document.getElementById("carouselHost"));
     setExploreHost(document.getElementById("exploreHost"));
   }, []);
 
@@ -295,6 +297,22 @@ export default function Home() {
         };
         writeNavUser(data.user);
         setShellStats(data.stats);
+        /* The hero features live rooms only, ranked by viewers — its slide
+           says "Watch Live", so anything else up there would lie. Replaced
+           only when something changed, so the 30s tracker doesn't rebuild
+           an unchanged strip. */
+        const hero: HeroRoom[] = debates
+          .filter((d) => d.status === "live")
+          .sort((a, b) => b.viewersNum - a.viewersNum)
+          .slice(0, 4)
+          .map((d) => ({
+            roomId: d.roomId, motion: d.motion, debater1: d.debater1, debater2: d.debater2,
+            color1: d.color1, color2: d.color2, gradient: d.gradient, thumbnailUrl: d.thumbnailUrl,
+            topicKey: d.topicKey, secondaryTopics: d.secondaryTopics, format: d.format, language: d.language,
+            community: d.community, communityColor: d.communityColor, liveSince: d.liveSince,
+            speakerCount: d.speakerCount, audienceCount: d.audienceCount, viewersNum: d.viewersNum,
+          }));
+        setHeroRooms((prev) => (JSON.stringify(prev) === JSON.stringify(hero) ? prev : hero));
         const w = window as unknown as Record<string, unknown>;
         w.__AGORA_DATA__ = data;
         // Live update path: if the MVP engine is already running, push the
@@ -679,7 +697,7 @@ export default function Home() {
     };
   }, [supabase, onSidebarNavigate, openCreate, goToProfileById]);
 
-  /* Hero "Queue a discussion": the vanilla carousel raises
+  /* Hero "Queue a discussion": the carousel (HeroCarousel.tsx) raises
      agora:queue-headline; this owns the RPC + the match poll and answers
      with agora:hero-queue-state so the button can paint itself. Same
      queue_for_headline / check_topic_match flow as the News panel. */
@@ -769,7 +787,7 @@ export default function Home() {
           Supabase project to be running.
         </div>
       )}
-      <NewsTicker container={newsHost} />
+      <HeroCarousel container={carouselHost} rooms={heroRooms} />
       <ExplorePage container={exploreHost} open={mvpPage === "explore"} stats={shellStats} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />

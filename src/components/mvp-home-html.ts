@@ -1,4 +1,3 @@
-import { iconSvg } from "./icons";
 
 export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refraction -->
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
@@ -106,17 +105,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 <!-- ─── HOME FEED ─── -->
 <div id="homeFeed">
 
-  <!-- CAROUSEL -->
-  <section class="carousel-section">
-    <div class="carousel-stage" id="carouselStage">
-      <div class="carousel-track" id="carouselTrack"></div>
-      <button class="carousel-arrow left" id="arrowLeft" aria-label="Previous">${iconSvg("chevron-left", 26, { strokeWidth: 1.5 })}</button>
-      <button class="carousel-arrow right" id="arrowRight" aria-label="Next">${iconSvg("chevron-right", 26, { strokeWidth: 1.5 })}</button>
-    </div>
-    <div class="carousel-dots" id="carouselDots"></div>
-    <!-- News headlines — React portal target (NewsTicker.tsx) -->
-    <div id="newsTickerHost"></div>
-  </section>
+  <!-- HERO CAROUSEL + news ticker — React (HeroCarousel.tsx portals the
+       .carousel-section into this host) -->
+  <div id="carouselHost"></div>
 
   <!-- TOPICS — React portal target (TopicsHome.tsx renders the
        field-of-study dropdowns: queue questions + user lobbies) -->
