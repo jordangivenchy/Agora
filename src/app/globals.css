@@ -2538,8 +2538,11 @@ html.reduce-motion .nav-sparkle {
        doesn't sit behind the tab icons. */
     background: rgba(6, 6, 9, 0.32);
     border-top: none;
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    /* Unprefixed only: the CSS compiler adds -webkit- itself, and when
+       both are written it keeps just the prefixed one (dropped on
+       Chrome). !important: the phone blocks strip backdrop filters
+       elsewhere for the call's sake; this one bar keeps its blur. */
+    backdrop-filter: blur(18px) saturate(140%) !important;
     z-index: 120;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
