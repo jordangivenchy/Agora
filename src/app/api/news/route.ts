@@ -38,46 +38,105 @@
    so every serverless instance reuses one fetch per window. */
 import { rankStories, toUtcIso } from "@/lib/newsRank";
 import { after } from "next/server";
+import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 
-/* 40 min: two newsdata request sets × two pages = 4 credits a refresh,
-   36 refreshes a day = 144 of the free tier's 200, leaving headroom for
-   local runs against the same key. */
-const TTL_MS = 40 * 60_000;
-const UPSTREAM_REVALIDATE_S = 40 * 60;
+/* An hour: two newsdata request sets × two pages = 4 credits a refresh,
+   24 refreshes a day = 96 of the free tier's 200 — and one refresh per
+   interval across every server instance (the shared copy below), with
+   headroom for local runs against the same key. */
+const TTL_MS = 60 * 60_000;
+const UPSTREAM_REVALIDATE_S = 60 * 60;
+
 /* The feed is answered from what we have and refreshed behind the
    response once it is older than the TTL, so a cold cache costs one
-   background fetch, never a five-second page. Kept in memory and in a
-   file in the temp directory so a restart (dev) or a new instance
-   (production, while the file lasts) starts from the last feed
-   instead of waiting on the providers. */
+   background fetch, never a five-second page. Every instance keeps a
+   copy in memory; the copy they all share is a row in the database
+   (news_cache, migration 20260899), read when the memory copy is stale
+   and written by whichever instance wins the claim to refresh — so a
+   fresh instance starts from the last feed and several at once refresh
+   once. Without the service role (a local run) the shared copy is a
+   file in the temp directory instead. A refresh that only yields the
+   sample keeps the last real feed. */
+const ROW = "feed";
 const CACHE_FILE = path.join(os.tmpdir(), "agorasphere-news-cache.json");
 type Cached = { at: number; body: NewsPayload };
 let cache: Cached | null = null;
 let refreshing: Promise<void> | null = null;
+if (process.env.VERCEL && !hasAdminCredentials()) {
+  console.warn("[news] no SUPABASE_SERVICE_ROLE_KEY: the feed cache is per instance");
+}
 
-async function readFileCache(): Promise<Cached | null> {
+async function readShared(): Promise<Cached | null> {
+  if (!hasAdminCredentials()) {
+    try {
+      const c = JSON.parse(await fs.readFile(CACHE_FILE, "utf8")) as Cached;
+      if (c && typeof c.at === "number" && c.body && Array.isArray(c.body.stories)) return c;
+    } catch { /* none yet, or unreadable */ }
+    return null;
+  }
   try {
-    const c = JSON.parse(await fs.readFile(CACHE_FILE, "utf8")) as Cached;
-    if (c && typeof c.at === "number" && c.body && Array.isArray(c.body.stories)) return c;
-  } catch { /* none yet, or unreadable */ }
+    const { data } = await createAdminClient().from("news_cache").select("body, fetched_at").eq("key", ROW).maybeSingle();
+    const row = data as { body?: NewsPayload; fetched_at?: string } | null;
+    if (row?.body && Array.isArray(row.body.stories) && row.fetched_at) {
+      return { at: new Date(row.fetched_at).getTime(), body: row.body };
+    }
+  } catch (e) {
+    console.error("[news] the shared copy is unreadable", e);
+  }
   return null;
 }
 
-async function remember(body: NewsPayload) {
-  cache = { at: Date.now(), body };
-  console.log(`[news] feed refreshed: ${body.stories.length} stories${body.sample ? " (sample)" : ""}`);
-  try { await fs.writeFile(CACHE_FILE, JSON.stringify(cache)); } catch { /* read-only disk: memory only */ }
+/* One refresh per interval across every instance: the claim is a row
+   update only one caller wins. A claim older than two minutes is a
+   refresh that died, and is taken over. */
+async function claim(): Promise<boolean> {
+  if (!hasAdminCredentials()) return true;
+  try {
+    const stale = new Date(Date.now() - 2 * 60_000).toISOString();
+    const { data } = await createAdminClient()
+      .from("news_cache")
+      .update({ refreshing_at: new Date().toISOString() })
+      .eq("key", ROW)
+      .or(`refreshing_at.is.null,refreshing_at.lt.${stale}`)
+      .select("key");
+    return ((data as unknown[] | null)?.length ?? 0) > 0;
+  } catch (e) {
+    console.error("[news] the refresh claim failed", e);
+    return false;
+  }
 }
 
-/* One refresh at a time; callers share it. */
-function refresh(): Promise<void> {
+async function remember(body: NewsPayload) {
+  // The providers only gave the sample: keep the last real feed.
+  const prev = cache?.body;
+  const keep = body.sample && prev && !prev.sample ? prev : body;
+  cache = { at: Date.now(), body: keep };
+  console.log(`[news] feed refreshed: ${keep.stories.length} stories${keep.sample ? " (sample)" : ""}${keep !== body ? " (last real feed kept)" : ""}`);
+  if (hasAdminCredentials()) {
+    try {
+      await createAdminClient()
+        .from("news_cache")
+        .upsert({ key: ROW, body: keep, fetched_at: new Date(cache.at).toISOString(), refreshing_at: null });
+    } catch (e) {
+      console.error("[news] the shared copy could not be written", e);
+    }
+  } else {
+    try { await fs.writeFile(CACHE_FILE, JSON.stringify(cache)); } catch { /* read-only disk: memory only */ }
+  }
+}
+
+/* One refresh at a time here; callers share it. With `claimed` the
+   refresh first has to win the shared claim. */
+function refresh(claimed: boolean): Promise<void> {
   if (!refreshing) {
-    console.log("[news] refreshing the feed");
-    refreshing = fetchFeed()
-      .then(remember)
+    refreshing = (async () => {
+      if (claimed && !(await claim())) { console.log("[news] another instance is refreshing"); return; }
+      console.log("[news] refreshing the feed");
+      await remember(await fetchFeed());
+    })()
       .catch((e) => { console.error("[news] refresh failed; serving the last feed", e); })
       .finally(() => { refreshing = null; });
   }
@@ -328,14 +387,20 @@ async function fetchFeed(): Promise<NewsPayload> {
 }
 
 export async function GET() {
-  const known = cache ?? (cache = await readFileCache());
+  // The memory copy is stale or missing: the shared copy may be newer.
+  if (!cache || Date.now() - cache.at >= TTL_MS) {
+    const shared = await readShared();
+    if (shared && (!cache || shared.at > cache.at)) cache = shared;
+  }
+  const known = cache as Cached | null;
   if (known) {
     // Past the TTL: answer with what we have, refresh behind the response.
-    if (Date.now() - known.at >= TTL_MS) after(refresh);
+    if (Date.now() - known.at >= TTL_MS) after(() => refresh(true));
     return Response.json(known.body);
   }
-  // Nothing known yet (the first request after a cold start with no file):
+  // Nothing anywhere yet (the first request after the first deploy):
   // the one time the fetch is waited for.
-  await refresh();
-  return Response.json(cache?.body ?? { sample: true, stories: SAMPLE });
+  await refresh(false);
+  const now = cache as Cached | null;
+  return Response.json(now?.body ?? { sample: true, stories: SAMPLE });
 }
