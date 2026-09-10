@@ -6405,24 +6405,17 @@ body { background: transparent; }
   /* Source chips on the hero were the one stylesheet size still under
      the phone floor. */
   html .carousel-news-chip { font-size: 12.5px !important; }
-  /* Phones hide the slide's side panel (Read at / Queue), so the slide
-     carries one small pill to the News page instead. */
+  /* Phones hide the slide's side panel (Read at / Queue): the whole
+     slide opens the News page on a tap (mvp-home.js), and a quiet
+     chevron chip at the right end of the chip row — the outlet chip's
+     own look — is the hint. */
   html .carousel-news-link {
     display: inline-flex;
-    align-items: center;
-    gap: 4px;
     margin-left: auto;
     align-self: center;
-    padding: 5px 11px;
-    border-radius: 999px;
-    background: #2f7fe0;
-    border: none;
-    color: #fff;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11.5px;
-    font-weight: 600;
     text-decoration: none;
-    white-space: nowrap;
+    font-weight: 700;
+    line-height: 1;
   }
   html .nav-auth .btn-ghost,
   html .nav-auth .btn-signup { padding: 6px 12px !important; font-size: 12.5px !important; }

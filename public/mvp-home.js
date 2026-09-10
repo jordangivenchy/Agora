@@ -353,7 +353,7 @@ function newsSlideHTML(c, i, total) {
       <div class="carousel-news-shade"></div>
       <div class="carousel-lower-third">
         <div class="carousel-motion">${escHTML(c.headline)}</div>
-        <div class="carousel-news-chips">${chips}<a class="carousel-news-link" href="/news">News page ›</a></div>
+        <div class="carousel-news-chips">${chips}<a class="carousel-news-chip carousel-news-link" href="/news" aria-label="News page">›</a></div>
       </div>
       <div class="carousel-panel carousel-news-card">
         <div class="carousel-news-byline">
@@ -472,6 +472,19 @@ function renderCarousel() {
       }
     });
   });
+
+  // Phones: the slide itself is the way in — a tap anywhere on a news
+  // slide (not on one of its controls) opens the News page. Desktop has
+  // the side panel's buttons instead.
+  if (window.matchMedia('(max-width: 639px)').matches) {
+    track.querySelectorAll('.carousel-item.news').forEach(slide => {
+      slide.style.cursor = 'pointer';
+      slide.addEventListener('click', (e) => {
+        if (e.target && e.target.closest && e.target.closest('button, a')) return;
+        window.location.href = '/news';
+      });
+    });
+  }
 
   // "Queue a discussion" — React (page.tsx) owns the RPC + match polling;
   // the hero just raises the event and paints whatever state comes back.
