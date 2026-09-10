@@ -1617,14 +1617,20 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     const kids = commentTree.children.get(c.id) ?? [];
     const isCollapsed = collapsed.has(c.id);
     const hidden = commentTree.subtreeSize(c.id);
+    const canModC = !!openPost && canModerate(openPost.community_id);
+    const canPinC = !c.parent_id && canModC; // mods pin root comments (children live under parents)
+    const canDeleteC = c.author_id === userId || canModC;
     return (
-      <div key={c.id} className="cm-node" id={`comment-${c.id}`}>
-        {/* Reddit's collapse: click anywhere on the comment to fold it (and
-            its replies) down to the author line, click again to open — at
-            any depth, replies or not. Links, buttons, the editor, and a text
-            selection keep their own click. */}
+      <div key={c.id} className={depth === 0 ? "cm-node cm-node--root" : "cm-node"} id={`comment-${c.id}`}>
+        {/* After Reddit's app: no card — the avatar row, the text flush
+            beneath it, the actions to the right; replies hang off a rail
+            from under this avatar (globals.css, "The comment thread").
+            Reddit's collapse too: click anywhere on the comment to fold it
+            (and its replies) down to the author line, click again to open
+            — at any depth, replies or not. Links, buttons, the editor, and
+            a text selection keep their own click. */}
         <div
-          className={`px-4 py-3 cm-comment${isCollapsed ? " is-collapsed" : ""}`}
+          className={`cm-comment${isCollapsed ? " is-collapsed" : ""}${flashCommentId === c.id ? " is-flash" : ""}`}
           onPointerDown={(e) => pressComment.onPointerDown(e, c)}
           onPointerMove={pressComment.onPointerMove}
           onPointerUp={pressComment.onPointerUp}
@@ -1637,29 +1643,31 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
             if (window.getSelection()?.toString()) return;
             toggleCollapse(c.id);
           }}
-          style={{
-            ...card, borderRadius: 14,
-            ...(isCollapsed ? { paddingTop: 8, paddingBottom: 8 } : null),
-            ...(flashCommentId === c.id
-              ? { boxShadow: "0 0 0 1px rgba(226,185,107,0.55), 0 0 18px rgba(226,185,107,0.18)", transition: "box-shadow 0.3s" }
-              : { transition: "box-shadow 1.2s" }),
-          }}
         >
-            <div className="flex items-center gap-2 flex-wrap" style={{ cursor: "pointer" }}>
-              <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
-                {authorSpan(c.author_id, c.author_username, c.author_display_name)} · {timeAgo(c.created_at)}
+            <div className="cm-head">
+              <span
+                className="cm-avatar"
+                onClick={(e) => {
+                  if (!c.author_id) return;
+                  e.stopPropagation();
+                  openUserMenu({ x: e.clientX, y: e.clientY }, { userId: c.author_id, username: c.author_username });
+                }}
+              >
+                <UserAvatar size={24} username={c.author_username} avatarUrl={avatars[c.author_id ?? ""] ?? null} seed={c.author_id ?? c.author_username} />
               </span>
+              <span className="cm-author">{authorSpan(c.author_id, c.author_username, c.author_display_name)}</span>
+              <span className="cm-time">· {timeAgo(c.created_at)}</span>
               <RoleBadge role={c.author_role} />
               {c.pinned_at && <PinnedBadge />}
               {isCollapsed && hidden > 0 && (
-                <span className="text-[10.5px] shrink-0" style={{ color: "rgba(238,238,245,0.45)", fontWeight: 600 }}>
+                <span className="cm-time shrink-0" style={{ fontWeight: 600 }}>
                   · {hidden} repl{hidden === 1 ? "y" : "ies"}
                 </span>
               )}
             </div>
             {!isCollapsed && (
               <>
-                <div className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "rgba(238,238,245,0.88)" }}>
+                <div className="cm-body">
                   <RichText text={c.body} />
                 </div>
                 {c.image_url && (
@@ -1669,61 +1677,59 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       style={{ maxHeight: 260, maxWidth: "100%", display: "block" }} />
                   </button>
                 )}
-                <div className="flex items-center gap-3 mt-1.5 cm-comment-actions">
-                  <span className="flex items-center gap-1">
-                    <button
-                      onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
-                      className="cursor-pointer bg-transparent border-none p-0 inline-flex items-center"
-                      style={{ color: c.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
-                      aria-label="Upvote comment"
-                    >
-                      <Icon name="chevron-up" size={15} />
-                    </button>
-                    <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.65)", fontWeight: 600, minWidth: 12, textAlign: "center" }}>
-                      {c.score}
+                {/* Reddit's row, right-aligned: ⋯ (phones — the sheet), share,
+                    reply, then the votes. Pin and delete stay inline on wide
+                    screens; the sheet carries them on phones. */}
+                <div className="cm-comment-actions">
+                  {(canPinC || canDeleteC) && (
+                    <span className="cm-mod-inline">
+                      {canPinC && (
+                        <button onClick={() => togglePin(c)} className="cm-act">
+                          {c.pinned_at ? "Unpin" : <><Icon name="pin" size={12} /> Pin</>}
+                        </button>
+                      )}
+                      {canDeleteC && (
+                        <button onClick={() => deleteComment(c)} className="cm-act" style={c.author_id === userId ? undefined : { color: "#e2b96b" }}>
+                          {c.author_id === userId ? "Delete" : "Remove (mod)"}
+                        </button>
+                      )}
                     </span>
-                    <button
-                      onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
-                      className="cursor-pointer bg-transparent border-none p-0 inline-flex items-center"
-                      style={{ color: c.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
-                      aria-label="Downvote comment"
-                    >
-                      <Icon name="chevron-down" size={15} />
-                    </button>
-                  </span>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSheet({ kind: "comment", comment: c }); }}
+                    className="cm-act cm-more"
+                    aria-label="More"
+                  >
+                    <Icon name="more-horizontal" size={16} />
+                  </button>
+                  <button onClick={() => shareComment(c)} className="cm-act" style={copiedCommentId === c.id ? { color: "#00b894" } : undefined}>
+                    {copiedCommentId === c.id ? <><Icon name="check" size={13} /> Link copied</> : <><Icon name="share" size={13} /> Share</>}
+                  </button>
                   <button
                     onClick={() => { if (requireAuth()) { setReplyTo(replyTo === c.id ? null : c.id); setReplyText(""); pickReplyImage(null); setReplyGifUrl(null); } }}
-                    className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-                    style={{ color: "#4a9eff", fontFamily: "inherit" }}
+                    className="cm-act"
                   >
-                    Reply
+                    <Icon name="message-circle" size={13} /> Reply
                   </button>
-                  <button
-                    onClick={() => shareComment(c)}
-                    className="cursor-pointer bg-transparent border-none p-0 text-[10px] inline-flex items-center gap-1"
-                    style={{ color: copiedCommentId === c.id ? "#00b894" : "rgba(238,238,245,0.45)", fontFamily: "inherit" }}
-                  >
-                    {copiedCommentId === c.id ? <><Icon name="check" size={11} /> Link copied</> : <><Icon name="share" size={11} /> Share</>}
-                  </button>
-                  {/* Mods pin root comments (children live under parents). */}
-                  {!c.parent_id && openPost && canModerate(openPost.community_id) && (
+                  <span className="cm-votes">
                     <button
-                      onClick={() => togglePin(c)}
-                      className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-                      style={{ color: "#4a9eff", fontFamily: "inherit" }}
+                      onClick={() => voteComment(c, c.my_vote === 1 ? 0 : 1)}
+                      className="cm-act"
+                      style={c.my_vote === 1 ? { color: "#e2b96b" } : undefined}
+                      aria-label="Upvote comment"
                     >
-                      {c.pinned_at ? "Unpin" : <><Icon name="pin" size={12} /> Pin</>}
+                      <Icon name="chevron-up" size={16} />
                     </button>
-                  )}
-                  {(c.author_id === userId || (openPost && canModerate(openPost.community_id))) && (
+                    <span className="cm-score">{c.score}</span>
                     <button
-                      onClick={() => deleteComment(c)}
-                      className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-                      style={{ color: c.author_id === userId ? "rgba(238,238,245,0.32)" : "#e2b96b", fontFamily: "inherit" }}
+                      onClick={() => voteComment(c, c.my_vote === -1 ? 0 : -1)}
+                      className="cm-act"
+                      style={c.my_vote === -1 ? { color: "#64B5F6" } : undefined}
+                      aria-label="Downvote comment"
                     >
-                      {c.author_id === userId ? "Delete" : "Remove (mod)"}
+                      <Icon name="chevron-down" size={16} />
                     </button>
-                  )}
+                  </span>
                 </div>
                 {replyTo === c.id && (
                   <div className="mt-2">
@@ -2567,7 +2573,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     No comments yet — start the discussion.
                   </p>
                 ) : (
-                  <div className="flex flex-col" style={{ gap: 16 }}>
+                  <div className="cm-thread">
                     {commentTree.roots.map((root) => renderThread(root, 0))}
                   </div>
                 )}

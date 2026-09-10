@@ -2500,6 +2500,57 @@ html.reduce-motion .nav-sparkle {
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
 
+/* ═══ The comment thread, after Reddit's app: no cards — each comment is
+   its avatar row, the text flush beneath, the actions to the right.
+   Replies hang off a rail from under the parent's avatar, and an elbow
+   curves off it into each reply's own avatar; the rail stops at the
+   last one. Top-level threads are parted by a hairline. Past the indent
+   cap a reply sits at its parent's x, joined by a bracket in the gutter
+   (.cm-children--flat; phones cap sooner, below). ═══ */
+.cm-thread { display: flex; flex-direction: column; }
+.cm-node--root + .cm-node--root { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1b1b21; }
+.cm-comment { position: relative; border-radius: 10px; transition: background-color 1.2s ease, box-shadow 1.2s ease; }
+.cm-comment.is-flash { background: #1a1708; box-shadow: 0 0 0 6px #1a1708; transition: background-color .3s ease, box-shadow .3s ease; }
+.cm-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-height: 24px; cursor: pointer; }
+.cm-comment.is-collapsed .cm-head { opacity: 0.72; }
+.cm-avatar { display: inline-flex; flex: 0 0 auto; cursor: pointer; }
+.cm-author { font-size: 12px; font-weight: 600; color: #c3c3ce; }
+.cm-time { font-size: 11.5px; color: #71717e; }
+.cm-body { margin-top: 3px; font-size: 13px; line-height: 1.55; color: #e6e6ee; }
+.cm-comment-actions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 2px; }
+.cm-mod-inline { display: inline-flex; align-items: center; gap: 12px; margin-right: auto; }
+.cm-act { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11.5px; font-weight: 600; line-height: 1; color: #85858f; background: none; border: 0; padding: 4px 0; cursor: pointer; }
+.cm-act:hover { color: #e6e6ee; }
+.cm-more { display: none; }
+.cm-votes { display: inline-flex; align-items: center; gap: 1px; }
+.cm-score { font-size: 11.5px; font-weight: 600; color: #c3c3ce; min-width: 16px; text-align: center; }
+
+.cm-children {
+  --cm-av: 24px; --cm-arm: 20px; --cm-gap: 12px; --cm-rail: #2b2b34;
+  margin-left: calc(var(--cm-av) / 2); padding-left: var(--cm-arm); margin-top: var(--cm-gap);
+  display: flex; flex-direction: column; gap: var(--cm-gap);
+}
+.cm-child { position: relative; }
+/* The rail: from the parent's bottom edge through the gaps to the next sibling. */
+.cm-child::before {
+  content: ""; position: absolute; left: calc(-1 * var(--cm-arm)); top: calc(-1 * var(--cm-gap)); bottom: calc(-1 * var(--cm-gap));
+  width: 0; border-left: 1.5px solid var(--cm-rail); pointer-events: none;
+}
+.cm-child:last-child::before { display: none; }
+/* The elbow: off the rail, curving into this reply's avatar. */
+.cm-child::after {
+  content: ""; position: absolute; left: calc(-1 * var(--cm-arm)); top: calc(-1 * var(--cm-gap));
+  width: var(--cm-arm); height: calc(var(--cm-gap) + var(--cm-av) / 2);
+  border-left: 1.5px solid var(--cm-rail); border-bottom: 1.5px solid var(--cm-rail); border-bottom-left-radius: 11px; pointer-events: none;
+}
+.cm-children--flat { margin-left: 0; padding-left: 0; }
+.cm-children--flat > .cm-child::before { display: none; }
+.cm-children--flat > .cm-child::after {
+  left: -9px; top: calc(-1 * var(--cm-gap) - 8px); width: 9px;
+  height: calc(var(--cm-gap) + 8px + var(--cm-av) / 2);
+  border-top: 1.5px solid var(--cm-rail); border-top-left-radius: 8px; border-bottom-left-radius: 8px;
+}
+
 @media (max-width: 639px) {
   /* Friends overlay mounts on body here (no sidebar to host it): a
      full-screen, opaque sheet above the page and the tab bar. */
@@ -2792,15 +2843,23 @@ html.reduce-motion .nav-sparkle {
   .cm-brand-tools { opacity: 1 !important; }
   .cm-brand-tools > * { width: 32px !important; height: 32px !important; }
   [style*="padding: 5px 13px"] { min-height: 36px; padding: 8px 14px !important; }
-  html .cm-children { margin-left: 4px !important; padding-left: 16px !important; gap: 10px; }
-  html .cm-child::after { left: -16px !important; width: 16px !important; }
-  html .cm-child::before { left: -16px !important; }
-  html .cm-children .cm-children .cm-children { margin-left: 0 !important; padding-left: 0 !important; }
-  html .cm-children .cm-children .cm-children > .cm-child::before,
-  html .cm-children .cm-children .cm-children > .cm-child::after { display: none; }
-  /* The post view: a quieter thread line, the send button as a pill
-     under the box, the composer's toolbar a touch tighter. */
-  html .cm-child::before, html .cm-child::after { opacity: 0.55; }
+  /* The thread on phones: tighter rails, no more than three levels of
+     indent (deeper replies sit under their parent, bracketed), the ⋯
+     for the sheet in place of the inline pin and delete. */
+  .cm-children { --cm-arm: 14px; --cm-gap: 10px; }
+  .cm-children .cm-children .cm-children { margin-left: 0; padding-left: 0; }
+  .cm-children .cm-children .cm-children > .cm-child::before { display: none; }
+  .cm-children .cm-children .cm-children > .cm-child::after {
+    left: -9px; top: calc(-1 * var(--cm-gap) - 8px); width: 9px;
+    height: calc(var(--cm-gap) + 8px + var(--cm-av) / 2);
+    border-top: 1.5px solid var(--cm-rail); border-top-left-radius: 8px; border-bottom-left-radius: 8px;
+  }
+  .cm-more { display: inline-flex; }
+  .cm-mod-inline { display: none; }
+  .cm-comment-actions { gap: 16px; }
+  .cm-act { padding: 6px 0; }
+  /* The post view: the send button as a pill under the box, the
+     composer's toolbar a touch tighter. */
   .cm-send { height: 34px !important; padding: 0 16px !important; border-radius: 999px !important; font-size: 12.5px !important; margin-top: 2px; }
   .cm-composer-row .rich-editor [role="toolbar"] button { width: 30px; height: 30px; min-width: 30px; }
   .cm-comments-head { margin-top: 4px; }
@@ -3105,7 +3164,6 @@ html.reduce-motion .nav-sparkle {
   .cm-post-actions > *, .cm-comment-actions > button, .cm-comment-actions > span { min-height: 26px !important; }
   [aria-label="Upvote"], [aria-label="Downvote"],
   [aria-label="Upvote comment"], [aria-label="Downvote comment"] { min-height: 24px !important; min-width: 28px !important; }
-  html .cm-children { gap: 8px !important; }
 
   /* Feed rows */
   .feed-replay { padding: 10px !important; gap: 8px !important; }
