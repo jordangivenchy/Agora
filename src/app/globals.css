@@ -2242,30 +2242,39 @@ html.reduce-motion .nav-sparkle {
 }
 
 /* ── Loading screen (components/LoadingScreen.tsx) ───────────────────
-   A time-lapse of the night sky on a canvas — a fresh scatter of stars
-   turning around a pole, each drawing its arc — and the wordmark
-   coming up at the pole as the exposure ends. */
+   A time-lapse of the night sky on a canvas — a fresh disc of stars,
+   centred and fitting the screen, turning, each star drawing its arc —
+   and the AS mark coming up at the centre as the exposure ends. The
+   disc's rim dissolves through a radial mask on the canvas. */
 .ld-screen {
   position: fixed; inset: 0; z-index: 60;
   background: #000; color: #9aa0ac;
   overflow: hidden;
 }
-.ld-sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ld-sky {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  mask-image: radial-gradient(circle closest-side at center, #000 68%, transparent 100%);
+}
 .ld-center {
-  position: absolute; left: 50%; top: 46%;
-  transform: translate(-50%, -50%) scale(0.96);
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0.94);
   display: flex; flex-direction: column; align-items: center;
-  padding: 28px 40px;
+  padding: 24px 32px;
   opacity: 0;
-  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(.2,.7,.2,1);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(.2,.7,.2,1);
 }
 .ld-center.is-on { opacity: 1; transform: translate(-50%, -50%); }
-/* A pool of dark under the wordmark so it reads over the trails. */
+/* A pool of dark under the mark so it reads over the trails. */
 .ld-center::before {
-  content: ""; position: absolute; inset: -30px -40px; z-index: -1; border-radius: 50%;
+  content: ""; position: absolute; inset: -28px -36px; z-index: -1; border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(0,0,0,0.92), rgba(0,0,0,0.7) 42%, transparent 70%);
 }
-.ld-wordmark { width: 176px; height: auto; display: block; mix-blend-mode: screen; }
+.ld-mark {
+  display: flex; line-height: 1;
+  font-family: 'Space Grotesk', 'DM Sans', sans-serif; font-weight: 700; font-size: 72px;
+  letter-spacing: -0.02em; color: #f5f5f0;
+}
+.ld-mark-s { color: #3b7df5; }
 .ld-label {
   margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;
   display: flex; align-items: baseline; white-space: nowrap;
@@ -2277,7 +2286,7 @@ html.reduce-motion .nav-sparkle {
 .ld-ellipsis i:nth-child(2) { animation-delay: 0.2s; }
 .ld-ellipsis i:nth-child(3) { animation-delay: 0.4s; }
 @media (max-width: 639px) {
-  .ld-wordmark { width: 150px; }
+  .ld-mark { font-size: 58px; }
 }
 /* Boot splash (components/BootSplash.tsx): over all the chrome, then a
    fade. */

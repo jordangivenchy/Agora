@@ -1,8 +1,8 @@
 "use client";
 
 /* The boot splash: the loading screen over everything on a full page
-   load, held long enough for the sky's time-lapse to run and the
-   wordmark to arrive, then taken down with a fade. Client-side
+   load, held long enough for the sky's time-lapse to run and the AS
+   mark to arrive, then taken down with a fade. Client-side
    navigations never remount the root layout, so it shows once per
    load. It never touches React state — the takedown is a class and a
    display change on its own node — so it cannot disturb hydration of
@@ -11,7 +11,7 @@
 import { useEffect, useRef } from "react";
 import LoadingScreen from "./LoadingScreen";
 
-const HOLD_MS = 2100; // the exposure (1.5s) plus a beat with the wordmark up
+const HOLD_MS = 2400; // the exposure (1.7s + a beat) plus a moment with the mark up
 const FADE_MS = 500;
 
 export default function BootSplash() {
