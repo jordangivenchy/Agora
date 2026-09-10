@@ -1019,13 +1019,23 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     try { sessionStorage.removeItem(`agora:live:${roomId}`); } catch { /* private mode */ }
   }, [roomId]);
   /* Every tap on a control is noted (its label), so an unclean exit can
-     name what was pressed just before. */
+     name what was pressed just before. On phones every tap — control or
+     not — is also written to the telemetry at once (throttled), since a
+     tab that dies on the next frame can't report afterwards. */
   useEffect(() => {
+    const phone = window.matchMedia("(max-width: 639px)").matches;
+    let lastTap = 0;
     const onDown = (e: PointerEvent) => {
-      const t = (e.target as HTMLElement | null)?.closest("button, a, [role=button], input, textarea") as HTMLElement | null;
-      if (!t) return;
-      const label = t.getAttribute("aria-label") || t.getAttribute("title") || t.textContent?.trim() || t.tagName;
-      noteRoomAction(roomId, `${e.pointerType}:${label}`);
+      const raw = e.target as HTMLElement | null;
+      const t = raw?.closest("button, a, [role=button], input, textarea") as HTMLElement | null;
+      const label = t
+        ? t.getAttribute("aria-label") || t.getAttribute("title") || t.textContent?.trim().slice(0, 40) || t.tagName
+        : raw ? `${raw.tagName.toLowerCase()}${raw.className && typeof raw.className === "string" ? "." + raw.className.split(" ")[0] : ""}` : "?";
+      if (t) noteRoomAction(roomId, `${e.pointerType}:${label}`);
+      if (phone && Date.now() - lastTap > 1500) {
+        lastTap = Date.now();
+        logRoomEvent(roomId, "tap", label, { x: Math.round(e.clientX), y: Math.round(e.clientY), control: !!t });
+      }
     };
     document.addEventListener("pointerdown", onDown, { passive: true, capture: true });
     return () => document.removeEventListener("pointerdown", onDown, { capture: true } as EventListenerOptions);
