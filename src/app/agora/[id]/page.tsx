@@ -1486,21 +1486,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
         {!broadcast && (
         <header className="ag-topbar">
-          <button
-            className="ag-back"
-            onClick={() => {
-              /* The stage lives and dies with its host: hosts confirm the
-                 close; everyone else just walks out. */
-              if (isHostRole(myRole) && !duel && room.status !== "ended") setLeavePrompt(true);
-              else {
-                vacateSeat();
-                router.push("/");
-              }
-            }}
-            title="Back to home"
-          >
-            ←
-          </button>
           <div className="ag-topbar-info">
             <div className="ag-live-tag">
               <span className={`ag-live-dot ${room.status === "live" ? "" : "idle"}`} />

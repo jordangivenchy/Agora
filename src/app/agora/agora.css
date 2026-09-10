@@ -243,33 +243,6 @@
   z-index: 5;
 }
 
-/* Glass buttons riding on a glass bar: they carry a lighter rim than the
-   floating controls do, since they sit on the pane rather than on the
-   night, and a doubled-up full-strength stack would read as embossed. */
-.ag-back {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: var(--ag-glass-bg);
-  color: #e7e9ee;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: var(--ag-glass-rim-inlay);
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
-}
-
-.ag-back:hover {
-  background: var(--ag-glass-bg-hover);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.ag-back:active { transform: scale(0.94); }
-
 .ag-topbar-info {
   flex: 1;
   min-width: 0;
@@ -3139,7 +3112,6 @@
     gap: 4px 8px;
     padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 12px;
   }
-  .ag-back { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
   .ag-topbar-info { order: 3; flex: 1 1 100%; min-width: 0; }
   .ag-live-tag { font-size: 9.5px; letter-spacing: 0.12em; }
   .ag-motion {
