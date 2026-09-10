@@ -56,6 +56,9 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
     const finish = () => {
       if (waitDone.current) return;
       waitDone.current = true;
+      // The sky settles into the page's starfield as the last of its
+      // screens fades — this wait or the boot splash over it (lib/skySplash.ts).
+      window.__agoraSkyLeaving?.();
       waitRef.current?.classList.add("is-leaving");
       window.setTimeout(() => setShellReady(true), 420);
     };

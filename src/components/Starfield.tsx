@@ -9,6 +9,7 @@
    pointer-events none) and reduce-motion handling apply unchanged. */
 
 import { useEffect, useRef } from "react";
+import type { SkySnapshot } from "@/lib/skySplash";
 
 const DENSITY = 0.00018;
 
@@ -28,6 +29,8 @@ interface Star {
   pulsePhase: number;
   glowSprite?: HTMLCanvasElement;
   rgbStr?: string;
+  /** Coming out over `ms` from `at` (the settled sky's faint tier had no heads). */
+  rise?: { at: number; ms: number };
 }
 
 function randomRadius(): number {
@@ -130,6 +133,46 @@ export default function Starfield() {
       canvas.height = window.innerHeight;
       generate();
     };
+    /* The loading sky settling into the page (lib/skySplash.ts): its
+       stars, where they stand, become this field's — same places, same
+       colours, the two brighter tiers at the sky's own brightness — so
+       the splash and its trails fade over a sky that doesn't move. Each
+       star's twinkle and pulse are phased to sit at exactly base
+       brightness on the first frame; the faint tier, which had no heads
+       in the sky, comes out over the next couple of seconds. */
+    const adopt = (snap: SkySnapshot) => {
+      if (snap.w !== canvas.width || snap.h !== canvas.height) return;
+      const nowS = still ? 0 : Date.now() * 0.001;
+      const bornAt = performance.now();
+      const cx = snap.w / 2, cy = snap.h / 2;
+      stars = snap.stars.map((sky): Star => {
+        const x = cx + sky.r * Math.cos(sky.a + snap.theta);
+        const y = cy + sky.r * Math.sin(sky.a + snap.theta);
+        const faint = sky.w < 1;
+        const radius = faint ? 0.55 : sky.w < 1.5 ? 1.0 : 1.6;
+        const isClose = radius >= 1.2, isFar = radius < 0.9;
+        const depth = isFar ? 0.2 : isClose ? 1.0 : 0.5;
+        const twinkleSpeed = Math.random() < 0.7
+          ? isClose ? 1.8 + Math.random() * 1.7 : !isFar ? 0.8 + Math.random() * 1.2 : 0.3 + Math.random() * 0.7
+          : null;
+        const pulsing = Math.random() < 0.25;
+        const pulseSpeed = pulsing ? 2.0 + Math.random() * 3.0 : 0;
+        return {
+          ox: x, oy: y, x, y, radius,
+          baseOpacity: faint ? 0.3 + Math.random() * 0.2 : Math.min(1, sky.alpha),
+          baseColor: [sky.col[0], sky.col[1], sky.col[2]],
+          depth, isClose, isFar,
+          twinkleSpeed,
+          phase: twinkleSpeed ? -nowS / twinkleSpeed : 0,
+          pulsing, pulseSpeed,
+          pulsePhase: pulsing ? -Math.PI / 2 - nowS / pulseSpeed : 0,
+          rise: faint && !still ? { at: bornAt, ms: 2200 } : undefined,
+        };
+      });
+      mouseX = mouseY = 0;
+      if (still) render();
+    };
+    const onSettle = (e: Event) => adopt((e as CustomEvent<SkySnapshot>).detail);
     const onWindowResize = () => {
       const ow = canvas.width || 1, oh = canvas.height || 1;
       const nw = window.innerWidth, nh = window.innerHeight;
@@ -179,6 +222,11 @@ export default function Starfield() {
         if (s.pulsing) {
           opacity -= ((Math.sin(now / s.pulseSpeed + s.pulsePhase) + 1) * 0.5) * 0.15;
         }
+        if (s.rise) {
+          const k = (performance.now() - s.rise.at) / s.rise.ms;
+          if (k >= 1) s.rise = undefined;
+          else opacity *= k;
+        }
         opacity = Math.min(1, Math.max(0, opacity));
 
         if (s.isClose && s.twinkleSpeed !== null) {
@@ -207,8 +255,12 @@ export default function Starfield() {
     };
 
     window.addEventListener("resize", onWindowResize);
+    window.addEventListener("agora:sky-settle", onSettle);
     if (!still) window.addEventListener("mousemove", onMouse, { passive: true });
     resize();
+    // A sky that settled just before this mounted (slow hydration).
+    const settled = window.__agoraSkySettled;
+    if (settled && performance.now() - settled.at < 3000) adopt(settled);
     if (still) render();
     else raf = requestAnimationFrame(render);
 
@@ -216,6 +268,7 @@ export default function Starfield() {
       cancelAnimationFrame(raf);
       clearTimeout(regenTimer);
       window.removeEventListener("resize", onWindowResize);
+      window.removeEventListener("agora:sky-settle", onSettle);
       window.removeEventListener("mousemove", onMouse);
     };
   }, []);
