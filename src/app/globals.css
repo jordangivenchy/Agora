@@ -2262,7 +2262,7 @@ html.reduce-motion .nav-sparkle {
    drawing its arc behind a bright head — and the AS mark coming up at
    the centre. */
 .ld-screen {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; inset: 0; z-index: 5000;
   background: #000; color: #9aa0ac;
   overflow: hidden;
 }
@@ -2305,8 +2305,12 @@ html.reduce-motion .nav-sparkle {
 }
 /* Boot splash (components/BootSplash.tsx): over all the chrome, then a
    fade. */
-.ld-boot .ld-screen { z-index: 5000; transition: opacity 0.5s ease; }
+.ld-boot .ld-screen { transition: opacity 0.5s ease; }
 .ld-boot.is-done .ld-screen { opacity: 0; pointer-events: none; }
+/* The home shell's own wait (app/page.tsx): up until it has fully
+   loaded, then a fade. */
+.ld-page-wait .ld-screen { transition: opacity 0.4s ease; }
+.ld-page-wait.is-leaving .ld-screen { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   .ld-ellipsis i { animation: none; }
   .ld-center { transition: none; }

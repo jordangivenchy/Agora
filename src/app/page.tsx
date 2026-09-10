@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { readNavUser, writeNavUser, type CachedNavUser } from "@/lib/navUserCache";
+import LoadingScreen from "@/components/LoadingScreen";
 import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
 import CreateCommunityModal from "@/components/community/CreateCommunityModal";
@@ -152,6 +153,38 @@ export default function Home() {
     communityId?: string; communityName?: string;
   } | null>(null);
   const [booted, setBooted] = useState(false);
+
+  /* The shell's own loading screen: up until the data has landed, the
+     engine and adapter have run against the markup and the hero's news
+     fetch has settled — so the page never reveals itself half-built —
+     then a short fade. Capped so a stalled script can't trap the page.
+     Its sky continues the boot splash's on a full load and the chrome's
+     overlay on a client-side arrival (they share a session). */
+  const [shellReady, setShellReady] = useState(false);
+  const waitRef = useRef<HTMLDivElement>(null);
+  const waitFlags = useRef({ adapter: false, hero: false, done: false });
+  useEffect(() => {
+    if (shellReady) return;
+    const f = waitFlags.current;
+    const finish = () => {
+      if (f.done) return;
+      f.done = true;
+      waitRef.current?.classList.add("is-leaving");
+      window.setTimeout(() => setShellReady(true), 420);
+    };
+    const check = () => { if (booted && f.adapter && f.hero) finish(); };
+    const onAdapter = () => { f.adapter = true; check(); };
+    const onHero = () => { f.hero = true; check(); };
+    window.addEventListener("agora:adapter-ready", onAdapter);
+    window.addEventListener("agora:hero-settled", onHero);
+    const cap = window.setTimeout(finish, 7000);
+    check();
+    return () => {
+      window.removeEventListener("agora:adapter-ready", onAdapter);
+      window.removeEventListener("agora:hero-settled", onHero);
+      clearTimeout(cap);
+    };
+  }, [booted, shellReady]);
   const [dbOffline, setDbOffline] = useState(false);
   const dataLandedRef = useRef(false);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -399,6 +432,7 @@ export default function Home() {
       if (typeof w.init === "function") (w.init as () => void)();
       const adapter = document.createElement("script");
       adapter.src = "/mvp-adapter.js";
+      adapter.onload = () => window.dispatchEvent(new Event("agora:adapter-ready"));
       document.body.appendChild(adapter);
       return;
     }
@@ -413,6 +447,7 @@ export default function Home() {
       engine.onload = () => {
         const adapter = document.createElement("script");
         adapter.src = "/mvp-adapter.js";
+        adapter.onload = () => window.dispatchEvent(new Event("agora:adapter-ready"));
         document.body.appendChild(adapter);
       };
       document.body.appendChild(engine);
@@ -738,6 +773,11 @@ export default function Home() {
 
   return (
     <>
+      {!shellReady && (
+        <div ref={waitRef} className="ld-page-wait">
+          <LoadingScreen />
+        </div>
+      )}
       <div ref={hostRef} />
       {dbOffline && (
         <div

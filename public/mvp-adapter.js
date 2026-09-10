@@ -63,7 +63,8 @@
       });
       if (newsSlides.length) rebuildCarousel();
     })
-    .catch(function () { /* no news feed → carousel stays rooms-only */ });
+    .catch(function () { /* no news feed → carousel stays rooms-only */ })
+    .finally(function () { window.dispatchEvent(new Event('agora:hero-settled')); });
 
   function applyData(D) {
     if (!D) return;

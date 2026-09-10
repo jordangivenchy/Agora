@@ -146,6 +146,8 @@ export default function Starfield() {
     };
 
     const render = () => {
+      // A loading screen's sky is drawing over this: don't compete for frames.
+      if (!still && (window.__agoraSkyLiveCount || 0) > 0) { raf = requestAnimationFrame(render); return; }
       if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) onWindowResize();
       mouseX += (targetMouseX - mouseX) * 0.06;
       mouseY += (targetMouseY - mouseY) * 0.06;

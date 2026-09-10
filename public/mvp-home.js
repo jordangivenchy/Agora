@@ -2549,6 +2549,8 @@ init();
   }
 
   function render() {
+    // A loading screen's sky is drawing over this: don't compete for frames.
+    if (!REDUCE_MOTION && (window.__agoraSkyLiveCount || 0) > 0) { requestAnimationFrame(render); return; }
     // React re-injects the MVP markup on remount, which orphans the canvas
     // this closure captured at boot — leaving the visible one forever blank.
     // Re-acquire the live node whenever they diverge.

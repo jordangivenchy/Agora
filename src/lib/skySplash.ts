@@ -37,14 +37,21 @@ window.__agoraSky = function (trails, heads, center, o) {
   if (!ctx || !hctx) return none;
   trails.dataset.live = '1';
 
-  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  // 1.5x is plenty for thin trails, and a third fewer pixels to clear
+  // and stroke each frame than the full 2x.
+  var dpr = Math.min(1.5, window.devicePixelRatio || 1);
   var w = window.innerWidth, h = window.innerHeight;
   var now0 = performance.now();
   var S = window.__agoraSkySession;
-  if (!S || S.start == null || now0 - (S.lastStop || S.start) > 400 || S.w !== w || S.h !== h) {
-    S = window.__agoraSkySession = { seed: (Math.random() * 4294967296) >>> 0, start: null, w: w, h: h, lastStop: 0 };
+  // Continue the session while another sky is live (a page's own loading
+  // screen under the boot splash, a fallback under the chrome's overlay)
+  // or within a beat of the last one stopping; otherwise a fresh sky.
+  var handoff = S && S.w === w && S.h === h && (S.live > 0 || (S.lastStop && now0 - S.lastStop <= 400));
+  if (!handoff) {
+    S = window.__agoraSkySession = { seed: (Math.random() * 4294967296) >>> 0, start: null, w: w, h: h, lastStop: 0, live: 0 };
   }
-  S.lastStop = 0;
+  S.live++;
+  window.__agoraSkyLiveCount = (window.__agoraSkyLiveCount || 0) + 1;
   var elapsed0 = S.start == null ? 0 : now0 - S.start;
   var rnd = (function (a) {
     return function () {
@@ -56,13 +63,20 @@ window.__agoraSky = function (trails, heads, center, o) {
     };
   })(S.seed);
 
-  var stopped = false, raf = 0, markTimer = 0;
+  var stopped = false, raf = 0, markTimer = 0, counted = true;
+  var retire = function () {
+    if (!counted) return;
+    counted = false;
+    S.live = Math.max(0, S.live - 1);
+    window.__agoraSkyLiveCount = Math.max(0, (window.__agoraSkyLiveCount || 1) - 1);
+    S.lastStop = performance.now();
+  };
   var stop = function () {
     stopped = true;
     cancelAnimationFrame(raf);
     clearTimeout(markTimer);
     delete trails.dataset.live;
-    S.lastStop = performance.now();
+    retire();
   };
   [[trails, ctx], [heads, hctx]].forEach(function (p) {
     p[0].width = Math.round(w * dpr);
@@ -107,10 +121,13 @@ window.__agoraSky = function (trails, heads, center, o) {
       ctx.stroke();
     }
   }
+  // Heads for the two brighter tiers only — the faint ones read as
+  // trail tips anyway, and they are seven in ten of the stars.
   function drawHeads(theta) {
     hctx.clearRect(0, 0, w, h);
     for (var gi = 0; gi < groups.length; gi++) {
       var g = groups[gi], rad = g.width * 0.9;
+      if (g.width < 1) continue;
       hctx.beginPath();
       hctx.fillStyle = g.style;
       for (var si = 0; si < g.stars.length; si++) {
@@ -147,7 +164,7 @@ window.__agoraSky = function (trails, heads, center, o) {
   else if (S.start != null) markTimer = setTimeout(showMark, MARK_AT - elapsed0);
   function frame(now) {
     if (stopped) return;
-    if (!trails.isConnected || trails.offsetWidth === 0) { S.lastStop = performance.now(); return; }
+    if (!trails.isConnected || trails.offsetWidth === 0) { retire(); return; }
     if (S.start == null) { S.start = now; markTimer = setTimeout(showMark, MARK_AT); }
     var theta = turned((now - S.start) / 1000);
     if (theta > drawn) { sweep(drawn, theta); drawn = theta; drawHeads(theta); }
@@ -166,6 +183,8 @@ declare global {
       center: HTMLElement | null,
       options?: { speed?: number; ramp?: number; markAt?: number },
     ) => { stop: () => void; elapsed: number };
-    __agoraSkySession?: { seed: number; start: number | null; w: number; h: number; lastStop: number };
+    __agoraSkySession?: { seed: number; start: number | null; w: number; h: number; lastStop: number; live: number };
+    /** Skies currently drawing; the page starfields hold still while > 0. */
+    __agoraSkyLiveCount?: number;
   }
 }
