@@ -1608,13 +1608,19 @@ html.reduce-motion #shooting-svg,
 html.reduce-motion .nav-sparkle {
   display: none !important;
 }
-/* Note: the starfield is deliberately NOT hidden under the OS-level
-   prefers-reduced-motion media query — display:none can't stop the JS
-   canvas loop anyway, and the OS flag silently deleting a core visual
-   surprised more than it helped. Hiding it is the explicit in-app
-   setting's job. CSS animations/transitions still calm down here: */
+/* The OS-level flag (prefers-reduced-motion) gets the same calm: every
+   animation and transition off, sparkles and shooting stars gone. The
+   starfield is the one difference — it stays, but holds still (its
+   canvas loops stop under the flag in Starfield.tsx / mvp-home.js):
+   the OS flag silently deleting a core visual surprised more than it
+   helped, so removing it stays the explicit in-app setting's job. */
 @media (prefers-reduced-motion: reduce) {
-  .nav-sparkle { display: none !important; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .nav-sparkle, #shooting-svg { display: none !important; }
 }
 
 /* ── Agora orb: Shazam-style states ──────────────────────────

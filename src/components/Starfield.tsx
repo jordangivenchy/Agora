@@ -114,12 +114,16 @@ export default function Starfield() {
     let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
     let raf = 0;
     let regenTimer: ReturnType<typeof setTimeout> | undefined;
+    /* Reduced motion: the sky is drawn once and holds still — no
+       twinkle, no parallax — and redrawn only when the window resizes. */
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const generate = () => {
       stars = Array.from(
         { length: Math.floor(canvas.width * canvas.height * DENSITY) },
         () => makeStar(canvas.width, canvas.height)
       );
+      if (still) render();
     };
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -132,6 +136,7 @@ export default function Starfield() {
       if (nw === ow && nh === oh) return;
       canvas.width = nw; canvas.height = nh;
       for (const s of stars) { s.ox *= nw / ow; s.oy *= nh / oh; }
+      if (still) render();
       clearTimeout(regenTimer);
       regenTimer = setTimeout(generate, 200);
     };
@@ -145,7 +150,7 @@ export default function Starfield() {
       mouseX += (targetMouseX - mouseX) * 0.06;
       mouseY += (targetMouseY - mouseY) * 0.06;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const now = Date.now() * 0.001;
+      const now = still ? 0 : Date.now() * 0.001;
 
       for (const s of stars) {
         s.x = s.ox + mouseX * s.depth * 3.0;
@@ -196,13 +201,14 @@ export default function Starfield() {
         ctx.fill();
         ctx.globalAlpha = 1;
       }
-      raf = requestAnimationFrame(render);
+      if (!still) raf = requestAnimationFrame(render);
     };
 
     window.addEventListener("resize", onWindowResize);
-    window.addEventListener("mousemove", onMouse, { passive: true });
+    if (!still) window.addEventListener("mousemove", onMouse, { passive: true });
     resize();
-    raf = requestAnimationFrame(render);
+    if (still) render();
+    else raf = requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(raf);

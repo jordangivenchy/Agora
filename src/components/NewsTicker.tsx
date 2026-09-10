@@ -48,6 +48,8 @@ export default function NewsTicker({ container }: Props) {
      instead of freezing mid-frame. */
   useEffect(() => {
     if (stories.length === 0) return;
+    // Reduced motion: the strip holds still; a finger or wheel still moves it.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let raf = 0;
     let speed = 0;
     /* Position is accumulated as a float and written as whole pixels:

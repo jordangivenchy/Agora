@@ -111,6 +111,10 @@ const UPCOMING = [
 const SIDEBAR_CHANNELS = [];
 
 // Rebuilt from real rooms by mvp-adapter.js.
+/* The OS-level reduce-motion flag: decorative loops below draw once and
+   hold still, the hero doesn't auto-advance. (globals.css calms the CSS.) */
+const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 const CAROUSEL_DATA = [];
 
 // ═══════════════════════════════════════════════
@@ -559,6 +563,7 @@ function goToSlide(index) {
 }
 
 function startAutoPlay() {
+  if (REDUCE_MOTION) return; // no auto-advance: the reader moves the strip
   autoPlayTimer = setInterval(() => goToSlide(currentSlide + 1), 9000); // 9s: long enough to read a summary
 }
 
@@ -2058,6 +2063,8 @@ init();
     ctx.lineWidth = 0.75;
     ctx.stroke();
 
+    if (REDUCE_MOTION) return; // the border alone, still
+
     // Traveling glow — clipped to border band only
     const grad = ctx.createRadialGradient(glow.x, glow.y, 0, glow.x, glow.y, 55);
     grad.addColorStop(0,   'rgba(255,255,255,0.65)');
@@ -2512,9 +2519,11 @@ init();
       stars[i].ox *= sx;
       stars[i].oy *= sy;
     }
+    if (REDUCE_MOTION) render(); // the still sky, redrawn at the new size
     clearTimeout(regenTimer);
     regenTimer = setTimeout(function () {
       stars = generateStars(canvas.width, canvas.height);
+      if (REDUCE_MOTION) render();
     }, 200);
   }
 
@@ -2631,7 +2640,7 @@ init();
       ctx.globalAlpha = 1;
     }
 
-    requestAnimationFrame(render);
+    if (!REDUCE_MOTION) requestAnimationFrame(render); // reduced motion: this one frame, held
   }
 
   window.addEventListener('resize', onWindowResize);
@@ -2841,7 +2850,7 @@ init();
       el.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
       el.style.opacity = activeNode ? (parseInt(el.dataset.id) === activeNode ? 1 : 0.4) : opacity;
     });
-    animFrame = requestAnimationFrame(animateOrbit);
+    if (!REDUCE_MOTION) animFrame = requestAnimationFrame(animateOrbit);
   }
 
   function initSphere() {
@@ -2955,7 +2964,7 @@ init();
       mesh.rotation.y += 0.0005;
       mesh.rotation.x += 0.0002;
       renderer.render(scene, camera);
-      sphereFrame = requestAnimationFrame(animateSphere);
+      if (!REDUCE_MOTION) sphereFrame = requestAnimationFrame(animateSphere);
     }
     animateSphere(0);
 
