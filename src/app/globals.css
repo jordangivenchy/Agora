@@ -2317,6 +2317,11 @@ html.reduce-motion .nav-sparkle {
   .sk-progress { animation: none; transform: scaleX(0.6); }
 }
 
+/* Daily topics (TopicsHome): as many ~380px columns as the grid's width
+   takes, never fewer than two — two on phones, three on a laptop, four
+   on a 1920 screen (where TopicsHome then shows every topic). */
+.daily-topics-grid { grid-template-columns: repeat(auto-fill, minmax(min(380px, calc(50% - 5px)), 1fr)); }
+
 /* Feed: "Live now" dot — a drawn dot, not a text glyph (those render
    differently per platform font). */
 .feed-live-dot {

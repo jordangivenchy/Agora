@@ -202,6 +202,24 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [reminders, setReminders] = useState<Record<string, { count: number; amSet: boolean }>>({});
   const [selectedKey, setSelectedKey] = useState<string>(TOPICS[0].key);
   const [showAllQuestions, setShowAllQuestions] = useState(false);
+  /* The topics grid takes as many columns as its width allows (CSS); once
+     it has four — a 1920 screen — every topic shows, no Show-more line. */
+  const [topicsCols, setTopicsCols] = useState(2);
+  /* A callback ref, not an effect: the grid mounts only once the topics
+     have loaded, so this has to attach whenever it appears. */
+  const topicsGridRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const measure = () => {
+      const n = getComputedStyle(el).gridTemplateColumns.split(" ").length;
+      setTopicsCols((c) => (c === n ? c : n));
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    // Once on attach as well: the observer only reports on a paint.
+    const t = window.setTimeout(measure, 0);
+    return () => { ro.disconnect(); clearTimeout(t); };
+  }, []);
+  const questionsShown = topicsCols >= 4 ? Number.MAX_SAFE_INTEGER : QUESTIONS_SHOWN;
   const [showAllRooms, setShowAllRooms] = useState(false);
   const [showAllScheduled, setShowAllScheduled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -822,8 +840,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         {/* Two columns — always two, so the board reads as a grid rather
             than a stack that occasionally pairs up. Phones collapse to
             one (globals.css phone block). */}
-        <div className="daily-topics-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-        {(showAllQuestions ? selRows : selRows.slice(0, QUESTIONS_SHOWN)).map((t) => {
+        <div ref={topicsGridRef} className="daily-topics-grid" style={{ display: "grid", gap: 10 }}>
+        {(showAllQuestions ? selRows : selRows.slice(0, questionsShown)).map((t) => {
           const inQueue = t.am_queued;
           return (
             <div
@@ -916,7 +934,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
           );
         })}
         </div>
-        {selRows.length > QUESTIONS_SHOWN && showMoreLine(selRows.length - QUESTIONS_SHOWN, showAllQuestions, () => setShowAllQuestions((v) => !v), "questions")}
+        {selRows.length > questionsShown && showMoreLine(selRows.length - questionsShown, showAllQuestions, () => setShowAllQuestions((v) => !v), "questions")}
         {selRows.length === 0 && (
           <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
             No standing questions in {selCat.label} yet.
