@@ -2523,8 +2523,11 @@ html.reduce-motion .nav-sparkle {
   }
 
   /* Kick-style bottom tab bar: see-through, safe-area aware, yellow
-     active. No fill and no hairline, so the starfield shows behind the
-     tabs the way it does behind the top bar. */
+     active. No fill, no hairline, no blur on the bar itself — it rides
+     on the starfield. The content regions above it end at its top edge
+     and fade out there (masks below), and a thin strip just above the
+     bar blurs that fading foot progressively — the Claude-app edge,
+     where information dissolves before it reaches the bar. */
   .mobile-tabbar {
     display: flex;
     position: fixed;
@@ -2533,16 +2536,8 @@ html.reduce-motion .nav-sparkle {
     bottom: 0;
     height: calc(58px + env(safe-area-inset-bottom));
     padding: 0 10px env(safe-area-inset-bottom);
-    /* See-through, but what scrolls under it dissolves: a soft blur with
-       a faint dark wash, so the stars still show and the page's text
-       doesn't sit behind the tab icons. */
-    background: rgba(6, 6, 9, 0.32);
+    background: transparent;
     border-top: none;
-    /* Unprefixed only: the CSS compiler adds -webkit- itself, and when
-       both are written it keeps just the prefixed one (dropped on
-       Chrome). !important: the phone blocks strip backdrop filters
-       elsewhere for the call's sake; this one bar keeps its blur. */
-    backdrop-filter: blur(18px) saturate(140%) !important;
     z-index: 120;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
@@ -2669,8 +2664,23 @@ html.reduce-motion .nav-sparkle {
     left: 0 !important;
     bottom: calc(58px + env(safe-area-inset-bottom)) !important;
     overflow-x: hidden !important;
+    /* The foot fades to nothing just above the tab bar (unprefixed
+       only — the compiler adds -webkit-). */
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent 100%);
   }
   .shell-page-inner { padding: 12px 12px 24px !important; }
+  /* The progressive blur over that fading foot. */
+  .mobile-tabbar::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 64px;
+    pointer-events: none;
+    backdrop-filter: blur(8px) !important;
+    mask-image: linear-gradient(to bottom, transparent, #000 65%);
+  }
 
   /* Feed */
   .feed-head { row-gap: 8px; }

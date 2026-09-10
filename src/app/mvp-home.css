@@ -6413,6 +6413,25 @@ body { background: transparent; }
     margin-left: 0 !important;
     padding: 8px 12px calc(76px + env(safe-area-inset-bottom)) !important;
   }
+  /* The home page scrolls inside a box between the top bar and the tab
+     bar rather than as the document, so its foot can fade out just above
+     the bar like the tab overlays do (globals.css). Scoped to the home
+     shell — the chrome routes still scroll the document. */
+  html:has(main.main), body:has(main.main) { height: 100%; overflow: hidden !important; }
+  html .main {
+    position: fixed !important;
+    top: var(--nav-height) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(58px + env(safe-area-inset-bottom)) !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 28px !important;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent 100%);
+  }
   /* Phones keep an 8px gap under the bar (above); the painted band matches. */
   /* Phones: the bar is see-through — no fill, no painted gap band — so
      the page shows straight through behind the logo and search. */
