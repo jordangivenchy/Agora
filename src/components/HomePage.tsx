@@ -33,20 +33,24 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
   /* The navbar's cache starts from what the route knew. */
   useEffect(() => { writeNavUser(initial.navUser); }, [initial.navUser]);
 
-  /* The page's own loading screen on a full load: up until the hero's
-     news fetch has settled — so the strip never pops in under a page
-     already shown — then a short fade. Capped so a stalled fetch can't
-     trap the page. Its sky continues the boot splash's (they share a
-     session). */
-  /* Only the session's first load waits: the boot splash is up then,
-     and this keeps its sky until the hero has settled. Every other
-     arrival — a tab tap, a later full load — shows the page at once and
-     lets the strip fill in. */
-  const [shellReady, setShellReady] = useState(
-    () => typeof document !== "undefined" && !!document.getElementById("ag-boot")?.classList.contains("is-done"),
-  );
+  /* The page's own loading screen, on the session's first load only:
+     the boot splash is up then, and this keeps its sky (they share a
+     session) until the hero's news fetch has settled — so the strip
+     never pops in under a page already shown — then a short fade,
+     capped so a stalled fetch can't trap the page. Every other arrival
+     — a tab tap, a later full load — shows the page at once and lets
+     the strip fill in. Decided after mount, not while hydrating: the
+     server can't see the splash, and a first render that differs from
+     its HTML makes React throw the page away and draw it again. The
+     splash covers the page until then, so nothing shows in between. */
+  const [shellReady, setShellReady] = useState(true);
   const waitRef = useRef<HTMLDivElement>(null);
   const waitDone = useRef(false);
+  useEffect(() => {
+    const boot = document.getElementById("ag-boot");
+    if (!boot || boot.classList.contains("is-done")) return;
+    queueMicrotask(() => setShellReady(false));
+  }, []);
   useEffect(() => {
     if (shellReady) return;
     const finish = () => {
