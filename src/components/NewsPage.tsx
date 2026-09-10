@@ -202,7 +202,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
     if (!el) return;
     el.scrollIntoView({ block: "center" });
     el.classList.add("news-story--hit");
-    const t = setTimeout(() => el.classList.remove("news-story--hit"), 2400);
+    const t = setTimeout(() => el.classList.remove("news-story--hit"), 3600);
     try { window.history.replaceState(null, "", window.location.pathname); } catch {}
     return () => clearTimeout(t);
   }, [stories]);
