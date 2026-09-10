@@ -271,6 +271,16 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
 
   const [supabase] = useState(() => createClient());
   const [userId, setUserId] = useState<string | null>(null);
+  /* Whether the viewer is a site moderator: the post menus offer
+     "Feature on home" only to them. */
+  const [siteMod, setSiteMod] = useState(false);
+  useEffect(() => {
+    if (!userId) { queueMicrotask(() => setSiteMod(false)); return; }
+    let alive = true;
+    supabase.from("users").select("is_moderator").eq("id", userId).maybeSingle()
+      .then(({ data }) => { if (alive) setSiteMod(!!(data as { is_moderator?: boolean } | null)?.is_moderator); });
+    return () => { alive = false; };
+  }, [supabase, userId]);
 
   /* Live presence (45s heartbeat / 90s staleness) — the store is kept
      running by FriendsSection on the homepage shell; we only read it. */
@@ -1363,6 +1373,18 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     loadPosts();
   }, [supabase, loadPosts]);
 
+  /* Site moderators feature a post on the home page's carousel, or take
+     it off (set_post_featured; the guard in the database keeps it to
+     them). The home page picks featured posts up on its next refresh. */
+  const toggleFeatured = useCallback(async (post: Post) => {
+    const on = !post.featured_at;
+    const { data, error: err } = await supabase.rpc("set_post_featured", { p_post: post.id, p_featured: on });
+    if (err) { setError(err.message); return; }
+    const stamp = (data as string | null) ?? null;
+    setOpenPost((p) => (p && p.id === post.id ? { ...p, featured_at: stamp } : p));
+    setPosts((ps) => ps.map((p) => (p.id === post.id ? { ...p, featured_at: stamp } : p)));
+  }, [supabase]);
+
   /* Mods pin/unpin root comments; pinned threads float to the top. */
   const togglePin = useCallback(async (comment: Comment) => {
     const pinned = !comment.pinned_at;
@@ -1587,7 +1609,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         >
           <Icon name="repeat" size={14} /> Repost
         </button>
-        {(canPin || canDelete) && (
+        {(canPin || canDelete || siteMod) && (
           <span className="inline-flex ml-auto">
             <button
               onClick={(e) => {
@@ -1616,6 +1638,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
                   }}
                 >
+                  {siteMod && postMenuItem("star", p.featured_at ? "Remove from home" : "Feature on home", () => toggleFeatured(p))}
                   {canPin && postMenuItem("pin", p.pinned_at ? "Unpin post" : "Pin post", () => togglePostPin(p))}
                   {canDelete && postMenuItem("trash", p.author_id === userId ? "Delete post" : "Remove post (mod)", () => deletePost(p), true)}
                 </div>
@@ -1877,6 +1900,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
       } },
       { icon: "copy", label: "Copy text", run: () => { void navigator.clipboard?.writeText([p.title, p.body].filter(Boolean).join("\n\n")); } },
     ];
+    if (siteMod) items.push({ icon: "star", label: p.featured_at ? "Remove from home" : "Feature on home", run: () => { void toggleFeatured(p); } });
     if (canModerate(p.community_id)) items.push({ icon: "pin", label: p.pinned_at ? "Unpin post" : "Pin post", run: () => { void togglePostPin(p); } });
     if (p.author_id === userId || canModerate(p.community_id)) {
       items.push({ icon: "trash", label: p.author_id === userId ? "Delete post" : "Remove post (mod)", run: () => { void deletePost(p); }, danger: true });

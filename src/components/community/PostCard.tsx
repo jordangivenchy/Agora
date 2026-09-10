@@ -50,6 +50,8 @@ export type PostRow = {
   orig_author_username: string | null;
   orig_author_display_name: string | null;
   pinned_at: string | null;
+  /** When a site moderator put it on the home page's carousel; null when not featured. */
+  featured_at: string | null;
 };
 
 /* Homepage v5 glass: translucent card, blur, hairline border. */

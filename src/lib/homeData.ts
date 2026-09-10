@@ -1,5 +1,5 @@
 /* The home page's first view: the hero's rooms — the busiest live ones,
-   shaped for the carousel — the announcements for its post slides, and
+   shaped for the carousel — the featured posts for its post slides, and
    the signed-in user for the navbar. The route (app/page.tsx) fetches
    it on the server so the page arrives complete; the page refreshes it
    in the browser on realtime changes and every 30s with the same
@@ -13,16 +13,15 @@ export type HomeNavUser = { id: string; name: string; username: string | null; a
 
 export type HomeInitial = {
   heroRooms: HeroRoom[];
-  announcements: HeroPost[];
+  featured: HeroPost[];
   navUser: HomeNavUser | null;
 };
 
-/* The announcements: posts in the site's own board — the Agora board —
-   tagged "Announcement" by a site moderator, pinned ones first, reposts
-   left out. The tag is the board's own (community_tags); the poster
-   picks it in the composer. */
-const ANNOUNCEMENTS_BOARD_ID = "856e4ac6-03f2-4fbc-9b00-3555cdd8211a";
-const ANNOUNCEMENT_TAG = "Announcement";
+/* The featured posts: the ones a site moderator put on the home page
+   ("Feature on home" in a post's menu, any board), newest first, from
+   the last fortnight, reposts left out. Row security keeps a private
+   board's post to its members. */
+const FEATURED_DAYS = 14;
 const HERO_POSTS = 3;
 
 /* A colour that lands in a CSS variable, so only a strict hex value may
@@ -171,16 +170,15 @@ type DevPostRow = {
 };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
-export async function fetchAnnouncements(supabase: SupabaseClient): Promise<HeroPost[]> {
+export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[]> {
+  const since = new Date(Date.now() - FEATURED_DAYS * 86400000).toISOString();
   const { data } = await supabase
     .from("community_posts")
-    .select("id, title, body, image_url, created_at, tag:community_tags!tag_id!inner(name), author:users!author_id!inner(username, display_name, avatar_url), community:communities!community_id(name, color), comments:community_comments(count)")
-    .eq("community_id", ANNOUNCEMENTS_BOARD_ID)
-    .eq("tag.name", ANNOUNCEMENT_TAG)
-    .eq("author.is_moderator", true)
+    .select("id, title, body, image_url, created_at, author:users!author_id(username, display_name, avatar_url), community:communities!community_id(name, color), comments:community_comments(count)")
+    .not("featured_at", "is", null)
+    .gte("featured_at", since)
     .or("is_repost.is.null,is_repost.eq.false")
-    .order("pinned_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
+    .order("featured_at", { ascending: false })
     .limit(HERO_POSTS);
   return ((data ?? []) as unknown as DevPostRow[]).map((p) => {
     const a = one(p.author);
@@ -225,11 +223,11 @@ export async function fetchNavUser(
 /* Everything the route needs, as the viewer (the session's verified
    claims — no auth round trip). */
 export async function fetchHomeInitial(supabase: SupabaseClient): Promise<HomeInitial> {
-  const [{ data: claims }, heroRooms, announcements] = await Promise.all([supabase.auth.getClaims(), fetchHeroRooms(supabase), fetchAnnouncements(supabase)]);
+  const [{ data: claims }, heroRooms, featured] = await Promise.all([supabase.auth.getClaims(), fetchHeroRooms(supabase), fetchFeatured(supabase)]);
   const c = claims?.claims;
   const viewer = c?.sub
     ? { id: c.sub, name: (c.user_metadata as { name?: string } | undefined)?.name ?? null, email: c.email ?? null }
     : null;
   const navUser = await fetchNavUser(supabase, viewer);
-  return { heroRooms, announcements, navUser };
+  return { heroRooms, featured, navUser };
 }
