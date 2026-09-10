@@ -124,93 +124,9 @@ export const MVP_HOME_HTML = `<!-- SVG turbulence filter for liquid glass refrac
 
 </div><!-- /homeFeed -->
 
-<!-- ─── EXPLORE PAGE ─── -->
-<div id="explorePage" style="display:none;">
-
-  <!-- Banner -->
-  <div class="explore-banner">
-    <div class="explore-banner-text">
-      <h1 class="explore-title">Explore discussions</h1>
-      <p class="explore-subtitle">Find a live room, join a queue, or sign up for one coming up</p>
-    </div>
-    <div class="explore-banner-stats">
-      <div class="explore-stat">
-        <span class="explore-stat-val">—</span>
-        <span class="explore-stat-label">Active rooms</span>
-      </div>
-      <div class="explore-stat">
-        <span class="explore-stat-val">—</span>
-        <span class="explore-stat-label">Speakers online</span>
-      </div>
-      <div class="explore-stat">
-        <span class="explore-stat-val">—</span>
-        <span class="explore-stat-label">Watching now</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Search bar -->
-  <div class="explore-search-wrap">
-    <span class="explore-search-icon">${iconSvg("search", 15)}</span>
-    <input id="exploreSearchInput" class="explore-search-input" type="text"
-      placeholder="Search topics, people, or keywords…" autocomplete="off" />
-  </div>
-
-  <!-- Filter bar -->
-  <div class="explore-filter-bar">
-
-    <div class="explore-filter-group">
-      <span class="explore-filter-group-label">Category</span>
-      <div class="explore-filter-pills" id="epCategoryFilter">
-        <button class="explore-pill active" onclick="_epFilter(this,'category')">All</button>
-        <button class="explore-pill" style="--tc:#4a9eff" onclick="_epFilter(this,'category')">${iconSvg("topic-politics-law", 14)}Politics</button>
-        <button class="explore-pill" style="--tc:#00b894" onclick="_epFilter(this,'category')">${iconSvg("topic-economics", 14)}Economics</button>
-        <button class="explore-pill" style="--tc:#00cec9;--ink:#062a29" onclick="_epFilter(this,'category')">${iconSvg("topic-science-tech", 14)}Science &amp; Tech</button>
-        <button class="explore-pill" style="--tc:#fdcb6e;--ink:#1a0e00" onclick="_epFilter(this,'category')">${iconSvg("topic-philosophy", 14)}Philosophy</button>
-        <button class="explore-pill" style="--tc:#1976D2" onclick="_epFilter(this,'category')">${iconSvg("topic-foreign-policy", 14)}Foreign Policy</button>
-        <button class="explore-pill" style="--tc:#e056b8" onclick="_epFilter(this,'category')">${iconSvg("topic-culture", 14)}Culture</button>
-        <button class="explore-pill" style="--tc:#fd9644;--ink:#2a1200" onclick="_epFilter(this,'category')">${iconSvg("topic-sports", 14)}Sports</button>
-        <button class="explore-pill" style="--tc:#9d8fd9" onclick="_epFilter(this,'category')">${iconSvg("scale", 14)}Law</button>
-        <button class="explore-pill" style="--tc:#e0956a;--ink:#2a1200" onclick="_epFilter(this,'category')">${iconSvg("hourglass", 14)}History</button>
-      </div>
-    </div>
-
-    <div class="explore-filter-divider"></div>
-
-    <div class="explore-filter-row">
-
-      <div class="explore-filter-group-inline">
-        <span class="explore-filter-group-label">Status</span>
-        <div class="explore-filter-pills" id="epStatusFilter">
-          <button class="explore-pill active"    onclick="_epFilter(this,'status')">All</button>
-          <button class="explore-pill live-pill" onclick="_epFilter(this,'status')">● Live</button>
-          <button class="explore-pill"           onclick="_epFilter(this,'status')">Queue</button>
-          <button class="explore-pill"           onclick="_epFilter(this,'status')">Scheduled</button>
-        </div>
-      </div>
-
-      <div class="explore-filter-group-inline">
-        <span class="explore-filter-group-label">Language</span>
-        <div class="explore-filter-pills" id="epLangFilter">
-          <button class="explore-pill active" onclick="_epFilter(this,'lang')">Any</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'lang')">EN</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'lang')">ES</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'lang')">FR</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'lang')">ZH</button>
-          <button class="explore-pill"        onclick="_epFilter(this,'lang')">AR</button>
-        </div>
-      </div>
-
-    </div><!-- /explore-filter-row -->
-  </div><!-- /explore-filter-bar -->
-
-  <!-- Results -->
-  <div class="explore-results-wrap">
-    <div class="explore-results-meta" id="epResultsMeta">Showing 0 results</div>
-    <div class="explore-results-grid" id="epResultsGrid"></div>
-  </div>
-
-</div><!-- /explorePage -->
+<!-- ─── EXPLORE PAGE ─── React now (components/ExplorePage.tsx portals in
+     here while Explore is the open section; app/page.tsx hides #homeFeed). -->
+<div id="exploreHost"></div>
 
 </main>
 

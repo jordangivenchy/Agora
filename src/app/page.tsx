@@ -23,7 +23,7 @@ import NewsPage, { topicFor } from "@/components/NewsPage";
 import FeedPage from "@/components/feed/FeedPage";
 import SearchPage, { type SearchKeyHandler } from "@/components/search/SearchPage";
 import useNavbarSearch from "@/components/search/useNavbarSearch";
-import ExploreGrid from "@/components/ExploreGrid";
+import ExplorePage, { type ShellStats } from "@/components/ExplorePage";
 import { MVP_HOME_HTML } from "@/components/mvp-home-html";
 import { displayName } from "@/lib/names";
 import { parseHomeRoute, canonicalPath, pathFor, sectionTitle, setSectionTitle, type HomeRoute } from "@/lib/routes";
@@ -115,6 +115,8 @@ export default function Home() {
   const [mvpPage, setMvpPage] = useState<"home" | "explore">("home");
   const [newsHost, setNewsHost] = useState<HTMLElement | null>(null);
   const [exploreHost, setExploreHost] = useState<HTMLElement | null>(null);
+  /* Live platform figures for the Explore banner, from the data pass below. */
+  const [shellStats, setShellStats] = useState<ShellStats | null>(null);
   const [createPrefill, setCreatePrefill] = useState<{
     motion: string; topic: string; schedule?: boolean;
     communityId?: string; communityName?: string;
@@ -167,7 +169,7 @@ export default function Home() {
     // below the carousel, and the navbar's notification bell slot.
     setFieldsHost(document.getElementById("fieldsSection"));
     setNewsHost(document.getElementById("newsTickerHost"));
-    setExploreHost(document.getElementById("epResultsGrid"));
+    setExploreHost(document.getElementById("exploreHost"));
   }, []);
 
   /* Fetch real rooms + auth + platform stats, expose to the MVP scripts.
@@ -292,6 +294,7 @@ export default function Home() {
           },
         };
         writeNavUser(data.user);
+        setShellStats(data.stats);
         const w = window as unknown as Record<string, unknown>;
         w.__AGORA_DATA__ = data;
         // Live update path: if the MVP engine is already running, push the
@@ -429,10 +432,10 @@ export default function Home() {
     if (main) main.style.display = activeTab && activeTab !== "search" ? "none" : "";
   }, [activeTab, booted]);
 
-  /* Sidebar navigation: React panels for trending/communities/news; the
-     MVP engine's own page switch for home/explore (it exposes both). */
+  /* Sidebar navigation: React panels for trending/communities/news;
+     home and explore are this page's own state (the shell's home feed
+     hides while Explore is up; ExplorePage mounts into #exploreHost). */
   const onSidebarNavigate = useCallback((id: HomeNavId) => {
-    const w = window as unknown as { loadHomePage?: () => void; loadExplorePage?: () => void };
     if (isPanelTab(id)) {
       setActiveTab(id);
       return;
@@ -442,9 +445,11 @@ export default function Home() {
     }
     setActiveTab(null);
     setMvpPage(id);
-    if (id === "explore") w.loadExplorePage?.();
-    else w.loadHomePage?.();
   }, []);
+  useEffect(() => {
+    const feed = document.getElementById("homeFeed");
+    if (feed) feed.style.display = mvpPage === "explore" ? "none" : "";
+  }, [mvpPage]);
 
   /* ── URL routing ──
      Sections live as state on this page; next.config rewrites
@@ -485,7 +490,6 @@ export default function Home() {
   useEffect(() => {
     if (!pendingRoute || appliedSeqRef.current === pendingRoute.seq) return;
     const { route } = pendingRoute;
-    const w = window as unknown as { loadHomePage?: () => void };
     const done = () => {
       appliedSeqRef.current = pendingRoute.seq;
       lastPushedRef.current = window.location.pathname;
@@ -496,22 +500,12 @@ export default function Home() {
           setActiveTab(route.id);
           done();
         } else if (route.id === "explore") {
-          if (!booted) return;
           setActiveTab(null);
           setMvpPage("explore");
           done();
-          /* The MVP engine loads asynchronously after `booted` (three.js,
-             then mvp-home.js); wait for loadExplorePage to exist. */
-          const w2 = window as unknown as { loadExplorePage?: () => void };
-          let tries = 0;
-          const tick = () => {
-            if (typeof w2.loadExplorePage === "function") { w2.loadExplorePage(); return; }
-            if (++tries < 100) setTimeout(tick, 100);
-          };
-          tick();
         } else {
           setActiveTab(null);
-          if (mvpPage !== "home") { setMvpPage("home"); w.loadHomePage?.(); }
+          if (mvpPage !== "home") setMvpPage("home");
           done();
         }
         return;
@@ -776,7 +770,7 @@ export default function Home() {
         </div>
       )}
       <NewsTicker container={newsHost} />
-      <ExploreGrid container={exploreHost} />
+      <ExplorePage container={exploreHost} open={mvpPage === "explore"} stats={shellStats} />
       <TrendingPage open={activeTab === "trending"} onClose={() => setActiveTab(null)} />
       <FeedPage open={activeTab === "feed"} onClose={() => setActiveTab(null)} />
       <SearchPage
