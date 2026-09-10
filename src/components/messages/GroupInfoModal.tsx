@@ -12,6 +12,8 @@ import { displayName } from "@/lib/names";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { YELLOW } from "./DmThread";
 import GroupTile from "./GroupTile";
+import Link from "next/link";
+import { userPath } from "@/lib/urls";
 import {
   GROUP_NAME_MAX,
   errorNote,
@@ -286,13 +288,13 @@ export default function GroupInfoModal({
                       </span>
                     </span>
                     {!isMe && (
-                      <a
-                        href={`/users/${m.username}`}
+                      <Link
+                        href={userPath(m.username)}
                         className="no-underline"
                         style={{ ...pillDark, height: 28, padding: "0 11px", fontSize: 12, textDecoration: "none" }}
                       >
                         Profile
-                      </a>
+                      </Link>
                     )}
                     {iOwn && !isMe && (
                       <button

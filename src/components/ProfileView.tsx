@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pathFor } from "@/lib/routes";
 import { slugify } from "@/lib/communityUrls";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import { roomPath, replayPath, userPath } from "@/lib/urls";
@@ -444,7 +445,7 @@ export default function ProfileView({
     const name = u.display_name?.trim() || `@${u.username}`;
     const showHandle = !!u.display_name?.trim();
     return (
-      <a
+      <Link
         href={userPath(u.username)}
         className="no-underline inline-flex items-center gap-1.5 min-w-0 row-inner-link"
         style={{ color: "#e3e3ea" }}
@@ -452,7 +453,7 @@ export default function ProfileView({
         <UserAvatar size={size} username={u.username} avatarUrl={u.avatar_url ?? null} seed={u.id ?? u.username} />
         <span className="truncate" style={{ fontSize: 12.5, fontWeight: 600 }}>{name}</span>
         {showHandle && <span className="truncate" style={{ color: "#8b8b94", fontSize: 11.5, fontWeight: 400 }}>@{u.username}</span>}
-      </a>
+      </Link>
     );
   };
 
@@ -805,12 +806,12 @@ export default function ProfileView({
                 Also followed by{" "}
                 {profile.mutual_names.map((name, i, arr) => (
                   <span key={name}>
-                    <a
+                    <Link
                       href={userPath(name)}
                       style={{ color: "#c9c9d2", textDecoration: "none", fontWeight: 600 }}
                     >
                       {name}
-                    </a>
+                    </Link>
                     {i < arr.length - 2 ? ", " : i === arr.length - 2 ? " and " : ""}
                   </span>
                 ))}

@@ -41,6 +41,8 @@ import EmojiPicker from "@/components/EmojiPicker";
 import GifPicker, { giphyEnabled } from "@/components/community/GifPicker";
 import { CommunityTile } from "@/components/community/PostCard";
 import { COMMUNITY_KINDS } from "@/components/community/CreateCommunityModal";
+import Link from "next/link";
+import { userPath } from "@/lib/urls";
 
 export interface Dm {
   id: string;
@@ -842,8 +844,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             <Icon name="arrow-left" size={15} />
           </button>
         )}
-        <a
-          href={`/users/${peer.username}`}
+        <Link
+          href={userPath(peer.username)}
           style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, textDecoration: "none" }}
           title="View profile"
         >
@@ -867,7 +869,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               @{peer.username}
             </span>
           </span>
-        </a>
+        </Link>
         {/* Far right: chat options, then the dock's close. */}
         <div ref={optionsRef} style={{ marginLeft: "auto", position: "relative", display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
           <button

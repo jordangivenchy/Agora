@@ -230,8 +230,13 @@ window.__agoraLeave = function () {
   }, 8000);
 };
 // Any same-origin link that will load a whole page (Next's own links
-// call preventDefault and route in place — those are skipped).
-document.addEventListener('click', function (e) {
+// call preventDefault and route in place — those are skipped). On the
+// window, not the document: React handles clicks at the document, and
+// this script runs before React loads, so a document listener here
+// would fire first and see nothing prevented yet — every in-app link
+// would put the splash up over a page that then changes underneath it.
+// Window listeners run after the document's, whoever registered first.
+window.addEventListener('click', function (e) {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
   if (!a || a.target === '_blank' || a.hasAttribute('download')) return;

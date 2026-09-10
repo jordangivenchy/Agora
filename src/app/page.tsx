@@ -7,6 +7,7 @@
    React now, driven by the rooms fetched here. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -109,6 +110,7 @@ export default function Home() {
      explicitly picked Home in the sidebar, "/" stays the browse page for
      the rest of the session. */
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const router = useRouter();
   const [fieldsHost, setFieldsHost] = useState<HTMLElement | null>(null);
   /* Which MVP-rendered page is showing when no React tab is open; the
      sidebar highlights activeTab ?? mvpPage. */
@@ -302,13 +304,11 @@ export default function Home() {
         .eq("id", id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data?.username) {
-            window.__agoraLeave?.();
-            window.location.href = userPath(data.username);
-          }
+          // In place: the profile route's own loading screen covers the fetch.
+          if (data?.username) router.push(userPath(data.username));
         });
     },
-    [supabase]
+    [supabase, router]
   );
 
   // Deep link support: /?profile=<userId> (old "Copy profile link" URLs and

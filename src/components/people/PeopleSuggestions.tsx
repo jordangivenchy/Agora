@@ -11,6 +11,8 @@ import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { sessionUser } from "@/lib/session";
+import Link from "next/link";
+import { userPath } from "@/lib/urls";
 
 export type Suggestion = {
   id: string;
@@ -87,8 +89,8 @@ export function PersonCard({
      them to the bottom as the final guarantee). */
   const name = person.display_name?.trim() || person.username;
   return (
-    <a
-      href={`/@${encodeURIComponent(person.username)}`}
+    <Link
+      href={userPath(person.username)}
       className="no-underline flex flex-col items-center text-center shrink-0"
       style={{
         width: compact ? 140 : 168,
@@ -116,7 +118,7 @@ export function PersonCard({
       <div className="mt-auto" style={{ paddingTop: compact ? 12 : 16 }}>
         <FollowButton userId={person.id} following={following} busy={busy} onToggle={onToggle} small={compact} />
       </div>
-    </a>
+    </Link>
   );
 }
 
