@@ -9,7 +9,8 @@
    the rail brings its own offset class (profile-beside-sidebar /
    replay-beside-sidebar). */
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { endProgress, navigateTo } from "@/lib/progress";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import SiteNavbar from "@/components/SiteNavbar";
@@ -44,25 +45,21 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeId = activeFor(pathname);
   /* A tab tap navigates in place: the frame stays, the content swaps
-     when the route is ready, and the thin bar at the top shows the wait
-     in between (the sidebar's links prefetch, so in production there
-     is rarely one). */
-  const [pending, startTransition] = useTransition();
-  const [target, setTarget] = useState<string | null>(null);
+     when the route is ready, and the bar at the top shows the wait in
+     between (the sidebar's links prefetch, so in production there is
+     rarely one). */
   const go = (id: HomeNavId) => {
     if (id === "home") markHomeChosen();
-    const path = pathFor.section(id);
-    setTarget(path);
-    startTransition(() => { router.push(path); });
+    navigateTo(router, pathFor.section(id));
   };
-  const waiting = pending && target !== null && pathname !== target;
+  /* The address has moved: whatever was navigating has arrived. */
+  useEffect(() => { endProgress(); }, [pathname]);
 
   return (
     <div className="min-h-screen site-chrome" style={{ background: "#000", fontFamily: "'DM Sans', sans-serif" }}>
       <Starfield />
       <SiteNavbar />
       <GlobalActions />
-      {waiting && <div className="sk-progress" aria-hidden="true" />}
 
       {/* Always mounted: the desktop rail at lg+, an off-canvas drawer
           (hamburger-driven) below — never simply gone. */}

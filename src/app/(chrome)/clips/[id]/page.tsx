@@ -24,6 +24,7 @@ import { downloadClip } from "@/lib/clipDownload";
 import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import ClipTile, { formatClipDuration, formatViews, type ClipTileData } from "@/components/clips/ClipTile";
 import { sessionUser } from "@/lib/session";
+import { navigateTo } from "@/lib/progress";
 
 interface ClipRow {
   id: string;
@@ -225,7 +226,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
     return (
       <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "#0a0a0e", color: "#c0c0c8", fontFamily: "'DM Sans', sans-serif" }}>
         <p style={{ margin: 0 }}>This clip doesn&apos;t exist, or its room is private.</p>
-        <button onClick={() => router.push("/")} style={pill("#2f7fe0", "#fff")}>Back to the Agora</button>
+        <button onClick={() => navigateTo(router, "/")} style={pill("#2f7fe0", "#fff")}>Back to the Agora</button>
       </main>
     );
   }

@@ -8,9 +8,9 @@
    inlined in the root layout): the live room's entrance and the home
    page's first-load wait start it from the effect here; the boot
    splash (BootSplash.tsx) starts it before React is even loaded and
-   the effect then leaves it be. Routes inside the chrome show a
-   loading line instead (RouteLoading.tsx): the sky is the site's
-   opening, once a session. It
+   the effect then leaves it be. Inside a session every other wait is
+   the bar at the top (lib/progress.ts): the sky is the site's opening,
+   once a session. It
    never touches React state — the sky is two canvases and the mark's
    arrival is a class on its own node — so it cannot disturb hydration
    of whatever is loading beneath it. */

@@ -14,6 +14,7 @@ import { YELLOW } from "./DmThread";
 import GroupTile from "./GroupTile";
 import Link from "next/link";
 import { userPath } from "@/lib/urls";
+import { progressOnClick } from "@/lib/progress";
 import {
   GROUP_NAME_MAX,
   errorNote,
@@ -288,7 +289,7 @@ export default function GroupInfoModal({
                       </span>
                     </span>
                     {!isMe && (
-                      <Link
+                      <Link onClick={progressOnClick}
                         href={userPath(m.username)}
                         className="no-underline"
                         style={{ ...pillDark, height: 28, padding: "0 11px", fontSize: 12, textDecoration: "none" }}

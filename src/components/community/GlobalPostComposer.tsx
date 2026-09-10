@@ -19,6 +19,7 @@ import { giphyEnabled } from "@/components/community/GifPicker";
 import type { PickerCommunity } from "@/components/community/CommunityPicker";
 import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
 import { sessionUser } from "@/lib/session";
+import { navigateTo } from "@/lib/progress";
 
 export type ComposeClip = { id: string; title: string; duration: string | null };
 export type ComposeRequest = { to?: "profile" | string; clip?: ComposeClip };
@@ -161,7 +162,7 @@ export default function GlobalPostComposer() {
     const onProfile = /^\/(users\/|@)/.test(window.location.pathname);
     close();
     window.dispatchEvent(new CustomEvent("agora:post-created", { detail: { id, communityId: composeCommunity, topicNote } }));
-    if (!onProfile) router.push(pathFor.post(id));
+    if (!onProfile) navigateTo(router, pathFor.post(id));
   }, [req, userId, busy, title, composeCommunity, body, image, gifUrl, tagId, topic, supabase, close, router]);
 
   if (!req) return null;

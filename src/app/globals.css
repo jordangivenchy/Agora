@@ -2255,6 +2255,8 @@ html.reduce-motion .nav-sparkle {
   animation: skTrickle 8s cubic-bezier(.15,.6,.25,1) forwards;
   pointer-events: none;
 }
+/* Done (lib/progress.ts): to the end, then gone. */
+.sk-progress.is-done { animation: none; transform: scaleX(1); opacity: 0; transition: opacity 0.35s ease 0.1s; }
 
 /* ── Loading screen (components/LoadingScreen.tsx) ───────────────────
    A time-lapse of the night sky on two canvases (trails, heads) — a

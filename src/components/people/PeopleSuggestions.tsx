@@ -13,6 +13,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { sessionUser } from "@/lib/session";
 import Link from "next/link";
 import { userPath } from "@/lib/urls";
+import { progressOnClick } from "@/lib/progress";
 
 export type Suggestion = {
   id: string;
@@ -89,7 +90,7 @@ export function PersonCard({
      them to the bottom as the final guarantee). */
   const name = person.display_name?.trim() || person.username;
   return (
-    <Link
+    <Link onClick={progressOnClick}
       href={userPath(person.username)}
       className="no-underline flex flex-col items-center text-center shrink-0"
       style={{

@@ -43,6 +43,7 @@ import { CommunityTile } from "@/components/community/PostCard";
 import { COMMUNITY_KINDS } from "@/components/community/CreateCommunityModal";
 import Link from "next/link";
 import { userPath } from "@/lib/urls";
+import { progressOnClick } from "@/lib/progress";
 
 export interface Dm {
   id: string;
@@ -844,7 +845,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             <Icon name="arrow-left" size={15} />
           </button>
         )}
-        <Link
+        <Link onClick={progressOnClick}
           href={userPath(peer.username)}
           style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, textDecoration: "none" }}
           title="View profile"

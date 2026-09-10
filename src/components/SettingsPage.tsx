@@ -952,7 +952,7 @@ export default function SettingsPage({ initial }: {
 
   /* ── frame ── */
 
-  if (loading) return <RouteLoading label="Opening settings" />;
+  if (loading) return <RouteLoading />;
 
   if (loadError) {
     return (

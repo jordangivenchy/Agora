@@ -17,6 +17,7 @@ import type { SeedNewsItem } from "@/lib/seed-content";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { requestCreate } from "@/components/GlobalActions";
+import { navigateTo } from "@/lib/progress";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -127,7 +128,7 @@ function resetCountdown(): string {
 
 export default function NewsPage({ open = true, onClose, onStartDebate: startDebate }: Props) {
   const router = useRouter();
-  const close = onClose ?? (() => router.push("/"));
+  const close = onClose ?? (() => navigateTo(router, "/"));
   const onStartDebate = startDebate ?? ((motion: string, topic: string) => requestCreate({ motion, topic }));
   const [supabase] = useState(() => createClient());
   // Empty until real news_topics rows exist — no fabricated headlines.
@@ -236,7 +237,7 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
   };
 
   /* Live debates on the platform right now → jump to the Explore live list. */
-  const watchLive = () => { router.push("/explore"); };
+  const watchLive = () => { navigateTo(router, "/explore"); };
 
   useEffect(() => {
     if (!open) return;

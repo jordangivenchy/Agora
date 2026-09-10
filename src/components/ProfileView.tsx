@@ -32,6 +32,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
 import { TagChip } from "@/components/community/PostCard";
 import { sessionUser } from "@/lib/session";
+import { navigateTo, progressOnClick } from "@/lib/progress";
 
 /* Profile and DebateRow: lib/profileData.ts. */
 
@@ -446,7 +447,7 @@ export default function ProfileView({
     const name = u.display_name?.trim() || `@${u.username}`;
     const showHandle = !!u.display_name?.trim();
     return (
-      <Link
+      <Link onClick={progressOnClick}
         href={userPath(u.username)}
         className="no-underline inline-flex items-center gap-1.5 min-w-0 row-inner-link"
         style={{ color: "#e3e3ea" }}
@@ -579,7 +580,7 @@ export default function ProfileView({
   }
 
   if (!profile) {
-    if (!embedded) return <RouteLoading label="Opening the profile" />;
+    if (!embedded) return <RouteLoading />;
     return (
       <div className="h-full py-24 flex items-center justify-center">
         <LoadingLine label="Loading the profile" />
@@ -807,7 +808,7 @@ export default function ProfileView({
                 Also followed by{" "}
                 {profile.mutual_names.map((name, i, arr) => (
                   <span key={name}>
-                    <Link
+                    <Link onClick={progressOnClick}
                       href={userPath(name)}
                       style={{ color: "#c9c9d2", textDecoration: "none", fontWeight: 600 }}
                     >
@@ -1529,7 +1530,7 @@ export default function ProfileView({
           setListMode(null);
           (async () => {
             const { data } = await supabase.from("users").select("username").eq("id", id).maybeSingle();
-            if (data?.username) router.push(userPath(data.username));
+            if (data?.username) navigateTo(router, userPath(data.username));
           })();
         }}
       />

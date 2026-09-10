@@ -16,6 +16,7 @@ import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
+import { navigateTo } from "@/lib/progress";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -76,7 +77,7 @@ const card: React.CSSProperties = {
 
 export default function TrendingPage({ open = true, onClose }: Props) {
   const router = useRouter();
-  const close = onClose ?? (() => router.push("/"));
+  const close = onClose ?? (() => navigateTo(router, "/"));
   const [supabase] = useState(() => createClient());
   const [rooms, setRooms] = useState<GridRoom[]>([]);
   const [dbClips, setDbClips] = useState<Clip[]>([]);

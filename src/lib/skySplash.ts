@@ -184,15 +184,16 @@ window.__agoraSky = function (trails, heads, center, o) {
 };
 
 /* Leaving for a full page load inside a session: the thin bar at the
-   top of the page until the next document takes over. */
+   top of the page until the next document takes over (the same bar as
+   lib/progress.ts uses for in-place navigation). */
 window.__agoraLeave = function () {
-  if (document.querySelector('.sk-progress[data-leave]')) return;
+  if (document.querySelector('.sk-progress[data-nav]:not(.is-done)')) return;
   var bar = document.createElement('div');
   bar.className = 'sk-progress';
-  bar.setAttribute('data-leave', '1');
+  bar.setAttribute('data-nav', '1');
   bar.setAttribute('aria-hidden', 'true');
   document.body.appendChild(bar);
-  setTimeout(function () { bar.remove(); }, 8000);
+  setTimeout(function () { if (bar.isConnected) bar.remove(); }, 10000);
 };
 // Any same-origin link that will load a whole page (Next's own links
 // call preventDefault and route in place — those are skipped). On the

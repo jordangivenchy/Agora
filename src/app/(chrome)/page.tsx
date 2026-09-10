@@ -16,7 +16,7 @@ import { HOME_COOKIE } from "@/lib/homeChoice";
 import { isHomeSection, pathFor } from "@/lib/routes";
 import { userPath } from "@/lib/urls";
 import HomePage from "@/components/HomePage";
-import { LoadingLine } from "@/components/LoadingScreen";
+import RouteLoading from "@/components/RouteLoading";
 
 type Params = Record<string, string | string[] | undefined>;
 const first = (sp: Params, key: string): string | null => {
@@ -52,18 +52,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Par
     }
   }
 
-  /* While the first view streams: the column with a loading line, not a
-     curtain — the chrome is up around it, and a tab tap back to Home
-     should feel like a tab tap. (A full load has the boot splash over
+  /* While the first view streams: the bar at the top, not a curtain —
+     the chrome is up around it, and a tab tap back to Home should feel
+     like a tab tap. (The session's first load has the boot splash over
      all of this anyway.) */
   return (
-    <Suspense
-      fallback={
-        <main className="main" style={{ marginTop: 0 }}>
-          <LoadingLine label="Loading" />
-        </main>
-      }
-    >
+    <Suspense fallback={<RouteLoading />}>
       <HomeData />
     </Suspense>
   );

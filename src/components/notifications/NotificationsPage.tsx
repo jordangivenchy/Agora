@@ -19,6 +19,7 @@ import {
   type NotifFilter, type NotifRow,
 } from "@/lib/notifications";
 import { sessionUser } from "@/lib/session";
+import { navigateTo, progressOnClick } from "@/lib/progress";
 
 const PAGE = NOTIF_PAGE;
 
@@ -130,7 +131,7 @@ export default function NotificationsPage({ initial }: {
         setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
         supabase.rpc("mark_notification_read", { p_id: n.id });
       }
-      if (href) router.push(href);
+      if (href) navigateTo(router, href);
     },
     [supabase, router]
   );
@@ -158,7 +159,7 @@ export default function NotificationsPage({ initial }: {
           style={{ minHeight: "60vh", fontFamily: "'DM Sans', sans-serif" }}
         >
           <p className="m-0" style={{ color: "#8b8b94" }}>Sign in to see your notifications.</p>
-          <Link href="/login" style={{ color: "#9cc4f0", fontSize: 14 }}>Sign in →</Link>
+          <Link onClick={progressOnClick} href="/login" style={{ color: "#9cc4f0", fontSize: 14 }}>Sign in →</Link>
         </main>
       </>
     );
@@ -173,7 +174,7 @@ export default function NotificationsPage({ initial }: {
             <p className="m-0 mt-1 text-[12.5px]" style={{ color: "#8b8b94" }}>
               {unread > 0 ? `${unread} unread` : "You're all caught up"}
               {" · "}
-              <Link href="/settings" style={{ color: "#9cc4f0", textDecoration: "none" }}>Preferences</Link>
+              <Link onClick={progressOnClick} href="/settings" style={{ color: "#9cc4f0", textDecoration: "none" }}>Preferences</Link>
             </p>
           </div>
           <button

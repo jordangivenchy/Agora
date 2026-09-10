@@ -21,6 +21,7 @@ import { pathFor } from "@/lib/routes";
 import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import { userPath } from "@/lib/urls";
 import { sessionUser } from "@/lib/session";
+import { navigateTo } from "@/lib/progress";
 
 const SearchPage = dynamic(() => import("@/components/search/SearchPage"), { ssr: false });
 
@@ -107,11 +108,11 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
   const pinSearch = (query: string) => {
     if (pinned) { router.replace(pathFor.search(query)); return; }
     navSearch.closePanel();
-    router.push(pathFor.search(query));
+    navigateTo(router, pathFor.search(query));
   };
   const closeSearch = useCallback(() => {
     navSearch.closePanel();
-    if (pinned) router.push("/");
+    if (pinned) navigateTo(router, "/");
   }, [navSearch, pinned, router]);
   useEffect(() => { closeSearchRef.current = closeSearch; }, [closeSearch]);
   useEffect(() => {
@@ -148,7 +149,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
           e.preventDefault();
           markHomeChosen();
           if (onLogo) onLogo();
-          else router.push("/");
+          else navigateTo(router, "/");
         }}
       >
         {/* Inline height is the pre-CSS fallback; the stylesheet's
@@ -172,7 +173,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
           type="button"
           aria-label="Create"
           onClick={(e) => {
-            if (!user) { router.push("/login"); return; }
+            if (!user) { navigateTo(router, "/login"); return; }
             const r = e.currentTarget.getBoundingClientRect();
             window.dispatchEvent(new CustomEvent("agora:create-menu", { detail: { top: r.bottom, right: window.innerWidth - r.right } }));
           }}
@@ -190,8 +191,8 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
         </a>
         {user === null && (
           <>
-            <button className="btn-ghost" onClick={() => router.push("/login")}>Log in</button>
-            <button className="btn-signup" onClick={() => router.push("/login")}>Sign up</button>
+            <button className="btn-ghost" onClick={() => navigateTo(router, "/login")}>Log in</button>
+            <button className="btn-signup" onClick={() => navigateTo(router, "/login")}>Sign up</button>
           </>
         )}
         {user && (
@@ -201,7 +202,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
               id="nav-messages-btn"
               type="button"
               aria-label="Messages"
-              onClick={() => router.push("/messages")}
+              onClick={() => navigateTo(router, "/messages")}
             >
               <Icon name="message-circle" size={16} />
             </button>
@@ -235,7 +236,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
                   className="avatar-menu-item"
                   href={userPath(user.username)}
                   role="menuitem"
-                  onClick={(e) => { e.preventDefault(); setMenuOpen(false); router.push(userPath(user.username)); }}
+                  onClick={(e) => { e.preventDefault(); setMenuOpen(false); navigateTo(router, userPath(user.username)); }}
                 >
                   <span className="avatar-menu-icon"><Icon name="user" size={14} /></span>Profile
                 </a>
@@ -243,7 +244,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
                   className="avatar-menu-item"
                   href="/settings"
                   role="menuitem"
-                  onClick={(e) => { e.preventDefault(); setMenuOpen(false); router.push("/settings"); }}
+                  onClick={(e) => { e.preventDefault(); setMenuOpen(false); navigateTo(router, "/settings"); }}
                 >
                   <span className="avatar-menu-icon"><Icon name="settings" size={14} /></span>Settings
                 </a>

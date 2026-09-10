@@ -128,7 +128,7 @@ export default function ModPage({ initial }: {
     }
   }
 
-  if (!checked) return <RouteLoading label="Opening the mod tools" />;
+  if (!checked) return <RouteLoading />;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-primary, #0a0a0c)", fontFamily: "'DM Sans', sans-serif" }}>

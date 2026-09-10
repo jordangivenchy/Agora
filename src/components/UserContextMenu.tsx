@@ -15,6 +15,7 @@ import ProfileView from "./ProfileView";
 import { userPath } from "@/lib/urls";
 import { useRouter } from "next/navigation";
 import { displayName } from "@/lib/names";
+import { navigateTo } from "@/lib/progress";
 
 export { useUserMenu } from "./userMenuContext";
 export type { MenuRoomContext, MenuChatContext, OpenMenuOptions } from "./userMenuContext";
@@ -177,7 +178,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
       case "view_profile": {
         const inRoom = /^\/(agora|rooms)\//.test(window.location.pathname);
         if (inRoom) setDrawerUsername(target.username);
-        else router.push(userPath(target.username)); // in place: the app stays loaded
+        else navigateTo(router, userPath(target.username)); // in place: the app stays loaded
         break;
       }
 

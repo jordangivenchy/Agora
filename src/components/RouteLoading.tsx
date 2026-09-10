@@ -1,13 +1,17 @@
-/* What a route shows while its first view is on its way, inside the
-   chrome: a loading line in the content area, never a curtain. The sky
-   is the site's opening (BootSplash) and the live room's entrance. */
+"use client";
 
-import { LoadingLine } from "@/components/LoadingScreen";
+/* A wait with nothing to show yet: the bar at the top for as long as
+   this is mounted (lib/progress.ts). Used by pages that fetch after
+   mounting — settings, the mod tools, an unseeded profile — and by the
+   home route while its first view streams on a client-side arrival. */
 
-export default function RouteLoading({ label = "Loading" }: { label?: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "72px 24px" }}>
-      <LoadingLine label={label} />
-    </div>
-  );
+import { useEffect } from "react";
+import { endProgress, startProgress } from "@/lib/progress";
+
+export default function RouteLoading() {
+  useEffect(() => {
+    startProgress();
+    return () => endProgress();
+  }, []);
+  return null;
 }

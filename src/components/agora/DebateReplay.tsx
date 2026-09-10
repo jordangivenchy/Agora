@@ -22,6 +22,7 @@ import UserAvatar from "@/components/UserAvatar";
 import ReplayPlayer from "./ReplayPlayer";
 import "./debate-replay.css";
 import { sessionUser } from "@/lib/session";
+import { navigateTo } from "@/lib/progress";
 
 type Person = {
   id: string;
@@ -448,11 +449,11 @@ export default function DebateReplay({
   const openDiscussion = async () => {
     if (!room) return;
     if (room.discussion_post_id) {
-      router.push(pathFor.post(room.discussion_post_id));
+      navigateTo(router, pathFor.post(room.discussion_post_id));
       return;
     }
     if (!signedIn) {
-      router.push(`/login?next=${encodeURIComponent(roomPath({ id: room.id, motion: room.motion }))}`);
+      navigateTo(router, `/login?next=${encodeURIComponent(roomPath({ id: room.id, motion: room.motion }))}`);
       return;
     }
     setDiscussBusy(true);
@@ -463,7 +464,7 @@ export default function DebateReplay({
       setToast("Couldn't open the discussion — try again in a moment.");
       return;
     }
-    router.push(pathFor.post(data as string));
+    navigateTo(router, pathFor.post(data as string));
   };
 
   /* ── Inline comments (YouTube-style, under the VOD) ────────────────
@@ -478,7 +479,7 @@ export default function DebateReplay({
     const text = commentDraft.trim();
     if (!text) return;
     if (!signedIn) {
-      router.push(`/login?next=${encodeURIComponent(roomPath({ id: room.id, motion: room.motion }))}`);
+      navigateTo(router, `/login?next=${encodeURIComponent(roomPath({ id: room.id, motion: room.motion }))}`);
       return;
     }
     setCommentBusy(true);
@@ -567,7 +568,7 @@ export default function DebateReplay({
           <div className="dr-empty" style={{ paddingTop: 80 }}>
             This discussion isn&apos;t available.
             <div style={{ marginTop: 16 }}>
-              <button className="dr-btn" onClick={() => router.push("/")}>
+              <button className="dr-btn" onClick={() => navigateTo(router, "/")}>
                 ← Back to home
               </button>
             </div>

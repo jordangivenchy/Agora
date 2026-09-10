@@ -37,6 +37,7 @@ import { TOPICS } from "@/types/database";
 import TopicIcon from "@/components/topicIcons";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
+import { navigateTo } from "@/lib/progress";
 
 export type SearchKeyHandler = (e: KeyboardEvent, value: string) => boolean | void;
 
@@ -402,14 +403,14 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
     if (userId) await supabase.from("search_history").delete().eq("user_id", userId).eq("query", q);
   };
 
-  const openPost = (id: string, commentId?: string | null) => { onClose(); router.push(pathFor.post(id, commentId)); };
+  const openPost = (id: string, commentId?: string | null) => { onClose(); navigateTo(router, pathFor.post(id, commentId)); };
 
   const openSuggest = useCallback((s: Suggest) => {
     // A person: the profile route, in place — the app stays loaded and the
     // route's own loading screen covers the fetch. (A room is a full load:
     // the live room sets itself up from scratch, like the room cards.)
-    if (s.kind === "person") { onClose(); router.push(s.href_hint || userPath(s.label.replace(/^@/, ""))); return; }
-    if (s.kind === "community") { onClose(); router.push(pathFor.community(s.id)); return; }
+    if (s.kind === "person") { onClose(); navigateTo(router, s.href_hint || userPath(s.label.replace(/^@/, ""))); return; }
+    if (s.kind === "community") { onClose(); navigateTo(router, pathFor.community(s.id)); return; }
     window.location.href = roomPath({ id: s.id, motion: s.label });
   }, [onClose, router]);
 
@@ -502,7 +503,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
             onOpen={(x) => openPost(x.id)}
             onVote={vote}
             showCommunity
-            onOpenCommunity={() => { onClose(); router.push(pathFor.community(null)); }}
+            onOpenCommunity={() => { onClose(); navigateTo(router, pathFor.community(null)); }}
             author={authorChip(p.author_id, p.author_username, p.author_display_name, p.author_avatar_url)}
             communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }}
             embed={<RepostEmbed post={p} onOpenOriginal={openPost} />}
@@ -537,7 +538,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
       }
       case "community": {
         const c = r.payload;
-        const go = () => { onClose(); router.push(pathFor.community(c.id)); };
+        const go = () => { onClose(); navigateTo(router, pathFor.community(c.id)); };
         return (
           <div
             key={r.id}

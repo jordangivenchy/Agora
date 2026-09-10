@@ -22,6 +22,7 @@ import { markHomeChosen } from "@/lib/homeChoice";
 import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
 import CreateCommunityModal from "@/components/community/CreateCommunityModal";
+import { navigateTo } from "@/lib/progress";
 
 /** What agora:create may carry. */
 export type CreatePrefill = {
@@ -84,7 +85,7 @@ export default function GlobalActions() {
       .select("username")
       .eq("id", id)
       .maybeSingle()
-      .then(({ data }) => { if (data?.username) router.push(userPath(data.username)); });
+      .then(({ data }) => { if (data?.username) navigateTo(router, userPath(data.username)); });
   }, [supabase, router]);
 
   useEffect(() => {
@@ -104,9 +105,9 @@ export default function GlobalActions() {
       const tab = (e as CustomEvent).detail;
       if (typeof tab !== "string" || tab === "close") return;
       // The old Topics tab: the dropdowns live on the home feed.
-      if (tab === "battle") { markHomeChosen(); router.push("/#topics"); return; }
+      if (tab === "battle") { markHomeChosen(); navigateTo(router, "/#topics"); return; }
       if (tab === "home") markHomeChosen();
-      if (isHomeSection(tab)) router.push(pathFor.section(tab));
+      if (isHomeSection(tab)) navigateTo(router, pathFor.section(tab));
     };
     const onLogout = async () => {
       writeNavUser(null);
@@ -162,7 +163,7 @@ export default function GlobalActions() {
         onCreated={(c) => {
           /* Land in the new board. Its route mounts the boards page with a
              fresh list; a boards page already up refreshes on the event. */
-          router.push(pathFor.community(c.id));
+          navigateTo(router, pathFor.community(c.id));
           window.setTimeout(() => {
             document.dispatchEvent(new CustomEvent("agora:open-community", { detail: { communityId: c.id, refresh: true } }));
           }, 80);

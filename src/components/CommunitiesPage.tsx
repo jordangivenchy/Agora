@@ -50,6 +50,7 @@ import PostComposer, { POST_BODY_MAX } from "./community/PostComposer";
 import { sessionUser } from "@/lib/session";
 import { usePathname, useRouter } from "next/navigation";
 import { requestCreate } from "@/components/GlobalActions";
+import { navigateTo } from "@/lib/progress";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -223,7 +224,7 @@ function fmtWhen(iso: string | null): string {
 export default function CommunitiesPage({ open = true, onClose, onStartDiscussion: startDiscussion }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const close = onClose ?? (() => router.push("/"));
+  const close = onClose ?? (() => navigateTo(router, "/"));
   const onStartDiscussion = startDiscussion ?? ((communityId: string, communityName: string) => requestCreate({ motion: "", topic: "", communityId, communityName }));
   const { openUserMenu } = useUserMenu();
 
