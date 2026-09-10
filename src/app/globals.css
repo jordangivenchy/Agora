@@ -2267,7 +2267,7 @@ html.reduce-motion .nav-sparkle {
   background: radial-gradient(ellipse at center, rgba(0,0,0,0.92), rgba(0,0,0,0.7) 42%, transparent 70%);
 }
 /* The AS mark: the A of "Agora" and the S of "Sphere", cut straight
-   from the wordmark (public/as-mark.png, 446×202). */
+   from the wordmark (public/as-mark.png, 426×202). */
 .ld-mark { height: 28px; width: auto; display: block; }
 .ld-label {
   margin: 14px 0 0; font-size: 12.5px; letter-spacing: 0.04em; color: #9aa0ac;

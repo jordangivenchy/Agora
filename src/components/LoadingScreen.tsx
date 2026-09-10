@@ -37,7 +37,7 @@ export default function LoadingScreen({ label }: { label?: string }) {
       <div ref={centerRef} className="ld-center" suppressHydrationWarning>
         {/* The A and the S, cut from the wordmark (public/as-mark.png). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/as-mark.png" alt="AgoraSphere" className="ld-mark" width={446} height={202} />
+        <img src="/as-mark.png" alt="AgoraSphere" className="ld-mark" width={426} height={202} />
         {label && (
           <p className="ld-label">
             {label}
