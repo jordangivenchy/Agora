@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
-import { pathFor, setSectionTitle, sectionTitle } from "@/lib/routes";
+import { pathFor, releaseSectionTitle, setSectionTitle, sectionTitle } from "@/lib/routes";
 import { userPath, roomPath } from "@/lib/urls";
 import { highlightSegments, excerptAround } from "@/lib/highlight";
 import RoomCard, { type RoomCardRoom } from "@/components/RoomCard";
@@ -146,12 +146,6 @@ const sectionLabel: React.CSSProperties = {
   margin: "0 0 8px",
 };
 
-/** Navigate inside the homepage shell (page.tsx re-parses on popstate). */
-function shellNavigate(path: string) {
-  window.history.pushState(null, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 /** Query terms wrapped in <mark>. */
 export function Highlight({ text, query }: { text: string; query: string }) {
   const segs = useMemo(() => highlightSegments(text, query), [text, query]);
@@ -230,6 +224,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
 
   useEffect(() => {
     if (open && pinned) setSectionTitle(sectionTitle("search"));
+    return () => { if (pinned) releaseSectionTitle(); };
   }, [open, pinned]);
 
   /* Auth + recent searches (DB history when signed in, localStorage otherwise). */
@@ -407,14 +402,14 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
     if (userId) await supabase.from("search_history").delete().eq("user_id", userId).eq("query", q);
   };
 
-  const openPost = (id: string, commentId?: string | null) => { onClose(); shellNavigate(pathFor.post(id, commentId)); };
+  const openPost = (id: string, commentId?: string | null) => { onClose(); router.push(pathFor.post(id, commentId)); };
 
   const openSuggest = useCallback((s: Suggest) => {
     // A person: the profile route, in place — the app stays loaded and the
     // route's own loading screen covers the fetch. (A room is a full load:
     // the live room sets itself up from scratch, like the room cards.)
     if (s.kind === "person") { onClose(); router.push(s.href_hint || userPath(s.label.replace(/^@/, ""))); return; }
-    if (s.kind === "community") { onClose(); shellNavigate(pathFor.community(s.id)); return; }
+    if (s.kind === "community") { onClose(); router.push(pathFor.community(s.id)); return; }
     window.location.href = roomPath({ id: s.id, motion: s.label });
   }, [onClose, router]);
 
@@ -507,7 +502,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
             onOpen={(x) => openPost(x.id)}
             onVote={vote}
             showCommunity
-            onOpenCommunity={() => { onClose(); shellNavigate(pathFor.community(null)); }}
+            onOpenCommunity={() => { onClose(); router.push(pathFor.community(null)); }}
             author={authorChip(p.author_id, p.author_username, p.author_display_name, p.author_avatar_url)}
             communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }}
             embed={<RepostEmbed post={p} onOpenOriginal={openPost} />}
@@ -542,7 +537,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
       }
       case "community": {
         const c = r.payload;
-        const go = () => { onClose(); shellNavigate(pathFor.community(c.id)); };
+        const go = () => { onClose(); router.push(pathFor.community(c.id)); };
         return (
           <div
             key={r.id}

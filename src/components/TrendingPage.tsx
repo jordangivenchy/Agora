@@ -15,10 +15,13 @@ import { replayPath } from "@/lib/urls";
 import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
 import { sessionUser } from "@/lib/session";
+import { useRouter } from "next/navigation";
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
+  /** Always open as a route; false only when hosted as an overlay. */
+  open?: boolean;
+  /** Leaving the page; by default, home. */
+  onClose?: () => void;
 }
 
 type Clip = SeedClip & {
@@ -71,7 +74,9 @@ const card: React.CSSProperties = {
   borderRadius: 12,
 };
 
-export default function TrendingPage({ open, onClose }: Props) {
+export default function TrendingPage({ open = true, onClose }: Props) {
+  const router = useRouter();
+  const close = onClose ?? (() => router.push("/"));
   const [supabase] = useState(() => createClient());
   const [rooms, setRooms] = useState<GridRoom[]>([]);
   const [dbClips, setDbClips] = useState<Clip[]>([]);
@@ -151,7 +156,7 @@ export default function TrendingPage({ open, onClose }: Props) {
     if (open) load();
   }, [open, load]);
 
-  useEscapeClose(open, () => (activeShort ? setActiveShort(null) : onClose()));
+  useEscapeClose(open, () => (activeShort ? setActiveShort(null) : close()));
 
   const toggleHeart = useCallback((id: string) => {
     setHearted((h) => ({ ...h, [id]: !h[id] }));

@@ -1,17 +1,13 @@
 "use client";
 
-/* The Explore page, React (phase 2 of retiring the home shell's
-   scripts): the banner with live platform figures, the search box, the
-   category / status / language pills and the results as the homepage's
-   RoomCard blocks. It portals into the shell's #exploreHost so it sits
-   where the shell's own explore markup used to, beside the rail, and
-   mounts only while Explore is the open section (the entrance fade is
-   the #explorePage animation in mvp-home.css). The rooms are fetched
-   here and filtered in React; the figures come from the page's own data
-   pass (app/page.tsx). */
+/* The Explore page (/explore): the banner with live platform figures,
+   the search box, the category / status / language pills and the
+   results as the homepage's RoomCard blocks, in the home shell's look
+   (mvp-home.css: the #explorePage entrance fade, the .main column its
+   route wraps it in). The rooms are fetched here and filtered in React;
+   the figures come with the route (app/explore/page.tsx). */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { TOPICS } from "@/types/database";
 import { Icon, type IconName } from "@/components/icons";
@@ -69,11 +65,7 @@ function CountUp({ value }: { value: number }) {
   );
 }
 
-export default function ExplorePage({ container, open, stats }: {
-  container: HTMLElement | null;
-  open: boolean;
-  stats: ShellStats | null;
-}) {
+export default function ExplorePage({ stats }: { stats: ShellStats | null }) {
   const [supabase] = useState(() => createClient());
   const [rooms, setRooms] = useState<Room[] | null>(null);
   const [query, setQuery] = useState("");
@@ -84,7 +76,6 @@ export default function ExplorePage({ container, open, stats }: {
 
   /* The same room shape the homepage blocks use. */
   useEffect(() => {
-    if (!open) return;
     let alive = true;
     supabase
       .from("debate_rooms")
@@ -94,7 +85,7 @@ export default function ExplorePage({ container, open, stats }: {
       .then(({ data }) => { if (alive) setRooms((data ?? []) as unknown as Room[]); });
     const t = window.setTimeout(() => inputRef.current?.focus(), 60);
     return () => { alive = false; clearTimeout(t); };
-  }, [open, supabase]);
+  }, [supabase]);
 
   const topicLabel = useMemo(() => new Map<string, string>(TOPICS.map((t) => [t.key, t.label])), []);
   const list = useMemo(() => {
@@ -113,15 +104,13 @@ export default function ExplorePage({ container, open, stats }: {
     });
   }, [rooms, query, cat, status, lang, topicLabel]);
 
-  if (!open || !container) return null;
-
   const pill = (key: string, active: boolean, onClick: () => void, label: React.ReactNode, style?: React.CSSProperties, extra = "") => (
     <button key={key} type="button" className={`explore-pill${active ? " active" : ""}${extra ? ` ${extra}` : ""}`} style={style} onClick={onClick}>
       {label}
     </button>
   );
 
-  return createPortal(
+  return (
     <div id="explorePage">
       <div className="explore-banner">
         <div className="explore-banner-text">
@@ -205,7 +194,6 @@ export default function ExplorePage({ container, open, stats }: {
           ))}
         </div>
       </div>
-    </div>,
-    container,
+    </div>
   );
 }

@@ -8,9 +8,10 @@
    opens in place on every route; the home shell wires the box itself
    (ownSearch={false}). */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { markHomeChosen } from "@/lib/homeChoice";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import NotificationsBell from "@/components/NotificationsBell";
@@ -38,6 +39,9 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
   ownSearch?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  /* /search?q=…: the panel pinned as a page, opened on the address's query. */
+  const pinned = ownSearch && pathname === "/search";
   const [supabase] = useState(() => createClient());
   /* The same typeahead search panel the homepage has: the hook binds
      the navbar box (#searchInput) and drives SearchPage, so search opens
@@ -50,7 +54,6 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
     onCloseRequest: () => closeSearchRef.current(),
     enabled: ownSearch,
   });
-  useEffect(() => { closeSearchRef.current = navSearch.closePanel; }, [navSearch.closePanel]);
   /* undefined = still resolving (render neither auth state to avoid a
      Log in flash for signed-in users). */
   const [user, setUser] = useState<NavUser | null | undefined>(undefined);
@@ -102,9 +105,23 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
   }, [menuOpen]);
 
   const pinSearch = (query: string) => {
+    if (pinned) { router.replace(pathFor.search(query)); return; }
     navSearch.closePanel();
     router.push(pathFor.search(query));
   };
+  const closeSearch = useCallback(() => {
+    navSearch.closePanel();
+    if (pinned) router.push("/");
+  }, [navSearch, pinned, router]);
+  useEffect(() => { closeSearchRef.current = closeSearch; }, [closeSearch]);
+  useEffect(() => {
+    if (!pinned) return;
+    let q = "";
+    try { q = new URLSearchParams(window.location.search).get("q") ?? ""; } catch {}
+    navSearch.setQuery(q);
+    navSearch.openPanel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinned]);
 
   /* See-through at the top of the page and solid once scrolled
      (mvp-home.css .nav:not(.is-scrolled)); toggled on the element so
@@ -129,6 +146,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
         aria-label="AgoraSphere"
         onClick={(e) => {
           e.preventDefault();
+          markHomeChosen();
           if (onLogo) onLogo();
           else router.push("/");
         }}
@@ -260,11 +278,11 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
     </nav>
     {ownSearch && (
       <SearchPage
-        open={navSearch.open}
-        pinned={false}
+        open={navSearch.open || pinned}
+        pinned={pinned}
         query={navSearch.query}
         setQuery={navSearch.setQuery}
-        onClose={navSearch.closePanel}
+        onClose={closeSearch}
         onPin={pinSearch}
         keyHandlerRef={searchKeyRef}
       />

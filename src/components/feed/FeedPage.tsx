@@ -25,10 +25,13 @@ import PeopleSuggestions from "@/components/people/PeopleSuggestions";
 import FeedRail from "@/components/feed/FeedRail";
 import { useUserMenu } from "@/components/userMenuContext";
 import { sessionUser } from "@/lib/session";
+import { useRouter } from "next/navigation";
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
+  /** Always open as a route; false only when hosted as an overlay. */
+  open?: boolean;
+  /** Leaving the page; by default, home. */
+  onClose?: () => void;
 }
 
 type Filter = "all" | "following" | "communities" | "popular";
@@ -80,13 +83,6 @@ const btnGhost: React.CSSProperties = {
   fontFamily: "inherit",
 };
 
-/** Navigate inside the homepage shell: push the path and let page.tsx
-    re-parse it (its popstate listener reads window.location). */
-function shellNavigate(path: string) {
-  window.history.pushState(null, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 function whenLabel(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -105,7 +101,9 @@ function Reason({ text }: { text: string }) {
   );
 }
 
-export default function FeedPage({ open, onClose }: Props) {
+export default function FeedPage({ open = true, onClose }: Props) {
+  const router = useRouter();
+  const close = onClose ?? (() => router.push("/"));
   const [supabase] = useState(() => createClient());
   const { openUserMenu } = useUserMenu();
   const [userId, setUserId] = useState<string | null | undefined>(undefined);
@@ -120,7 +118,7 @@ export default function FeedPage({ open, onClose }: Props) {
   const [suggestionCount, setSuggestionCount] = useState<number | null>(null);
   const loadSeq = useRef(0);
 
-  useEscapeClose(open, onClose);
+  useEscapeClose(open, close);
 
   /* Persisted filter choice. */
   useEffect(() => {
@@ -242,7 +240,7 @@ export default function FeedPage({ open, onClose }: Props) {
       </span>
     ) : <>{label ?? authorLabel(dn, username)}</>;
 
-  const openPost = (id: string) => shellNavigate(pathFor.post(id));
+  const openPost = (id: string) => router.push(pathFor.post(id));
 
   if (!open) return null;
 
@@ -258,7 +256,7 @@ export default function FeedPage({ open, onClose }: Props) {
           onOpen={(x) => openPost(x.id)}
           onVote={vote}
           showCommunity
-          onOpenCommunity={() => shellNavigate(pathFor.community(null))}
+          onOpenCommunity={() => router.push(pathFor.community(null))}
           author={authorChip(p.author_id, p.author_username, p.author_display_name, null, undefined, false)}
           communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }}
           reason={it.reason}
@@ -363,7 +361,7 @@ export default function FeedPage({ open, onClose }: Props) {
           key={it.item_id}
           className="px-4 py-3 mb-3 cursor-pointer"
           style={card}
-          onClick={() => shellNavigate(pathFor.post(c.post_id, c.id))}
+          onClick={() => router.push(pathFor.post(c.post_id, c.id))}
         >
           <Reason text={it.reason} />
           <p className="m-0 text-[11.5px] flex items-center gap-1.5 flex-wrap" style={{ color: "rgba(238,238,245,0.6)" }}>
@@ -493,7 +491,7 @@ export default function FeedPage({ open, onClose }: Props) {
                 )}
                 <a
                   href={pathFor.community(null)}
-                  onClick={(e) => { e.preventDefault(); shellNavigate(pathFor.community(null)); }}
+                  onClick={(e) => { e.preventDefault(); router.push(pathFor.community(null)); }}
                   className="inline-block mt-3 no-underline text-[12px] px-4 py-2 rounded-lg"
                   style={btnGhost}
                 >

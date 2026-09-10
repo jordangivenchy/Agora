@@ -13,15 +13,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
-  /* Shareable URLs for the homepage shell's sections. The browser keeps
-     the pretty path; page.tsx reads window.location to open the section.
-     Keep in step with REWRITTEN_SOURCES in src/lib/routes.ts. */
-  async rewrites() {
-    return [
-      "/feed", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
-      "/posts/:id", "/search",
-    ].map((source) => ({ source, destination: "/" }));
-  },
 };
 
 export default nextConfig;

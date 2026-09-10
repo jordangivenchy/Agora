@@ -16,7 +16,7 @@ import { openPostComposer } from "@/components/community/GlobalPostComposer";
 
 type Anchor = { top: number; right: number };
 
-const onHomeShell = () => typeof document !== "undefined" && !!document.getElementById("createModal");
+/* The modals are mounted by the chrome on every route (GlobalActions.tsx). */
 
 const ITEMS: { icon: IconName; label: string; hint: string; run: () => void }[] = [
   {
@@ -24,8 +24,7 @@ const ITEMS: { icon: IconName; label: string; hint: string; run: () => void }[] 
     label: "Create a Discussion",
     hint: "Open a live room now or schedule one",
     run: () => {
-      if (onHomeShell()) window.dispatchEvent(new CustomEvent("agora:create"));
-      else window.location.href = "/?create=1";
+      window.dispatchEvent(new CustomEvent("agora:create"));
     },
   },
   {
@@ -39,8 +38,7 @@ const ITEMS: { icon: IconName; label: string; hint: string; run: () => void }[] 
     label: "New community",
     hint: "A board for a school, team or topic",
     run: () => {
-      if (onHomeShell()) window.dispatchEvent(new CustomEvent("agora:create-community"));
-      else window.location.href = "/?create=community";
+      window.dispatchEvent(new CustomEvent("agora:create-community"));
     },
   },
 ];

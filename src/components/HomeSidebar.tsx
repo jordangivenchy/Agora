@@ -18,6 +18,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import FriendsSection from "@/components/friends/FriendsSection";
 import { Icon } from "@/components/icons";
+import { pathFor } from "@/lib/routes";
 import "./home-sidebar.css";
 
 export type HomeNavId = "home" | "feed" | "trending" | "explore" | "communities" | "news";
@@ -209,7 +210,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
               <a
                 key={item.id}
                 className={`sidebar-link${activeId === item.id ? " active" : ""}`}
-                href="#"
+                href={pathFor.section(item.id)}
                 data-page={item.page}
                 data-nav-id={item.id}
                 onClick={(e) => {

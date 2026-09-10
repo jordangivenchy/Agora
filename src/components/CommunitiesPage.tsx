@@ -30,7 +30,7 @@ import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import CreateCommunityModal from "@/components/community/CreateCommunityModal";
 import { getPresenceSnapshot, subscribePresence } from "@/lib/presence";
 import { communitySlug, findCommunityBySlug } from "@/lib/communityUrls";
-import { pathFor, setSectionTitle } from "@/lib/routes";
+import { pathFor, releaseSectionTitle, setSectionTitle } from "@/lib/routes";
 import { BansPanel, ModLogPanel } from "./community/ModerationPanels";
 import GifPicker, { giphyEnabled } from "./community/GifPicker";
 import EmojiPicker from "./EmojiPicker";
@@ -48,12 +48,17 @@ import ActionSheet, { type SheetItem } from "./community/ActionSheet";
 import { createLongPress } from "@/lib/longPress";
 import PostComposer, { POST_BODY_MAX } from "./community/PostComposer";
 import { sessionUser } from "@/lib/session";
+import { usePathname, useRouter } from "next/navigation";
+import { requestCreate } from "@/components/GlobalActions";
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
+  /** Always open as a route; false only when hosted as an overlay. */
+  open?: boolean;
+  /** Leaving the page; by default, home. */
+  onClose?: () => void;
   /* Open the room-create modal linked to a community — starts live by
-     default; scheduling stays available inside the modal. */
+     default; scheduling stays available inside the modal. By default the
+     site-wide create modal. */
   onStartDiscussion?: (communityId: string, communityName: string) => void;
 }
 
@@ -215,7 +220,11 @@ function fmtWhen(iso: string | null): string {
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Props) {
+export default function CommunitiesPage({ open = true, onClose, onStartDiscussion: startDiscussion }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const close = onClose ?? (() => router.push("/"));
+  const onStartDiscussion = startDiscussion ?? ((communityId: string, communityName: string) => requestCreate({ motion: "", topic: "", communityId, communityName }));
   const { openUserMenu } = useUserMenu();
 
   /* Author label → unified user context menu (needs an id; system posts skip
@@ -810,32 +819,11 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
         if (detail?.refresh) void loadCommunitiesRef.current?.();
       }
     };
-    /* URL routes from page.tsx (/communities/<slug>, /posts/<id>): the
-       slug resolves against the loaded list below; posts reuse the
-       pending-post flow. */
-    const onRoute = (e: Event) => {
-      const r = (e as CustomEvent).detail as
-        | { kind: "community"; slug: string }
-        | { kind: "post"; id: string; commentId: string | null };
-      if (r?.kind === "community") {
-        setPendingPostId(null);
-        setPendingCommentId(null);
-        setOpenPost(null);
-        setPendingSlug(r.slug);
-      } else if (r?.kind === "post") {
-        setPendingSlug(null);
-        setOpenPost(null);
-        setPendingPostId(r.id);
-        setPendingCommentId(r.commentId ?? null);
-      }
-    };
     document.addEventListener("agora:open-post", onOpen);
     document.addEventListener("agora:open-community", onOpenCommunity);
-    document.addEventListener("agora:route", onRoute);
     return () => {
       document.removeEventListener("agora:open-post", onOpen);
       document.removeEventListener("agora:open-community", onOpenCommunity);
-      document.removeEventListener("agora:route", onRoute);
     };
   }, []);
   useEffect(() => {
@@ -850,8 +838,10 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
      state (page.tsx re-parses the URL and dispatches agora:route) never
      adds duplicate entries. Skipped while a route is still resolving. */
   const lastPushedRef = useRef<string | null>(null);
+  const routeReadRef = useRef(false); // the address has been read once (below)
   useEffect(() => {
     if (!open) { lastPushedRef.current = null; return; }
+    if (!routeReadRef.current) return; // the address is read first (below)
     if (pendingSlug || pendingPostId || resolvingPostRef.current) return;
     const board = selected === "all" ? null : communities.find((c) => c.id === selected) ?? null;
     const desired = openPost
@@ -874,6 +864,39 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selected, openPost, communities, pendingSlug, pendingPostId, routeTick]);
+  useEffect(() => () => releaseSectionTitle(), []);
+
+  /* The address is the route: /communities, /communities/<slug> and
+     /posts/<id>[#comment-<id>] (also ?comment=). Read on arrival and
+     whenever the router moves it — Back, a link elsewhere; a path this
+     page pushed itself is already showing. The slug resolves against
+     the loaded list above; posts reuse the pending-post flow. */
+  useEffect(() => {
+    if (!open || !pathname) return;
+    if (routeReadRef.current && pathname === lastPushedRef.current) return;
+    const seg = pathname.replace(/\/+$/, "").split("/").filter(Boolean).map((x) => {
+      try { return decodeURIComponent(x); } catch { return x; }
+    });
+    routeReadRef.current = true;
+    queueMicrotask(() => {
+      if (seg[0] === "posts" && seg[1]) {
+        let comment: string | null = /^#comment-(.+)$/.exec(window.location.hash)?.[1] ?? null;
+        if (!comment) { try { comment = new URLSearchParams(window.location.search).get("comment"); } catch {} }
+        setPendingSlug(null);
+        setOpenPost(null);
+        setPendingPostId(seg[1]);
+        setPendingCommentId(comment);
+      } else if (seg[0] === "communities") {
+        setPendingPostId(null);
+        setPendingCommentId(null);
+        setOpenPost(null);
+        if (seg[1]) setPendingSlug(seg[1]);
+        else { setPendingSlug(null); setSelected("all"); }
+      }
+      setRouteTick((t) => t + 1);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pathname]);
   useEffect(() => {
     if (!open || !pendingPostId || loadingPosts) return;
     const hit = posts.find((p) => p.id === pendingPostId);
@@ -897,7 +920,7 @@ export default function CommunitiesPage({ open, onClose, onStartDiscussion }: Pr
     })();
   }, [open, pendingPostId, loadingPosts, posts, openPostDetail, fetchAvatars, supabase]);
 
-  useEscapeClose(open, () => (repostFor ? setRepostFor(null) : openPost ? closePostDetail() : onClose()));
+  useEscapeClose(open, () => (repostFor ? setRepostFor(null) : openPost ? closePostDetail() : close()));
 
   /* ── actions ── */
 

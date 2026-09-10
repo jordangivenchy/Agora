@@ -15,11 +15,16 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { setPresenceQueued } from "@/lib/presence";
 import type { SeedNewsItem } from "@/lib/seed-content";
 import { sessionUser } from "@/lib/session";
+import { useRouter } from "next/navigation";
+import { requestCreate } from "@/components/GlobalActions";
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
-  onStartDebate: (motion: string, topicKey: string) => void;
+  /** Always open as a route; false only when hosted as an overlay. */
+  open?: boolean;
+  /** Leaving the page; by default, home. */
+  onClose?: () => void;
+  /** "Discuss this": by default, the site-wide create modal. */
+  onStartDebate?: (motion: string, topicKey: string) => void;
 }
 
 const card: React.CSSProperties = {
@@ -120,7 +125,10 @@ function resetCountdown(): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-export default function NewsPage({ open, onClose, onStartDebate }: Props) {
+export default function NewsPage({ open = true, onClose, onStartDebate: startDebate }: Props) {
+  const router = useRouter();
+  const close = onClose ?? (() => router.push("/"));
+  const onStartDebate = startDebate ?? ((motion: string, topic: string) => requestCreate({ motion, topic }));
   const [supabase] = useState(() => createClient());
   // Empty until real news_topics rows exist — no fabricated headlines.
   const [items, setItems] = useState<SeedNewsItem[]>([]);
@@ -228,10 +236,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
   };
 
   /* Live debates on the platform right now → jump to the Explore live list. */
-  const watchLive = () => {
-    onClose();
-    (document.querySelector('[data-nav-id="explore"]') as HTMLElement | null)?.click();
-  };
+  const watchLive = () => { router.push("/explore"); };
 
   useEffect(() => {
     if (!open) return;
@@ -280,7 +285,7 @@ export default function NewsPage({ open, onClose, onStartDebate }: Props) {
     })();
   }, [open, supabase]);
 
-  useEscapeClose(open, onClose);
+  useEscapeClose(open, close);
 
   const pct = useMemo(() => {
     if (!daily) return { pro: 50, total: 0 };

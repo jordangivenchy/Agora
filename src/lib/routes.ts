@@ -1,18 +1,9 @@
-/* Shareable URLs for sections that are state on the homepage shell.
-   next.config rewrites every path here to "/"; page.tsx reads the browser
-   pathname to pick the section, and pushes these paths as the user moves. */
+/* The app's paths, in one place. Every section is a route of its own
+   (app/feed, app/trending, app/news, app/explore, app/search, and the
+   boards under app/(boards)); the sidebar and the pages build their
+   links from here. */
 
 export type HomeSection = "home" | "feed" | "explore" | "trending" | "communities" | "news" | "search";
-
-export type HomeRoute =
-  | { kind: "section"; id: HomeSection }
-  /* /search?q=… — the query rides along so the panel can open on it. */
-  | { kind: "search"; q: string }
-  | { kind: "community"; slug: string }
-  | { kind: "post"; id: string; commentId: string | null }
-  /* Legacy /?dm=<userId>: resolved to /messages/<username> (a real
-     route since the dedicated messages page) in page.tsx. */
-  | { kind: "dm-user"; userId: string };
 
 export const pathFor = {
   section(id: HomeSection): string {
@@ -36,71 +27,10 @@ export const pathFor = {
   },
 };
 
-/* Rewrites are declared in next.config.ts; keep the two lists in step.
-   (/messages is a REAL route now — not rewritten to the home shell.) */
-export const REWRITTEN_SOURCES = [
-  "/feed", "/trending", "/news", "/explore", "/communities", "/communities/:slug",
-  "/posts/:id", "/search",
-];
-
 const SECTIONS: HomeSection[] = ["home", "feed", "explore", "trending", "communities", "news", "search"];
 
 export function isHomeSection(s: string): s is HomeSection {
   return (SECTIONS as string[]).includes(s);
-}
-
-/** Parse a location into a route. `legacy` is true when the route came
-    from an old query-param form and the URL should be canonicalised. */
-export function parseHomeRoute(
-  pathname: string,
-  search: string,
-  hash: string
-): { route: HomeRoute; legacy: boolean } {
-  const seg = pathname.replace(/\/+$/, "").split("/").filter(Boolean).map((s) => {
-    try { return decodeURIComponent(s); } catch { return s; }
-  });
-  const hashComment = /^#comment-(.+)$/.exec(hash)?.[1] ?? null;
-  const params = new URLSearchParams(search);
-
-  if (seg.length >= 1) {
-    if (seg[0] === "posts" && seg[1]) {
-      return {
-        route: { kind: "post", id: seg[1], commentId: hashComment ?? params.get("comment") },
-        legacy: false,
-      };
-    }
-    if (seg[0] === "communities") {
-      return {
-        route: seg[1] ? { kind: "community", slug: seg[1] } : { kind: "section", id: "communities" },
-        legacy: false,
-      };
-    }
-    if (seg.length === 1 && seg[0] === "search") {
-      return { route: { kind: "search", q: (params.get("q") ?? "").trim() }, legacy: false };
-    }
-    if (seg.length === 1 && isHomeSection(seg[0])) {
-      return { route: { kind: "section", id: seg[0] }, legacy: false };
-    }
-  }
-
-  const post = params.get("post");
-  if (post) return { route: { kind: "post", id: post, commentId: hashComment ?? params.get("comment") }, legacy: true };
-  const dm = params.get("dm");
-  if (dm) return { route: { kind: "dm-user", userId: dm }, legacy: true };
-  const nav = params.get("nav");
-  if (nav && isHomeSection(nav)) return { route: { kind: "section", id: nav }, legacy: true };
-
-  return { route: { kind: "section", id: "home" }, legacy: false };
-}
-
-export function canonicalPath(route: HomeRoute): string | null {
-  switch (route.kind) {
-    case "section": return pathFor.section(route.id);
-    case "community": return pathFor.community(route.slug);
-    case "post": return pathFor.post(route.id, route.commentId);
-    case "search": return pathFor.search(route.q);
-    case "dm-user": return null;
-  }
 }
 
 export function sectionTitle(id: HomeSection): string {
@@ -122,6 +52,10 @@ export function sectionTitle(id: HomeSection): string {
    else. One observer per document. */
 let desiredTitle: string | null = null;
 let titleObserver: MutationObserver | null = null;
+/** The page that pinned a title has left: the next route's own title stands. */
+export function releaseSectionTitle(): void {
+  desiredTitle = null;
+}
 export function setSectionTitle(title: string): void {
   if (typeof document === "undefined") return;
   desiredTitle = title;
