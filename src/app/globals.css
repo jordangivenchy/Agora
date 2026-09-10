@@ -2533,8 +2533,13 @@ html.reduce-motion .nav-sparkle {
     bottom: 0;
     height: calc(58px + env(safe-area-inset-bottom));
     padding: 0 10px env(safe-area-inset-bottom);
-    background: transparent;
+    /* See-through, but what scrolls under it dissolves: a soft blur with
+       a faint dark wash, so the stars still show and the page's text
+       doesn't sit behind the tab icons. */
+    background: rgba(6, 6, 9, 0.32);
     border-top: none;
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
     z-index: 120;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
