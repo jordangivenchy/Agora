@@ -260,13 +260,23 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
     }
   }, [place, snap]);
 
-  const stopAuto = useCallback(() => { window.clearInterval(autoTimer.current); autoTimer.current = 0; }, []);
+  /* Autoplay dwells on each slide for as long as it takes to read: a
+     story's summary in nine seconds, a notice from the team in fifteen. */
+  const SLIDE_MS = 9000, NOTICE_MS = 15000;
+  const slidesRef = useRef(slides);
+  useLayoutEffect(() => { slidesRef.current = slides; }, [slides]);
+  const dwell = useCallback(() => (slidesRef.current[curRef.current]?.kind === "post" ? NOTICE_MS : SLIDE_MS), []);
+  const stopAuto = useCallback(() => { window.clearTimeout(autoTimer.current); autoTimer.current = 0; }, []);
   const startAuto = useCallback(() => {
     stopAuto();
     if (nRef.current < 2) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; // the reader moves the strip
-    autoTimer.current = window.setInterval(() => goTo(curRef.current + 1), 9000); // long enough to read a summary
-  }, [goTo, stopAuto]);
+    const tick = () => {
+      goTo(curRef.current + 1);
+      autoTimer.current = window.setTimeout(tick, dwell());
+    };
+    autoTimer.current = window.setTimeout(tick, dwell());
+  }, [goTo, stopAuto, dwell]);
   useEffect(() => { startAuto(); return stopAuto; }, [N, startAuto, stopAuto]);
 
   /* A new set of slides, or the strip's first appearance (the host
