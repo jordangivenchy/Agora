@@ -70,8 +70,10 @@ export type HeroPost = {
   title: string;
   /** The opening paragraph, as plain text. */
   excerpt: string;
-  /** The post's first list — its heading and each item's lead — for the notice's side column. */
-  highlights: { heading: string | null; items: string[] } | null;
+  /** The post's first list — its heading, each item's lead and detail — for the notice's side column. */
+  highlights: { heading: string | null; items: { lead: string; detail: string }[] } | null;
+  /** The paragraph after that list, with its heading. */
+  more: { heading: string | null; text: string } | null;
   imageUrl: string | null;
   createdAt: string;
   author: string;
@@ -531,12 +533,13 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
   );
 }
 
-/* A featured post as a notice from the site: the mark and "From the
-   AgoraSphere team" with the date, the title, a yellow rule, the post's
-   opening paragraph, "Read more" and the post's facts. At the right on
-   wide screens: the post's picture framed, or, when the post carries a
-   list, that list's heading and leads as highlights. Phones open it on
-   tap. */
+/* A featured post as a notice from the site, "From the team" with the
+   date: the title, a yellow rule, the post's opening paragraph, the
+   paragraph after its list under that paragraph's heading, and "Read
+   more" with the post's facts. At the right on wide screens: the
+   post's picture framed, or, when the post carries a list, that list —
+   heading, each item's lead and its detail. Phones show the opening
+   and the leads in a line, and open the post on tap. */
 function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, onTap }: {
   post: HeroPost;
   i: number;
@@ -559,20 +562,27 @@ function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, o
       <div className="notice-wrap">
         <div className="notice-text">
           <div className="notice-kicker">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/as-mark.png" alt="" aria-hidden="true" />
-            <span>From the AgoraSphere team</span>
+            <span>From the team</span>
             <span className="notice-date">{noticeDate(p.createdAt)}</span>
           </div>
           <h3 className="notice-title">{p.title}</h3>
           <div className="notice-rule" aria-hidden="true" />
           {p.excerpt && <p className="notice-body">{p.excerpt}</p>}
+          {p.more && (
+            <div className="notice-more">
+              {p.more.heading && <div className="notice-more-head">{p.more.heading}</div>}
+              <p>{p.more.text}</p>
+            </div>
+          )}
+          {p.highlights && !image && (
+            <div className="notice-leads">{p.highlights.items.map((it) => it.lead).join(" · ")}</div>
+          )}
           <div className="notice-foot">
             <button type="button" className="notice-read" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
               Read more
             </button>
             <span className="notice-meta">
-              <b>{p.commentCount}</b> comment{p.commentCount === 1 ? "" : "s"} · <b>{p.board}</b> · @{p.author}
+              <b>{p.commentCount}</b> comment{p.commentCount === 1 ? "" : "s"} · <b>{p.board}</b>
             </span>
           </div>
         </div>
@@ -585,7 +595,9 @@ function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, o
           <div className="notice-highlights">
             {p.highlights.heading && <div className="notice-highlights-head">{p.highlights.heading}</div>}
             <ul>
-              {p.highlights.items.map((it) => <li key={it}>{it}</li>)}
+              {p.highlights.items.map((it) => (
+                <li key={it.lead}><b>{it.lead}</b>{it.detail && <span> — {it.detail}</span>}</li>
+              ))}
             </ul>
           </div>
         )}

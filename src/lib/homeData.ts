@@ -158,34 +158,53 @@ function cutAtWord(text: string, max: number): string {
 }
 
 /* The notice's copy from a post: its opening paragraph (the first block
-   that is neither a heading nor a list), and — when the post goes on to
-   a list — that list's heading and the lead of each item, for the
-   slide's highlights column. Lists written with a blank line between
-   items count as one list. */
-export type NoticeHighlights = { heading: string | null; items: string[] };
-function noticeCopy(md: string, max = 320): { excerpt: string; highlights: NoticeHighlights | null } {
+   that is neither a heading nor a list); when the post goes on to a
+   list, that list's heading and each item's lead with the rest of the
+   item as its detail; and the paragraph after the list with its heading,
+   if there is one. Lists written with a blank line between items count
+   as one list. */
+export type NoticeItem = { lead: string; detail: string };
+export type NoticeHighlights = { heading: string | null; items: NoticeItem[] };
+export type NoticeMore = { heading: string | null; text: string };
+function noticeCopy(md: string): { excerpt: string; highlights: NoticeHighlights | null; more: NoticeMore | null } {
   const blocks = md.replace(/\r/g, "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
   const isItem = (line: string) => /^([-*+]|\d+\.)\s+/.test(line);
   const isList = (b: string) => b.split("\n").map((l) => l.trim()).filter(Boolean).every(isItem);
   const isHeading = (b: string) => /^#{1,6}\s/.test(b) || (!b.includes("\n") && b.length <= 60 && !/[.!?]$/.test(b));
   const opening = blocks.find((b) => !isList(b) && !isHeading(b)) ?? blocks[0] ?? "";
-  const items: string[] = [];
+  const raw: string[] = [];
   let heading: string | null = null;
+  let after = -1;
   for (let i = 0; i < blocks.length; i++) {
     if (isList(blocks[i])) {
-      if (!items.length && i > 0 && isHeading(blocks[i - 1])) heading = plain(blocks[i - 1]);
+      if (!raw.length && i > 0 && isHeading(blocks[i - 1])) heading = plain(blocks[i - 1]);
       for (const line of blocks[i].split("\n")) {
         const t = line.trim();
-        if (isItem(t)) items.push(t.replace(/^([-*+]|\d+\.)\s+/, ""));
+        if (isItem(t)) raw.push(t.replace(/^([-*+]|\d+\.)\s+/, ""));
       }
-    } else if (items.length) break;
+      after = i + 1;
+    } else if (raw.length) break;
   }
-  const leads = items
-    .map((t) => plain(t).split(/[.!?:]\s|\s[—–-]\s/)[0].replace(/[.:!?]+$/, "").trim())
-    .filter(Boolean)
-    .map((t) => (t.length > 40 ? t.slice(0, 39).trimEnd() + "…" : t))
-    .slice(0, 4);
-  return { excerpt: cutAtWord(plain(opening), max), highlights: leads.length >= 2 ? { heading, items: leads } : null };
+  const items = raw
+    .map((t): NoticeItem => {
+      const text = plain(t);
+      const m = /[.!?:]\s|\s[—–-]\s/.exec(text);
+      const lead = (m ? text.slice(0, m.index) : text).replace(/[.:!?]+$/, "").trim();
+      const detail = m ? text.slice(m.index + m[0].length).trim() : "";
+      return { lead: lead.length > 40 ? lead.slice(0, 39).trimEnd() + "…" : lead, detail: cutAtWord(detail, 110) };
+    })
+    .filter((it) => it.lead)
+    .slice(0, 5);
+  let more: NoticeMore | null = null;
+  if (after > 0) {
+    for (let i = after; i < blocks.length; i++) {
+      if (isList(blocks[i]) || isHeading(blocks[i])) continue;
+      const h = i > after && isHeading(blocks[i - 1]) ? plain(blocks[i - 1]) : null;
+      more = { heading: h, text: cutAtWord(plain(blocks[i]), 220) };
+      break;
+    }
+  }
+  return { excerpt: cutAtWord(plain(opening), 320), highlights: items.length >= 2 ? { heading, items } : null, more };
 }
 
 type Person = { username: string | null; display_name: string | null; avatar_url: string | null };
@@ -221,6 +240,7 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[
       title: p.title,
       excerpt: copy.excerpt,
       highlights: copy.highlights,
+      more: copy.more,
       imageUrl: typeof p.image_url === "string" && /^https:\/\//.test(p.image_url) ? p.image_url : null,
       createdAt: p.created_at,
       author: a?.username ?? "agorasphere",
