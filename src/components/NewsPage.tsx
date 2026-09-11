@@ -18,6 +18,7 @@ import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { requestCreate } from "@/components/GlobalActions";
 import { navigateTo } from "@/lib/progress";
+import { outletIcon } from "@/lib/outlets";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -80,7 +81,7 @@ function Outlets({ sources, max = 3 }: { sources: Source[]; max?: number }) {
           {src.domain && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(src.domain)}&sz=32`}
+              src={outletIcon(src.domain)}
               alt=""
               width={12}
               height={12}

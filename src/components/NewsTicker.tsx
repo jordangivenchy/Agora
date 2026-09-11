@@ -11,6 +11,7 @@
    Content is rendered twice for a seamless loop. */
 
 import { useEffect, useRef } from "react";
+import { outletIcon } from "@/lib/outlets";
 
 export type TickerStory = {
   id: string;
@@ -115,7 +116,7 @@ export default function NewsTicker({ stories }: { stories: TickerStory[] }) {
                 >
                   {src.domain && (
                     <img
-                      src={`https://www.google.com/s2/favicons?domain=${src.domain}&sz=32`}
+                      src={outletIcon(src.domain)}
                       alt=""
                       width={13}
                       height={13}

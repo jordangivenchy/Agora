@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { navigateTo } from "@/lib/progress";
 import { pathFor } from "@/lib/routes";
+import { outletIcon } from "@/lib/outlets";
 import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
@@ -111,7 +112,7 @@ const NEWS_GRADIENTS = [
 ];
 
 const chip = (accent: string) => ({ "--chip": accent } as CSSProperties);
-const favicon = (domain: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+const favicon = (domain: string) => outletIcon(domain);
 const initial = (name: string) => (name || "?").charAt(0).toUpperCase();
 
 /* " now", " for 12m", " for 2h 5m" — after the panel's "Live". */
