@@ -18,7 +18,6 @@ import { createClient } from "@/lib/supabase-browser";
 import { sessionUser } from "@/lib/session";
 import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import { isHomeSection, pathFor } from "@/lib/routes";
-import { markHomeChosen } from "@/lib/homeChoice";
 import { userPath } from "@/lib/urls";
 import CreateRoomModal from "@/components/CreateRoomModal";
 import CreateCommunityModal from "@/components/community/CreateCommunityModal";
@@ -105,8 +104,7 @@ export default function GlobalActions() {
       const tab = (e as CustomEvent).detail;
       if (typeof tab !== "string" || tab === "close") return;
       // The old Topics tab: the dropdowns live on the home feed.
-      if (tab === "battle") { markHomeChosen(); navigateTo(router, "/#topics"); return; }
-      if (tab === "home") markHomeChosen();
+      if (tab === "battle") { navigateTo(router, "/#topics"); return; }
       if (isHomeSection(tab)) navigateTo(router, pathFor.section(tab));
     };
     const onLogout = async () => {

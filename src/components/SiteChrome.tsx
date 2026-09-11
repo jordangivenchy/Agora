@@ -15,7 +15,6 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import SiteNavbar from "@/components/SiteNavbar";
 import GlobalActions from "@/components/GlobalActions";
-import { markHomeChosen } from "@/lib/homeChoice";
 import { pathFor } from "@/lib/routes";
 import type { HomeNavId } from "@/components/HomeSidebar";
 /* Statically, not via the sidebar's dynamic chunk: the navbar renders on
@@ -49,7 +48,6 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
      between (the sidebar's links prefetch, so in production there is
      rarely one). */
   const go = (id: HomeNavId) => {
-    if (id === "home") markHomeChosen();
     navigateTo(router, pathFor.section(id));
   };
   /* The address has moved: whatever was navigating has arrived. */

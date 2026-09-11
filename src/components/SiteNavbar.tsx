@@ -11,7 +11,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
-import { markHomeChosen } from "@/lib/homeChoice";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import NotificationsBell from "@/components/NotificationsBell";
@@ -147,7 +146,6 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
         aria-label="AgoraSphere"
         onClick={(e) => {
           e.preventDefault();
-          markHomeChosen();
           if (onLogo) onLogo();
           else navigateTo(router, "/");
         }}
