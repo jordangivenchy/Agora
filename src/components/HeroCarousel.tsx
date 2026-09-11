@@ -31,6 +31,8 @@ import { useRouter } from "next/navigation";
 import { navigateTo } from "@/lib/progress";
 import { pathFor } from "@/lib/routes";
 import { outletIcon } from "@/lib/outlets";
+import { expandQueue, openQueue, useQueue } from "@/lib/queue";
+import { topicFor } from "@/components/NewsPage";
 import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
@@ -90,7 +92,6 @@ type Slide =
   | { kind: "post"; key: string; post: HeroPost }
   | { kind: "news"; key: string; story: NewsStory; gradient: string };
 
-type QueueState = { state: string; message?: string };
 
 /* The shell's topic chips: its keys (the page maps the database's
    `ethics` to `politics-ethics`) with its labels and accents. */
@@ -149,7 +150,6 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
   const router = useRouter();
   const [news, setNews] = useState<NewsStory[]>([]);
   const [ticker, setTicker] = useState<TickerStory[]>([]);
-  const [queue, setQueue] = useState<Record<string, QueueState>>({});
   const [broken, setBroken] = useState<Record<string, true>>({});
   const [phone, setPhone] = useState(false);
   const [cur, setCur] = useState(0);
@@ -191,16 +191,6 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
   }, []);
 
   /* The page answers a queue request with the button's state. */
-  useEffect(() => {
-    const on = (e: Event) => {
-      const d = (e as CustomEvent).detail as { headline?: string; state?: string; message?: string } | undefined;
-      if (!d?.headline) return;
-      const headline = d.headline;
-      setQueue((q) => ({ ...q, [headline]: { state: d.state ?? "idle", message: d.message } }));
-    };
-    window.addEventListener("agora:hero-queue-state", on);
-    return () => window.removeEventListener("agora:hero-queue-state", on);
-  }, []);
 
   /* Rooms, featured posts and stories take turns: room, post, story… */
   const slides = useMemo<Slide[]>(() => {
@@ -434,7 +424,6 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
         i={i}
         total={N}
         phone={phone}
-        queue={queue[s.headline]}
         image={s.imageUrl && !broken[`img:${s.id}`] ? s.imageUrl : null}
         onImageBroken={() => markBroken(`img:${s.id}`)}
         onTap={tapOpen(s.id)}
@@ -624,25 +613,22 @@ function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, o
 /* A news story: headline over its image and the outlets reporting it;
    the side panel lists the coverage, the summary, "Read at" and the
    queue button. */
-function NewsSlide({ story: c, gradient, i, total, phone, queue, image, onImageBroken, onTap }: {
+function NewsSlide({ story: c, gradient, i, total, phone, image, onImageBroken, onTap }: {
   story: NewsStory;
   gradient: string;
   i: number;
   total: number;
   phone: boolean;
-  queue: QueueState | undefined;
   image: string | null;
   onImageBroken: () => void;
   onTap: (e: ReactMouseEvent) => void;
 }) {
   const sources: Source[] = c.sources ?? [];
   const hasUrl = !!(c.url && /^https:\/\//.test(c.url));
-  const state = queue?.state;
-  const queueLabel =
-    state === "busy" ? "…"
-    : state === "queued" ? "In queue — tap to leave"
-    : state === "error" ? (queue?.message || "Couldn’t queue — try again")
-    : "Queue a discussion";
+  /* The queue panel (lib/queue.ts) owns the queue: this button opens
+     it with the headline, or brings it back up once in line. */
+  const inQueue = useQueue().entries.some((e) => e.question === c.headline);
+  const queueLabel = inQueue ? "In queue — open the panel" : "Queue a discussion";
   return (
     <div
       className="carousel-item news"
@@ -691,13 +677,11 @@ function NewsSlide({ story: c, gradient, i, total, phone, queue, image, onImageB
         )}
         <button
           type="button"
-          className={`carousel-watch-btn carousel-queue-btn${state === "queued" ? " queued" : ""}`}
+          className={`carousel-watch-btn carousel-queue-btn${inQueue ? " queued" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
-            if (state === "busy") return;
-            window.dispatchEvent(new CustomEvent("agora:queue-headline", {
-              detail: { headline: c.headline, category: c.category || "", url: c.url || "" },
-            }));
+            if (inQueue) expandQueue();
+            else openQueue({ id: null, question: c.headline, topicKey: topicFor(c.category || null), queueCount: 0, sourceUrl: c.url || null });
           }}
         >
           {queueLabel}

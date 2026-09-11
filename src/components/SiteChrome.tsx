@@ -15,6 +15,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import SiteNavbar from "@/components/SiteNavbar";
 import GlobalActions from "@/components/GlobalActions";
+import QueueDock from "@/components/QueueDock";
 import { pathFor } from "@/lib/routes";
 import type { HomeNavId } from "@/components/HomeSidebar";
 /* Statically, not via the sidebar's dynamic chunk: the navbar renders on
@@ -58,6 +59,7 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
       <Starfield />
       <SiteNavbar />
       <GlobalActions />
+      <QueueDock />
 
       {/* Always mounted: the desktop rail at lg+, an off-canvas drawer
           (hamburger-driven) below — never simply gone. */}

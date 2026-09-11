@@ -7,13 +7,14 @@
    check_topic_match, same stanceless flow as the Browse board), and
    Upcoming (rooms you set reminders for). */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
 import { roomPath, userPath } from "@/lib/urls";
 import { progressOnClick } from "@/lib/progress";
+import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
 
 interface LiveRoom {
   id: string;
@@ -72,8 +73,6 @@ export default function FeedRail({ userId }: { userId: string | null }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   const [topics, setTopics] = useState<RailTopic[]>([]);
-  const [queued, setQueued] = useState<Set<string>>(new Set());
-  const [queueBusy, setQueueBusy] = useState<string | null>(null);
   const [upcoming, setUpcoming] = useState<Upcoming[]>([]);
 
   const loadLive = useCallback(async () => {
@@ -112,7 +111,6 @@ export default function FeedRail({ userId }: { userId: string | null }) {
         }
       }
       setTopics(picked.slice(0, 3));
-      setQueued(new Set(rows.filter((r) => r.am_queued).map((r) => r.id)));
     });
 
     if (userId) supabase
@@ -133,39 +131,13 @@ export default function FeedRail({ userId }: { userId: string | null }) {
     return () => { alive = false; clearInterval(t); };
   }, [supabase, userId, loadLive]);
 
-  /* Stanceless queue: same flow as the Browse board — the poll jumps
-     straight into the room on a match. */
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const ensurePoll = useCallback(() => {
-    if (pollRef.current) return;
-    pollRef.current = setInterval(async () => {
-      const { data: roomId } = await supabase.rpc("check_topic_match");
-      if (roomId) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        window.location.href = `/agora/${roomId}`;
-      }
-    }, 2500);
-  }, [supabase]);
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
-
-  const toggleQueue = useCallback(async (t: RailTopic) => {
-    if (queueBusy) return;
-    setQueueBusy(t.id);
-    if (queued.has(t.id)) {
-      await supabase.rpc("leave_topic_queue", { p_topic: t.id });
-      setQueued((q) => { const n = new Set(q); n.delete(t.id); return n; });
-      setQueueBusy(null);
-      if (pollRef.current && queued.size <= 1) { clearInterval(pollRef.current); pollRef.current = null; }
-      return;
-    }
-    const { data, error } = await supabase.rpc("queue_for_topic", { p_topic: t.id, p_stance: "PRO" });
-    setQueueBusy(null);
-    if (error) return;
-    const res = data as { status?: string; room_id?: string } | null;
-    if (res?.status === "matched" && res.room_id) { window.location.href = `/agora/${res.room_id}`; return; }
-    setQueued((q) => new Set(q).add(t.id));
-    ensurePoll();
-  }, [supabase, queued, queueBusy, ensurePoll]);
+  /* The queue panel (lib/queue.ts) owns queueing: a topic's button
+     opens it, or leaves the line it is already in. */
+  const queue = useQueue();
+  const toggleQueue = useCallback((t: RailTopic) => {
+    if (queue.entries.some((e) => e.topicId === t.id)) { void leaveTopicQueue(t.id); return; }
+    openQueue({ id: t.id, question: t.question, topicKey: t.topic_key, queueCount: t.queue_count });
+  }, [queue.entries]);
 
   const follow = useCallback(async (p: Person) => {
     setFollowed((f) => new Set(f).add(p.id));
@@ -237,20 +209,20 @@ export default function FeedRail({ userId }: { userId: string | null }) {
                   {t.question}
                 </span>
                 <span className="block mt-0.5 text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-                  {queued.has(t.id) ? "In line — waiting for a match…" : t.queue_count > 0 ? `${t.queue_count} waiting to talk` : "no one waiting yet"}
+                  {queue.entries.some((e) => e.topicId === t.id) ? "In line — waiting for a match…" : t.queue_count > 0 ? `${t.queue_count} waiting to talk` : "no one waiting yet"}
                 </span>
               </span>
               <button
                 onClick={() => toggleQueue(t)}
-                disabled={queueBusy === t.id}
+                disabled={queue.busy}
                 className="cursor-pointer text-[10px] font-semibold px-2.5 py-1 rounded-md shrink-0 disabled:opacity-60"
-                style={queued.has(t.id)
+                style={queue.entries.some((e) => e.topicId === t.id)
                   ? { background: "#1d4f8c", border: "none", color: "#fff", fontFamily: "inherit" }
                   : t.queue_count > 0
                     ? { background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }
                     : { background: "#2f7fe0", border: "none", color: "#fff", fontFamily: "inherit" }}
               >
-                {queueBusy === t.id ? "…" : queued.has(t.id) ? "Leave" : "Queue"}
+                {queue.entries.some((e) => e.topicId === t.id) ? "Leave" : "Queue"}
               </button>
             </div>
           ))}

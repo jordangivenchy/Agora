@@ -10,11 +10,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
 import { Icon } from "@/components/icons";
 import useEscapeClose from "@/lib/useEscapeClose";
-import { setPresenceQueued } from "@/lib/presence";
 import type { SeedNewsItem } from "@/lib/seed-content";
-import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { requestCreate } from "@/components/GlobalActions";
 import { navigateTo } from "@/lib/progress";
@@ -158,48 +157,11 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
      and joins its matchmaking queue; while anything is queued we poll
      check_topic_match exactly like the Browse board and jump into the
      room on a match. */
-  const [userId, setUserId] = useState<string | null>(null);
-  const [queued, setQueued] = useState<Record<string, { topicId: string }>>({});
-  const [queueBusy, setQueueBusy] = useState<string | null>(null);
-  const [queueError, setQueueError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    sessionUser(supabase).then(({ data }) => setUserId(data.user?.id ?? null));
-  }, [open, supabase]);
-
-  /* Stanceless: the server pairs you with whoever is waiting on this
-     headline; seats are assigned invisibly (p_stance is only a default). */
-  const queueUp = async (st: Story) => {
-    if (!userId) { window.location.href = "/login"; return; }
-    setQueueBusy(st.id);
-    setQueueError(null);
-    const { data, error } = await supabase.rpc("queue_for_headline", {
-      p_question: st.headline,
-      p_topic_key: topicFor(st.category),
-      p_stance: "PRO",
-      p_source_url: st.url,
-    });
-    setQueueBusy(null);
-    if (error) {
-      setQueueError(error.message.replace(/^[a-z_]+:\s*/, ""));
-      return;
-    }
-    const res = data as { status: string; room_id?: string; topic_id?: string };
-    if (res?.status === "matched" && res.room_id) { window.location.href = `/agora/${res.room_id}`; return; }
-    if (res?.topic_id) setQueued((q) => ({ ...q, [st.id]: { topicId: res.topic_id! } }));
-  };
-
-  const leaveQueue = async (st: Story) => {
-    const entry = queued[st.id];
-    if (!entry) return;
-    setQueueBusy(st.id);
-    await supabase.rpc("leave_topic_queue", { p_topic: entry.topicId });
-    setQueueBusy(null);
-    setQueued((q) => { const n = { ...q }; delete n[st.id]; return n; });
-  };
-
-  const anyQueued = Object.keys(queued).length > 0;
+  /* The queue panel (lib/queue.ts) owns queueing; a story's button opens it. */
+  const queue = useQueue();
+  const queuedTopicFor = (st: Story) => queue.entries.find((e) => e.question === st.headline)?.topicId ?? null;
+  const queueUp = (st: Story) => openQueue({ id: null, question: st.headline, topicKey: topicFor(st.category), queueCount: 0, sourceUrl: st.url });
+  const leaveQueue = (st: Story) => { const id = queuedTopicFor(st); if (id) void leaveTopicQueue(id); };
 
   /* Friends lists show "In queue" while we wait — clear it on unmount. */
   /* A hero tap on a phone arrives with ?story=<id>: scroll that card
@@ -218,16 +180,6 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
     return () => clearTimeout(t);
   }, [stories]);
 
-  useEffect(() => { setPresenceQueued(anyQueued); }, [anyQueued]);
-  useEffect(() => () => setPresenceQueued(false), []);
-  useEffect(() => {
-    if (!anyQueued || !userId) return;
-    const t = setInterval(async () => {
-      const { data: roomId } = await supabase.rpc("check_topic_match");
-      if (roomId) { clearInterval(t); window.location.href = `/agora/${roomId}`; }
-    }, 2500);
-    return () => clearInterval(t);
-  }, [anyQueued, userId, supabase]);
 
   /* Vote is local immediately; persisted via RPC when the daily motion is a
      real news_topics row (i.e. after the migration seeds one). */
@@ -445,21 +397,20 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
                           <button onClick={() => onStartDebate(st.headline, topicFor(st.category))} style={discussBtn}>
                             Start a discussion
                           </button>
-                          {queued[st.id] ? (
+                          {queuedTopicFor(st) ? (
                             <div className="flex flex-col gap-1.5">
                               <p className="m-0 text-[11px] text-center" style={{ color: "#c9b8f2" }}>
                                 <span className="feed-live-dot" aria-hidden="true" style={{ background: "#c9b8f2", boxShadow: "none", marginRight: 5 }} />In queue — waiting for a partner
                               </p>
-                              <button onClick={() => leaveQueue(st)} disabled={queueBusy === st.id} style={{ ...readBtn, width: "100%" }}>
+                              <button onClick={() => leaveQueue(st)} disabled={queue.busy} style={{ ...readBtn, width: "100%" }}>
                                 Leave queue
                               </button>
                             </div>
                           ) : (
                             <div className="flex flex-col gap-1.5">
-                              <button onClick={() => queueUp(st)} disabled={queueBusy === st.id} style={queueBtn}>
-                                {queueBusy === st.id ? "…" : "Queue a conversation"}
+                              <button onClick={() => queueUp(st)} style={queueBtn}>
+                                Queue a conversation
                               </button>
-                              {queueError && <p className="m-0 text-[10.5px] text-center" style={{ color: "#fca5a5" }}>{queueError}</p>}
                             </div>
                           )}
                         </div>

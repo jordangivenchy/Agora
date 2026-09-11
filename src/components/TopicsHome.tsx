@@ -21,7 +21,7 @@ import TopicIcon from "./topicIcons";
 import { useUserMenu } from "./userMenuContext";
 import { roomPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
-import { setPresenceQueued } from "@/lib/presence";
+import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
 import UserAvatar from "./UserAvatar";
 import { sessionUser } from "@/lib/session";
 
@@ -63,7 +63,6 @@ const FORMAT_LABEL: Record<string, string> = {
   panel: "Panel",
 };
 
-const POLL_MS = 2500;
 const REFRESH_MS = 30000;
 /* A field can carry a dozen questions; three rows of two is a screenful. */
 const QUESTIONS_SHOWN = 6;
@@ -225,13 +224,11 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   const [showAllScheduled, setShowAllScheduled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const anyQueued = topics.some((t) => t.am_queued);
-
-  /* Friends lists show "In queue" while we wait — clear it on unmount. */
-  useEffect(() => { setPresenceQueued(anyQueued); }, [anyQueued]);
-  useEffect(() => () => setPresenceQueued(false), []);
+  /* The queue panel (lib/queue.ts) owns queueing — the poll, the
+     presence, the match. The board offers questions to it and reloads
+     its counts whenever the queue changes. */
+  const queue = useQueue();
 
   const load = useCallback(async () => {
     const [{ data: auth }, topicsRes, roomsRes] = await Promise.all([
@@ -267,6 +264,12 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
   }, [supabase]);
 
   useEffect(() => {
+    const onQueue = () => { void load(); };
+    window.addEventListener("agora:queue-changed", onQueue);
+    return () => window.removeEventListener("agora:queue-changed", onQueue);
+  }, [load]);
+
+  useEffect(() => {
     load();
     const heartbeat = setInterval(load, REFRESH_MS);
     const channel = supabase
@@ -279,87 +282,6 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
     };
   }, [load, supabase]);
 
-  /* While queued anywhere: poll for a match; also refresh counts so the
-     board feels alive.
-
-     Match-vs-refresh race: getting matched WRITES matched_room_id on
-     our queue row, so a board refresh that lands between the match and
-     our next poll reports am_queued=false — anyQueued flips, this
-     effect tears down, and without the catch-up below the winner is
-     stranded on the board ("removed from the queue") while their room
-     sits waiting. Any transition out of the queued state we didn't
-     initiate does one last check_topic_match to collect the room. */
-  const wasQueuedRef = useRef(false);
-  useEffect(() => {
-    if (!anyQueued || !userId) {
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      if (wasQueuedRef.current && userId) {
-        wasQueuedRef.current = false;
-        supabase.rpc("check_topic_match").then(({ data }) => {
-          if (data) window.location.href = `/agora/${data}`;
-        });
-      }
-      return;
-    }
-    wasQueuedRef.current = true;
-    pollRef.current = setInterval(async () => {
-      const { data: roomId } = await supabase.rpc("check_topic_match");
-      if (roomId) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        wasQueuedRef.current = false;
-        window.location.href = `/agora/${roomId}`;
-        return;
-      }
-      load();
-    }, POLL_MS);
-    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
-  }, [anyQueued, userId, supabase, load]);
-
-  const queueUp = useCallback(async (t: TopicRow, stance: "PRO" | "CON") => {
-    if (!userId) { window.location.href = "/login"; return; }
-    setBusyId(t.id);
-    setError(null);
-    const { data, error: err } = await supabase.rpc("queue_for_topic", { p_topic: t.id, p_stance: stance });
-    setBusyId(null);
-    if (err) {
-      setError(err.message.includes("suspended") ? "Your account is suspended." : err.message);
-      return;
-    }
-    const res = data as { status: string; room_id?: string };
-    if (res?.status === "matched" && res.room_id) {
-      window.location.href = `/agora/${res.room_id}`;
-      return;
-    }
-    setTopics((ts) => ts.map((x) =>
-      x.id === t.id
-        ? {
-            ...x,
-            am_queued: true,
-            my_stance: stance,
-            queue_count: x.queue_count + 1,
-            pro_count: x.pro_count + (stance === "PRO" ? 1 : 0),
-            con_count: x.con_count + (stance === "CON" ? 1 : 0),
-          }
-        : x));
-  }, [supabase, userId]);
-
-  const leaveQueue = useCallback(async (t: TopicRow) => {
-    wasQueuedRef.current = false; // deliberate exit — no catch-up check
-    setBusyId(t.id);
-    await supabase.rpc("leave_topic_queue", { p_topic: t.id });
-    setBusyId(null);
-    setTopics((ts) => ts.map((x) =>
-      x.id === t.id
-        ? {
-            ...x,
-            am_queued: false,
-            my_stance: null,
-            queue_count: Math.max(0, x.queue_count - 1),
-            pro_count: Math.max(0, x.pro_count - (x.my_stance === "PRO" ? 1 : 0)),
-            con_count: Math.max(0, x.con_count - (x.my_stance === "CON" ? 1 : 0)),
-          }
-        : x));
-  }, [supabase]);
 
   if (!container) return null;
 
@@ -843,7 +765,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             one (globals.css phone block). */}
         <div ref={topicsGridRef} className="daily-topics-grid" style={{ display: "grid", gap: 10 }}>
         {(showAllQuestions ? selRows : selRows.slice(0, questionsShown)).map((t) => {
-          const inQueue = t.am_queued;
+          const inQueue = t.am_queued || queue.entries.some((e) => e.topicId === t.id);
           return (
             <div
               key={t.id}
@@ -887,7 +809,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                       In queue
                     </span>
                     <p className="m-0 text-[11px]" style={{ marginTop: 15, color: "#8b8b94" }}>
-                      You&rsquo;ll be matched the moment someone joins — keep this page open.
+                      You&rsquo;ll be matched the moment someone joins. Keep browsing — the queue panel stays with you.
                     </p>
                   </div>
                 ) : (
@@ -904,8 +826,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               </div>
               {inQueue ? (
                 <button
-                  onClick={() => leaveQueue(t)}
-                  disabled={busyId === t.id}
+                  onClick={() => { void leaveTopicQueue(t.id); }}
+                  disabled={queue.busy}
                   className="cursor-pointer text-[12px] px-4 py-2 rounded-lg shrink-0"
                   style={{ background: "transparent", border: "0.5px solid #3a3a42", color: "#c0c0c8", fontFamily: "inherit" }}
                 >
@@ -920,12 +842,12 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                     const instant = t.queue_count > 0;
                     return (
                       <button
-                        onClick={() => queueUp(t, "PRO")}
-                        disabled={busyId === t.id}
+                        onClick={() => openQueue({ id: t.id, question: t.question, topicKey: t.topic_key, queueCount: t.queue_count, proCount: t.pro_count, conCount: t.con_count })}
+                        disabled={queue.busy}
                         className={`queue-join-btn${instant ? " queue-join-btn--instant" : ""}`}
                         title={instant ? "Someone is waiting — you'll be matched right away" : "Queue for this question"}
                       >
-                        {busyId === t.id ? "…" : instant ? "Queue — match now" : "Queue"}
+                        {instant ? "Queue — match now" : "Queue"}
                       </button>
                     );
                   })()}

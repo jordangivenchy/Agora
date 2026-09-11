@@ -7,68 +7,29 @@
    check_topic_match. Renders nothing for a post without a topic, so
    cards can mount it unconditionally. */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase-browser";
+import { useCallback, useEffect } from "react";
 import { Icon } from "@/components/icons";
 import { TOPICS } from "@/types/database";
 import { refreshPostTopic, usePostTopic } from "@/lib/postTopics";
-import { sessionUser } from "@/lib/session";
+import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
 
 export default function PostTopicQueue({ postId, compact }: { postId: string; compact?: boolean }) {
-  const [supabase] = useState(() => createClient());
   const topic = usePostTopic(postId);
-  const [busy, setBusy] = useState<"queue" | "leave" | null>(null);
-  const [note, setNote] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stopPoll = useCallback(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = null;
-  }, []);
-
-  /* While I'm in line: a match sends me straight into the room. */
-  const ensurePoll = useCallback(() => {
-    if (pollRef.current) return;
-    pollRef.current = setInterval(async () => {
-      const { data: roomId } = await supabase.rpc("check_topic_match");
-      if (roomId) {
-        stopPoll();
-        window.location.href = `/agora/${roomId}`;
-      } else {
-        refreshPostTopic(postId);
-      }
-    }, 4000);
-  }, [supabase, stopPoll, postId]);
-
+  /* The queue panel (lib/queue.ts) owns queueing: Queue opens it with
+     this question; Leave drops the line. The card refreshes its counts
+     whenever the queue changes. */
+  const q = useQueue();
+  const inLine = !!topic && (topic.am_queued || q.entries.some((e) => e.topicId === topic.topic_id));
   useEffect(() => {
-    if (topic?.am_queued) ensurePoll();
-    else stopPoll();
-    return stopPoll;
-  }, [topic?.am_queued, ensurePoll, stopPoll]);
-
-  const queue = useCallback(async () => {
-    if (!topic || busy) return;
-    const { data: auth } = await sessionUser(supabase);
-    if (!auth.user) { window.location.href = "/login"; return; }
-    setBusy("queue");
-    setNote(null);
-    /* Stanceless: the server seats the joiner opposite whoever is waiting. */
-    const { data, error } = await supabase.rpc("queue_for_topic", { p_topic: topic.topic_id, p_stance: "PRO" });
-    setBusy(null);
-    if (error) { setNote(error.message.replace(/^[a-z_]+:\s*/, "")); return; }
-    const res = data as { status?: string; room_id?: string } | null;
-    if (res?.status === "matched" && res.room_id) { window.location.href = `/agora/${res.room_id}`; return; }
-    refreshPostTopic(postId);
-  }, [topic, busy, supabase, postId]);
-
-  const leave = useCallback(async () => {
-    if (!topic || busy) return;
-    setBusy("leave");
-    await supabase.rpc("leave_topic_queue", { p_topic: topic.topic_id });
-    setBusy(null);
-    stopPoll();
-    refreshPostTopic(postId);
-  }, [topic, busy, supabase, stopPoll, postId]);
+    const on = () => refreshPostTopic(postId);
+    window.addEventListener("agora:queue-changed", on);
+    return () => window.removeEventListener("agora:queue-changed", on);
+  }, [postId]);
+  const queue = useCallback(() => {
+    if (!topic) return;
+    openQueue({ id: topic.topic_id, question: topic.question, topicKey: topic.topic_key, queueCount: topic.queue_count });
+  }, [topic]);
+  const leave = useCallback(() => { if (topic) void leaveTopicQueue(topic.topic_id); }, [topic]);
 
   if (!topic) return null;
   const field = TOPICS.find((t) => t.key === topic.topic_key);
@@ -98,7 +59,7 @@ export default function PostTopicQueue({ postId, compact }: { postId: string; co
           <span style={{ fontSize: 10.5, fontWeight: 600, color: field.color, flexShrink: 0 }}>{field.label}</span>
         )}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(238,238,245,0.5)", whiteSpace: "nowrap" }}>
-          {topic.am_queued
+          {inLine
             ? "In line"
             : waiting > 0
               ? `${waiting} waiting to talk`
@@ -109,22 +70,21 @@ export default function PostTopicQueue({ postId, compact }: { postId: string; co
         {topic.question}
       </p>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        {topic.am_queued ? (
+        {inLine ? (
           <>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#ffb700", fontWeight: 600 }}>
               <span className="feed-live-dot" aria-hidden />
               In line — waiting for a match…
             </span>
-            <button type="button" onClick={leave} disabled={busy !== null} className="cursor-pointer" style={quiet}>
-              {busy === "leave" ? "…" : "Leave"}
+            <button type="button" onClick={leave} disabled={q.busy} className="cursor-pointer" style={quiet}>
+              Leave
             </button>
           </>
         ) : (
-          <button type="button" onClick={queue} disabled={busy !== null} className="cursor-pointer" style={queueBtn(waiting > 0)}>
-            {busy === "queue" ? "…" : waiting > 0 ? "Queue · match now" : "Queue"}
+          <button type="button" onClick={queue} className="cursor-pointer" style={queueBtn(waiting > 0)}>
+            {waiting > 0 ? "Queue · match now" : "Queue"}
           </button>
         )}
-        {note && <span style={{ fontSize: 11.5, color: "#ff9d92" }}>{note}</span>}
       </div>
     </div>
   );

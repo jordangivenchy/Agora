@@ -2503,6 +2503,49 @@ html.reduce-motion .nav-sparkle {
    DM dock becomes a full-screen sheet. */
 .mobile-tabbar { display: none; }
 
+/* ═══ The queue panel (QueueDock.tsx, lib/queue.ts): a pop-out at the
+   bottom right — above the tab bar on phones — that any Queue button
+   opens with its question; folded to a pill while waiting, wherever the
+   person browses. Solid near-black, hairline, the yellow pill to join. ═══ */
+.qd, .qd-pill { position: fixed; right: 20px; bottom: 20px; z-index: 900; font-family: 'DM Sans', sans-serif; }
+.qd { width: 360px; max-width: calc(100vw - 40px); padding: 14px 16px 14px; border-radius: 16px; background: #0b0b0d; border: 1px solid #23232b; box-shadow: 0 18px 48px rgba(0,0,0,0.6); color: #f5f5f0; }
+.qd-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 12px; border-radius: 999px; background: #0b0b0d; border: 1px solid #2b2b34; color: #f5f5f0; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 12px 32px rgba(0,0,0,0.55); }
+.qd-pill:hover { border-color: #3a3a45; }
+.qd-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ffb700; animation: qd-pulse 1.6s ease-in-out infinite; }
+@keyframes qd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.qd-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.qd-title { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.qd-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #ffb700; color: #1a0e00; font-size: 11.5px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.qd-icon { margin-left: auto; width: 28px; height: 28px; border-radius: 8px; border: 1px solid #2b2b34; background: #0b0b0d; color: #c9c9d2; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.qd-icon:hover { border-color: #3a3a45; color: #f5f5f0; }
+.qd-match { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: #ffb700; }
+.qd-offer { padding-bottom: 12px; }
+.qd-offer + .qd-list { border-top: 1px solid #1b1b21; padding-top: 12px; }
+.qd-field { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.qd-question { margin: 6px 0 6px; font-size: 15.5px; font-weight: 600; line-height: 1.35; color: #f5f5f0; }
+.qd-stats { margin: 0 0 12px; font-size: 12.5px; line-height: 1.45; color: #8c8c98; }
+.qd-stance { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 12.5px; color: #8c8c98; }
+.qd-stance span { margin-right: 4px; }
+.qd-stance button { height: 30px; padding: 0 14px; border-radius: 999px; border: 1px solid #2b2b34; background: #0b0b0d; color: #c9c9d2; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.qd-stance button.is-on { background: #26262e; border-color: #3a3a45; color: #f5f5f0; }
+.qd-join { width: 100%; height: 42px; border-radius: 999px; border: 1px solid #ffb700; background: #ffb700; color: #1a0e00; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.qd-join:hover:not(:disabled) { background: #ffc22e; border-color: #ffc22e; }
+.qd-join:disabled { opacity: 0.5; cursor: default; }
+.qd-error { margin: 10px 0 0; font-size: 12px; color: #ff9d92; }
+.qd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.qd-list li { display: flex; align-items: center; gap: 10px; }
+.qd-entry { flex: 1; min-width: 0; }
+.qd-entry-q { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.35; color: #f5f5f0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.qd-entry-meta { margin: 3px 0 0; font-size: 11.5px; color: #8c8c98; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.qd-leave { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #2b2b34; background: #0b0b0d; color: #c9c9d2; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+.qd-leave:hover:not(:disabled) { border-color: #3a3a45; color: #f5f5f0; }
+.qd-leave:disabled { opacity: 0.5; cursor: default; }
+.qd-note { margin: 12px 0 0; font-size: 11.5px; line-height: 1.45; color: #6f6f7c; }
+@media (max-width: 639px) {
+  .qd, .qd-pill { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .qd { left: 12px; width: auto; max-width: none; }
+}
+
 /* ═══ The phone comment composer (CommentSheet.tsx): a dock above the
    tab bar — your avatar, "Take the floor" — opens a sheet over the
    keyboard: Cancel and the yellow Post pill up top as in our post
