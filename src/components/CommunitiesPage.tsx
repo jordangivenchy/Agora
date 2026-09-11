@@ -2103,7 +2103,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         </div>
 
         {!openPost && selected === "all" && (
-          <p className="page-sub">Communities for your school, team, or topic</p>
+          <p className="page-sub cm-width">Communities for your school, team, or topic</p>
         )}
 
         {error && (
