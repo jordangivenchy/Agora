@@ -699,7 +699,7 @@ export default function ProfileView({
 
         {/* ── Header ── */}
         <section
-          className="p-6 flex gap-5 flex-wrap items-start"
+          className="p-6 flex gap-5 items-start profile-head"
           style={{
             ...card,
             /* Tighter top pad pulls the name up toward the banner edge. */
@@ -724,7 +724,7 @@ export default function ProfileView({
           >
             <UserAvatar size={120} username={profile.username} avatarUrl={profile.avatar_url} seed={profile.id} />
           </span>
-          <div className="flex-1 min-w-[240px]">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="m-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 25, fontWeight: 700, letterSpacing: "-0.02em", color: "#f5f5f0" }}>
                 {displayName(profile)}
@@ -950,7 +950,7 @@ export default function ProfileView({
                 </p>
               )}
             {isSelf && (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 profile-cta">
                 <button
                   onClick={() => setEditOpen(true)}
                   className="cursor-pointer"
@@ -993,7 +993,7 @@ export default function ProfileView({
               </div>
             )}
             {!isSelf && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 profile-cta">
                 <button
                   onClick={toggleFollow}
                   disabled={busy}

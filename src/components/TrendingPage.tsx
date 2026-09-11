@@ -39,6 +39,8 @@ type GridRoom = {
   id: string;
   motion: string;
   viewer_count: number;
+  /** Watches of the recording (raw, every watch), for ended rooms. */
+  replay_views?: number | null;
   status: string;
   created_at: string;
   thumbnail_url?: string | null;
@@ -95,7 +97,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
     const [{ data: roomRows }, { data: clipRows }] = await Promise.all([
       supabase
         .from("debate_rooms")
-        .select("id, motion, viewer_count, status, created_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+        .select("id, motion, viewer_count, replay_views, status, created_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
         .in("status", ["live", "created", "ended"])
         .eq("is_private", false)
         /* Ended rooms are only worth a tile when the replay exists —
@@ -515,7 +517,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                         </span>
                       )}
                       <span className="absolute bottom-2 right-2 text-[10px] px-2.5 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec" }}>
-                        <Icon name="eye" size={11} /> {fmt(r.viewer_count ?? 0)}
+                        <Icon name="eye" size={11} /> {fmt(r.status === "ended" ? (r.replay_views ?? 0) : (r.viewer_count ?? 0))}
                       </span>
                     </div>
                     <div className="flex gap-2.5">

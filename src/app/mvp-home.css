@@ -336,9 +336,9 @@ body {
   border-radius: 14px;
   /* Same near-black as the pill/card surfaces (rowCard #0b0b0d family)
      instead of the lighter grey it used to carry. */
-  background: #0e0e12;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  background: #0b0b0d;
+  border: 1px solid #23232b;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
   padding: 6px;
   z-index: 9999;
   transform-origin: top right;
@@ -421,7 +421,7 @@ body {
 }
 
 .avatar-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #1a1a20;
   color: var(--text-primary);
 }
 
@@ -1741,22 +1741,14 @@ a.carousel-watch-btn { text-decoration: none; }
    ═══════════════════════════════════════════════ */
 body { background: transparent; }
 .nav {
+  /* Solid black, top of the page or scrolled, no glass: the bar is a
+     surface of its own, and the band under it (.nav::after) keeps the
+     carousel and anything scrolling past clearly separate from the
+     logo, the search and the icons. */
   background: #000000;
-  backdrop-filter: blur(22px);
   /* position:fixed already set above — do not override */
   z-index: 100;
-  transition: background 0.2s ease;
 }
-/* At the top of the page the bar is glass-free and see-through: the
-   starfield shows behind the logo and search. It turns solid black —
-   and paints its gap band — once the page scrolls (mvp-adapter.js sets
-   .is-scrolled), so the carousel never slides under the search pill. */
-.nav:not(.is-scrolled) {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-.nav:not(.is-scrolled)::after { display: none; }
 /* .sidebar — no overrides; all rules in base block above */
 .main {
   /* margin-top and margin-left already set above — preserve them */
@@ -3334,10 +3326,8 @@ body { background: transparent; }
      at the keyboard so a field can scroll clear of it; the tab bar stays
      behind the keyboard. */
   html.kb-open .main { bottom: var(--kb, 0px) !important; }
-  /* Phones: the bar is see-through — no fill, no painted gap band — so
-     the page shows straight through behind the logo and search. */
-  html .nav { background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-  html .nav::after { display: none; }
+  /* Phones: the same solid black bar and band as everywhere else. */
+  html .nav { background: #000 !important; box-shadow: none !important; }
 
   /* Hero title sized for portrait. */
   html .carousel-motion,

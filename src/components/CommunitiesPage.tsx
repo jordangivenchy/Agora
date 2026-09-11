@@ -2128,7 +2128,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         <div className="flex gap-5 items-start flex-col md:flex-row-reverse md:justify-between cm-width">
 
           {/* community rail — right side */}
-          <nav className="w-full md:w-[310px] shrink-0 cm-rail">
+          <nav className="w-full md:w-[28%] md:max-w-[310px] md:min-w-[224px] md:shrink-0 cm-rail">
             {/* About card — the open board's name and description, up top */}
             {selectedCommunity && (
               <div className="mb-3 overflow-hidden" style={{

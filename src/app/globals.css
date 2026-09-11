@@ -1727,14 +1727,13 @@ html.reduce-motion .nav-sparkle {
 .site-chrome .dr-root {
   background: transparent;
 }
-/* The navbar melts into that ground too: no fill, no hairline, the
-   starfield shows straight through behind the logo/search/profile row.
-   (The homepage keeps its own solid blurred bar.) */
+/* The navbar is a solid black surface of its own — the logo, the
+   search and the icons never sit over what scrolls past, and no glass:
+   whatever passes under the bar simply disappears behind it. */
 .site-chrome .nav {
-  background: transparent;
+  background: #000;
   border-bottom: none;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 /* No painted gap band under a see-through bar. The band (mvp-home.css,
    .nav::after) masks the homepage carousel as it scrolls under the
@@ -3302,6 +3301,21 @@ html.reduce-motion .nav-sparkle {
   .clip-stage { width: 100%; min-width: 0; }
   .clip-channel { gap: 10px; margin-top: 16px; padding-top: 14px; }
   .clip-channel > button { padding: 0 14px !important; height: 32px !important; font-size: 12.5px !important; }
+}
+
+/* The profile header is one row at every width — the avatar, the name,
+   the buttons top right — and the buttons never move: below tablet
+   width they shrink instead, and the name column gives way first. */
+.profile-head { flex-wrap: nowrap; }
+.profile-cta { flex-wrap: nowrap; min-width: 0; }
+.profile-cta > button { flex: 0 1 auto; min-width: 0; white-space: nowrap; }
+@media (max-width: 760px) {
+  .profile-cta > button { height: 34px !important; padding: 0 clamp(8px, 2.4vw, 18px) !important; font-size: clamp(11.5px, 3vw, 13px) !important; }
+}
+@media (max-width: 460px) {
+  .profile-head { gap: 10px !important; padding: 14px !important; }
+  .profile-cta { gap: 6px !important; }
+  .profile-cta > button { height: 30px !important; padding: 0 9px !important; font-size: 11px !important; }
 }
 
 /* Profile social links (ProfileView): round icon links in the header
