@@ -116,6 +116,17 @@ export default function Starfield() {
     if (!ctx) return;
 
     let stars: Star[] = [];
+    /* The canvas is drawn at the screen's own pixel ratio (capped at 2),
+       in CSS pixels: a faint star is a crisp point on a retina screen,
+       not a dim smudge across four of them. `cw`/`ch` are the CSS size. */
+    const dpr = () => Math.min(2, window.devicePixelRatio || 1);
+    let cw = 0, ch = 0;
+    const size = () => {
+      cw = window.innerWidth; ch = window.innerHeight;
+      const r = dpr();
+      canvas.width = Math.round(cw * r); canvas.height = Math.round(ch * r);
+      ctx.setTransform(r, 0, 0, r, 0, 0);
+    };
     let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
     let raf = 0;
     let regenTimer: ReturnType<typeof setTimeout> | undefined;
@@ -125,14 +136,13 @@ export default function Starfield() {
 
     const generate = () => {
       stars = Array.from(
-        { length: Math.floor(canvas.width * canvas.height * DENSITY) },
-        () => makeStar(canvas.width, canvas.height)
+        { length: Math.floor(cw * ch * DENSITY) },
+        () => makeStar(cw, ch)
       );
       if (still) render();
     };
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      size();
       generate();
     };
     /* The loading sky settling into the page (lib/skySplash.ts): its
@@ -143,7 +153,7 @@ export default function Starfield() {
        brightness on the first frame; the faint tier, which had no heads
        in the sky, comes out over the next couple of seconds. */
     const adopt = (snap: SkySnapshot) => {
-      if (snap.w !== canvas.width || snap.h !== canvas.height) return;
+      if (snap.w !== cw || snap.h !== ch) return;
       const nowS = still ? 0 : Date.now() * 0.001;
       const bornAt = performance.now();
       const cx = snap.w / 2, cy = snap.h / 2;
@@ -174,9 +184,9 @@ export default function Starfield() {
       /* The sky's scatter is thinner than this field: top it up to the
          field's density with stars of our own, coming out with the faint
          tier so the sky fills in rather than pops. */
-      const target = Math.floor(canvas.width * canvas.height * DENSITY);
+      const target = Math.floor(cw * ch * DENSITY);
       while (stars.length < target) {
-        const extra = makeStar(canvas.width, canvas.height);
+        const extra = makeStar(cw, ch);
         if (!still) extra.rise = { at: bornAt, ms: 2600 };
         stars.push(extra);
       }
@@ -185,10 +195,10 @@ export default function Starfield() {
     };
     const onSettle = (e: Event) => adopt((e as CustomEvent<SkySnapshot>).detail);
     const onWindowResize = () => {
-      const ow = canvas.width || 1, oh = canvas.height || 1;
+      const ow = cw || 1, oh = ch || 1;
       const nw = window.innerWidth, nh = window.innerHeight;
-      if (nw === ow && nh === oh) return;
-      canvas.width = nw; canvas.height = nh;
+      if (nw === ow && nh === oh && canvas.width === Math.round(nw * dpr())) return;
+      size();
       for (const s of stars) { s.ox *= nw / ow; s.oy *= nh / oh; }
       if (still) render();
       clearTimeout(regenTimer);
@@ -202,10 +212,10 @@ export default function Starfield() {
     const render = () => {
       // A loading screen's sky is drawing over this: don't compete for frames.
       if (!still && (window.__agoraSkyLiveCount || 0) > 0) { raf = requestAnimationFrame(render); return; }
-      if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) onWindowResize();
+      if (cw !== window.innerWidth || ch !== window.innerHeight) onWindowResize();
       mouseX += (targetMouseX - mouseX) * 0.06;
       mouseY += (targetMouseY - mouseY) * 0.06;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, cw, ch);
       const now = still ? 0 : Date.now() * 0.001;
 
       for (const s of stars) {
