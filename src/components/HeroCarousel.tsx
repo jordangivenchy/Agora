@@ -64,7 +64,7 @@ type NewsStory = TickerStory & {
   major?: boolean;
 };
 
-/* A featured post: one a site moderator put on the home page (lib/homeData.ts). */
+/* A featured post: one a site moderator put on the home page (lib/homeData.ts), shown as a notice from the team. */
 export type HeroPost = {
   id: string;
   title: string;
@@ -81,7 +81,7 @@ export type HeroPost = {
 
 type Slide =
   | { kind: "room"; key: string; room: HeroRoom }
-  | { kind: "post"; key: string; post: HeroPost; gradient: string }
+  | { kind: "post"; key: string; post: HeroPost }
   | { kind: "news"; key: string; story: NewsStory; gradient: string };
 
 type QueueState = { state: string; message?: string };
@@ -104,12 +104,6 @@ const NEWS_GRADIENTS = [
   "linear-gradient(120deg,#141020 0%,#2a1a33 55%,#12203a 100%)",
   "linear-gradient(120deg,#0e1a2a 0%,#182a45 55%,#2b1f38 100%)",
 ];
-/* The featured slides lean warm, a shade of the brand yellow in the dark. */
-const POST_GRADIENTS = [
-  "linear-gradient(120deg,#1a1300 0%,#2a1d00 50%,#101426 100%)",
-  "linear-gradient(120deg,#141020 0%,#2a1a00 55%,#1c2340 100%)",
-  "linear-gradient(120deg,#0e1a2a 0%,#241a00 55%,#2b1f38 100%)",
-];
 
 const chip = (accent: string) => ({ "--chip": accent } as CSSProperties);
 const favicon = (domain: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
@@ -127,16 +121,10 @@ function liveFor(iso: string | null): string {
   return ` for ${h}h ${m % 60}m`;
 }
 
-/* "3m", "5h", "2d" — when a post went up. */
-function ago(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  if (!(ms > 0)) return "now";
-  const m = Math.floor(ms / 60000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
+/* "Sep 10" — the day a notice went up. */
+function noticeDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 /* A full page load with the loading screen up first (the adapter's
@@ -214,7 +202,7 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
     const n = Math.max(rooms.length, posts.length, news.length);
     for (let i = 0; i < n; i++) {
       if (rooms[i]) out.push({ kind: "room", key: `r:${rooms[i].roomId}`, room: rooms[i] });
-      if (posts[i]) out.push({ kind: "post", key: `p:${posts[i].id}`, post: posts[i], gradient: POST_GRADIENTS[i % POST_GRADIENTS.length] });
+      if (posts[i]) out.push({ kind: "post", key: `p:${posts[i].id}`, post: posts[i] });
       if (news[i]) out.push({ kind: "news", key: `n:${news[i].id}`, story: news[i], gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length] });
     }
     return out;
@@ -408,10 +396,9 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
     if (slide.kind === "post") {
       const p = slide.post;
       return (
-        <PostSlide
+        <NoticeSlide
           key={key}
           post={p}
-          gradient={slide.gradient}
           i={i}
           total={N}
           phone={phone}
@@ -541,13 +528,12 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
   );
 }
 
-/* A featured post, in the news slide's frame: the title over the
-   post's image (else a warm gradient) with a "Featured" badge, the
-   board, the author and the comment count as chips; the right column
-   has the author, an excerpt and "Read the post". */
-function PostSlide({ post: p, gradient, i, total, phone, image, onImageBroken, onOpen, onTap }: {
+/* A featured post as a notice from the site: the mark and "From the
+   AgoraSphere team" with the date, the title, a yellow rule, the post's
+   opening, "Read more" and the post's facts; its picture framed at the
+   right when it has one (wide screens). Phones open it on tap. */
+function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, onTap }: {
   post: HeroPost;
-  gradient: string;
   i: number;
   total: number;
   phone: boolean;
@@ -558,43 +544,39 @@ function PostSlide({ post: p, gradient, i, total, phone, image, onImageBroken, o
 }) {
   return (
     <div
-      className="carousel-item news post"
+      className="carousel-item notice"
       role="group"
       aria-label={`Slide ${i + 1} of ${total}`}
       style={phone ? { cursor: "pointer" } : undefined}
       onClick={phone ? onTap : undefined}
     >
-      <div className="carousel-bg" style={{ background: gradient }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {image && <img className="carousel-news-img" src={image} alt="" loading="eager" decoding="async" onError={onImageBroken} />}
-      </div>
-      <div className="carousel-news-shade" />
-      <div className="carousel-post-badge">Featured</div>
-      <div className="carousel-lower-third">
-        <div className="carousel-motion">{p.title}</div>
-        {/* Phones have no right column: a couple of lines of the post under the title. */}
-        {p.excerpt && <div className="carousel-post-excerpt">{p.excerpt}</div>}
-        <div className="carousel-news-chips">
-          <span className="carousel-news-chip carousel-post-board" style={chip(p.boardColor || "#4a9eff")}>{p.board}</span>
-          <span className="carousel-news-chip">@{p.author}</span>
-          <span className="carousel-news-chip">{p.commentCount} comment{p.commentCount === 1 ? "" : "s"}</span>
-        </div>
-      </div>
-      <div className="carousel-panel carousel-news-card">
-        <div className="carousel-post-author">
-          {p.authorAvatar
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img className="carousel-post-avatar" src={p.authorAvatar} alt="" />
-            : <div className="panel-avatar small carousel-post-avatar" style={{ background: "#ffb700", color: "#1a0e00" }}>{initial(p.authorName)}</div>}
-          <div className="carousel-post-who">
-            <div className="carousel-post-name">{p.authorName}</div>
-            <div className="carousel-post-when">@{p.author} · {ago(p.createdAt)}</div>
+      <div className="carousel-bg" />
+      <div className="notice-wrap">
+        <div className="notice-text">
+          <div className="notice-kicker">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/as-mark.png" alt="" aria-hidden="true" />
+            <span>From the AgoraSphere team</span>
+            <span className="notice-date">{noticeDate(p.createdAt)}</span>
+          </div>
+          <h3 className="notice-title">{p.title}</h3>
+          <div className="notice-rule" aria-hidden="true" />
+          {p.excerpt && <p className="notice-body">{p.excerpt}</p>}
+          <div className="notice-foot">
+            <button type="button" className="notice-read" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
+              Read more
+            </button>
+            <span className="notice-meta">
+              <b>{p.commentCount}</b> comment{p.commentCount === 1 ? "" : "s"} · <b>{p.board}</b> · @{p.author}
+            </span>
           </div>
         </div>
-        {p.excerpt && <p className="carousel-news-summary">{p.excerpt}</p>}
-        <button type="button" className="carousel-watch-btn carousel-queue-btn" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
-          Read the post
-        </button>
+        {image && (
+          <div className="notice-photo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image} alt="" loading="eager" decoding="async" onError={onImageBroken} />
+          </div>
+        )}
       </div>
     </div>
   );

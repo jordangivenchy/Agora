@@ -186,7 +186,7 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[
     return {
       id: p.id,
       title: p.title,
-      excerpt: excerpt(p.body ?? ""),
+      excerpt: excerpt(p.body ?? "", 320),
       imageUrl: typeof p.image_url === "string" && /^https:\/\//.test(p.image_url) ? p.image_url : null,
       createdAt: p.created_at,
       author: a?.username ?? "agorasphere",
