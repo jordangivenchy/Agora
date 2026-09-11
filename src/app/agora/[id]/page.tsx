@@ -614,6 +614,32 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      connect effect re-requests a token with the new role — the server
      sees the stage row and hands out WebRTC. */
   const hlsAudience = !broadcast && !!call.hlsMode;
+
+  /* ── The sky while the call connects ──────────────────────────────
+     The loading screen that brought us here stays over the stage until
+     the call is up (or the broadcast view is): its sky continues the
+     entry screen's, so arriving in a room is one unbroken exposure that
+     ends on the stage. At least a beat, so it never flashes; at most
+     twelve seconds, so a stalled connection can't trap anyone behind
+     it — the stage's own "Connecting…" and retry take over then. */
+  const callUp = call.connected || hlsAudience;
+  const [entering, setEntering] = useState<"up" | "leaving" | "gone">("up");
+  const enteredAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (entering !== "up") return;
+    if (broadcast) { queueMicrotask(() => setEntering("gone")); return; }
+    enteredAt.current ??= Date.now();
+    const ENTER_MIN_MS = 1200, ENTER_CAP_MS = 12000;
+    const elapsed = Date.now() - enteredAt.current;
+    const wait = callUp ? Math.max(0, ENTER_MIN_MS - elapsed) : Math.max(0, ENTER_CAP_MS - elapsed);
+    const t = window.setTimeout(() => setEntering("leaving"), wait);
+    return () => clearTimeout(t);
+  }, [entering, callUp, broadcast]);
+  useEffect(() => {
+    if (entering !== "leaving") return;
+    const t = window.setTimeout(() => setEntering("gone"), 420);
+    return () => clearTimeout(t);
+  }, [entering]);
   const { hlsMode, retryConnect } = call;
   useEffect(() => {
     /* Egress died mid-watch (hls_url nulled via realtime): fall back to
@@ -1461,6 +1487,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   return (
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}`}>
+      {entering !== "gone" && (
+        <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
+          <LoadingScreen label="Entering the Agora" />
+        </div>
+      )}
       <div className="ag-main">
         {/* ── Top bar ── */}
         {(broadcast || duel) && (
