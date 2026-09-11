@@ -2979,7 +2979,7 @@ html.reduce-motion .nav-sparkle {
 
   /* Replay route */
   html .replay-beside-sidebar:not(.settings-shell) { padding-left: 0 !important; }
-  html .replay-beside-sidebar .dr-wrap { padding: 12px 12px calc(76px + env(safe-area-inset-bottom)) !important; }
+  html .replay-beside-sidebar .dr-wrap { padding: 4px 12px calc(76px + env(safe-area-inset-bottom)) !important; }
   html .dr-btn { min-height: 36px; }
   html .dr-panel-head { flex-wrap: wrap; }
   html .dr-search { flex-basis: 100%; min-height: 36px; }

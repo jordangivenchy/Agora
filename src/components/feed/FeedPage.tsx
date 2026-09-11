@@ -21,6 +21,7 @@ import { TOPICS } from "@/types/database";
 import RoomCard, { type RoomCardRoom } from "@/components/RoomCard";
 import UserAvatar from "@/components/UserAvatar";
 import PostCard, { RepostEmbed, TagChip, authorLabel, timeAgo, type PostRow } from "@/components/community/PostCard";
+import { fmtDay, roomDuration, useRoomTimes } from "@/lib/duration";
 import PeopleSuggestions from "@/components/people/PeopleSuggestions";
 import FeedRail from "@/components/feed/FeedRail";
 import { useUserMenu } from "@/components/userMenuContext";
@@ -111,6 +112,8 @@ export default function FeedPage({ open = true, onClose }: Props) {
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [items, setItems] = useState<FeedItem[] | null>(null);
+  /* The day and the run of the past discussions in the feed (their rows carry neither). */
+  const roomTimes = useRoomTimes((items ?? []).filter((i) => i.kind === "replay").map((i) => i.payload.id));
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -347,6 +350,14 @@ export default function FeedPage({ open = true, onClose }: Props) {
                 <Icon name="play" size={10} strokeWidth={0} style={{ fill: "currentColor" }} />
                 Watch discussion
               </span>
+              {(() => {
+                const tm = roomTimes[r.id];
+                const day = fmtDay(tm?.ended_at ?? it.created_at);
+                const run = roomDuration(tm?.started_at, tm?.ended_at);
+                return (day || run) ? (
+                  <span style={{ color: "rgba(238,238,245,0.5)" }}>{[day, run].filter(Boolean).join(" · ")}</span>
+                ) : null;
+              })()}
               {topic && (
                 <TagChip name={topic.label} color={topic.color} small />
               )}

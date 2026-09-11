@@ -14,6 +14,7 @@ import { displayName } from "@/lib/names";
 import { replayPath } from "@/lib/urls";
 import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
+import { roomDuration } from "@/lib/duration";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { navigateTo } from "@/lib/progress";
@@ -41,6 +42,8 @@ type GridRoom = {
   viewer_count: number;
   /** Watches of the recording (raw, every watch), for ended rooms. */
   replay_views?: number | null;
+  started_at?: string | null;
+  ended_at?: string | null;
   status: string;
   created_at: string;
   thumbnail_url?: string | null;
@@ -97,7 +100,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
     const [{ data: roomRows }, { data: clipRows }] = await Promise.all([
       supabase
         .from("debate_rooms")
-        .select("id, motion, viewer_count, replay_views, status, created_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+        .select("id, motion, viewer_count, replay_views, status, created_at, started_at, ended_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
         .in("status", ["live", "created", "ended"])
         .eq("is_private", false)
         /* Ended rooms are only worth a tile when the replay exists —
@@ -518,6 +521,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                       )}
                       <span className="absolute bottom-2 right-2 text-[10px] px-2.5 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec" }}>
                         <Icon name="eye" size={11} /> {fmt(r.status === "ended" ? (r.replay_views ?? 0) : (r.viewer_count ?? 0))}
+                        {r.status === "ended" && roomDuration(r.started_at, r.ended_at) ? ` · ${roomDuration(r.started_at, r.ended_at)}` : ""}
                       </span>
                     </div>
                     <div className="flex gap-2.5">

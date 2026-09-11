@@ -24,6 +24,9 @@ import "./debate-replay.css";
 import { sessionUser } from "@/lib/session";
 import { navigateTo } from "@/lib/progress";
 import { useCoarsePointer } from "@/lib/pointer";
+import { fmtDay, roomDuration } from "@/lib/duration";
+import RichEditor from "@/components/community/RichEditor";
+import RichText from "@/components/community/RichText";
 
 type Person = {
   id: string;
@@ -499,6 +502,18 @@ export default function DebateReplay({
      the post on the first comment. Top-level only — replies and voting
      live in the full thread. */
   const [commentDraft, setCommentDraft] = useState("");
+  /* The comments RPC carries no avatars; one lookup per set of authors. */
+  const [avatars, setAvatars] = useState<Record<string, string | null>>({});
+  const authorKey = comments.map((c) => c.author_id).filter(Boolean).sort().join(",");
+  useEffect(() => {
+    if (!authorKey) return;
+    let alive = true;
+    supabase.from("users").select("id, avatar_url").in("id", authorKey.split(",")).then(({ data }) => {
+      if (!alive || !data) return;
+      setAvatars((prev) => { const next = { ...prev }; for (const u of data as { id: string; avatar_url: string | null }[]) next[u.id] = u.avatar_url; return next; });
+    });
+    return () => { alive = false; };
+  }, [authorKey, supabase]);
   const [commentBusy, setCommentBusy] = useState(false);
   const submitReplayComment = async () => {
     if (!room || commentBusy) return;
@@ -555,6 +570,7 @@ export default function DebateReplay({
     motion: string;
     topic_key: string | null;
     thumbnail_url: string | null;
+    started_at: string | null;
     ended_at: string | null;
     host: { username: string; display_name: string | null; avatar_url: string | null } | null;
   };
@@ -566,7 +582,7 @@ export default function DebateReplay({
     let alive = true;
     supabase
       .from("debate_rooms")
-      .select("id, motion, topic_key, thumbnail_url, ended_at, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+      .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
       .eq("status", "ended")
       .eq("is_private", false)
       .not("recording_url", "is", null)
@@ -620,30 +636,12 @@ export default function DebateReplay({
   return (
     <div className="dr-root">
       <div className="dr-wrap">
-        <div className="dr-topbar">
-          <span className="dr-tag">
-            <span className="dr-tag-dot" /> {recorded ? "Past discussion" : "Ended · no recording"}
-          </span>
-          <span className="dr-spacer" />
-          {likes && (
-            <button
-              className={`dr-btn dr-like${likes.liked ? " is-on" : ""}`}
-              onClick={toggleLike}
-              disabled={likeBusy}
-              aria-pressed={likes.liked}
-              title={likes.liked ? "Liked" : "Like this discussion"}
-            >
-              <Icon name="thumbs-up" size={13} /> {likes.count > 0 ? likes.count : "Like"}
-            </button>
-          )}
-          <button className="dr-btn" onClick={share} title="Copy the link">
-            <Icon name="share" size={13} /> Share
-          </button>
-        </div>
-
         <header className="dr-head">
           <h1 className="dr-motion">{motion}</h1>
           <div className="dr-meta">
+            <span className="dr-tag">
+              <span className="dr-tag-dot" /> {recorded ? "Past discussion" : "Ended · no recording"}
+            </span>
             {topic && (
               <span className="dr-chip" style={{ borderColor: `${topic.color}55` }}>
                 <span aria-hidden>{topic.emoji}</span> {topic.label}
@@ -666,6 +664,23 @@ export default function DebateReplay({
             {!!room.viewer_count && (
               <span>{room.viewer_count} watched live</span>
             )}
+          </div>
+          {/* Like and Share belong with the title, not the corner of the page. */}
+          <div className="dr-actions">
+            {likes && (
+              <button
+                className={`dr-btn dr-like${likes.liked ? " is-on" : ""}`}
+                onClick={toggleLike}
+                disabled={likeBusy}
+                aria-pressed={likes.liked}
+                title={likes.liked ? "Liked" : "Like this discussion"}
+              >
+                <Icon name="thumbs-up" size={13} /> {likes.count > 0 ? likes.count : "Like"}
+              </button>
+            )}
+            <button className="dr-btn" onClick={share} title="Copy the link">
+              <Icon name="share" size={13} /> Share
+            </button>
           </div>
           <div className="dr-people">
             {room.speakers.map((p) => (
@@ -805,43 +820,44 @@ export default function DebateReplay({
             </button>
           </div>
 
-          {/* Composer — comments land in the room's community thread. */}
-          <div className="dr-comment-composer">
-            <textarea
-              value={commentDraft}
-              onChange={(e) => setCommentDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitReplayComment();
-              }}
-              placeholder={signedIn ? (coarse ? "Add a comment…" : "Add a comment… (⌘↩ to post)") : "Sign in to comment"}
-              rows={2}
-              maxLength={4000}
-            />
+          {/* The same composer and thread as a community post: comments
+              land in the room's community thread, where replies and votes
+              live ("Open full thread"). */}
+          <div className="flex gap-2 items-end cm-composer-row dr-composer">
+            <span className="relative flex-1 min-w-0">
+              <RichEditor
+                compact
+                value={commentDraft}
+                onChange={setCommentDraft}
+                placeholder={signedIn ? (coarse ? "Add a comment…" : "Add a comment… (@ to mention, ⌘↩ to send)") : "Sign in to comment"}
+                onSubmit={() => { void submitReplayComment(); }}
+                mentions={!!signedIn}
+                onFocus={() => { if (signedIn === false) window.location.href = "/login"; }}
+              />
+            </span>
             <button
-              className="dr-btn primary"
-              onClick={submitReplayComment}
+              onClick={() => { void submitReplayComment(); }}
               disabled={commentBusy || !commentDraft.trim()}
+              className="cm-send cursor-pointer text-[12.5px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+              style={{ background: "#2f7fe0", border: "none", color: "#fff", borderRadius: 999, height: 36, padding: "0 18px", fontWeight: 600, fontFamily: "inherit" }}
             >
               {commentBusy ? "Posting…" : "Comment"}
             </button>
           </div>
 
           {comments.length > 0 && (
-            <div className="dr-comments">
+            <div className="cm-thread dr-thread">
               {comments.map((c) => (
-                <div key={c.id} className="dr-comment">
-                  <UserAvatar
-                    username={c.author_username}
-                    avatarUrl={null}
-                    seed={c.author_id ?? c.author_username}
-                    size={32}
-                  />
-                  <div>
-                    <div className="dr-comment-meta">
-                      <strong>{displayName({ display_name: c.author_display_name, username: c.author_username })}</strong>{" "}
-                      · {timeAgo(c.created_at)}
+                <div key={c.id} className="cm-node cm-node--root">
+                  <div className="cm-comment">
+                    <div className="cm-head">
+                      <span className="cm-avatar">
+                        <UserAvatar size={24} username={c.author_username} avatarUrl={avatars[c.author_id ?? ""] ?? null} seed={c.author_id ?? c.author_username} />
+                      </span>
+                      <span className="cm-author">@{c.author_username}</span>
+                      <span className="cm-time">· {timeAgo(c.created_at)}</span>
                     </div>
-                    <div className="dr-comment-body">{c.body}</div>
+                    <div className="cm-body"><RichText text={c.body} /></div>
                   </div>
                 </div>
               ))}
@@ -853,8 +869,8 @@ export default function DebateReplay({
           <section className="dr-section">
             <div className="dr-section-head">
               <div>
-                <h2 className="dr-section-title">More replays</h2>
-                <p className="dr-section-sub">Recent replays to watch next</p>
+                <h2 className="dr-section-title">More past discussions</h2>
+                <p className="dr-section-sub">Recent ones to watch next</p>
               </div>
             </div>
             <div className="dr-more-grid">
@@ -873,7 +889,8 @@ export default function DebateReplay({
                   <div className="dr-more-motion">{m.motion}</div>
                   <div className="dr-more-meta">
                     {m.host ? displayName(m.host) : ""}
-                    {m.ended_at ? ` · ${timeAgo(m.ended_at)}` : ""}
+                    {m.ended_at ? ` · ${fmtDay(m.ended_at)}` : ""}
+                    {roomDuration(m.started_at, m.ended_at) ? ` · ${roomDuration(m.started_at, m.ended_at)}` : ""}
                   </div>
                 </a>
               ))}

@@ -22,6 +22,7 @@ import { fetchDebates, fetchProfile, type DebateRow, type Profile, type ProfileI
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { fmtDay, roomDuration, useRoomTimes } from "@/lib/duration";
 import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import { Icon, type IconName } from "@/components/icons";
 import FollowListModal from "@/components/FollowListModal";
@@ -482,6 +483,8 @@ export default function ProfileView({
      stamps recording_url at broadcast start (the live-now chip surfaces
      an active room); unrecorded ended rooms and scheduled rooms are out
      too (Scheduled keeps its own tab). */
+  /* The day and the run of each past discussion (the rows carry neither). */
+  const roomTimes = useRoomTimes((debates ?? []).filter((d) => d.status === "ended").map((d) => d.id));
   const recordedDiscussions = useMemo(
     () => debates?.filter((d) => d.status === "ended" && !!d.recording_url) ?? null,
     [debates]
@@ -1245,7 +1248,9 @@ export default function ProfileView({
                           {topic ? ` · ${topic.label}` : ""}
                         </p>
                         <p className="m-0" style={{ color: "#6b6b74", fontSize: 10.5 }}>
-                          {live ? `${d.viewer_count ?? 0} watching` : `${timeAgo(d.created_at)} ago`}
+                          {live
+                            ? `${d.viewer_count ?? 0} watching`
+                            : [fmtDay(roomTimes[d.id]?.ended_at ?? d.created_at), roomDuration(roomTimes[d.id]?.started_at, roomTimes[d.id]?.ended_at)].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                     </a>
