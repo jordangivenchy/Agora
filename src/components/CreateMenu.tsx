@@ -36,7 +36,7 @@ const ITEMS: { icon: IconName; label: string; hint: string; run: () => void }[] 
   {
     icon: "users-round",
     label: "New community",
-    hint: "A thread for a school, team or topic",
+    hint: "For a school, team or topic",
     run: () => {
       window.dispatchEvent(new CustomEvent("agora:create-community"));
     },
