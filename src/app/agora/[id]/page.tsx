@@ -135,6 +135,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      means they arrived after the close and should get the replay. */
   const [firstStatus, setFirstStatus] = useState<string | null>(null);
   const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   /* Host leave flow: leaving as host asks whether to close the stage. */
   const [leavePrompt, setLeavePrompt] = useState(false);
   /* ?avdebug=1 — live snapshot of the call plumbing for field debugging. */
@@ -617,6 +618,35 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const hlsAudience = !broadcast && !!call.hlsMode;
   /* The host's profile for the top bar, from their seat's row. */
   const hostUser = room ? participants.find((pp) => pp.user_id === room.host_id)?.user ?? null : null;
+
+  /* Following the host is the real relationship (user_follows, through
+     the same follow_user / unfollow_user everyone else uses), not a
+     local toggle — and the host gets no button for themselves. */
+  const hostId = room?.host_id ?? null;
+  const isHostViewer = !!currentUser && !!hostId && currentUser.id === hostId;
+  useEffect(() => {
+    if (!currentUser || !hostId || isHostViewer) return;
+    let alive = true;
+    supabase
+      .from("user_follows")
+      .select("following_id")
+      .eq("follower_id", currentUser.id)
+      .eq("following_id", hostId)
+      .maybeSingle()
+      .then(({ data }) => { if (alive) setFollowing(!!data); });
+    return () => { alive = false; };
+  }, [supabase, currentUser, hostId, isHostViewer]);
+  const toggleFollow = useCallback(async () => {
+    if (!hostId) return;
+    if (!currentUser) { window.location.href = "/login"; return; }
+    if (followBusy || isHostViewer) return;
+    setFollowBusy(true);
+    const { error } = await supabase.rpc(following ? "unfollow_user" : "follow_user", { p_target: hostId });
+    setFollowBusy(false);
+    if (error) return;
+    setFollowing(!following);
+    window.dispatchEvent(new CustomEvent("follows-updated", { detail: { userId: hostId, following: !following } }));
+  }, [supabase, currentUser, hostId, isHostViewer, followBusy, following]);
 
   /* ── The sky while the call connects ──────────────────────────────
      The loading screen that brought us here stays over the stage until
@@ -1554,12 +1584,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                 <span>{displayName(hostUser)}</span>
               </a>
             )}
-            <button
-              className={`ag-follow ${following ? "on" : ""}`}
-              onClick={() => setFollowing((f) => !f)}
-            >
-              {following ? "Following ✓" : "Follow"}
-            </button>
+            {!isHostViewer && (
+              <button
+                className={`ag-follow ${following ? "on" : ""}`}
+                onClick={toggleFollow}
+                disabled={followBusy}
+              >
+                {following ? "Following ✓" : "Follow"}
+              </button>
+            )}
             <div className="ag-react-wrap" ref={topMenuRef}>
               {topMenuOpen && (
                 <div className="ag-more-menu ag-more-menu--down" role="menu" aria-label="Room options">
