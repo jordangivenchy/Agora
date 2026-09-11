@@ -37,6 +37,32 @@ Supabase path (no new vendor): Dashboard → Project Settings → Storage →
 
 Cloudflare R2 works identically (and has free egress) if preferred.
 
+## 4. Discord, the beta server — `discord: true`
+
+The site posts three kinds of card into the testers' Discord: a public
+room going live (#live-now), a recording landing (#past-discussions), and
+a post featured on the home page (#announcements). The database raises
+each event (migration `20260905_discord_notify`, trigger → pg_net →
+`/api/internal/discord`); the route re-reads the row and posts to the
+channel's webhook. Nothing posts until a webhook is set.
+
+1. In Discord, for each channel: Edit channel → Integrations → Webhooks →
+   New webhook → name it `AgoraSphere` → Copy webhook URL.
+2. Add to Vercel: `DISCORD_WEBHOOK_LIVE`, `DISCORD_WEBHOOK_RECORDINGS`,
+   `DISCORD_WEBHOOK_ANNOUNCEMENTS`. One channel for everything: set only
+   `DISCORD_WEBHOOK_URL` (it is the fallback for all three).
+3. Redeploy, then `/api/health` → `discord: true`.
+4. Prove a webhook from a terminal (the URL is the secret — keep it out of
+   chats and commits):
+
+   ```bash
+   curl -sS -X POST "$DISCORD_WEBHOOK_LIVE" -H 'Content-Type: application/json' \
+     -d '{"username":"AgoraSphere","content":"Webhook connected."}'
+   ```
+
+The bot's avatar is `public/mark-512.png`, fetched by Discord from the
+production origin (PNGs bypass the beta gate).
+
 ## Also worth setting while you're in there
 
 - `CRON_SECRET` — any long random string; Vercel then authenticates its

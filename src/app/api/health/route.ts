@@ -3,6 +3,7 @@ import { hasAdminCredentials } from "@/lib/supabase-admin";
 import { getAppConfig } from "@/lib/appConfig";
 import { emailConfigured } from "@/lib/email";
 import { newsConfigured } from "@/lib/news";
+import { discordConfigured } from "@/lib/discord";
 
 /* Integration health: which optional backends are live. Safe to expose —
    booleans only, never values. Hit this after pasting a key into Vercel
@@ -35,6 +36,7 @@ export async function GET() {
     ),
     webPush: push,
     cron: Boolean(process.env.CRON_SECRET),
+    discord: discordConfigured(),
   });
 }
 
