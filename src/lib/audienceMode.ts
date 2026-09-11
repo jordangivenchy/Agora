@@ -10,7 +10,7 @@
    threshold admits newcomers over WebRTC again automatically. There is
    deliberately no separate floor constant for that reason. */
 
-export const DEFAULT_HLS_AUDIENCE_THRESHOLD = 15;
+export const DEFAULT_HLS_AUDIENCE_THRESHOLD = 300;
 
 /* Raised-hand fast lane: a viewer asking to speak needs to be AT the
    live edge (the HLS broadcast runs ~10s behind — being brought up off
