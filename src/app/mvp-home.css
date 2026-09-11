@@ -2881,7 +2881,7 @@ body { background: transparent; }
   border-radius: 0;
   border: none;
   border-left: 0.5px solid #2e2e38;
-  background: #0b0b0d !important; /* solid — same surface on every slide */
+  background: transparent !important; /* the page shows through, as it does behind a notice */
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
