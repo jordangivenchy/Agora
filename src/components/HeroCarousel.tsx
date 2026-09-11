@@ -68,7 +68,10 @@ type NewsStory = TickerStory & {
 export type HeroPost = {
   id: string;
   title: string;
+  /** The opening paragraph, as plain text. */
   excerpt: string;
+  /** The post's first list — its heading and each item's lead — for the notice's side column. */
+  highlights: { heading: string | null; items: string[] } | null;
   imageUrl: string | null;
   createdAt: string;
   author: string;
@@ -530,8 +533,10 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
 
 /* A featured post as a notice from the site: the mark and "From the
    AgoraSphere team" with the date, the title, a yellow rule, the post's
-   opening, "Read more" and the post's facts; its picture framed at the
-   right when it has one (wide screens). Phones open it on tap. */
+   opening paragraph, "Read more" and the post's facts. At the right on
+   wide screens: the post's picture framed, or, when the post carries a
+   list, that list's heading and leads as highlights. Phones open it on
+   tap. */
 function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, onTap }: {
   post: HeroPost;
   i: number;
@@ -571,10 +576,17 @@ function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, o
             </span>
           </div>
         </div>
-        {image && (
+        {image ? (
           <div className="notice-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image} alt="" loading="eager" decoding="async" onError={onImageBroken} />
+          </div>
+        ) : p.highlights && (
+          <div className="notice-highlights">
+            {p.highlights.heading && <div className="notice-highlights-head">{p.highlights.heading}</div>}
+            <ul>
+              {p.highlights.items.map((it) => <li key={it}>{it}</li>)}
+            </ul>
           </div>
         )}
       </div>

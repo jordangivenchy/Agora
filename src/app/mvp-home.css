@@ -2977,7 +2977,13 @@ body { background: transparent; }
 .notice-photo { flex: 0 0 38%; position: relative; overflow: hidden; }
 .notice-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .notice-photo::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(to right, #0b0b0d 0%, rgba(11,11,13,0) 35%); }
-@media (max-width: 900px) { .notice-photo { display: none; } }
+/* The post's first list, as highlights beside the opening. */
+.notice-highlights { flex: 0 0 34%; display: flex; flex-direction: column; justify-content: center; padding: 28px 40px 28px 32px; border-left: 1px solid #1b1b21; }
+.notice-highlights-head { margin-bottom: 12px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; color: #8c8c98; }
+.notice-highlights ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.notice-highlights li { position: relative; padding-left: 16px; font-size: 14.5px; font-weight: 600; line-height: 1.35; color: #e6e6ee; }
+.notice-highlights li::before { content: ""; position: absolute; left: 0; top: 0.5em; width: 6px; height: 6px; border-radius: 50%; background: #ffb700; }
+@media (max-width: 900px) { .notice-photo, .notice-highlights { display: none; } }
 @media (max-width: 639px) {
   .notice-text { padding: 16px 16px 18px; }
   .notice-kicker { font-size: 11px; gap: 8px; }

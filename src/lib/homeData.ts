@@ -139,10 +139,9 @@ export async function fetchHeroRooms(supabase: SupabaseClient): Promise<HeroRoom
     });
 }
 
-/* A post's opening as plain text for the slide: markdown marks, images
-   and bare links dropped, cut at a word. */
-function excerpt(md: string, max = 200): string {
-  const text = md
+/* Markdown as plain text: marks, images and bare links dropped. */
+function plain(md: string): string {
+  return md
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/https?:\/\/\S+/g, "")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
@@ -151,9 +150,42 @@ function excerpt(md: string, max = 200): string {
     .replace(/[*_~]+/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+function cutAtWord(text: string, max: number): string {
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
   return cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 40)).trimEnd() + "…";
+}
+
+/* The notice's copy from a post: its opening paragraph (the first block
+   that is neither a heading nor a list), and — when the post goes on to
+   a list — that list's heading and the lead of each item, for the
+   slide's highlights column. Lists written with a blank line between
+   items count as one list. */
+export type NoticeHighlights = { heading: string | null; items: string[] };
+function noticeCopy(md: string, max = 320): { excerpt: string; highlights: NoticeHighlights | null } {
+  const blocks = md.replace(/\r/g, "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  const isItem = (line: string) => /^([-*+]|\d+\.)\s+/.test(line);
+  const isList = (b: string) => b.split("\n").map((l) => l.trim()).filter(Boolean).every(isItem);
+  const isHeading = (b: string) => /^#{1,6}\s/.test(b) || (!b.includes("\n") && b.length <= 60 && !/[.!?]$/.test(b));
+  const opening = blocks.find((b) => !isList(b) && !isHeading(b)) ?? blocks[0] ?? "";
+  const items: string[] = [];
+  let heading: string | null = null;
+  for (let i = 0; i < blocks.length; i++) {
+    if (isList(blocks[i])) {
+      if (!items.length && i > 0 && isHeading(blocks[i - 1])) heading = plain(blocks[i - 1]);
+      for (const line of blocks[i].split("\n")) {
+        const t = line.trim();
+        if (isItem(t)) items.push(t.replace(/^([-*+]|\d+\.)\s+/, ""));
+      }
+    } else if (items.length) break;
+  }
+  const leads = items
+    .map((t) => plain(t).split(/[.!?:]\s|\s[—–-]\s/)[0].replace(/[.:!?]+$/, "").trim())
+    .filter(Boolean)
+    .map((t) => (t.length > 40 ? t.slice(0, 39).trimEnd() + "…" : t))
+    .slice(0, 4);
+  return { excerpt: cutAtWord(plain(opening), max), highlights: leads.length >= 2 ? { heading, items: leads } : null };
 }
 
 type Person = { username: string | null; display_name: string | null; avatar_url: string | null };
@@ -183,10 +215,12 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[
   return ((data ?? []) as unknown as DevPostRow[]).map((p) => {
     const a = one(p.author);
     const b = one(p.community);
+    const copy = noticeCopy(p.body ?? "");
     return {
       id: p.id,
       title: p.title,
-      excerpt: excerpt(p.body ?? "", 320),
+      excerpt: copy.excerpt,
+      highlights: copy.highlights,
       imageUrl: typeof p.image_url === "string" && /^https:\/\//.test(p.image_url) ? p.image_url : null,
       createdAt: p.created_at,
       author: a?.username ?? "agorasphere",
