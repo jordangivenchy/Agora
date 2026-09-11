@@ -1552,7 +1552,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               >
                 <UserAvatar size={24} username={hostUser.username} avatarUrl={hostUser.avatar_url ?? null} seed={room.host_id} />
                 <span>{displayName(hostUser)}</span>
-                <small>HOST</small>
               </a>
             )}
             <button

@@ -2101,7 +2101,6 @@
   max-width: 200px;
 }
 .ag-host-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ag-host-chip small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #ffb700; }
 .ag-host-chip:hover { background: var(--ag-glass-bg-hover); border-color: rgba(255, 255, 255, 0.3); }
 
 /* ── Right rail ── */
