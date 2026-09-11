@@ -901,9 +901,11 @@ a.carousel-watch-btn { text-decoration: none; }
 .carousel-arrow:hover { color: #fff; }
 .carousel-arrow.left:hover { transform: translateY(-50%) translateX(-2px); }
 .carousel-arrow.right:hover { transform: translateY(-50%) translateX(2px); }
-.carousel-arrow.left { left: 12px; }
-/* Hugs the slide's right edge — clear of the info panel's content. */
-.carousel-arrow.right { right: 2px; }
+/* Hugging the slide's edges from just inside, both sides alike. The frame
+   around the stage carries them (the stage clips whatever it holds). */
+.carousel-frame { position: relative; }
+.carousel-arrow.left { left: 4px; }
+.carousel-arrow.right { right: 4px; }
 
 .carousel-dots {
   display: flex;

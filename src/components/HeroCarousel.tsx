@@ -443,17 +443,21 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
 
   return createPortal(
     <section className="carousel-section" style={N ? undefined : { display: "none" }}>
-      <div
-        className="carousel-stage"
-        id="carouselStage"
-        ref={stageRef}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-      >
-        <div className="carousel-track" id="carouselTrack" ref={trackRef}>
-          {strip.map(renderSlide)}
+      {/* The arrows sit outside the stage, in the column's gutters: the
+          stage clips its slides, so they live on the frame around it. */}
+      <div className="carousel-frame">
+        <div
+          className="carousel-stage"
+          id="carouselStage"
+          ref={stageRef}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+        >
+          <div className="carousel-track" id="carouselTrack" ref={trackRef}>
+            {strip.map(renderSlide)}
+          </div>
         </div>
         <button type="button" className="carousel-arrow left" id="arrowLeft" aria-label="Previous" onClick={() => { goTo(curRef.current - 1); startAuto(); }}>
           <Icon name="chevron-left" size={26} strokeWidth={1.5} />
