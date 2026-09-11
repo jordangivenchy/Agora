@@ -12,7 +12,8 @@ import { logRoomEvent, noteRoomAction, takeRoomAction } from "@/lib/roomDiag";
 import { useRouter } from "next/navigation";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { createClient } from "@/lib/supabase-browser";
-import { parseRoomParam } from "@/lib/urls";
+import { parseRoomParam, userPath } from "@/lib/urls";
+import UserAvatar from "@/components/UserAvatar";
 import { displayName } from "@/lib/names";
 import type { DebateRoom } from "@/types/database";
 import { TOPICS } from "@/types/database";
@@ -614,6 +615,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      connect effect re-requests a token with the new role — the server
      sees the stage row and hands out WebRTC. */
   const hlsAudience = !broadcast && !!call.hlsMode;
+  /* The host's profile for the top bar, from their seat's row. */
+  const hostUser = room ? participants.find((pp) => pp.user_id === room.host_id)?.user ?? null : null;
 
   /* ── The sky while the call connects ──────────────────────────────
      The loading screen that brought us here stays over the stage until
@@ -1539,6 +1542,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             </div>
           </div>
           <div className="ag-topbar-actions">
+            {hostUser?.username && (
+              <a
+                className="ag-host-chip"
+                href={userPath(hostUser.username)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="The host's profile"
+              >
+                <UserAvatar size={24} username={hostUser.username} avatarUrl={hostUser.avatar_url ?? null} seed={room.host_id} />
+                <span>{displayName(hostUser)}</span>
+                <small>HOST</small>
+              </a>
+            )}
             <button
               className={`ag-follow ${following ? "on" : ""}`}
               onClick={() => setFollowing((f) => !f)}

@@ -2039,45 +2039,70 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 14px 20px;
-  border-radius: 14px;
-  background: rgba(16, 13, 26, 0.97);
-  border: 1px solid #7c5cff;
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6), 0 0 24px rgba(124, 92, 255, 0.25);
-  backdrop-filter: blur(12px);
+  padding: 14px 18px 14px 20px;
+  border-radius: 16px;
+  background: #0b0b0d;
+  border: 1px solid #2b2b34;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
   animation: ag-walk-on 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
 
-.ag-invite-text { font-size: 13px; color: #e7e9ee; }
-.ag-invite-text strong { color: #b3a1ff; }
+.ag-invite-text { font-size: 13.5px; color: #e7e9ee; }
+.ag-invite-text strong { color: #ffb700; font-weight: 700; }
 
 .ag-invite-actions { display: flex; gap: 8px; }
 
 .ag-invite-join {
-  padding: 8px 18px;
-  border-radius: 10px;
-  border: none;
-  background: #7c5cff;
-  color: #fff;
-  font-size: 12.5px;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid #ffb700;
+  background: #ffb700;
+  color: #1a0e00;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  font-family: inherit;
 }
 
-.ag-invite-join:hover:not(:disabled) { background: #8f73ff; }
+.ag-invite-join:hover:not(:disabled) { background: #ffc22e; border-color: #ffc22e; }
+.ag-invite-join:disabled { opacity: 0.5; cursor: default; }
 
 .ag-invite-decline {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: transparent;
-  color: #9aa0ac;
-  font-size: 12.5px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid #2b2b34;
+  background: #0b0b0d;
+  color: #c9c9d2;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
 }
 
-.ag-invite-decline:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.ag-invite-decline:hover:not(:disabled) { border-color: #3a3a45; color: #f5f5f0; }
+.ag-invite-decline:disabled { opacity: 0.5; cursor: default; }
+
+/* The host, top right beside Follow: their avatar and name, to their profile. */
+.ag-host-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ag-glass-bg);
+  color: #e7e9ee;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--ag-glass-rim-inlay);
+  max-width: 200px;
+}
+.ag-host-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-host-chip small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #ffb700; }
+.ag-host-chip:hover { background: var(--ag-glass-bg-hover); border-color: rgba(255, 255, 255, 0.3); }
 
 /* ── Right rail ── */
 

@@ -20,7 +20,7 @@ export default function InvitePrompt({ inviterName, busy, onJoin, onDecline }: P
       </div>
       <div className="ag-invite-actions">
         <button className="ag-invite-join" disabled={busy} onClick={onJoin}>
-          Join Stage
+          Join the stage
         </button>
         <button className="ag-invite-decline" disabled={busy} onClick={onDecline}>
           Decline
