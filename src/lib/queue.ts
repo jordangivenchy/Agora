@@ -15,6 +15,8 @@ import { sessionUser } from "@/lib/session";
 import { setPresenceQueued } from "@/lib/presence";
 
 export type Stance = "PRO" | "CON";
+/** Who to be matched with: anyone, or only someone on the other side. */
+export type Opponent = "anyone" | "disagree";
 
 /** A question the panel can offer: a standing topic (id) or a headline (id null, made on join). */
 export type QueueTopic = {
@@ -32,6 +34,7 @@ export type QueueEntry = {
   question: string;
   topicKey: string;
   stance: Stance;
+  opponent: Opponent;
   /** When this account joined, ms since the epoch. */
   since: number;
 };
@@ -85,23 +88,23 @@ export function expandQueue(): void { set({ open: true }); }
 /** Down to the pill (or away, when nothing is waiting). The offer is dropped. */
 export function collapseQueue(): void { set({ open: false, preview: null, error: null }); }
 
-/** Join the offered question with a stance. A match opens the room at once. */
-export async function joinQueue(stance: Stance): Promise<void> {
+/** Join the offered question with a stance and a wish. A match opens the room at once. */
+export async function joinQueue(stance: Stance, opponent: Opponent = "anyone"): Promise<void> {
   const t = state.preview;
   if (!t || state.busy) return;
   const { data: auth } = await sessionUser(supabase());
   if (!auth.user) { window.location.href = "/login"; return; }
   set({ busy: true, error: null });
   const call = t.id
-    ? supabase().rpc("queue_for_topic", { p_topic: t.id, p_stance: stance })
-    : supabase().rpc("queue_for_headline", { p_question: t.question, p_topic_key: t.topicKey, p_stance: stance, p_source_url: t.sourceUrl ?? null });
+    ? supabase().rpc("queue_for_topic", { p_topic: t.id, p_stance: stance, p_opponent: opponent })
+    : supabase().rpc("queue_for_headline", { p_question: t.question, p_topic_key: t.topicKey, p_stance: stance, p_source_url: t.sourceUrl ?? null, p_opponent: opponent });
   const { data, error } = await call;
   if (error) { set({ busy: false, error: friendly(error.message) }); return; }
   const res = data as { status?: string; room_id?: string; topic_id?: string } | null;
   if (res?.status === "matched" && res.room_id) { goToRoom(res.room_id); return; }
   const topicId = t.id ?? res?.topic_id ?? null;
   if (!topicId) { set({ busy: false, error: "Couldn't queue — try again." }); return; }
-  const entry: QueueEntry = { topicId, question: t.question, topicKey: t.topicKey, stance, since: Date.now() };
+  const entry: QueueEntry = { topicId, question: t.question, topicKey: t.topicKey, stance, opponent, since: Date.now() };
   set({ busy: false, preview: null, entries: [...state.entries.filter((e) => e.topicId !== topicId), entry] });
   setPresenceQueued(true);
 }
@@ -139,22 +142,26 @@ export async function restoreQueue(): Promise<void> {
   if (!auth.user) return;
   const [{ data: topics }, { data: rows }] = await Promise.all([
     supabase().rpc("get_debate_topics"),
-    supabase().from("topic_queue").select("topic_id, created_at").is("matched_room_id", null),
+    supabase().from("topic_queue").select("topic_id, created_at, opponent").is("matched_room_id", null),
   ]);
   const since = new Map<string, number>();
-  for (const r of (rows ?? []) as { topic_id: string; created_at: string }[]) since.set(r.topic_id, Date.parse(r.created_at) || Date.now());
+  const wish = new Map<string, Opponent>();
+  for (const r of (rows ?? []) as { topic_id: string; created_at: string; opponent?: string | null }[]) {
+    since.set(r.topic_id, Date.parse(r.created_at) || Date.now());
+    wish.set(r.topic_id, r.opponent === "disagree" ? "disagree" : "anyone");
+  }
   const mine = ((topics ?? []) as { id: string; question: string; topic_key: string; am_queued: boolean; my_stance: string | null }[])
     .filter((t) => t.am_queued && !state.entries.some((e) => e.topicId === t.id));
   if (!mine.length) return;
   const entries: QueueEntry[] = mine.map((t) => ({
     topicId: t.id, question: t.question, topicKey: t.topic_key,
-    stance: t.my_stance === "CON" ? "CON" : "PRO", since: since.get(t.id) ?? Date.now(),
+    stance: t.my_stance === "CON" ? "CON" : "PRO", opponent: wish.get(t.id) ?? "anyone", since: since.get(t.id) ?? Date.now(),
   }));
   set({ entries: [...state.entries, ...entries] });
   setPresenceQueued(true);
   /* Heartbeat each (a row gone stale is re-made); a match waiting is taken. */
   for (const e of entries) {
-    const { data } = await supabase().rpc("queue_for_topic", { p_topic: e.topicId, p_stance: e.stance });
+    const { data } = await supabase().rpc("queue_for_topic", { p_topic: e.topicId, p_stance: e.stance, p_opponent: e.opponent });
     const res = data as { status?: string; room_id?: string } | null;
     if (res?.status === "matched" && res.room_id) { goToRoom(res.room_id); return; }
   }

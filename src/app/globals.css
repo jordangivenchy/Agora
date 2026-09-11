@@ -2523,7 +2523,8 @@ html.reduce-motion .nav-sparkle {
 .qd-field { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
 .qd-question { margin: 6px 0 6px; font-size: 15.5px; font-weight: 600; line-height: 1.35; color: #f5f5f0; }
 .qd-stats { margin: 0 0 12px; font-size: 12.5px; line-height: 1.45; color: #8c8c98; }
-.qd-stance { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 12.5px; color: #8c8c98; }
+.qd-stance { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; font-size: 12.5px; color: #8c8c98; }
+.qd-stance + .qd-join { margin-top: 2px; }
 .qd-stance span { margin-right: 4px; }
 .qd-stance button { height: 30px; padding: 0 14px; border-radius: 999px; border: 1px solid #2b2b34; background: #0b0b0d; color: #c9c9d2; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .qd-stance button.is-on { background: #26262e; border-color: #3a3a45; color: #f5f5f0; }

@@ -1042,7 +1042,7 @@ export default function ProfileView({
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1.5 mt-5 mb-4 flex-wrap profile-tabs">
-          {tabBtn("debates", "Replays", counts.debates)}
+          {tabBtn("debates", "Past discussions", counts.debates)}
           {tabBtn("scheduled", "Scheduled", counts.scheduled)}
           {tabBtn("posts", "Posts", counts.posts)}
           {tabBtn("reposts", "Reposts", counts.reposts)}
@@ -1148,8 +1148,8 @@ export default function ProfileView({
             ) : recordedDiscussions.length === 0 ? (
               emptyState(
                 "mic",
-                isSelf ? "No replays yet" : `${first} has no replays yet`,
-                isSelf ? "Replays are saved here — turn on recording in Settings before you host." : "Their replays will show up here.",
+                isSelf ? "No past discussions yet" : `${first} has no past discussions yet`,
+                isSelf ? "Discussions you host are kept here — turn on recording in Settings first." : "Their past discussions will show up here.",
                 isSelf ? { label: "Start a discussion", href: "/?create=1" } : undefined,
               )
             ) : (

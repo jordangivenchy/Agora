@@ -354,6 +354,29 @@ export default function DebateReplay({
      signed-out viewers included. Bumped once per page load (ref-guarded
      against StrictMode double-effects); the RPC returns the new total. */
   const [replayViews, setReplayViews] = useState<number | null>(null);
+  /* Likes, the way a video is liked: one per account, toggled
+     (replay_like_state / toggle_replay_like). */
+  const [likes, setLikes] = useState<{ count: number; liked: boolean } | null>(null);
+  const [likeBusy, setLikeBusy] = useState(false);
+  useEffect(() => {
+    if (!loaded || !room || room.status !== "ended") return;
+    let alive = true;
+    supabase.rpc("replay_like_state", { p_room: room.id }).then(({ data }) => {
+      const d = data as { count?: number; liked?: boolean } | null;
+      if (alive && d) setLikes({ count: Number(d.count ?? 0), liked: !!d.liked });
+    });
+    return () => { alive = false; };
+  }, [loaded, room, supabase]);
+  const toggleLike = useCallback(async () => {
+    if (!room || likeBusy) return;
+    if (!signedIn) { window.location.href = "/login"; return; }
+    setLikeBusy(true);
+    const { data, error } = await supabase.rpc("toggle_replay_like", { p_room: room.id });
+    setLikeBusy(false);
+    if (error) return;
+    const d = data as { count?: number; liked?: boolean } | null;
+    if (d) setLikes({ count: Number(d.count ?? 0), liked: !!d.liked });
+  }, [room, likeBusy, signedIn, supabase]);
   const viewBumpedRef = useRef(false);
   useEffect(() => {
     if (!loaded || !room?.recording_url || room.status !== "ended" || viewBumpedRef.current) return;
@@ -599,10 +622,21 @@ export default function DebateReplay({
       <div className="dr-wrap">
         <div className="dr-topbar">
           <span className="dr-tag">
-            <span className="dr-tag-dot" /> {recorded ? "Replay" : "Ended · no recording"}
+            <span className="dr-tag-dot" /> {recorded ? "Past discussion" : "Ended · no recording"}
           </span>
           <span className="dr-spacer" />
-          <button className="dr-btn" onClick={share} title="Copy the replay link">
+          {likes && (
+            <button
+              className={`dr-btn dr-like${likes.liked ? " is-on" : ""}`}
+              onClick={toggleLike}
+              disabled={likeBusy}
+              aria-pressed={likes.liked}
+              title={likes.liked ? "Liked" : "Like this discussion"}
+            >
+              <Icon name="thumbs-up" size={13} /> {likes.count > 0 ? likes.count : "Like"}
+            </button>
+          )}
+          <button className="dr-btn" onClick={share} title="Copy the link">
             <Icon name="share" size={13} /> Share
           </button>
         </div>
@@ -620,7 +654,7 @@ export default function DebateReplay({
             </span>
             {recorded && durationLabel && (
               <span>
-                <Icon name="video" size={12} /> Replay · {durationLabel}
+                <Icon name="video" size={12} /> Recorded · {durationLabel}
               </span>
             )}
             {!recorded && durationLabel && <span>Lasted {durationLabel}</span>}

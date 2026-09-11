@@ -18,6 +18,7 @@ import { displayName } from "@/lib/names";
 import type { DebateRoom } from "@/types/database";
 import { TOPICS } from "@/types/database";
 import LoadingScreen from "@/components/LoadingScreen";
+import RouteLoading from "@/components/RouteLoading";
 import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
@@ -96,11 +97,10 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
     return () => { stale = true; };
   }, [parsed, router, supabase]);
 
-  if (!resolvedId) {
-    return (
-      <LoadingScreen label="Entering the Agora" />
-    );
-  }
+  /* The bar while the room is looked up: the sky is for a call, and a
+     past discussion never sees it. Once the room is known to be live,
+     the entering overlay below brings the sky up until the call is. */
+  if (!resolvedId) return <RouteLoading />;
   return <AgoraRoom roomId={resolvedId} />;
 }
 
@@ -1425,11 +1425,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     );
   }
 
-  if (!loaded || !room) {
-    return (
-      <LoadingScreen label={roomUnreadable ? "Checking access" : "Entering the Agora"} />
-    );
-  }
+  if (!loaded || !room) return <RouteLoading />;
 
   if ((arrivedEnded || showReplay) && !broadcast) {
     // Ended rooms get the shared chrome (navbar + sidebar) like the

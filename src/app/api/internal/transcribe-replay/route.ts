@@ -98,7 +98,10 @@ async function transcribeChunk(
     "Transcribe this audio recording of a live discussion verbatim. " +
     'Return ONLY a JSON array. Each element is {"t": <number — seconds from the start of THIS clip when the segment begins>, "text": "<transcribed speech>"}. ' +
     "Split into natural sentence-sized segments of at most ~30 words. Use correct punctuation and casing. " +
-    "Do not include speaker labels, timestamps inside the text, or any commentary. If the audio contains no intelligible speech, return [].";
+    "Do not include speaker labels, timestamps inside the text, or any commentary. " +
+    "Transcribe only words that are actually spoken and clearly audible. Never guess, complete, paraphrase or invent speech: " +
+    "silence, music, noise, breathing, laughter, crosstalk or unintelligible passages produce nothing — leave them out rather than filling them. " +
+    "Never repeat a segment. If the audio contains no intelligible speech, return [].";
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
@@ -141,13 +144,37 @@ async function transcribeChunk(
     }
   }
   if (!Array.isArray(parsed)) return [];
-  return parsed
-    .filter(
-      (l): l is { t: number; text: string } =>
-        !!l && typeof (l as { t?: unknown }).t === "number" && typeof (l as { text?: unknown }).text === "string"
-    )
-    .map((l) => ({ t: Math.max(0, l.t), text: l.text.trim() }))
-    .filter((l) => l.text.length > 0);
+  return dropGhosts(
+    parsed
+      .filter(
+        (l): l is { t: number; text: string } =>
+          !!l && typeof (l as { t?: unknown }).t === "number" && typeof (l as { text?: unknown }).text === "string"
+      )
+      .map((l) => ({ t: Math.max(0, l.t), text: l.text.trim() }))
+      .filter((l) => l.text.length > 0)
+  );
+}
+
+/* What a model hears in silence: sign-offs and captions from the
+   training data, and the same line again and again. Those go; so does
+   a line the model returned twice in a row (a stutter of its own,
+   never of the speaker), and any line inside brackets — [Music],
+   (inaudible) — that describes rather than transcribes. */
+const GHOST = /^(thanks?( you)?( so much)?( for (watching|listening|your time))?|subtitles? by[^.]*|subscribe[^.]*|like and subscribe[^.]*|see you( next time| in the next (one|video))?|bye(-bye)?|(please )?don'?t forget to subscribe[^.]*|thank you\.?)[.!]*$/i;
+export function dropGhosts(lines: Array<{ t: number; text: string }>): Array<{ t: number; text: string }> {
+  const out: Array<{ t: number; text: string }> = [];
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  let last = "", run = 0;
+  for (const l of lines) {
+    const n = norm(l.text);
+    if (!n) continue;
+    if (/^[\[(].*[\])]$/.test(l.text.trim())) continue;
+    if (GHOST.test(l.text.trim())) continue;
+    if (n === last) { run++; if (run >= 1) continue; } else { run = 0; }
+    last = n;
+    out.push(l);
+  }
+  return out;
 }
 
 export async function POST(request: NextRequest) {

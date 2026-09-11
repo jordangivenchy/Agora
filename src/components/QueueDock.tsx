@@ -11,7 +11,7 @@
 import { useEffect, useReducer, useState } from "react";
 import { Icon } from "@/components/icons";
 import { TOPICS } from "@/types/database";
-import { collapseQueue, expandQueue, isQueued, joinQueue, leaveQueue, pollQueue, restoreQueue, useQueue, type Stance } from "@/lib/queue";
+import { collapseQueue, expandQueue, isQueued, joinQueue, leaveQueue, pollQueue, restoreQueue, useQueue, type Opponent, type Stance } from "@/lib/queue";
 
 const field = (key: string) => TOPICS.find((t) => t.key === key) ?? null;
 const mmss = (ms: number) => {
@@ -22,6 +22,7 @@ const mmss = (ms: number) => {
 export default function QueueDock() {
   const q = useQueue();
   const [stance, setStance] = useState<Stance>("PRO");
+  const [opponent, setOpponent] = useState<Opponent>("anyone");
   /* The waiting clocks read this; it moves once a second while they show. */
   const [now, tick] = useReducer(() => Date.now(), 0);
 
@@ -85,7 +86,12 @@ export default function QueueDock() {
             <button type="button" role="radio" aria-checked={stance === "PRO"} className={stance === "PRO" ? "is-on" : undefined} onClick={() => setStance("PRO")}>For</button>
             <button type="button" role="radio" aria-checked={stance === "CON"} className={stance === "CON" ? "is-on" : undefined} onClick={() => setStance("CON")}>Against</button>
           </div>
-          <button type="button" className="qd-join" disabled={q.busy} onClick={() => { void joinQueue(stance); }}>
+          <div className="qd-stance" role="radiogroup" aria-label="Who to match with">
+            <span>Match me with</span>
+            <button type="button" role="radio" aria-checked={opponent === "anyone"} className={opponent === "anyone" ? "is-on" : undefined} onClick={() => setOpponent("anyone")}>Anyone</button>
+            <button type="button" role="radio" aria-checked={opponent === "disagree"} className={opponent === "disagree" ? "is-on" : undefined} onClick={() => setOpponent("disagree")}>Someone who disagrees</button>
+          </div>
+          <button type="button" className="qd-join" disabled={q.busy} onClick={() => { void joinQueue(stance, opponent); }}>
             {q.busy ? "Joining…" : p.queueCount > 0 ? "Match now" : "Join the queue"}
           </button>
           {q.error && <p className="qd-error">{q.error}</p>}
@@ -102,7 +108,7 @@ export default function QueueDock() {
                   <p className="qd-entry-q">{e.question}</p>
                   <p className="qd-entry-meta">
                     {f && <span style={{ color: f.color }}>{f.label}</span>}
-                    {f && " · "}{e.stance === "PRO" ? "For" : "Against"} · <span className="qd-dot" aria-hidden="true" /> waiting {mmss(now - e.since)}
+                    {f && " · "}{e.stance === "PRO" ? "For" : "Against"}{e.opponent === "disagree" ? " · the other side only" : ""} · <span className="qd-dot" aria-hidden="true" /> waiting {mmss(now - e.since)}
                   </p>
                 </div>
                 <button type="button" className="qd-leave" disabled={q.busy || !!q.matched} onClick={() => { void leaveQueue(e.topicId); }}>Leave</button>

@@ -559,3 +559,7 @@
   font-size: 11px;
   color: #8b8b94;
 }
+
+/* The like, beside Share: quiet until it is yours, then yellow. */
+.dr-like.is-on { border-color: #ffb700; color: #ffb700; }
+.dr-like:disabled { opacity: 0.6; }
