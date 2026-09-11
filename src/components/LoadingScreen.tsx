@@ -15,7 +15,7 @@
    arrival is a class on its own node — so it cannot disturb hydration
    of whatever is loading beneath it. */
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 /* In-page waits (a list still arriving, a panel's data): a line with the
    same ticking ellipsis, never a spinner. */
@@ -28,6 +28,8 @@ export function LoadingLine({ label = "Loading" }: { label?: string }) {
   );
 }
 
+const STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode;if(!el||!window.__agoraSky||(el.closest&&el.closest('#ag-boot')))return;var c=el.querySelectorAll('canvas');window.__agoraSky(c[0],c[1],el.querySelector('.ld-center'));})();`;
+
 export default function LoadingScreen({ label }: { label?: string }) {
   const trailsRef = useRef<HTMLCanvasElement>(null);
   const headsRef = useRef<HTMLCanvasElement>(null);
@@ -35,7 +37,12 @@ export default function LoadingScreen({ label }: { label?: string }) {
 
   const barRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  /* A layout effect, not a passive one: the sky's first frame — and the
+     mark, when it is already due — is drawn before the browser paints
+     this screen, so one screen giving way to the next (the entry to a
+     room handing to its call, a fallback to a page's own wait) never
+     shows a black frame between two skies. */
+  useLayoutEffect(() => {
     const trails = trailsRef.current, heads = headsRef.current;
     if (!trails || !heads || trails.dataset.live || !window.__agoraSky) return;
     const sky = window.__agoraSky(trails, heads, centerRef.current);
@@ -51,6 +58,11 @@ export default function LoadingScreen({ label }: { label?: string }) {
           centre before hydration; those attributes are meant to differ. */}
       <canvas ref={trailsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
       <canvas ref={headsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
+      {/* The sky starts as the HTML is parsed, before any bundle — a
+          server-rendered screen (a room's entry) is never a black frame
+          waiting for hydration. The effect above then leaves it be. The
+          boot splash's own starter handles the boot node. */}
+      <script dangerouslySetInnerHTML={{ __html: STARTER }} />
       <div ref={centerRef} className="ld-center" suppressHydrationWarning>
         {/* The A and the S, cut from the wordmark (public/as-mark.png). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}

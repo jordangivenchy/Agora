@@ -2307,7 +2307,10 @@ html.reduce-motion .nav-sparkle {
 }
 /* Boot splash (components/BootSplash.tsx): over all the chrome, then a
    fade. */
-.ld-boot .ld-screen { transition: opacity 0.5s ease; }
+/* Above any page's own loading screen: a page's screen arrives in the
+   HTML black and starts its sky at parse (LoadingScreen.tsx), and must
+   never paint over the boot's sky in between. */
+.ld-boot .ld-screen { z-index: 5001; transition: opacity 0.5s ease; }
 .ld-boot.is-done .ld-screen { opacity: 0; pointer-events: none; }
 /* The home shell's own wait (app/page.tsx): up until it has fully
    loaded, then a fade. */
