@@ -2960,7 +2960,9 @@ body { background: transparent; }
    to bottom on the left; on the right, the post's picture framed or its
    list — heading, leads and their detail — so the frame is full of the
    notice and nothing else. ═══ */
-.carousel-item.notice .carousel-bg { background: #0b0b0d; }
+/* No surface of its own: the notice is set straight on the page, the
+   starfield showing through around the words. */
+.carousel-item.notice .carousel-bg { background: transparent; }
 .carousel-item.notice .notice-wrap { position: absolute; inset: 0; z-index: 2; display: flex; align-items: stretch; }
 .notice-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 26px 36px 26px 40px; }
 .notice-kicker { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: #ffb700; }
