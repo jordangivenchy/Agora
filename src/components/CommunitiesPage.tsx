@@ -2021,7 +2021,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
 
         {/* header — matches the homepage section-title treatment; clicking
             it returns to the All-posts feed */}
-        <div className={`page-head cm-head${!openPost && selected === "all" ? " has-sub" : ""}`}>
+        <div className={`page-head cm-head cm-width${!openPost && selected === "all" ? " has-sub" : ""}`}>
           {(openPost || selected !== "all") && (
             <button
               onClick={() => {
@@ -2123,8 +2123,9 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         />
 
         {/* Reddit-style split: feed left at a reading width, rail at the
-            far right (rail first on mobile). */}
-        <div className="flex gap-5 items-start flex-col md:flex-row-reverse md:justify-between">
+            right (rail first on mobile) — the pair capped and centred, so a
+            wide screen doesn't open a gulf between them. */}
+        <div className="flex gap-5 items-start flex-col md:flex-row-reverse md:justify-between cm-width">
 
           {/* community rail — right side */}
           <nav className="w-full md:w-[310px] shrink-0 cm-rail">
