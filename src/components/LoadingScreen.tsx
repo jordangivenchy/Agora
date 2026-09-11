@@ -16,6 +16,7 @@
    of whatever is loading beneath it. */
 
 import { useLayoutEffect, useRef } from "react";
+import { useIsClient } from "@/lib/media";
 
 /* In-page waits (a list still arriving, a panel's data): a line with the
    same ticking ellipsis, never a spinner. */
@@ -31,6 +32,11 @@ export function LoadingLine({ label = "Loading" }: { label?: string }) {
 const STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode;if(!el||!window.__agoraSky||(el.closest&&el.closest('#ag-boot')))return;var c=el.querySelectorAll('canvas');window.__agoraSky(c[0],c[1],el.querySelector('.ld-center'));})();`;
 
 export default function LoadingScreen({ label }: { label?: string }) {
+  /* The parse-time starter belongs to the server's HTML only: it is
+     rendered on the server and through hydration (so the trees match),
+     then dropped; a screen mounted in the browser never creates it —
+     scripts created by React don't run, and React says so. */
+  const client = useIsClient();
   const trailsRef = useRef<HTMLCanvasElement>(null);
   const headsRef = useRef<HTMLCanvasElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +68,7 @@ export default function LoadingScreen({ label }: { label?: string }) {
           server-rendered screen (a room's entry) is never a black frame
           waiting for hydration. The effect above then leaves it be. The
           boot splash's own starter handles the boot node. */}
-      <script dangerouslySetInnerHTML={{ __html: STARTER }} />
+      {!client && <script dangerouslySetInnerHTML={{ __html: STARTER }} />}
       <div ref={centerRef} className="ld-center" suppressHydrationWarning>
         {/* The A and the S, cut from the wordmark (public/as-mark.png). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
