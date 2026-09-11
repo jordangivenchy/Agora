@@ -46,6 +46,12 @@ each event (migration `20260905_discord_notify`, trigger → pg_net →
 `/api/internal/discord`); the route re-reads the row and posts to the
 channel's webhook. Nothing posts until a webhook is set.
 
+The quick way: make the empty server, invite a bot with Administrator, and
+run `node scripts/discord-setup.mjs` (the notes at the top of the file walk
+through the bot token and server id). It builds the channels, roles,
+permissions, pinned texts and webhooks, and writes the webhook URLs to
+`.env.discord.local` for step 2 below. Safe to run again. By hand:
+
 1. In Discord, for each channel: Edit channel → Integrations → Webhooks →
    New webhook → name it `AgoraSphere` → Copy webhook URL.
 2. Add to Vercel: `DISCORD_WEBHOOK_LIVE`, `DISCORD_WEBHOOK_RECORDINGS`,
