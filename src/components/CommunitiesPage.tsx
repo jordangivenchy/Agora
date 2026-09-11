@@ -244,6 +244,9 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
   const phone = useMediaQuery("(max-width: 639px)");
   const isClient = useIsClient();
   const [composerFor, setComposerFor] = useState<string | null>(null);
+  /* Editing a post's body, as on Reddit: the author only, in the post's
+     own view (edit_post). */
+  const [editing, setEditing] = useState<{ id: string; body: string } | null>(null);
   const close = onClose ?? (() => navigateTo(router, "/"));
   const onStartDiscussion = startDiscussion ?? ((communityId: string, communityName: string) => requestCreate({ motion: "", topic: "", communityId, communityName }));
   const { openUserMenu } = useUserMenu();
@@ -1385,6 +1388,25 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     setPosts((ps) => ps.map((p) => (p.id === post.id ? { ...p, featured_at: stamp } : p)));
   }, [supabase]);
 
+  const startEdit = useCallback((post: Post) => {
+    if (!requireAuth()) return;
+    setEditing({ id: post.id, body: post.body ?? "" });
+    if (openPost?.id !== post.id) navigateTo(router, pathFor.post(post.id));
+  }, [requireAuth, openPost, router]);
+  const saveEdit = useCallback(async () => {
+    if (!editing || busy) return;
+    const body = editing.body.trim();
+    if (body.length > BODY_MAX) { setError(`Post is too long (${body.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return; }
+    setBusy(true);
+    const { data, error: err } = await supabase.rpc("edit_post", { p_post: editing.id, p_body: body });
+    setBusy(false);
+    if (err) { setError(err.message); return; }
+    const stamp = (data as string | null) ?? new Date().toISOString();
+    setOpenPost((p) => (p && p.id === editing.id ? { ...p, body, edited_at: stamp } : p));
+    setPosts((ps) => ps.map((p) => (p.id === editing.id ? { ...p, body, edited_at: stamp } : p)));
+    setEditing(null);
+  }, [editing, busy, supabase]);
+
   /* Mods pin/unpin root comments; pinned threads float to the top. */
   const togglePin = useCallback(async (comment: Comment) => {
     const pinned = !comment.pinned_at;
@@ -1638,6 +1660,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     boxShadow: "0 16px 48px rgba(0,0,0,0.5)", padding: 6, gap: 1,
                   }}
                 >
+                  {p.author_id === userId && postMenuItem("pencil", "Edit post", () => startEdit(p))}
                   {siteMod && postMenuItem("star", p.featured_at ? "Remove from home" : "Feature on home", () => toggleFeatured(p))}
                   {canPin && postMenuItem("pin", p.pinned_at ? "Unpin post" : "Pin post", () => togglePostPin(p))}
                   {canDelete && postMenuItem("trash", p.author_id === userId ? "Delete post" : "Remove post (mod)", () => deletePost(p), true)}
@@ -1900,6 +1923,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
       } },
       { icon: "copy", label: "Copy text", run: () => { void navigator.clipboard?.writeText([p.title, p.body].filter(Boolean).join("\n\n")); } },
     ];
+    if (p.author_id === userId) items.push({ icon: "pencil", label: "Edit post", run: () => startEdit(p) });
     if (siteMod) items.push({ icon: "star", label: p.featured_at ? "Remove from home" : "Feature on home", run: () => { void toggleFeatured(p); } });
     if (canModerate(p.community_id)) items.push({ icon: "pin", label: p.pinned_at ? "Unpin post" : "Pin post", run: () => { void togglePostPin(p); } });
     if (p.author_id === userId || canModerate(p.community_id)) {
@@ -2554,6 +2578,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         {authorSpan(openPost.author_id, openPost.author_username, openPost.author_display_name)}
                         <span>·</span>
                         <span>{timeAgo(openPost.created_at)}</span>
+                        {openPost.edited_at && <><span>·</span><span title={`Edited ${timeAgo(openPost.edited_at)}`}>edited</span></>}
                       </span>
                       <RoleBadge role={openPost.author_role} />
                       {openPost.is_repost && <span className="inline-flex items-center gap-1" style={{ color: "#e2b96b" }}><Icon name="repeat" size={12} /> repost</span>}
@@ -2563,7 +2588,35 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     <h2 className="m-0 mt-1 text-[17px]" style={{ color: "#eeeef5", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                       <RichText text={openPost.title} inline />
                     </h2>
-                    {stripClipLink(openPost.body) && (
+                    {editing?.id === openPost.id ? (
+                      <div className="mt-2 cm-post-edit" onPointerDown={(e) => e.stopPropagation()}>
+                        <RichEditor
+                          autoFocus
+                          value={editing.body}
+                          onChange={(md) => setEditing((e) => (e ? { ...e, body: md } : e))}
+                          placeholder="Text (optional — @ to mention someone)"
+                          mentions={!!userId}
+                          onSubmit={() => { void saveEdit(); }}
+                        />
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            onClick={() => { void saveEdit(); }}
+                            disabled={busy}
+                            className="cursor-pointer text-[12.5px] disabled:opacity-50 disabled:cursor-default"
+                            style={{ background: "#ffb700", border: "1px solid #ffb700", color: "#1a0e00", borderRadius: 999, height: 34, padding: "0 16px", fontWeight: 700, fontFamily: "inherit" }}
+                          >
+                            {busy ? "Saving…" : "Save"}
+                          </button>
+                          <button
+                            onClick={() => setEditing(null)}
+                            className="cursor-pointer text-[12.5px]"
+                            style={{ ...btnGhost, height: 34, padding: "0 14px", borderRadius: 999 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : stripClipLink(openPost.body) && (
                       <div className="mt-2 text-[13px] leading-relaxed" style={{ color: "rgba(238,238,245,0.85)" }}>
                         <RichText text={stripClipLink(openPost.body)} />
                       </div>

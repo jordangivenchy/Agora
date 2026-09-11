@@ -52,6 +52,8 @@ export type PostRow = {
   pinned_at: string | null;
   /** When a site moderator put it on the home page's carousel; null when not featured. */
   featured_at: string | null;
+  /** When the author last changed the body; null when never edited. */
+  edited_at: string | null;
 };
 
 /* Homepage v5 glass: translucent card, blur, hairline border. */
@@ -354,6 +356,7 @@ export default function PostCard<P extends PostRow>({
             {author}
             <span>·</span>
             <span>{timeAgo(p.created_at)}</span>
+            {p.edited_at && <><span>·</span><span title={`Edited ${timeAgo(p.edited_at)}`}>edited</span></>}
           </span>
           <RoleBadge role={p.author_role} />
           {/* No repost glyph up here: the embed below says "from <board>". */}
