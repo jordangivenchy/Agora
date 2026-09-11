@@ -2882,8 +2882,10 @@ body { background: transparent; }
   border: none;
   border-left: 0.5px solid #2e2e38;
   background: transparent !important; /* the page shows through, as it does behind a notice */
+  /* Unprefixed only: with the -webkit- twin beside it the compiler keeps
+     just the twin, the base panel's blur survives, and the stars behind
+     are smeared to nothing. */
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   box-shadow: none;
   display: flex;
   flex-direction: column;
