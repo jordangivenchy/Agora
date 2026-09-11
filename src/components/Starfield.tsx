@@ -11,7 +11,9 @@
 import { useEffect, useRef } from "react";
 import type { SkySnapshot } from "@/lib/skySplash";
 
-const DENSITY = 0.00018;
+/* Stars per square pixel. Dense enough that a 250px column beside a
+   story still reads as sky, not as black. */
+const DENSITY = 0.00045;
 
 interface Star {
   ox: number; oy: number;
@@ -35,9 +37,9 @@ interface Star {
 
 function randomRadius(): number {
   const r = Math.random();
-  if (r < 0.65) return 0.3 + Math.random() * 0.4;
-  if (r < 0.93) return 0.9 + Math.random() * 0.3;
-  return 1.4;
+  if (r < 0.65) return 0.5 + Math.random() * 0.4;
+  if (r < 0.93) return 1.0 + Math.random() * 0.3;
+  return 1.5;
 }
 
 function makeStar(w: number, h: number): Star {
@@ -47,10 +49,10 @@ function makeStar(w: number, h: number): Star {
   const isFar = radius < 0.9;
   const depth = isFar ? 0.2 : isMid ? 0.5 : 1.0;
   const baseOpacity = isFar
-    ? 0.3 + Math.random() * 0.2
+    ? 0.42 + Math.random() * 0.22
     : isMid
-      ? 0.5 + Math.random() * 0.25
-      : 0.75 + Math.random() * 0.25;
+      ? 0.58 + Math.random() * 0.25
+      : 0.78 + Math.random() * 0.22;
   const hotBlue = Math.random() < 0.04;
   const baseColor: [number, number, number] = hotBlue
     ? [144, 202, 249]
@@ -149,7 +151,7 @@ export default function Starfield() {
         const x = cx + sky.r * Math.cos(sky.a + snap.theta);
         const y = cy + sky.r * Math.sin(sky.a + snap.theta);
         const faint = sky.w < 1;
-        const radius = faint ? 0.55 : sky.w < 1.5 ? 1.0 : 1.6;
+        const radius = faint ? 0.8 : sky.w < 1.5 ? 1.1 : 1.6;
         const isClose = radius >= 1.2, isFar = radius < 0.9;
         const depth = isFar ? 0.2 : isClose ? 1.0 : 0.5;
         const twinkleSpeed = Math.random() < 0.7
@@ -159,7 +161,7 @@ export default function Starfield() {
         const pulseSpeed = pulsing ? 2.0 + Math.random() * 3.0 : 0;
         return {
           ox: x, oy: y, x, y, radius,
-          baseOpacity: faint ? 0.3 + Math.random() * 0.2 : Math.min(1, sky.alpha),
+          baseOpacity: faint ? 0.45 + Math.random() * 0.2 : Math.min(1, sky.alpha),
           baseColor: [sky.col[0], sky.col[1], sky.col[2]],
           depth, isClose, isFar,
           twinkleSpeed,
@@ -169,6 +171,15 @@ export default function Starfield() {
           rise: faint && !still ? { at: bornAt, ms: 2200 } : undefined,
         };
       });
+      /* The sky's scatter is thinner than this field: top it up to the
+         field's density with stars of our own, coming out with the faint
+         tier so the sky fills in rather than pops. */
+      const target = Math.floor(canvas.width * canvas.height * DENSITY);
+      while (stars.length < target) {
+        const extra = makeStar(canvas.width, canvas.height);
+        if (!still) extra.rise = { at: bornAt, ms: 2600 };
+        stars.push(extra);
+      }
       mouseX = mouseY = 0;
       if (still) render();
     };
