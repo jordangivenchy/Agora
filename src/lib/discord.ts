@@ -45,6 +45,7 @@ export const DISCORD_YELLOW = 0xffb700;
 export const DISCORD_BLUE = 0x2f7fe0;
 
 export interface DiscordEmbed {
+  author?: { name: string; url?: string; icon_url?: string };
   title?: string;
   description?: string;
   url?: string;
@@ -144,12 +145,13 @@ function runLabel(startedAt: string | null | undefined, endedAt: string | null |
   return rest ? `${h} h ${rest} min` : `${h} h`;
 }
 
-function brand(origin: string, embed: DiscordEmbed, content: string): DiscordMessage {
+/* Every message is one embed and nothing else: no bare text above it.
+   The kind of card sits in the author line, the title is the link. */
+function brand(origin: string, kind: string, embed: DiscordEmbed): DiscordMessage {
   return {
-    content: clip(content, 300),
     username: "AgoraSphere",
     avatar_url: `${origin}/mark-512.png`,
-    embeds: [{ footer: { text: FOOTER }, ...embed }],
+    embeds: [{ author: { name: kind }, footer: { text: FOOTER }, ...embed }],
     allowed_mentions: { parse: [] },
   };
 }
@@ -170,16 +172,15 @@ export function roomLiveMessage(
 ): DiscordMessage {
   const where = community?.name ? ` in **${escapeMd(community.name)}**` : "";
   const how = isDuel(room) ? " · matched from the queue" : "";
-  return brand(
-    origin,
-    {
-      description: `Hosted by ${person(host, origin)}${where}${how}\n**[Join the room](${origin}${roomPath(room)})**`,
-      color: DISCORD_YELLOW,
-      timestamp: room.started_at ?? new Date().toISOString(),
-      thumbnail: host?.avatar_url ? { url: httpsUrl(host.avatar_url) ?? "" } : undefined,
-    },
-    `🔴 **Live now:** ${escapeMd(motionOf(room))}`
-  );
+  const url = `${origin}${roomPath(room)}`;
+  return brand(origin, "🔴 Live now", {
+    title: motionOf(room),
+    url,
+    description: `Hosted by ${person(host, origin)}${where}${how}\n**[Join the room](${url})**`,
+    color: DISCORD_YELLOW,
+    timestamp: room.started_at ?? new Date().toISOString(),
+    thumbnail: host?.avatar_url ? { url: httpsUrl(host.avatar_url) ?? "" } : undefined,
+  });
 }
 
 export function recordingReadyMessage(
@@ -190,16 +191,15 @@ export function recordingReadyMessage(
 ): DiscordMessage {
   const where = community?.name ? ` in **${escapeMd(community.name)}**` : "";
   const run = runLabel(room.started_at, room.ended_at);
-  return brand(
-    origin,
-    {
-      description: `Hosted by ${person(host, origin)}${where}${run ? ` · ${run}` : ""}\n**[Open the past discussion](${origin}${replayPath(room)})**`,
-      color: DISCORD_BLUE,
-      timestamp: room.recording_ended_at ?? room.ended_at ?? new Date().toISOString(),
-      thumbnail: host?.avatar_url ? { url: httpsUrl(host.avatar_url) ?? "" } : undefined,
-    },
-    `🎧 **Past discussion:** ${escapeMd(motionOf(room))}`
-  );
+  const url = `${origin}${replayPath(room)}`;
+  return brand(origin, "🎧 Past discussion", {
+    title: motionOf(room),
+    url,
+    description: `Hosted by ${person(host, origin)}${where}${run ? ` · ${run}` : ""}\n**[Open the past discussion](${url})**`,
+    color: DISCORD_BLUE,
+    timestamp: room.recording_ended_at ?? room.ended_at ?? new Date().toISOString(),
+    thumbnail: host?.avatar_url ? { url: httpsUrl(host.avatar_url) ?? "" } : undefined,
+  });
 }
 
 export function featuredPostMessage(
@@ -210,18 +210,14 @@ export function featuredPostMessage(
   const title = clip(plainText(post.title) || "A post from the team", 200);
   const excerpt = clip(plainText(post.body), 600);
   const url = `${origin}${pathFor.post(post.id)}`;
-  return brand(
-    origin,
-    {
-      title: title,
-      url,
-      description: `${excerpt ? `${escapeMd(excerpt)}\n\n` : ""}Posted by ${person(author, origin)} · **[Read the post](${url})**`,
-      color: DISCORD_YELLOW,
-      timestamp: post.featured_at ?? new Date().toISOString(),
-      footer: { text: `${FOOTER} · featured on the home page` },
-    },
-    `📣 **From the AgoraSphere team:** ${escapeMd(title)}`
-  );
+  return brand(origin, "📣 From the AgoraSphere team", {
+    title,
+    url,
+    description: `${excerpt ? `${escapeMd(excerpt)}\n\n` : ""}Posted by ${person(author, origin)} · **[Read the post](${url})**`,
+    color: DISCORD_YELLOW,
+    timestamp: post.featured_at ?? new Date().toISOString(),
+    footer: { text: `${FOOTER} · featured on the home page` },
+  });
 }
 
 /* ── Delivery ─────────────────────────────────────────────────────── */

@@ -76,13 +76,17 @@ describe("text helpers", () => {
 });
 
 describe("roomLiveMessage", () => {
-  it("headlines the motion, links the room and the host, pings nobody", () => {
+  it("is one embed: kind line, the motion as the link, host and room underneath, pings nobody", () => {
     const m = roomLiveMessage(ROOM, HOST, { name: "Politics club" }, ORIGIN);
-    expect(m.content).toBe("🔴 **Live now:** Voting should be mandatory");
+    expect(m.content).toBeUndefined();
+    expect(m.embeds).toHaveLength(1);
     expect(m.username).toBe("AgoraSphere");
     expect(m.avatar_url).toBe(`${ORIGIN}/mark-512.png`);
     expect(m.allowed_mentions).toEqual({ parse: [] });
     const e = m.embeds![0];
+    expect(e.author).toEqual({ name: "🔴 Live now" });
+    expect(e.title).toBe("Voting should be mandatory");
+    expect(e.url).toBe("https://agorasphere.net/agora/voting-should-be-mandatory-6c0ba6be");
     expect(e.description).toContain("[Jordan Jaca](https://agorasphere.net/@jordan)");
     expect(e.description).toContain("in **Politics club**");
     expect(e.description).toContain("[Join the room](https://agorasphere.net/agora/voting-should-be-mandatory-6c0ba6be)");
@@ -95,14 +99,15 @@ describe("roomLiveMessage", () => {
 
   it("marks a queue match and survives a nameless host", () => {
     const m = roomLiveMessage({ ...ROOM, pro_size: 1, con_size: 1, motion: null }, null, null, ORIGIN);
-    expect(m.content).toBe("🔴 **Live now:** Untitled room");
+    expect(m.embeds![0].title).toBe("Untitled room");
     expect(m.embeds![0].description).toContain("Hosted by someone · matched from the queue");
     expect(m.embeds![0].thumbnail).toBeUndefined();
   });
 
   it("never lets user text ping the server", () => {
     const m = roomLiveMessage({ ...ROOM, motion: "@everyone look at this **now**" }, HOST, null, ORIGIN);
-    expect(m.content).toBe("🔴 **Live now:** @everyone look at this now");
+    expect(m.content).toBeUndefined();
+    expect(m.embeds![0].title).toBe("@everyone look at this now");
     expect(m.allowed_mentions).toEqual({ parse: [] });
   });
 });
@@ -115,8 +120,11 @@ describe("recordingReadyMessage", () => {
       null,
       ORIGIN
     );
-    expect(m.content).toBe("🎧 **Past discussion:** Voting should be mandatory");
+    expect(m.content).toBeUndefined();
     const e = m.embeds![0];
+    expect(e.author).toEqual({ name: "🎧 Past discussion" });
+    expect(e.title).toBe("Voting should be mandatory");
+    expect(e.url).toBe("https://agorasphere.net/replays/voting-should-be-mandatory-6c0ba6be");
     expect(e.description).toContain("· 1 h 19 min");
     expect(e.description).toContain(
       "[Open the past discussion](https://agorasphere.net/replays/voting-should-be-mandatory-6c0ba6be)"
@@ -145,8 +153,9 @@ describe("featuredPostMessage", () => {
       { username: "agorasphere", display_name: "AgoraSphere", avatar_url: null },
       ORIGIN
     );
-    expect(m.content).toBe("📣 **From the AgoraSphere team:** Welcome to the beta");
+    expect(m.content).toBeUndefined();
     const e = m.embeds![0];
+    expect(e.author).toEqual({ name: "📣 From the AgoraSphere team" });
     expect(e.title).toBe("Welcome to the beta");
     expect(e.url).toBe("https://agorasphere.net/posts/p1");
     expect(e.description).toContain("Thanks for being here\nThree things to try this week:\nopen a room\npost a thread");
