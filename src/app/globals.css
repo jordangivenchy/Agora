@@ -3147,12 +3147,15 @@ html.reduce-motion .nav-sparkle {
   white-space: nowrap;
 }
 /* Communities: the header's + ends where the feed column ends, before
-   the 310px rail and its 20px gap (the split in CommunitiesPage). On the
-   overview, where the description line sits under the title, the +
-   drops to sit level with that line. */
+   the rail and its 20px gap. The rail is 28% of the same width, held
+   between 224 and 310px (md:w-[28%] md:min-w-[224px] md:max-w-[310px] in
+   CommunitiesPage), so the header measures it the same way rather than
+   assuming the widest case, which left the + adrift on a narrower
+   window. On the overview, where the description line sits under the
+   title, the + drops to sit level with that line. */
 @media (min-width: 768px) {
-  .cm-head { padding-right: 330px; position: relative; }
-  .cm-head.has-sub .cm-head-plus { position: absolute; right: 330px; top: 29px; }
+  .cm-head { --cm-rail-w: clamp(224px, 28%, 310px); padding-right: calc(var(--cm-rail-w) + 20px); position: relative; }
+  .cm-head.has-sub .cm-head-plus { position: absolute; right: calc(var(--cm-rail-w) + 20px); top: 29px; }
 }
 @media (max-width: 639px) {
   .cm-head-plus button { width: 40px !important; height: 40px !important; }
