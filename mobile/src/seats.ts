@@ -45,6 +45,8 @@ export const host = {
     supabase.from("debate_participants").update({ hand_raised_at: null }).eq("id", seatId),
   toAudience: (supabase: SupabaseClient, seatId: string) =>
     supabase.from("debate_participants").update({ stage_role: "audience", hand_raised_at: null }).eq("id", seatId),
+  setCohost: (supabase: SupabaseClient, seatId: string, make: boolean) =>
+    supabase.from("debate_participants").update({ stage_role: make ? "cohost" : "speaker" }).eq("id", seatId),
   lockRequests: (supabase: SupabaseClient, roomId: string, locked: boolean) =>
     supabase.from("debate_rooms").update({ speaker_requests_locked: locked }).eq("id", roomId),
 };

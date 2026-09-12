@@ -25,6 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="sign-in" options={{ headerShown: false }} />
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
+        <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
           </Stack>
         </CallHost>
       </CallProvider>

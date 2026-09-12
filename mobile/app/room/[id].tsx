@@ -17,7 +17,7 @@ import { mintToken } from "../../src/token";
 import { hostName, type RoomRow } from "../../src/rooms";
 import { fetchSeats, heartbeat, host, raiseHand, subscribeRoom, takeSeat, vacateSeat } from "../../src/seats";
 import { deriveStageRole, isHostRole, onStage, type Seat, type StageRole } from "../../src/stageModel";
-import { SeatList, type SeatActions } from "../../src/seatList";
+import { StageView, type StageActions } from "../../src/stageView";
 import { ConnectionNote, MicButton, useSpeakingIds } from "../../src/stage";
 import { colors } from "../../src/theme";
 import { Button, Note, Screen, Spinner } from "../../src/ui";
@@ -138,13 +138,14 @@ export default function RoomScreen() {
     else void refresh();
   }
 
-  const actions = useMemo<SeatActions | null>(
+  const actions = useMemo<StageActions | null>(
     () =>
       isHostRole(myRole)
         ? {
             bringUp: (s) => void host.bringUp(supabase, s.id).then(() => refresh()),
             dismiss: (s) => void host.dismiss(supabase, s.id).then(() => refresh()),
             toAudience: (s) => void host.toAudience(supabase, s.id).then(() => refresh()),
+            makeCohost: (s, make) => void host.setCohost(supabase, s.id, make).then(() => refresh()),
           }
         : null,
     [myRole, refresh]
@@ -163,9 +164,20 @@ export default function RoomScreen() {
       <Stack.Screen options={{ title: room?.status === "live" ? "Live" : "Room" }} />
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ flex: 1 }}>
         {room && (
-          <View style={{ paddingTop: 12, paddingBottom: 12 }}>
-            <Text style={{ color: colors.text, fontSize: 19, fontWeight: "800", lineHeight: 25 }}>{room.motion}</Text>
-            <Text style={{ color: colors.muted, fontSize: 12.5, marginTop: 4 }}>Hosted by {hostName(room)}{room.status !== "live" ? ` · ${room.status}` : ""}</Text>
+          <View style={{ paddingTop: 12, paddingBottom: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              {room.status === "live" ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.red }} />
+                  <Text style={{ color: colors.red, fontSize: 11, fontWeight: "800", letterSpacing: 0.4 }}>LIVE</Text>
+                </View>
+              ) : (
+                <Text style={{ color: colors.yellow, fontSize: 11, fontWeight: "800", letterSpacing: 0.4 }}>{room.status.toUpperCase()}</Text>
+              )}
+              <Text style={{ color: colors.muted, fontSize: 11.5 }}>{seats.length} here</Text>
+            </View>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: "800", lineHeight: 26, letterSpacing: -0.2 }}>{room.motion}</Text>
+            <Text style={{ color: colors.muted, fontSize: 12.5, marginTop: 4 }}>Hosted by {hostName(room)}</Text>
           </View>
         )}
         {error ? (
@@ -177,34 +189,38 @@ export default function RoomScreen() {
         ) : inThisRoom && room ? (
           <View>
             <ConnectionNote />
-            {isHostRole(myRole) && (
-              <Pressable onPress={() => void host.lockRequests(supabase, id, !locked).then(() => refresh())} style={{ alignSelf: "flex-start", marginBottom: 12, paddingHorizontal: 11, height: 30, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ color: colors.text, fontSize: 12, fontWeight: "700" }}>{locked ? "Open requests" : "Close requests"}</Text>
-              </Pressable>
-            )}
-            <SeatList seats={seats} hostId={room.host_id} meId={meId} myRole={myRole} speaking={speaking} actions={actions} />
+            <StageView
+              seats={seats}
+              hostId={room.host_id}
+              meId={meId}
+              myRole={myRole}
+              speaking={speaking}
+              actions={actions}
+              requestsLocked={locked}
+              onToggleLock={() => void host.lockRequests(supabase, id, !locked).then(() => refresh())}
+            />
           </View>
         ) : (
           <Note>Getting you in…</Note>
         )}
       </ScrollView>
       {!error && inThisRoom && room && (
-        <View style={{ flexDirection: "row", gap: 10, paddingVertical: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12 }}>
           {canRaise && (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 2 }}>
               <Button kind={handRaised ? "primary" : "secondary"} onPress={() => void toggleHand()} busy={handBusy} disabled={locked && !handRaised}>
-                {locked && !handRaised ? "Requests closed" : handRaised ? "Lower hand" : "Raise hand"}
+                {locked && !handRaised ? "Requests closed" : handRaised ? "Hand up · lower it" : "Raise hand"}
               </Button>
             </View>
           )}
           {onStage(myRole) && (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 2 }}>
               <MicButton />
             </View>
           )}
-          <View style={{ flex: 1 }}>
-            <Button kind="danger" onPress={() => void leaveRoom()}>Leave</Button>
-          </View>
+          <Pressable onPress={() => void leaveRoom()} hitSlop={8} style={{ flex: 1, height: 46, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.red }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: "700" }}>Leave</Text>
+          </Pressable>
         </View>
       )}
     </Screen>
