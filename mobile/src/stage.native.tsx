@@ -6,7 +6,7 @@ import { ConnectionState } from "livekit-client";
 import { loadLiveKit, type LiveKit } from "./livekit";
 import { colors } from "./theme";
 import { Button, Note } from "./ui";
-import { useSpeakingIds as noSpeaking, MicButton as NoMic, ConnectionNote as NoConnection } from "./stage";
+import { useSpeakingIdsFallback as noSpeaking, MicButtonFallback as NoMic, ConnectionNoteFallback as NoConnection } from "./stageFallback";
 
 export function useSpeakingIds(): Set<string> {
   const lk = loadLiveKit();
