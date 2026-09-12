@@ -46,6 +46,14 @@ every production deploy (#announcements); and a morning digest of new bugs and
 feedback for the team (#team). It also answers the "Get my beta key" button
 and the `/beta` command with the invite code, for that person's eyes only.
 
+**The key.** Testers never see the master code. The button (or `/beta`) mints
+a one-time key for their Discord account (`beta_keys`, migration
+`20260907_beta_keys`): it works once, on one device, dies after 48 hours
+unused, and a person gets `BETA_KEYS_PER_TESTER` (default 3) in all. To cut
+someone off: `update beta_keys set revoked_at = now() where discord_user_id = '…'`
+(their passes run out within 30 days; suspending the account is immediate).
+Rotating `BETA_INVITE_CODE` still ends every pass at once.
+
 The database raises the room and post events (migrations `20260905_discord_notify`
 and `20260906_discord_cards`, trigger → pg_net → `/api/internal/discord`).
 Vercel raises deploys (`/api/webhook/vercel`). A cron writes the digest

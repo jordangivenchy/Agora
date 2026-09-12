@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAppConfig } from "@/lib/appConfig";
+import { betaKeyCounts } from "@/lib/betaKeys";
 import { digestMessage, type DigestItem } from "@/lib/discord";
+import { hasAdminCredentials } from "@/lib/supabase-admin";
 
 /* Every morning: the bugs and feedback posted in Discord since
    yesterday, as one card in the private #team channel, so nothing is
@@ -96,7 +98,14 @@ export async function GET(req: Request) {
     items.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
 
     const cfg = await getAppConfig().catch(() => ({}) as Record<string, string>);
-    const message = digestMessage(items, cfg.app_origin ?? "https://agorasphere.net");
+    /* The key desk's day: handed out, used, testers in so far. */
+    const keys = hasAdminCredentials()
+      ? await betaKeyCounts(new Date(since).toISOString()).catch((e) => {
+          console.error("[discord-digest] key counts failed:", e);
+          return undefined;
+        })
+      : undefined;
+    const message = digestMessage(items, cfg.app_origin ?? "https://agorasphere.net", keys);
     if (!message) return NextResponse.json({ ok: true, posted: false, items: 0 });
 
     const sent = await api<{ id: string }>(`/channels/${team.id}/messages`, {

@@ -384,9 +384,16 @@ export function deployMessage(
   });
 }
 
+export interface KeyCounts {
+  minted: number;
+  redeemed: number;
+  testers: number;
+}
+
 /** The morning digest for the team; null when there is nothing to say. */
-export function digestMessage(items: DigestItem[], origin: string): DiscordMessage | null {
-  if (!items.length) return null;
+export function digestMessage(items: DigestItem[], origin: string, keys?: KeyCounts): DiscordMessage | null {
+  const keyNews = Boolean(keys && (keys.minted || keys.redeemed));
+  if (!items.length && !keyNews) return null;
   const bugs = items.filter((i) => i.kind === "bug");
   const fb = items.filter((i) => i.kind === "feedback");
   const line = (i: DigestItem) =>
@@ -399,6 +406,7 @@ export function digestMessage(items: DigestItem[], origin: string): DiscordMessa
     color: DISCORD_YELLOW,
     lines: [
       `${n(bugs.length, "new bug", "new bugs")} · ${n(fb.length, "new feedback post", "new feedback posts")}`,
+      keys ? `${n(keys.redeemed, "key used", "keys used")} · ${n(keys.minted, "handed out", "handed out")} · **${keys.testers}** ${keys.testers === 1 ? "tester" : "testers"} in so far` : null,
       "",
       ...group("Bugs", bugs),
       bugs.length && fb.length ? "" : null,
@@ -410,37 +418,74 @@ export function digestMessage(items: DigestItem[], origin: string): DiscordMessa
   });
 }
 
-/** The reply to the button or /beta: the shared code, for that person's eyes only. */
-export function betaKeyEmbed(code: string | null, origin: string): DiscordEmbed {
-  const thumbnail = { url: `${origin}/mark-512.png` };
-  const footer = { text: `Given to members of this server • ${BRAND}` };
-  if (!code) {
-    return {
-      title: "The door is open",
-      url: origin,
-      color: DISCORD_YELLOW,
-      thumbnail,
-      footer,
-      description: `No key is needed right now: **[agorasphere.net](${origin})** lets you straight in.\n\n*Only you can see this message.*`,
-    };
-  }
-  return {
-    title: "Your beta key",
-    url: `${origin}/beta`,
+/** What the key desk has for this person. */
+export type BetaKeyState =
+  | { kind: "key"; key: string; used: number; total: number }
+  | { kind: "none-left"; total: number }
+  | { kind: "revoked" }
+  | { kind: "unavailable" }
+  | { kind: "open" };
+
+/** The reply to the button or /beta, for that person's eyes only. */
+export function betaKeyEmbed(state: BetaKeyState, origin: string): DiscordEmbed {
+  const base = {
     color: DISCORD_YELLOW,
-    thumbnail,
-    footer,
-    description: [
-      `Go to **[agorasphere.net/beta](${origin}/beta)** and enter:`,
-      "```",
-      code,
-      "```",
-      `${TREE}One key for the whole beta, so keep it to yourself.`,
-      `${TREE}The pass lasts 30 days on each device. Come back here when it runs out.`,
-      "",
-      "*Only you can see this message.*",
-    ].join("\n"),
+    thumbnail: { url: `${origin}/mark-512.png` },
+    footer: { text: `Yours alone, from this server • ${BRAND}` },
   };
+  const only = "*Only you can see this message.*";
+  switch (state.kind) {
+    case "key": {
+      const left = state.total - state.used - 1;
+      return {
+        ...base,
+        title: "Your beta key",
+        url: `${origin}/beta`,
+        description: [
+          `Go to **[agorasphere.net/beta](${origin}/beta)** and enter:`,
+          "```",
+          state.key,
+          "```",
+          `${TREE}One use, on one device. It stops working after that, and after 48 hours unused.`,
+          left > 0
+            ? `${TREE}Another device later? Press the button again. **${left} more** after this one.`
+            : `${TREE}This is your last one. Ask in #general if you need more.`,
+          "",
+          only,
+        ].join("\n"),
+      };
+    }
+    case "none-left":
+      return {
+        ...base,
+        title: "No keys left",
+        description: [
+          `You have used all **${state.total}** of yours, one per device.`,
+          `${TREE}Ask in #general if you need another; the team can add one.`,
+          "",
+          only,
+        ].join("\n"),
+      };
+    case "revoked":
+      return {
+        ...base,
+        title: "No key for you right now",
+        description: `Your access to the beta was switched off. If that is a surprise, ask in #general.\n\n${only}`,
+      };
+    case "unavailable":
+      return {
+        ...base,
+        title: "The key desk is closed",
+        description: `Something is wrong on our side. Try again in a minute; if it keeps happening, say so in #general.\n\n${only}`,
+      };
+    case "open":
+      return {
+        ...base,
+        title: "The door is open",
+        url: origin,
+        description: `No key is needed right now: **[agorasphere.net](${origin})** lets you straight in.\n\n${only}`,
+      };
+  }
 }
 
 /* ── Delivery ─────────────────────────────────────────────────────── */

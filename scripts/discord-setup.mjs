@@ -258,7 +258,7 @@ const WELCOME_CARD = {
     "This server is where the beta lives. Say what broke, what confused you, and what you would change. Nothing is too small.",
     "",
     "**Your key**",
-    "Tap **Get my beta key** below, or type `/beta` anywhere. Only you see the answer.",
+    "Tap **Get my beta key** below, or type `/beta` anywhere. Each key works once, on one device, and only you see it. A few per person.",
     "",
     "**Try this first**",
     "**1.** Open a room from the **+** menu and hold a call with someone. Phone and desktop both.",

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { BETA_COOKIE, sha256Hex } from "@/lib/betaGate";
+import { BETA_COOKIE, verifyPass } from "@/lib/betaGate";
 
 /* Paths that must work without a beta pass: the gate itself, and endpoints
    hit by machines that carry their own auth (Apify webhook, Vercel cron)
@@ -31,7 +31,7 @@ export async function proxy(request: NextRequest) {
       (pathname.startsWith("/agora/") && sp.has("token") && sp.has("url"));
     if (!exempt) {
       const pass = request.cookies.get(BETA_COOKIE)?.value;
-      if (!pass || pass !== (await sha256Hex(betaCode))) {
+      if (!(await verifyPass(pass, betaCode))) {
         const url = request.nextUrl.clone();
         url.pathname = "/beta";
         url.search = "";

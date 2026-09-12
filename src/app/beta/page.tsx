@@ -34,20 +34,20 @@ function BetaGateForm() {
       return;
     }
     setBusy(false);
-    setError(res?.status === 401 ? "That code isn't right." : "Something went wrong — try again.");
+    setError(res?.status === 401 ? "That key isn't right, or it has been used." : "Something went wrong — try again.");
   }
 
   return (
     <AuthShell width={380} brandHref={null}>
       <form onSubmit={submit} className="auth-form">
         <h1 className="auth-title">Closed beta</h1>
-        <p className="auth-sub" style={{ marginBottom: 6 }}>AgoraSphere is invite-only right now. Enter your invite code to come in.</p>
+        <p className="auth-sub" style={{ marginBottom: 6 }}>AgoraSphere is invite-only right now. Enter your beta key to come in.</p>
         <input
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="Invite code"
-          aria-label="Invite code"
+          placeholder="Beta key"
+          aria-label="Beta key"
           autoFocus
           autoComplete="off"
           className="auth-field is-centered"

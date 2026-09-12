@@ -344,29 +344,46 @@ describe("digestMessage", () => {
 });
 
 describe("betaKeyEmbed", () => {
-  it("hands over the key in a code block, for that person only", () => {
-    const e = betaKeyEmbed("AGORA-2026", ORIGIN);
+  it("hands over a one-time key in a code block, with how many are left", () => {
+    const e = betaKeyEmbed({ kind: "key", key: "AGORA-7K2M-Q9XD", used: 0, total: 3 }, ORIGIN);
     expect(e.title).toBe("Your beta key");
     expect(e.url).toBe("https://agorasphere.net/beta");
     expect(e.description).toBe(
       [
         "Go to **[agorasphere.net/beta](https://agorasphere.net/beta)** and enter:",
         "```",
-        "AGORA-2026",
+        "AGORA-7K2M-Q9XD",
         "```",
-        " └ · One key for the whole beta, so keep it to yourself.",
-        " └ · The pass lasts 30 days on each device. Come back here when it runs out.",
+        " └ · One use, on one device. It stops working after that, and after 48 hours unused.",
+        " └ · Another device later? Press the button again. **2 more** after this one.",
         "",
         "*Only you can see this message.*",
       ].join("\n")
     );
     expect(e.thumbnail).toEqual(TILE);
-    expect(e.footer?.text).toBe("Given to members of this server • AgoraSphere beta");
+    expect(e.footer?.text).toBe("Yours alone, from this server • AgoraSphere beta");
   });
 
-  it("says the door is open when the gate is off", () => {
-    const e = betaKeyEmbed(null, ORIGIN);
-    expect(e.title).toBe("The door is open");
-    expect(e.description).toContain("No key is needed right now");
+  it("says when this is the last one, and when there are none", () => {
+    expect(betaKeyEmbed({ kind: "key", key: "AGORA-7K2M-Q9XD", used: 2, total: 3 }, ORIGIN).description).toContain(" └ · This is your last one. Ask in #general if you need more.");
+    const none = betaKeyEmbed({ kind: "none-left", total: 3 }, ORIGIN);
+    expect(none.title).toBe("No keys left");
+    expect(none.description).toContain("You have used all **3** of yours, one per device.");
+  });
+
+  it("has words for a revoked tester, a closed desk, and an open door", () => {
+    expect(betaKeyEmbed({ kind: "revoked" }, ORIGIN).title).toBe("No key for you right now");
+    expect(betaKeyEmbed({ kind: "unavailable" }, ORIGIN).title).toBe("The key desk is closed");
+    const open = betaKeyEmbed({ kind: "open" }, ORIGIN);
+    expect(open.title).toBe("The door is open");
+    expect(open.description).toContain("No key is needed right now");
+  });
+});
+
+describe("digestMessage with keys", () => {
+  it("adds the key line, and posts for keys alone", () => {
+    const e = digestMessage([], ORIGIN, { minted: 4, redeemed: 3, testers: 12 })!.embeds![0];
+    expect(e.description).toContain("**0 new bugs** · **0 new feedback posts**\n**3 keys used** · **4 handed out** · **12** testers in so far");
+    expect(digestMessage([], ORIGIN, { minted: 0, redeemed: 0, testers: 12 })).toBeNull();
   });
 });
