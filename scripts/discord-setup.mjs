@@ -259,6 +259,7 @@ const RULES_CARD = {
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
 const log = (s) => console.log(s);
+const why = (e) => String(e?.message ?? e).split(":").slice(-1)[0].trim();
 const same = (a, b) => (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
 /* Channel names as people type them: "Back channel" is #backchannel. */
 const norm = (s) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -440,7 +441,7 @@ async function main() {
       community = true;
       log("✓ Community mode on (rules: #rules, updates: #team)");
     } catch (e) {
-      log(`! Community mode could not be turned on by the bot (${e.message.split(":").slice(-1)[0].trim()}).`);
+      log(`! Community mode could not be turned on by the bot (${why(e)}).`);
       log("  Turn it on by hand: Server Settings → Enable Community, pick #rules and #team. Then run this again and #bugs and #feedback become forums.");
     }
   } else {
@@ -509,6 +510,50 @@ async function main() {
     const notices = (Array.isArray(recent) ? recent : []).filter((m) => m.type === 6);
     for (const m of notices) await api("DELETE", `/channels/${id}/messages/${m.id}`);
     if (notices.length) log(`✓ #${name}: ${notices.length} "pinned a message" notice${notices.length > 1 ? "s" : ""} removed`);
+  }
+
+  /* Joining. Two things Discord itself shows a newcomer, so nothing has
+     to be running: Rules Screening (the six rules, accepted before they
+     can talk) and the Welcome Screen (a line about the place and the
+     five channels to start in). Both need Community mode. */
+  if (community) {
+    const rules = RULES_CARD.description
+      .split("\n")
+      .filter((l) => /^\*\*\d\./.test(l))
+      .map((l) => l.replace(/\*\*/g, "").replace(/\{#([a-z-]+)\}/g, "#$1").replace(/^\d\.\s*/, ""));
+    const screening = {
+      enabled: true,
+      description: "The AgoraSphere beta is closed and small. Read these once; you accept them by joining.",
+      form_fields: [{ field_type: "TERMS", label: "Read and agree to the following rules", values: rules, required: true }],
+    };
+    try {
+      /* The form comes as a JSON string on this endpoint; older docs and
+         some servers take the array. Try the string first. */
+      await api("PATCH", `/guilds/${GUILD}/member-verification`, { ...screening, form_fields: JSON.stringify(screening.form_fields) }).catch(() =>
+        api("PATCH", `/guilds/${GUILD}/member-verification`, screening)
+      );
+      log(`✓ rules screening on: newcomers accept the ${rules.length} rules before they can talk`);
+    } catch (e) {
+      log(`! rules screening could not be set by the bot (${why(e)}).`);
+      log("  By hand: Server Settings → Safety Setup → Rules Screening → Set up → paste the six rules → Enable.");
+    }
+    try {
+      await api("PATCH", `/guilds/${GUILD}/welcome-screen`, {
+        enabled: true,
+        description: "A place to argue well. Say what broke, what confused you, and what you would change.",
+        welcome_channels: [
+          { channel_id: chanId.welcome, description: "Start here", emoji_name: "👋" },
+          { channel_id: chanId.bugs, description: "One post per bug", emoji_name: "🐛" },
+          { channel_id: chanId.feedback, description: "What felt off, what you would change", emoji_name: "💬" },
+          { channel_id: chanId["live-now"], description: "Rooms as they go live", emoji_name: "🔴" },
+          { channel_id: chanId.general, description: "Everything else", emoji_name: "💭" },
+        ].filter((c) => c.channel_id),
+      });
+      log("✓ welcome screen on: five channels to start in");
+    } catch (e) {
+      log(`! welcome screen could not be set by the bot (${why(e)}).`);
+      log("  By hand: Server Settings → Onboarding → Welcome Screen → add welcome, bugs, feedback, live-now, general.");
+    }
   }
 
   /* Webhooks: one per channel the site posts into. */
