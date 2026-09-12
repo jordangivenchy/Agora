@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "../userMenuContext";
 import CallSettings, { type CallSettingsProps } from "./CallSettings";
 import { displayName } from "@/lib/names";
+import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import type { User } from "@supabase/supabase-js";
 
 interface Message {
@@ -80,6 +81,7 @@ export default function AgoraSidebar({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   /* Chat unlock: null until we've read localStorage (avoids a gate flash
      for people who already joined). */
   const [joined, setJoined] = useState<boolean | null>(null);
@@ -135,12 +137,24 @@ export default function AgoraSidebar({
   async function sendMessage(e?: React.FormEvent) {
     e?.preventDefault();
     if (!currentUser || !input.trim() || sending) return;
+    const text = input.trim();
+    const issue = cleanTextError(text, BODY_MIN);
+    if (issue) {
+      setChatError(issue);
+      return;
+    }
     setSending(true);
-    await supabase.from("room_messages").insert({
+    setChatError(null);
+    const { error } = await supabase.from("room_messages").insert({
       room_id: roomId,
       user_id: currentUser.id,
-      content: input.trim(),
+      content: text,
     });
+    if (error) {
+      setChatError(error.message);
+      setSending(false);
+      return;
+    }
     setInput("");
     setSending(false);
     userScrolled.current = false;
@@ -244,12 +258,17 @@ export default function AgoraSidebar({
                 </div>
               ) : joined === true ? (
                 currentUser ? (
+                  <>
+                  {chatError && <div className="ag-chat-err">{chatError}</div>}
                   <form className="ag-chat-inputrow" onSubmit={sendMessage}>
                     <input
                       className="ag-chat-input"
                       type="text"
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
+                      onChange={(e) => {
+                        setInput(e.target.value);
+                        if (chatError) setChatError(null);
+                      }}
                       placeholder="Message #discussion-chat"
                       maxLength={200}
                       /* Phone keyboards cover a fixed bottom sheet; nudge the
@@ -260,6 +279,7 @@ export default function AgoraSidebar({
                       }}
                     />
                   </form>
+                  </>
                 ) : (
                   <div className="ag-chat-signin">
                     <a href="/login">Sign in</a> to chat

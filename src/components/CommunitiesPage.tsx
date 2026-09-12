@@ -55,6 +55,7 @@ import { navigateTo } from "@/lib/progress";
 import { useCoarsePointer } from "@/lib/pointer";
 import { useIsClient, useMediaQuery } from "@/lib/media";
 import { readNavUser } from "@/lib/navUserCache";
+import { BODY_MIN, NAME_MIN, cleanTextError } from "@/lib/cleanText";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -1021,6 +1022,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     const title = newTitle.trim();
     if (!communityId || !title) return;
     if (newBody.length > BODY_MAX) { setError(`Post body is too long (${newBody.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return; }
+    { const issue = cleanTextError(title, NAME_MIN) ?? cleanTextError(newBody, BODY_MIN); if (issue) { setError(issue); return; } }
     setBusy(true);
     let imageUrl: string | null = null;
     if (newImage && userId) {
@@ -1079,6 +1081,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     const text = body.trim();
     if (!text) return;
     if (text.length > BODY_MAX) { setError(`Comment is too long (${text.length.toLocaleString()} / ${BODY_MAX.toLocaleString()} characters).`); return; }
+    { const issue = cleanTextError(text, BODY_MIN); if (issue) { setError(issue); return; } }
     setBusy(true);
     let imageUrl: string | null = null;
     if (image && userId) {

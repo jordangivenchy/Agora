@@ -20,6 +20,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import InviteFriends from "./InviteFriends";
 import { sessionUser } from "@/lib/session";
+import { BODY_MIN as CLEAN_BODY, NAME_MIN as CLEAN_NAME, cleanTextError } from "@/lib/cleanText";
 
 export const COMMUNITY_KINDS: { key: string; label: string; icon: IconName; hint: string }[] = [
   { key: "topic-circle", label: "Topic circle", icon: "users-round", hint: "People around an interest" },
@@ -159,7 +160,8 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
   }, [banner]);
 
   const trimmed = name.trim();
-  const nameOk = trimmed.length >= NAME_MIN && trimmed.length <= NAME_MAX;
+  const nameIssue = cleanTextError(trimmed, CLEAN_NAME);
+  const nameOk = trimmed.length >= NAME_MIN && trimmed.length <= NAME_MAX && !nameIssue;
   const slug = previewSlug(trimmed);
   const canNext = step === 0 ? nameOk && description.length <= DESC_MAX : true;
   const canCreate = nameOk && rules.length <= RULES_MAX && (!isPrivate || prompt.length <= PROMPT_MAX);
@@ -167,6 +169,11 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
   const create = useCallback(async () => {
     if (!canCreate || busy) return;
     if (!userId) { window.location.href = "/login"; return; }
+    const textIssue = cleanTextError(description, CLEAN_BODY) ?? cleanTextError(rules, CLEAN_BODY) ?? cleanTextError(prompt, CLEAN_BODY);
+    if (textIssue) {
+      setError(textIssue);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -396,7 +403,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 />
                 <p style={{ ...hintStyle, display: "flex", justifyContent: "space-between", gap: 10 }}>
                   <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {slug ? <>Lives at <span style={{ color: "rgba(238,238,245,0.7)" }}>agorasphere.net/communities/{slug}</span></> : `${NAME_MIN}–${NAME_MAX} characters.`}
+                    {nameIssue ? <span style={{ color: "#ff8a80" }}>{nameIssue}</span> : slug ? <>Lives at <span style={{ color: "rgba(238,238,245,0.7)" }}>agorasphere.net/communities/{slug}</span></> : `${NAME_MIN}–${NAME_MAX} characters.`}
                   </span>
                   <span style={{ flexShrink: 0, color: trimmed.length > NAME_MAX ? "#ff8a80" : undefined }}>{trimmed.length}/{NAME_MAX}</span>
                 </p>

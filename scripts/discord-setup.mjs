@@ -745,7 +745,8 @@ async function main() {
   }
 
   /* AutoMod: the rules the testers agreed to, kept by Discord. Invite
-     links are the team's to share; mention floods and spam are blocked.
+     links are the team's to share; mention floods, spam, and Discord's
+     own lists of slurs, profanity and sexual content are blocked.
      Alerts land in #team. Founder, Team and Moderator are exempt. */
   const exempt = ["Founder", "Team", "Moderator"].map((r) => roleId[r]).filter(Boolean);
   const alert = chanId.team ? [{ type: 2, metadata: { channel_id: chanId.team } }] : [];
@@ -770,6 +771,15 @@ async function main() {
       trigger_type: 3,
       trigger_metadata: {},
       actions: [{ type: 1, metadata: {} }, ...alert],
+    },
+    /* Discord's own word lists: profanity, sexual content, slurs. The
+       site refuses the same kinds of words in names, titles and posts. */
+    {
+      name: "No slurs or porn",
+      event_type: 1,
+      trigger_type: 4,
+      trigger_metadata: { presets: [1, 2, 3], allow_list: [] },
+      actions: [{ type: 1, metadata: { custom_message: "Argue the point. That word isn't welcome here." } }, ...alert],
     },
   ];
   try {

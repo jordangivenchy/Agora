@@ -19,6 +19,7 @@ import { giphyEnabled } from "@/components/community/GifPicker";
 import type { PickerCommunity } from "@/components/community/CommunityPicker";
 import { EMPTY_TOPIC, attachPostTopic, type TopicDraft } from "@/lib/postTopics";
 import { sessionUser } from "@/lib/session";
+import { BODY_MIN, NAME_MIN, cleanTextError } from "@/lib/cleanText";
 import { navigateTo } from "@/lib/progress";
 
 export type ComposeClip = { id: string; title: string; duration: string | null };
@@ -119,6 +120,11 @@ export default function GlobalPostComposer() {
     if (!composeCommunity || !t) return;
     if (body.length > POST_BODY_MAX) {
       setError(`Post body is too long (${body.length.toLocaleString()} / ${POST_BODY_MAX.toLocaleString()} characters).`);
+      return;
+    }
+    const issue = cleanTextError(t, NAME_MIN) ?? cleanTextError(body, BODY_MIN);
+    if (issue) {
+      setError(issue);
       return;
     }
     setBusy(true);

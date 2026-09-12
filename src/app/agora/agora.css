@@ -2360,6 +2360,7 @@
    button row, but no fill of its own — it's part of the glass card now
    that the opaque band is gone. The hairline is card structure, dividing
    messages from composer; it isn't the page-wide bar that was removed. */
+.ag-chat-err { padding: 4px 12px 0; font-size: 12px; line-height: 1.4; color: #ff9d92; }
 .ag-chat-inputrow {
   display: flex;
   align-items: center;

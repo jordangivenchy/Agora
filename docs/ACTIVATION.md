@@ -114,6 +114,29 @@ once more (it makes an invite again).
 The bot's avatar and the tile on every card is `public/mark-512.png`,
 fetched by Discord from the production origin (PNGs bypass the beta gate).
 
+## Blocked words
+
+One list, `src/lib/blockedTerms.json`, with a severity per term: 3 hate
+(slurs, hate slogans, harassment), 2 obscene, 1 crude. Usernames, display
+names, bios, room titles, community names and post titles refuse every term;
+post bodies, comments, room chat, community descriptions and rules and the
+room frame refuse severity ≥ `app_config.clean_body_min_severity` (default 2;
+set it to 3 to let swearing through while slurs stay refused, and change
+`BODY_MIN` in `src/lib/cleanText.ts` to match). The database is the gate
+(`find_blocked_term`, triggers `trg_clean_text`, migration
+`20260914_clean_text`): it folds leetspeak, accents, lookalike letters,
+spaced-out and repeated letters, and matches whole words, so "class" and
+"Scunthorpe" pass and "n1gg3r" and "f u c k" do not. The composers run the same
+check first so the answer is instant. Room titles are also capped at 300
+characters there. Direct messages and group chats are not filtered.
+
+To change the list: edit the JSON, run `node scripts/blocked-terms-sql.mjs >
+supabase/migrations/<date>_clean_text.sql`, apply it, and point the sync test
+(`src/lib/__tests__/blockedTerms.sync.test.ts`) at the new file. Imports and
+backfills can skip the gate with `set_config('agora.skip_clean', 'on', true)`.
+Historical rows are not rewritten. The Discord server's AutoMod carries
+Discord's own slur, profanity and sexual-content lists (the setup script).
+
 ## Also worth setting while you're in there
 
 - `CRON_SECRET` — any long random string; Vercel then authenticates its

@@ -19,6 +19,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import UserAvatar from "@/components/UserAvatar";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
+import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import { Icon } from "@/components/icons";
 import { useMediaQuery } from "@/lib/media";
 import type { RoomFraming } from "@/types/database";
@@ -147,12 +148,22 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
 
   const saveAbout = async () => {
     if (aboutOver) return;
+    const issue = cleanTextError(about, BODY_MIN);
+    if (issue) {
+      setError(issue);
+      return;
+    }
     if (await call("set_room_frame", { p_room: room.id, p_about: about.trim() }, "about")) setAboutDraft(null);
   };
   const saveLine = async () => {
     if (lineDraft === null) return;
     if (lineDraft.trim() === myStance.trim()) {
       setLineDraft(null);
+      return;
+    }
+    const issue = cleanTextError(lineDraft, BODY_MIN);
+    if (issue) {
+      setError(issue);
       return;
     }
     if (await call("set_room_stance", { p_room: room.id, p_text: lineDraft.trim() }, "line")) setLineDraft(null);

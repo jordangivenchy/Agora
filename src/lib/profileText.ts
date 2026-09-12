@@ -12,6 +12,9 @@ export const DISPLAY_NAME_MAX = 40;
 export const BIO_MAX = 300;
 export const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
+import { BLOCKED, findBlockedTerm, foldObfuscation } from "./cleanText";
+const BLOCKED_TERMS: readonly string[] = BLOCKED.map(([t]) => t);
+
 /* C0 / C1 controls (minus \t \n \r, handled per-field) + zero-width and
    bidi/format characters that let users forge look-alike names or hide text. */
 const STRIP_RE =
@@ -46,62 +49,11 @@ export function normalizeUsername(s: string): string {
   return stripInvisible(s).trim().toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
 }
 
-/**
- * Conservative blocklist: unambiguous slurs + hard profanity only. Terms are
- * matched on word boundaries AFTER obfuscation folding (leetspeak, spaced /
- * dotted letters), so "assistant", "class", "Scunthorpe" never trip it.
- * Moderators: extend freely; mirror additions in public.blocked_terms.
- */
-export const BLOCKED_TERMS: readonly string[] = [
-  // racial / ethnic
-  "nigger", "nigga", "niggers", "niggas",
-  "chink", "chinks", "gook", "gooks", "spic", "spics", "wetback", "wetbacks",
-  "kike", "kikes", "raghead", "ragheads", "towelhead", "towelheads",
-  "beaner", "beaners", "darkie", "darkies",
-  "paki", "pakis", "zipperhead", "porchmonkey", "jigaboo", "sandnigger",
-  // homophobic / transphobic
-  "faggot", "faggots", "dyke", "dykes",
-  "tranny", "trannies", "shemale", "shemales",
-  // ableist
-  "retard", "retards", "retarded", "spaz", "mongoloid",
-  // hard profanity
-  "fuck", "fucks", "fucker", "fuckers", "fucking", "motherfucker", "motherfuckers",
-  "cunt", "cunts", "cocksucker", "cocksuckers",
-];
-
-const LEET: Record<string, string> = {
-  "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "8": "b",
-  "@": "a", "$": "s", "!": "i", "|": "l", "+": "t",
-};
-
-/**
- * Fold common obfuscations so the blocklist can be matched on word
- * boundaries:
- *   - NFKD + strip diacritics (fück → fuck)
- *   - lowercase
- *   - leetspeak digits/symbols → letters (n1gg3r → nigger)
- *   - separators between SINGLE letters removed (f.u.c.k / f u c k → fuck)
- *     but kept between real words ("class hole" stays two words)
- */
-export function foldObfuscation(s: string): string {
-  let t = s.normalize("NFKD").replace(/[\u0300-\u036F]/g, "").toLowerCase();
-  t = t.replace(/[0134578@$!|+]/g, (c) => LEET[c] ?? c);
-  // Collapse "a b c" / "a.b.c" / "a-b-c" / "a*b*c" runs of single letters.
-  const sep = /(?<![a-z])([a-z])(?:[\s._\-*]+([a-z])(?![a-z]))+/g;
-  t = t.replace(sep, (m) => m.replace(/[\s._\-*]+/g, ""));
-  return t;
-}
-
-/** Returns the blocked term matched in `s` (post-folding), or null. */
-export function findBlockedTerm(s: string): string | null {
-  if (!s) return null;
-  const folded = foldObfuscation(s);
-  for (const term of BLOCKED_TERMS) {
-    const re = new RegExp(`(?<![a-z])${term}(?![a-z])`, "i");
-    if (re.test(folded)) return term;
-  }
-  return null;
-}
+/* The blocklist and the matcher live in cleanText.ts (one list, with a
+   severity per term, shared with every composer); profile text is a
+   "name" surface: every term counts. Re-exported so nothing that imported
+   them from here has to move. */
+export { BLOCKED_TERMS, findBlockedTerm, foldObfuscation };
 
 export type ProfileTextInput = {
   displayName?: string | null;

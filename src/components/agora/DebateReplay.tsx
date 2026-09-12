@@ -23,6 +23,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import "./debate-replay.css";
 import { sessionUser } from "@/lib/session";
 import { navigateTo } from "@/lib/progress";
+import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import { useCoarsePointer } from "@/lib/pointer";
 import { fmtDay, roomDuration } from "@/lib/duration";
 import RichEditor from "@/components/community/RichEditor";
@@ -523,6 +524,11 @@ export default function DebateReplay({
       navigateTo(router, `/login?next=${encodeURIComponent(roomPath({ id: room.id, motion: room.motion }))}`);
       return;
     }
+    const issue = cleanTextError(text, BODY_MIN);
+    if (issue) {
+      setToast(issue);
+      return;
+    }
     setCommentBusy(true);
     try {
       let postId = room.discussion_post_id;
@@ -556,7 +562,9 @@ export default function DebateReplay({
       setToast(
         e instanceof Error && /rate_limited/.test(e.message)
           ? "Slow down — you're commenting too quickly."
-          : "Couldn't post the comment — try again."
+          : e instanceof Error && /don't allow/.test(e.message)
+            ? e.message
+            : "Couldn't post the comment — try again."
       );
     } finally {
       setCommentBusy(false);

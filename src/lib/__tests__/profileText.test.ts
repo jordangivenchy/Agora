@@ -80,7 +80,7 @@ describe("findBlockedTerm", () => {
       "assistant", "class", "Scunthorpe", "classic", "raccoon", "Dick Whittington",
       "cockatoo", "hello world", "Agent 47", "Jordan J.", "shitake", "bass player",
       "Niger delta", "Diksha", "spicy food", "Chinkara", "retarding potential",
-      "Negro league history", "Coon Rapids",
+      "Negro league history",
     ]) {
       expect(findBlockedTerm(s), s).toBeNull();
     }

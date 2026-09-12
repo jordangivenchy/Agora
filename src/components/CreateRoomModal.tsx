@@ -10,6 +10,7 @@ import { roomPath } from "@/lib/urls";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
 import TopicIcon from "./topicIcons";
 import { sessionUser } from "@/lib/session";
+import { NAME_MIN, cleanTextError } from "@/lib/cleanText";
 
 interface Props {
   open: boolean;
@@ -156,9 +157,15 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
   }
 
 
+  const motionIssue = cleanTextError(motion, NAME_MIN);
+
   async function handleCreate() {
     if (!motion.trim()) {
       setError("Please enter a motion or topic");
+      return;
+    }
+    if (motionIssue) {
+      setError(motionIssue);
       return;
     }
     let scheduledIso: string | null = null;
@@ -680,6 +687,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 }}
                 maxLength={300}
               />
+              {motionIssue && <div style={{ marginTop: 6, fontSize: 12, color: "#ff8a80" }}>{motionIssue}</div>}
             </FieldGroup>
 
             {/* Category */}
@@ -1001,7 +1009,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           </button>
           <button
             onClick={handleCreate}
-            disabled={loading || !motion.trim()}
+            disabled={loading || !motion.trim() || !!motionIssue}
             className="cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: "#ffb700",
