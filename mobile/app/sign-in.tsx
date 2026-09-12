@@ -9,7 +9,7 @@ import { colors } from "../src/theme";
 import { Button, Field, Note, Screen, Sub, Title } from "../src/ui";
 
 export default function SignIn() {
-  const { signIn, signInWithGoogle } = useSession();
+  const { signIn, signInWithGoogle, listenAsGuest } = useSession();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,6 +58,8 @@ export default function SignIn() {
           {error && <Note tone="error">{error}</Note>}
           <View style={{ height: 8 }} />
           <Button onPress={submit} disabled={!email.trim() || !password} busy={busy}>Sign in</Button>
+          <View style={{ height: 10 }} />
+          <Button kind="secondary" onPress={() => { listenAsGuest(); router.replace("/"); }}>Listen as a guest</Button>
           <Pressable onPress={() => Linking.openURL(`${SITE}/login`)} style={{ marginTop: 16, alignSelf: "center" }}>
             <Text style={{ color: colors.blueText, fontSize: 12.5, fontWeight: "500" }}>New here? Make your account on agorasphere.net</Text>
           </Pressable>

@@ -10,10 +10,10 @@ import { colors } from "../../src/theme";
 import { Spinner } from "../../src/ui";
 
 export default function TabsLayout() {
-  const { ready, session, pass, gated } = useSession();
+  const { ready, session, pass, gated, guest } = useSession();
   if (!ready) return <Spinner />;
   if (gated && !pass) return <Redirect href="/beta" />;
-  if (!session) return <Redirect href="/sign-in" />;
+  if (!session && !guest) return <Redirect href="/sign-in" />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Tabs

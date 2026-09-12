@@ -42,6 +42,9 @@ interface SessionState {
   pass: string | null;
   /** Whether the site's gate is armed: null until probed. */
   gated: boolean | null;
+  /** Listening without an account, like a visitor on the website. */
+  guest: boolean;
+  listenAsGuest(): void;
   signIn(email: string, password: string): Promise<string | null>;
   /** Google through Supabase, in the system browser. Resolves to an error message, or null. */
   signInWithGoogle(): Promise<string | null>;
@@ -56,6 +59,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pass, setPass] = useState<string | null>(null);
   const [gated, setGated] = useState<boolean | null>(null);
+  const [guest, setGuest] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -99,6 +103,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
      to the app at the redirect (exp://… in Expo Go, agorasphere://auth in
      the build; both must be on Supabase's redirect allow-list) carrying a
      code the client trades for a session. */
+  const listenAsGuest = useCallback(() => setGuest(true), []);
+
   const signInWithGoogle = useCallback(async () => {
     const redirectTo = Linking.createURL("/auth");
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -121,6 +127,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    setGuest(false);
     await supabase.auth.signOut();
   }, []);
 
@@ -138,8 +145,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ ready, session, pass, gated, signIn, signInWithGoogle, signOut, redeemKey }),
-    [ready, session, pass, gated, signIn, signInWithGoogle, signOut, redeemKey]
+    () => ({ ready, session, pass, gated, guest, listenAsGuest, signIn, signInWithGoogle, signOut, redeemKey }),
+    [ready, session, pass, gated, guest, listenAsGuest, signIn, signInWithGoogle, signOut, redeemKey]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

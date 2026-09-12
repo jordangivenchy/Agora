@@ -16,6 +16,7 @@ interface Me {
 
 export default function You() {
   const { session, signOut } = useSession();
+  const guest = !session;
   const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
@@ -31,6 +32,18 @@ export default function You() {
   }, [session?.user.id]);
 
   const name = me?.display_name?.trim() || me?.username || session?.user.email?.split("@")[0] || "You";
+  if (guest) {
+    return (
+      <Screen>
+        <View style={{ paddingTop: 20 }}>
+          <Text style={{ color: colors.text, fontSize: 20, fontWeight: "800" }}>Listening as a guest</Text>
+          <Text style={{ color: colors.muted, fontSize: 13, marginTop: 6, lineHeight: 19 }}>You can listen to any public room. Sign in to raise a hand, speak, or follow people.</Text>
+          <View style={{ height: 16 }} />
+          <Button onPress={() => router.replace("/sign-in")}>Sign in</Button>
+        </View>
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <View style={{ paddingTop: 20, alignItems: "center", marginBottom: 24 }}>
