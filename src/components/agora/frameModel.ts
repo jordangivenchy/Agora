@@ -56,3 +56,10 @@ export function frameNewsKey(f: RoomFraming | null | undefined): string {
 export function frameIsEmpty(f: RoomFraming | null | undefined): boolean {
   return !f?.about?.trim() && Object.keys(f?.stances ?? {}).length === 0;
 }
+
+/** What the counter shows: the frame's length with each move down a line
+    counting once, however the editor writes it (a paragraph break is two
+    newlines in markdown). The database applies the same measure. */
+export function frameLength(md: string): number {
+  return md.replace(/\r/g, "").replace(/\n{2,}/g, "\n").length;
+}

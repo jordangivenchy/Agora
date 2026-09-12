@@ -23,7 +23,7 @@ import { Icon } from "@/components/icons";
 import { useMediaQuery } from "@/lib/media";
 import type { RoomFraming } from "@/types/database";
 import { ROLE_LABEL, type StageParticipant, type StageRole, isHostRole, onStage } from "./stage";
-import { frameIsEmpty, frameNewsKey, framePeople } from "./frameModel";
+import { frameIsEmpty, frameLength, frameNewsKey, framePeople } from "./frameModel";
 
 const ABOUT_MAX = 1200;
 const STANCE_MAX = 200;
@@ -95,7 +95,8 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const serverAbout = framing?.about ?? "";
   const about = aboutDraft ?? serverAbout;
   const aboutDirty = about.trim() !== serverAbout.trim();
-  const aboutOver = about.length > ABOUT_MAX;
+  const aboutLen = frameLength(about);
+  const aboutOver = aboutLen > ABOUT_MAX;
   const myStance = currentUserId ? (framing?.stances?.[currentUserId]?.text ?? "") : "";
   const line = lineDraft ?? myStance;
   const empty = frameIsEmpty(framing);
@@ -166,7 +167,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
         onClick={toggle}
         aria-expanded={open}
         aria-haspopup="dialog"
-        title="What this debate is about, and where people stand"
+        title="What this room is about, and where people stand"
       >
         <Icon name="info" size={14} />
         About
@@ -174,9 +175,9 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
       </button>
 
       {showCard && (
-        <div className="ag-frame-dock" role="region" aria-label="About this debate">
+        <div className="ag-frame-dock" role="region" aria-label="About this room">
           <div className="ag-frame-dock-head">
-            <span className="ag-frame-label">About this debate</span>
+            <span className="ag-frame-label">About this room</span>
             <span className="ag-frame-dock-tools">
               <button type="button" className="ag-frame-mini" onClick={openPanel} title={canFrame ? "Edit" : "Read it all"} aria-label={canFrame ? "Edit the frame" : "Open the whole frame"}>
                 <Icon name={canFrame ? "pencil" : "maximize"} size={12} />
@@ -210,9 +211,9 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
       )}
 
       {open && (
-        <div className="ag-frame" role="dialog" aria-label="About this debate">
+        <div className="ag-frame" role="dialog" aria-label="About this room">
           <div className="ag-frame-head">
-            <span>About this debate</span>
+            <span>About this room</span>
             <span className="ag-frame-dock-tools">
               <button
                 type="button"
@@ -246,7 +247,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
                 </div>
                 <div className="ag-frame-row">
                   <span className={`ag-frame-hint ${aboutOver ? "over" : ""}`}>
-                    {about.length}/{ABOUT_MAX}
+                    {aboutLen}/{ABOUT_MAX}
                     {aboutOver ? " · too long" : framing?.about_at ? ` · set ${timeAgo(framing.about_at)}` : ""}
                   </span>
                   <button type="button" className="ag-frame-save" onClick={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy === "about"}>

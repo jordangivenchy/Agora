@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { frameIsEmpty, frameNewsKey, framePeople } from "./frameModel";
+import { frameIsEmpty, frameLength, frameNewsKey, framePeople } from "./frameModel";
 import type { StageParticipant } from "./stage";
 
 const person = (id: string, username: string, extra: Partial<StageParticipant> = {}): StageParticipant =>
@@ -65,5 +65,16 @@ describe("frameNewsKey and frameIsEmpty", () => {
     expect(frameIsEmpty({ about: "  " })).toBe(true);
     expect(frameIsEmpty({ about: "x" })).toBe(false);
     expect(frameIsEmpty({ stances: { h: { text: "y", at: "t" } } })).toBe(false);
+  });
+});
+
+describe("frameLength", () => {
+  it("counts a move down a line once, whether the editor wrote one newline or two", () => {
+    expect(frameLength("abc")).toBe(3);
+    expect(frameLength("ab\ncd")).toBe(5);
+    expect(frameLength("ab\n\ncd")).toBe(5);
+    expect(frameLength("ab\n\n\n\ncd")).toBe(5);
+    expect(frameLength("- one\n- two")).toBe(11);
+    expect(frameLength("")).toBe(0);
   });
 });
