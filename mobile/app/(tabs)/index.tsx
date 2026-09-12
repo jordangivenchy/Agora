@@ -1,7 +1,7 @@
 /* Live: what is on now, what is coming. Tap a room to enter. */
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
+import { useCallback, useState } from "react";
+import { AppState, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { fetchRooms, hostName, whenLabel, type RoomRow } from "../../src/rooms";
 import { colors } from "../../src/theme";
@@ -26,9 +26,17 @@ export default function Live() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  /* Fresh whenever the tab is looked at: on focus, every half minute while
+     it stays in front, and when the app comes back from the background. A
+     room that ended while the phone was in a pocket shouldn't still say LIVE. */
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+      const tick = setInterval(() => void load(), 30_000);
+      const sub = AppState.addEventListener("change", (s) => { if (s === "active") void load(); });
+      return () => { clearInterval(tick); sub.remove(); };
+    }, [load]),
+  );
 
   return (
     <Screen style={{ paddingHorizontal: 0 }}>

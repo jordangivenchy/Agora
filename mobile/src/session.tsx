@@ -106,24 +106,36 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const listenAsGuest = useCallback(() => setGuest(true), []);
 
   const signInWithGoogle = useCallback(async () => {
-    const redirectTo = Linking.createURL("/auth");
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
-    if (error || !data.url) return error?.message ?? "Couldn't start Google sign-in.";
-    if (Platform.OS === "web") {
-      window.location.assign(data.url);
-      return null;
+    /* Expo Go needs its exp:// address. Every build answers to the app's
+       own scheme (app.json) — createURL would prepend Metro's host in a
+       development build, giving an address Supabase doesn't know. */
+    const fromExpoGo = Linking.createURL("/auth");
+    const redirectTo = /^exps?:\/\//.test(fromExpoGo) ? fromExpoGo : "agorasphere://auth";
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error || !data.url) return error?.message ?? "Couldn't start Google sign-in.";
+      if (Platform.OS === "web") {
+        window.location.assign(data.url);
+        return null;
+      }
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== "success") return result.type === "cancel" || result.type === "dismiss" ? "Sign-in was cancelled." : "Google sign-in didn't finish.";
+      /* Supabase sends the session back in the URL fragment; errors can
+         arrive in either the query or the fragment. */
+      const back = new URL(result.url);
+      const params = new URLSearchParams(back.search);
+      new URLSearchParams(back.hash.replace(/^#/, "")).forEach((v, k) => params.set(k, v));
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      if (!access_token || !refresh_token) return params.get("error_description") ?? "Google sent nothing back.";
+      const { error: sessionErr } = await supabase.auth.setSession({ access_token, refresh_token });
+      return sessionErr ? sessionErr.message : null;
+    } catch (e) {
+      return e instanceof Error ? e.message : "Google sign-in failed.";
     }
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (result.type !== "success") return result.type === "cancel" || result.type === "dismiss" ? "Sign-in was cancelled." : "Google sign-in didn't finish.";
-    const params = new URL(result.url).searchParams;
-    const code = params.get("code");
-    const desc = params.get("error_description");
-    if (!code) return desc ?? "Google sent no code back.";
-    const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
-    return exchangeErr ? exchangeErr.message : null;
   }, []);
 
   const signOut = useCallback(async () => {

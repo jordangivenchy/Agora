@@ -18,5 +18,8 @@ export const supabase = createClient(url, anon, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === "web",
+    /* The implicit flow: Google sign-in comes back as tokens in the URL
+       fragment, which src/session.tsx reads. The code flow needs WebCrypto
+       for its challenge, which this runtime lacks. */
   },
 });
