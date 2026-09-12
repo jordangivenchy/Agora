@@ -1735,14 +1735,14 @@ html.reduce-motion .nav-sparkle {
   border-bottom: none;
   backdrop-filter: none;
 }
-/* No painted gap band under a see-through bar. The band (mvp-home.css,
-   .nav::after) masks the homepage carousel as it scrolls under the
-   opaque bar; on these routes it sat as a black strip under a
-   transparent one and, painting at the bar's level, cut the top 6px
-   off anything that starts inside it — the Messages shell, aligned
-   with the sidebar's top, lost its rounded top edge to it. */
+/* The gap band under the bar (mvp-home.css, .nav::after) is 12px on the
+   old home; here it is 4px. The search pill ends 3px past the bar's box,
+   so without a band anything scrolling under the bar shows beneath the
+   pill's bottom edge (the profile banner did). 4px covers that edge and
+   stops short of the sidebar and the Messages shell, which start 6px in
+   and once lost their rounded tops to the full band. */
 .site-chrome .nav::after {
-  display: none;
+  height: 4px;
 }
 
 /* Replay route: shift the replay content out from under the homepage
