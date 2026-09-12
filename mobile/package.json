@@ -36,7 +36,8 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start:go": "EXPO_GO=1 expo start --go --port 8081"
   },
   "private": true
 }
