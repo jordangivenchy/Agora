@@ -4,6 +4,7 @@
 import { Redirect, Tabs } from "expo-router";
 import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/session";
 import { MiniPlayer } from "../../src/miniPlayer";
 import { colors } from "../../src/theme";
@@ -11,6 +12,7 @@ import { Spinner } from "../../src/ui";
 
 export default function TabsLayout() {
   const { ready, session, pass, gated, guest } = useSession();
+  const insets = useSafeAreaInsets();
   if (!ready) return <Spinner />;
   if (gated && !pass) return <Redirect href="/beta" />;
   if (!session && !guest) return <Redirect href="/sign-in" />;
@@ -33,7 +35,8 @@ export default function TabsLayout() {
         <Tabs.Screen name="queue" options={{ title: "Queue", tabBarIcon: ({ color, size }) => <Ionicons name="swap-horizontal-outline" color={color} size={size} /> }} />
         <Tabs.Screen name="you" options={{ title: "You", tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" color={color} size={size} /> }} />
       </Tabs>
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 56 }}>
+      {/* Above the tab bar: its 49pt plus the home indicator's inset. */}
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 49 + insets.bottom }}>
         <MiniPlayer />
       </View>
     </View>
