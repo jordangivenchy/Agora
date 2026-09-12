@@ -23,7 +23,7 @@ export default function SignIn() {
     const err = await signInWithGoogle();
     setGoogleBusy(false);
     if (err) setError(err);
-    else router.replace("/home");
+    else router.replace("/");
   }
 
   async function submit() {
@@ -33,7 +33,7 @@ export default function SignIn() {
     const err = await signIn(email, password);
     setBusy(false);
     if (err) setError(err);
-    else router.replace("/home");
+    else router.replace("/");
   }
 
   return (

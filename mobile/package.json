@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
+    "@expo/vector-icons": "^15.0.2",
     "@livekit/react-native": "^2.12.0",
     "@livekit/react-native-expo-plugin": "^1.0.2",
     "@livekit/react-native-webrtc": "^144.2.0",
@@ -11,6 +12,7 @@
     "@supabase/supabase-js": "^2.116.0",
     "expo": "~57.0.22",
     "expo-constants": "~57.0.18",
+    "expo-haptics": "~57.0.3",
     "expo-linking": "~57.0.10",
     "expo-router": "~57.0.21",
     "expo-secure-store": "~57.0.4",

@@ -1,14 +1,16 @@
-/* A room: its title and host, then the stage. The token comes from the
-   site (the same mint the browser uses, with the app's bearer and pass),
-   which is what decides whether you may speak. */
+/* A room: its title and host, then the stage. Entering asks the site for
+   a token (the same mint the browser uses, with the app's bearer and
+   pass, which decides whether you may speak) and hands the call to the
+   app's root, so it keeps playing when you go back to the tabs. */
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
+import { useCall } from "../../src/callSession";
 import { apiFetch } from "../../src/api";
 import { hostName, type RoomRow } from "../../src/rooms";
-import { Call } from "../../src/call";
+import { Stage, MicButton } from "../../src/stage";
 import { colors } from "../../src/theme";
 import { Button, Note, Screen, Spinner } from "../../src/ui";
 
@@ -17,9 +19,10 @@ const LIVEKIT_URL = process.env.EXPO_PUBLIC_LIVEKIT_URL ?? "";
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, pass } = useSession();
+  const { active, join, leave } = useCall();
   const [room, setRoom] = useState<RoomRow | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const inThisRoom = active?.roomId === id;
 
   useEffect(() => {
     if (!id) return;
@@ -35,7 +38,9 @@ export default function RoomScreen() {
         setError("This room isn't available.");
         return;
       }
-      setRoom(data as unknown as RoomRow);
+      const row = data as unknown as RoomRow;
+      setRoom(row);
+      if (active?.roomId === id) return;
       const res = await apiFetch("/api/livekit", { token: session?.access_token, pass }, {
         method: "POST",
         body: JSON.stringify({ roomId: id, role: "spectator" }),
@@ -62,11 +67,13 @@ export default function RoomScreen() {
         setError("No token came back.");
         return;
       }
-      setToken(body.token);
+      join({ roomId: id, motion: row.motion, hostName: hostName(row), serverUrl: LIVEKIT_URL, token: body.token });
     })();
     return () => {
       alive = false;
     };
+    // The call is joined once per room id; a re-render must not re-request the token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, session?.access_token, pass]);
 
   if (!room && !error) return <Spinner />;
@@ -86,9 +93,18 @@ export default function RoomScreen() {
           <View style={{ height: 12 }} />
           <Button kind="secondary" onPress={() => router.back()}>Back</Button>
         </View>
-      ) : token && room ? (
+      ) : inThisRoom ? (
         <View style={{ flex: 1, paddingTop: 12 }}>
-          <Call serverUrl={LIVEKIT_URL} token={token} motion={room.motion} onLeave={() => router.back()} />
+          <Stage />
+          <View style={{ flexDirection: "row", gap: 10, paddingVertical: 12 }}>
+            <View style={{ flex: 1 }}>
+              <MicButton />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button kind="danger" onPress={() => { leave(); router.back(); }}>Leave</Button>
+            </View>
+          </View>
+          <Note>Go back to the tabs and this keeps playing; the bar at the bottom brings you here again.</Note>
         </View>
       ) : (
         <Note>Getting you in…</Note>

@@ -1,15 +1,13 @@
-/* Home: what is live, what is coming. Tap a room to enter. */
+/* Live: what is on now, what is coming. Tap a room to enter. */
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { Stack, router } from "expo-router";
-import { supabase } from "../src/supabase";
-import { useSession } from "../src/session";
-import { fetchRooms, hostName, whenLabel, type RoomRow } from "../src/rooms";
-import { colors } from "../src/theme";
-import { Note, Screen } from "../src/ui";
+import { router } from "expo-router";
+import { supabase } from "../../src/supabase";
+import { fetchRooms, hostName, whenLabel, type RoomRow } from "../../src/rooms";
+import { colors } from "../../src/theme";
+import { Note, Screen } from "../../src/ui";
 
-export default function Home() {
-  const { signOut } = useSession();
+export default function Live() {
   const [live, setLive] = useState<RoomRow[]>([]);
   const [scheduled, setScheduled] = useState<RoomRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,17 +32,8 @@ export default function Home() {
 
   return (
     <Screen style={{ paddingHorizontal: 0 }}>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <Pressable onPress={() => void signOut().then(() => router.replace("/sign-in"))} hitSlop={10}>
-              <Text style={{ color: colors.muted, fontSize: 13 }}>Sign out</Text>
-            </Pressable>
-          ),
-        }}
-      />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.yellow} />}
       >
         <Section title="Live now" count={live.length}>

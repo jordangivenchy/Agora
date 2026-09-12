@@ -45,7 +45,8 @@
             "audioType": "communication"
           }
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "scheme": "agorasphere",
     "backgroundColor": "#000000"
