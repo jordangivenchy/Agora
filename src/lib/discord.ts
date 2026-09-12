@@ -55,6 +55,7 @@ export interface DiscordEmbed {
   url?: string;
   color?: number;
   footer?: { text: string; icon_url?: string };
+  thumbnail?: { url: string };
 }
 
 export interface DiscordMessage {
@@ -150,6 +151,8 @@ function runLabel(startedAt: string | null | undefined, endedAt: string | null |
   return rest ? `${h} h ${rest} min` : `${h} h`;
 }
 
+/* The black tile with the mark sits top right of every card: Discord
+   paints the card's background itself, so this is the brand's black. */
 function card(origin: string, embed: DiscordEmbed & { note: string; lines: Array<string | null> }): DiscordMessage {
   const { note, lines, ...rest } = embed;
   return {
@@ -159,6 +162,7 @@ function card(origin: string, embed: DiscordEmbed & { note: string; lines: Array
       {
         ...rest,
         description: lines.filter((l) => l !== null).join("\n"),
+        thumbnail: { url: `${origin}/mark-512.png` },
         footer: { text: `${note} • ${BRAND}` },
       },
     ],

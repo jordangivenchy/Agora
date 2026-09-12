@@ -108,6 +108,7 @@ describe("roomLiveMessage", () => {
       ].join("\n")
     );
     expect(e.footer?.text).toBe("Public rooms only, the moment they open • AgoraSphere beta");
+    expect(e.thumbnail).toEqual({ url: "https://agorasphere.net/mark-512.png" });
   });
 
   it("marks a queue match and survives a nameless host with no start time", () => {
@@ -149,6 +150,7 @@ describe("recordingReadyMessage", () => {
       ].join("\n")
     );
     expect(e.footer?.text).toBe("Recordings land here as they finish • AgoraSphere beta");
+    expect(e.thumbnail).toEqual({ url: "https://agorasphere.net/mark-512.png" });
   });
 
   it("omits the run and the chips when the times are unknown", () => {
@@ -190,6 +192,7 @@ describe("featuredPostMessage", () => {
       ].join("\n")
     );
     expect(e.footer?.text).toBe("Featured on the home page by the team • AgoraSphere beta");
+    expect(e.thumbnail).toEqual({ url: "https://agorasphere.net/mark-512.png" });
   });
 
   it("keeps a long body under Discord's limits and copes with no body", () => {
