@@ -47,7 +47,7 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "notifications", label: "Notifications",       sub: "What you get notified about" },
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
-  { key: "data",       label: "Data & Coach",           sub: "Your profile, coaching, and data controls" },
+  { key: "data",       label: "Data & Coach",           sub: "Your data controls; the coach is coming soon" },
   { key: "blocked",    label: "Blocked users",          sub: "Manage your block list" },
   { key: "danger",     label: "Danger zone",            sub: "Delete your account" },
 ];
@@ -852,7 +852,7 @@ export default function SettingsPage({ initial }: {
 
       case "data":
         return (
-          <SectionCard title="Data & Coach" sub="Your profile and coaching, and the controls to turn any of it off, download it, or delete it.">
+          <SectionCard title="Data & Coach" sub="Your data, and the controls to turn tracking off, download it, or delete it. The coach is coming soon.">
             <div className="px-4 py-4">
               <DataAndCoachPanel />
             </div>

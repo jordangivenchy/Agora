@@ -13,14 +13,18 @@ import { createClient } from "@/lib/supabase-browser";
 import { setCaptureEnabled } from "@/lib/capture/track";
 import type { ConsentCategory } from "@/lib/dataPlatform/contract";
 import { sessionUser } from "@/lib/session";
+import { AGORA_AI } from "@/lib/features";
 
 type Consent = Record<ConsentCategory, boolean>;
 
-const CATEGORIES: { key: ConsentCategory; title: string; blurb: string }[] = [
+/* The three built on Agora's analysis are shown as coming soon while the
+   assistant is off (AGORA_AI): the switch is replaced by a chip, and
+   nothing is written for them. */
+const CATEGORIES: { key: ConsentCategory; title: string; blurb: string; ai?: boolean }[] = [
   { key: "analytics", title: "Activity analytics", blurb: "What you view, watch, like, and follow in the app — to personalize your feed." },
-  { key: "debate_analysis", title: "In-discussion analysis", blurb: "Agora analyzes how you argue and the positions you express on stage, to build your profile and coaching. The listening indicator always shows when this is active." },
-  { key: "personalization", title: "Personalized recommendations", blurb: "Use your profile to rank rooms, topics, and people for you — with a visible reason for each." },
-  { key: "coaching", title: "Persona notes & coach", blurb: "Turn your profile into specific, constructive coaching on how you argue and learn." },
+  { key: "debate_analysis", title: "In-discussion analysis", blurb: "Agora analyzes how you argue and the positions you express on stage, to build your profile and coaching. The listening indicator always shows when this is active.", ai: true },
+  { key: "personalization", title: "Personalized recommendations", blurb: "Use your profile to rank rooms, topics, and people for you — with a visible reason for each.", ai: true },
+  { key: "coaching", title: "Persona notes & coach", blurb: "Turn your profile into specific, constructive coaching on how you argue and learn.", ai: true },
 ];
 
 // On by default — consent is granted when the user accepts the app's terms
@@ -98,20 +102,36 @@ export default function DataAndCoachPanel() {
         Your Data &amp; Coach
       </h2>
       <p style={{ fontSize: 13, color: "#8b8b94", marginBottom: 20 }}>
-        Agora builds your profile and coaching from how you use the app and
-        speak on stage. You can turn any of it off here, and download or delete
-        everything it derives — it&rsquo;s built to coach you, not to profile
-        you for anyone else.
+        {AGORA_AI ? (
+          <>
+            Agora builds your profile and coaching from how you use the app and
+            speak on stage. You can turn any of it off here, and download or delete
+            everything it derives &mdash; it&rsquo;s built to coach you, not to profile
+            you for anyone else.
+          </>
+        ) : (
+          <>
+            Agora&rsquo;s coach, the analysis of how you argue and the recommendations
+            built on it, is coming soon. Until then nothing of the kind is collected.
+            Activity analytics is the one thing that runs today; you can turn it off
+            here, and download or delete everything the app holds about you.
+          </>
+        )}
       </p>
 
       {/* Consent toggles */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 26 }}>
         {CATEGORIES.map((cat) => (
-          <div key={cat.key} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 14, borderRadius: 12, background: "rgba(20,20,26,0.7)", border: "0.5px solid #34343c" }}>
+          <div key={cat.key} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 14, borderRadius: 12, background: "rgba(20,20,26,0.7)", border: "0.5px solid #34343c", opacity: cat.ai && !AGORA_AI ? 0.62 : 1 }}>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>{cat.title}</p>
               <p style={{ margin: "3px 0 0", fontSize: 11.5, color: "#8b8b94", lineHeight: 1.5 }}>{cat.blurb}</p>
             </div>
+            {cat.ai && !AGORA_AI ? (
+              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", color: "#ffb700", background: "#141418", border: "1px solid #2e2e38", borderRadius: 999, padding: "4px 9px", whiteSpace: "nowrap" }}>
+                Coming soon
+              </span>
+            ) : (
             <button
               role="switch"
               aria-checked={consent[cat.key]}
@@ -124,6 +144,7 @@ export default function DataAndCoachPanel() {
             >
               <span style={{ position: "absolute", top: 2, left: consent[cat.key] ? 19 : 2, width: 19, height: 19, borderRadius: "50%", background: "#eff6ff", transition: "left 0.2s" }} />
             </button>
+            )}
           </div>
         ))}
       </div>

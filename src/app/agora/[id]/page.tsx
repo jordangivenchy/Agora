@@ -23,6 +23,7 @@ import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
 import AgoraAssistant from "@/components/AgoraAssistant";
+import { AGORA_AI } from "@/lib/features";
 import AgoraVideoDock from "@/components/agora/AgoraVideoDock";
 import AgoraStage from "@/components/agora/AgoraStage";
 import ReactionOverlay from "@/components/agora/ReactionOverlay";
@@ -2418,8 +2419,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
       {/* Agora AI assistant — the full pipeline (Gemini + retrieval + history)
           lives behind /api/agora; this is its surface in the amphitheater,
-          which is where every room entry routes now. */}
-      {!broadcast && (
+          which is where every room entry routes now. Off for the beta
+          (AGORA_AI in lib/features): nothing mounts, nothing listens. */}
+      {AGORA_AI && !broadcast && (
         <AgoraAssistant
           motion={room.motion}
           roomId={roomId}
