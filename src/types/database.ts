@@ -13,6 +13,15 @@ export interface User {
   created_at: string;
 }
 
+/* The written frame of a debate: what is argued, and where each person on
+   the stage stands. Lives on the room row (migration 20260909). */
+export interface RoomFraming {
+  about?: string | null;
+  about_by?: string | null;
+  about_at?: string | null;
+  stances?: Record<string, { text: string; at: string }> | null;
+}
+
 export interface DebateRoom {
   id: string;
   motion: string;
@@ -60,6 +69,7 @@ export interface DebateRoom {
   // Persisted VOD playlist + egress window (20260851_debate_recordings):
   // survives the stream so the ended room can be replayed.
   recording_url?: string | null;
+  framing?: RoomFraming | null;
   recording_started_at?: string | null;
   recording_ended_at?: string | null;
   discussion_post_id?: string | null;

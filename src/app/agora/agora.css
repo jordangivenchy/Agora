@@ -3401,3 +3401,267 @@
   }
   .ag-controls::before { background: #000 !important; }
 }
+
+/* ── About this debate: the frame, and where people stand ──────────
+   A pop-out under the top bar's actions. Solid near-black, no glass:
+   it is read, not glanced at. The host writes the frame; everyone on
+   the stage writes one line; the audience reads. */
+.ag-frame-wrap {
+  position: relative;
+  display: flex;
+}
+
+.ag-about {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ag-glass-bg);
+  color: #cfd3dc;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--ag-glass-rim-inlay);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.ag-about:hover {
+  background: var(--ag-glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.ag-about:active { transform: scale(0.97); }
+
+.ag-about.on {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  box-shadow: var(--ag-glass-rim-lit);
+}
+
+.ag-about-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffb700;
+  box-shadow: 0 0 0 2px #0b0b0d;
+}
+
+.ag-frame {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: 380px;
+  max-height: min(66vh, 560px);
+  overflow: auto;
+  background: #0b0b0d;
+  border: 1px solid #23232b;
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  z-index: 40;
+  text-align: left;
+}
+
+.ag-frame-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 10px 14px;
+  border-bottom: 1px solid #1c1c22;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f4f2ec;
+}
+
+.ag-frame-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid #23232b;
+  background: #121215;
+  color: #9aa0ac;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ag-frame-close:hover { color: #fff; border-color: #3a3a46; }
+
+.ag-frame-sec {
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.ag-frame-sec + .ag-frame-sec { border-top: 1px solid #1c1c22; }
+
+.ag-frame-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9aa0ac;
+}
+
+.ag-frame-about {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #e7e9ee;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ag-frame-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #6f6c65;
+}
+
+.ag-frame-meta {
+  font-size: 11.5px;
+  color: #6f6c65;
+}
+
+.ag-frame-text {
+  width: 100%;
+  min-height: 92px;
+  padding: 9px 11px;
+  border: 1px solid #2b2b34;
+  border-radius: 10px;
+  background: #121215;
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.ag-frame-text:focus,
+.ag-frame-input:focus {
+  outline: none;
+  border-color: #ffb700;
+}
+
+.ag-frame-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ag-frame-hint {
+  font-size: 11.5px;
+  color: #6f6c65;
+  font-variant-numeric: tabular-nums;
+}
+
+.ag-frame-save {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #ffb700;
+  background: #ffb700;
+  color: #1a0e00;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ag-frame-save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ag-frame-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.ag-frame-person {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.ag-frame-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #cfd3dc;
+}
+
+.ag-frame-role {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9aa0ac;
+}
+
+.ag-frame-stance {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e7e9ee;
+  overflow-wrap: anywhere;
+}
+
+.ag-frame-stance.none { color: #6f6c65; }
+
+.ag-frame-input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 10px;
+  border: 1px solid #2b2b34;
+  border-radius: 9px;
+  background: #121215;
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.ag-frame-clear {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid #23232b;
+  background: #121215;
+  color: #9aa0ac;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ag-frame-clear:hover { color: #fff; border-color: #3a3a46; }
+
+.ag-frame-err {
+  font-size: 12px;
+  color: #e0655a;
+}
+
+@media (max-width: 639px) {
+  .ag-frame {
+    position: fixed;
+    top: 58px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: 72vh;
+  }
+}

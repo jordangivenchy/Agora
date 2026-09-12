@@ -38,6 +38,7 @@ import ReportModal, { type ReportTarget } from "@/components/ReportModal";
 import { type StageParticipant, deriveStageRole, isHostRole, onStage, sortRequests } from "@/components/agora/stage";
 import type { User } from "@supabase/supabase-js";
 import { Icon } from "@/components/icons";
+import RoomFrame from "@/components/agora/RoomFrame";
 import "../agora.css";
 import { sessionUser } from "@/lib/session";
 
@@ -1589,6 +1590,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                 {following ? "Following ✓" : "Follow"}
               </button>
             )}
+            <RoomFrame
+              room={room}
+              participants={participants}
+              myRole={myRole}
+              currentUserId={currentUser?.id ?? null}
+              supabase={supabase}
+              onChange={(framing) => setRoom((r) => (r ? { ...r, framing } : r))}
+            />
             <div className="ag-react-wrap" ref={topMenuRef}>
               {topMenuOpen && (
                 <div className="ag-more-menu ag-more-menu--down" role="menu" aria-label="Room options">
