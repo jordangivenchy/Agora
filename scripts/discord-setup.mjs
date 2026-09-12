@@ -240,6 +240,8 @@ const RULES = `**1. Argue the point, not the person.** Same as in the app.
 
 const log = (s) => console.log(s);
 const same = (a, b) => (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
+/* Channel names as people type them: "Back channel" is #backchannel. */
+const norm = (s) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 function iconDataUri() {
   const p = path.join(ROOT, "public", "mark-512.png");
@@ -315,9 +317,9 @@ async function main() {
   let channels = await api("GET", `/guilds/${GUILD}/channels`);
   const catId = {};
   for (const [i, name] of CATEGORIES.entries()) {
-    const found = channels.find((c) => c.type === T.CATEGORY && same(c.name, name));
+    const found = channels.find((c) => c.type === T.CATEGORY && norm(c.name) === norm(name));
     if (found) {
-      if (found.position !== i) await api("PATCH", `/channels/${found.id}`, { position: i });
+      if (found.position !== i || found.name !== name) await api("PATCH", `/channels/${found.id}`, { name, position: i });
       catId[name] = found.id;
     } else {
       const made = await api("POST", `/guilds/${GUILD}/channels`, { name, type: T.CATEGORY, position: i });
@@ -350,11 +352,11 @@ async function main() {
     const names = [spec.name, ...(spec.aliases ?? [])];
     /* Same kind of channel, by name or alias. Kind first: the template's
        "General" voice channel is not the text #general. */
-    let found = channels.find((c) => c.type === wantType && names.some((n) => same(c.name, n)));
+    let found = channels.find((c) => c.type === wantType && names.some((n) => norm(c.name) === norm(n)));
     if (!found && (wantType === T.FORUM || wantType === T.TEXT)) {
       /* A text #bugs left by a run before Community mode was on (or a
          forum when it is off): replace it while it is still empty. */
-      const twin = channels.find((c) => (c.type === T.FORUM || c.type === T.TEXT) && c.type !== wantType && c.name === spec.name);
+      const twin = channels.find((c) => (c.type === T.FORUM || c.type === T.TEXT) && c.type !== wantType && norm(c.name) === norm(spec.name));
       if (twin && (await channelIsEmpty(twin.id))) {
         await api("DELETE", `/channels/${twin.id}`);
         channels.splice(channels.indexOf(twin), 1);
@@ -429,6 +431,23 @@ async function main() {
   }
 
   for (const spec of CHANNELS) if (spec.type === T.FORUM) await ensureChannel(spec, nextPos(spec.cat), community);
+
+  /* Hand-made twins of the planned channels (a second #team, a "back
+     channel" beside #backchannel): removed while they are empty. */
+  channels = await api("GET", `/guilds/${GUILD}/channels`);
+  for (const spec of CHANNELS) {
+    const names = [spec.name, ...(spec.aliases ?? [])].map(norm);
+    const kinds = spec.type === T.FORUM ? [T.FORUM, T.TEXT] : [spec.type];
+    for (const c of channels.filter((c) => c.id !== chanId[spec.name] && kinds.includes(c.type) && names.includes(norm(c.name)))) {
+      if (await channelIsEmpty(c.id)) {
+        await api("DELETE", `/channels/${c.id}`);
+        channels.splice(channels.indexOf(c), 1);
+        log(`✓ duplicate #${c.name} removed (it was empty)`);
+      } else {
+        log(`! duplicate #${c.name} has messages; left for you to merge or delete`);
+      }
+    }
+  }
 
   /* The template's empty categories. */
   channels = await api("GET", `/guilds/${GUILD}/channels`);
