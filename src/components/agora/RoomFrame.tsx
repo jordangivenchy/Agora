@@ -10,12 +10,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import UserAvatar from "@/components/UserAvatar";
+import RichEditor from "@/components/community/RichEditor";
+import RichText from "@/components/community/RichText";
 import { Icon } from "@/components/icons";
 import type { RoomFraming } from "@/types/database";
 import { ROLE_LABEL, type StageParticipant, type StageRole, isHostRole, onStage } from "./stage";
 import { frameIsEmpty, frameNewsKey, framePeople } from "./frameModel";
 
-const ABOUT_MAX = 600;
+const ABOUT_MAX = 1200;
 const STANCE_MAX = 200;
 
 interface Props {
@@ -50,6 +52,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const serverAbout = framing?.about ?? "";
   const about = aboutDraft ?? serverAbout;
   const aboutDirty = about.trim() !== serverAbout.trim();
+  const aboutOver = about.length > ABOUT_MAX;
   const myStance = currentUserId ? (framing?.stances?.[currentUserId]?.text ?? "") : "";
   const line = lineDraft ?? myStance;
 
@@ -91,6 +94,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   );
 
   const saveAbout = async () => {
+    if (aboutOver) return;
     if (await call("set_room_frame", { p_room: room.id, p_about: about.trim() }, "about")) setAboutDraft(null);
   };
   const saveLine = async () => {
@@ -134,30 +138,31 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
             <div className="ag-frame-label">The frame</div>
             {canFrame ? (
               <>
-                <textarea
-                  className="ag-frame-text"
-                  value={about}
-                  onChange={(e) => setAboutDraft(e.target.value.slice(0, ABOUT_MAX))}
-                  onKeyDown={(e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void saveAbout();
-                  }}
-                  placeholder="What are we arguing? Set the question, the terms, and what's out of bounds."
-                  maxLength={ABOUT_MAX}
-                  rows={4}
-                />
+                <div className="ag-frame-editor">
+                  <RichEditor
+                    compact
+                    value={about}
+                    onChange={setAboutDraft}
+                    placeholder="What are we arguing? Set the question, the terms, and what's out of bounds."
+                    onSubmit={() => void saveAbout()}
+                    mentions={!!currentUserId}
+                  />
+                </div>
                 <div className="ag-frame-row">
-                  <span className="ag-frame-hint">
+                  <span className={`ag-frame-hint ${aboutOver ? "over" : ""}`}>
                     {about.length}/{ABOUT_MAX}
-                    {framing?.about_at ? ` · set ${timeAgo(framing.about_at)}` : ""}
+                    {aboutOver ? " · too long" : framing?.about_at ? ` · set ${timeAgo(framing.about_at)}` : ""}
                   </span>
-                  <button type="button" className="ag-frame-save" onClick={() => void saveAbout()} disabled={!aboutDirty || busy === "about"}>
+                  <button type="button" className="ag-frame-save" onClick={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy === "about"}>
                     {busy === "about" ? "Saving…" : "Save"}
                   </button>
                 </div>
               </>
             ) : serverAbout.trim() ? (
               <>
-                <p className="ag-frame-about">{serverAbout}</p>
+                <div className="ag-frame-about">
+                  <RichText text={serverAbout} />
+                </div>
                 <div className="ag-frame-meta">
                   Set by {setter?.name ?? "the host"}
                   {framing?.about_at ? ` · ${timeAgo(framing.about_at)}` : ""}

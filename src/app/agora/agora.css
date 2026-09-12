@@ -3461,8 +3461,8 @@
   position: absolute;
   top: 46px;
   right: 0;
-  width: 380px;
-  max-height: min(66vh, 560px);
+  width: 440px;
+  max-height: min(70vh, 620px);
   overflow: auto;
   background: #0b0b0d;
   border: 1px solid #23232b;
@@ -3519,9 +3519,21 @@
   font-size: 13.5px;
   line-height: 1.5;
   color: #e7e9ee;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.ag-frame-about .rich-text > :first-child { margin-top: 0; }
+.ag-frame-about .rich-text > :last-child { margin-bottom: 0; }
+
+/* The communities' editor, on the panel's own black. */
+.ag-frame-editor .rich-editor-box {
+  background: #121215;
+  border-color: #2b2b34;
+}
+
+.ag-frame-editor .rich-editor-box:focus-within { border-color: #ffb700; }
+
+.ag-frame-hint.over { color: #e0655a; }
 
 .ag-frame-empty {
   margin: 0;
