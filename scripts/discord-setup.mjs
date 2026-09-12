@@ -208,33 +208,53 @@ const CHANNELS = [
   { name: "team", cat: "Team", type: T.TEXT, topic: "Team and moderators. Triage, decisions, who is fixing what.", teamOnly: true, aliases: ["moderator-only"] },
 ];
 
-/* {#name} becomes a real channel mention once the ids are known. */
-const WELCOME = `**Welcome to the AgoraSphere beta.**
+/* The two pinned cards, in the same shape as the cards the site posts:
+   title, the facts in bold with tree sub-lines, an italic note, the
+   black tile, a footer. {#name} becomes a real channel mention once the
+   ids are known. */
+const MARK_URL = process.env.DISCORD_MARK_URL || "https://agorasphere.net/mark-512.png";
+const TREE = " └ · ";
 
-AgoraSphere is a place to argue well: live rooms where people take the floor and make their point, communities where the threads carry on after the call, and a queue that pairs you with someone who disagrees.
+const WELCOME_CARD = {
+  title: "Welcome to the AgoraSphere beta",
+  color: YELLOW,
+  description: [
+    "AgoraSphere is a place to argue well: live rooms where people take the floor and make their point, communities where the threads carry on after the call, and a queue that pairs you with someone who disagrees.",
+    "",
+    "This server is where the beta lives. Say what broke, what confused you, and what you would change. Nothing is too small.",
+    "",
+    "**Try this first**",
+    "**1.** Open a room from the **+** menu and hold a call with someone. Phone and desktop both.",
+    "**2.** Post a thread in a community and reply to someone else's.",
+    "**3.** Queue for a match from the home screen and pick **someone who disagrees**.",
+    "**4.** Open a past discussion and leave a comment.",
+    "",
+    "**Where things go**",
+    `${TREE}{#bugs} for anything broken, one post per bug.`,
+    `${TREE}{#feedback} for what felt off or what you would want.`,
+    `${TREE}{#live-now} shows rooms as they go live. Hop in.`,
+    `${TREE}{#general} for everything else.`,
+    "",
+    "*The beta is closed. Keep the invite code, this server, and screenshots to yourself for now.*",
+  ].join("\n"),
+  footer: { text: "Read the rules once, then say hello in general • AgoraSphere beta" },
+};
 
-This server is where the beta lives. Say what broke, what confused you, and what you would change. Nothing is too small.
-
-**Try this first**
-1. Open a room from the + menu and hold a call with someone. Phone and desktop both.
-2. Post a thread in a community and reply to someone else's.
-3. Queue for a match from the home screen and pick "someone who disagrees".
-4. Open a past discussion and leave a comment.
-
-**Where things go**
-{#bugs} for anything broken, one post per bug.
-{#feedback} for what felt off or what you would want.
-{#live-now} shows rooms as they go live. Hop in.
-{#general} for everything else.
-
-The beta is closed. Please keep the invite code, this server, and screenshots to yourself for now.`;
-
-const RULES = `**1. Argue the point, not the person.** Same as in the app.
-**2. One bug per post in {#bugs}**, with your device and what you expected.
-**3. The beta is closed.** Do not share the invite code, the invite link, or screenshots outside this server.
-**4. What people say in rooms stays in rooms.** Do not post recordings or transcripts here unless the app itself published them.
-**5. No spam, no promotion, no NSFW.**
-**6. Moderators can remove anything and anyone.** Unsure? Ask in {#general}.`;
+const RULES_CARD = {
+  title: "Six rules",
+  color: YELLOW,
+  description: [
+    "**1. Argue the point, not the person.** Same as in the app.",
+    "**2. One bug per post in {#bugs}**, with your device and what you expected.",
+    "**3. The beta is closed.** Do not share the invite code, the invite link, or screenshots outside this server.",
+    "**4. What people say in rooms stays in rooms.** Do not post recordings or transcripts here unless the app itself published them.",
+    "**5. No spam, no promotion, no NSFW.**",
+    "**6. Moderators can remove anything and anyone.** Unsure? Ask in {#general}.",
+    "",
+    "*They apply in the app too.*",
+  ].join("\n"),
+  footer: { text: "By staying in this server you accept these • AgoraSphere beta" },
+};
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
@@ -458,18 +478,31 @@ async function main() {
     }
   }
 
-  /* Welcome and rules, pinned — once. A channel with a pin is one
-     someone has already written in. */
+  /* Welcome and rules: one pinned card each. The bot's own pinned
+     message is brought up to date in place (an older plain-text one
+     becomes the card); a pin someone else made is left alone. */
   const mention = (s) => s.replace(/\{#([a-z-]+)\}/g, (_, n) => (chanId[n] ? `<#${chanId[n]}>` : `#${n}`));
-  for (const [name, text] of [
-    ["welcome", WELCOME],
-    ["rules", RULES],
+  const shape = (e) => JSON.stringify({ t: e?.title, d: e?.description, c: e?.color, f: e?.footer?.text, i: e?.thumbnail?.url });
+  for (const [name, spec] of [
+    ["welcome", WELCOME_CARD],
+    ["rules", RULES_CARD],
   ]) {
     const id = chanId[name];
-    if ((await pinnedMessages(id)).length) continue;
-    const msg = await api("POST", `/channels/${id}/messages`, { content: mention(text), allowed_mentions: { parse: [] } });
-    await pinMessage(id, msg.id);
-    log(`✓ #${name} message posted and pinned`);
+    const embed = { ...spec, description: mention(spec.description), thumbnail: { url: MARK_URL } };
+    const pins = await pinnedMessages(id);
+    const mine = pins.find((p) => p.author?.id === me.id);
+    if (mine) {
+      if (shape(mine.embeds?.[0]) !== shape(embed) || mine.content) {
+        await api("PATCH", `/channels/${id}/messages/${mine.id}`, { content: "", embeds: [embed], allowed_mentions: { parse: [] } });
+        log(`✓ #${name} card updated`);
+      }
+    } else if (pins.length) {
+      log(`! #${name} has a pinned message by someone else; left alone`);
+    } else {
+      const msg = await api("POST", `/channels/${id}/messages`, { embeds: [embed], allowed_mentions: { parse: [] } });
+      await pinMessage(id, msg.id);
+      log(`✓ #${name} card posted and pinned`);
+    }
   }
 
   /* Webhooks: one per channel the site posts into. */
