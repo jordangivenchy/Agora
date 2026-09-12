@@ -63,3 +63,13 @@ export function frameIsEmpty(f: RoomFraming | null | undefined): boolean {
 export function frameLength(md: string): number {
   return md.replace(/\r/g, "").replace(/\n{2,}/g, "\n").length;
 }
+
+/** The most lines a frame may run to: a few paragraphs, not a scroll. Blank
+    lines and bullets count, since they take the same room on screen. */
+export const FRAME_MAX_LINES = 16;
+
+/** Lines the frame takes on screen, blank ones included. */
+export function frameLines(md: string): number {
+  const t = md.replace(/\r/g, "").trim();
+  return t ? t.split("\n").length : 0;
+}

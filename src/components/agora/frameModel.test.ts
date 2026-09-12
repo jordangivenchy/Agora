@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { frameIsEmpty, frameLength, frameNewsKey, framePeople } from "./frameModel";
+import { FRAME_MAX_LINES, frameIsEmpty, frameLength, frameLines, frameNewsKey, framePeople } from "./frameModel";
 import type { StageParticipant } from "./stage";
 
 const person = (id: string, username: string, extra: Partial<StageParticipant> = {}): StageParticipant =>
@@ -76,5 +76,16 @@ describe("frameLength", () => {
     expect(frameLength("ab\n\n\n\ncd")).toBe(5);
     expect(frameLength("- one\n- two")).toBe(11);
     expect(frameLength("")).toBe(0);
+  });
+});
+
+describe("frameLines", () => {
+  it("counts the lines on screen, blank ones and bullets included", () => {
+    expect(frameLines("")).toBe(0);
+    expect(frameLines("one line")).toBe(1);
+    expect(frameLines("a\nb")).toBe(2);
+    expect(frameLines("a\n\nb")).toBe(3);
+    expect(frameLines("- one\n- two\n- three")).toBe(3);
+    expect(frameLines(Array.from({ length: FRAME_MAX_LINES + 1 }, (_, i) => `l${i}`).join("\n"))).toBe(FRAME_MAX_LINES + 1);
   });
 });

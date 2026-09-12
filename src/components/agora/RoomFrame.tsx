@@ -23,7 +23,7 @@ import { Icon } from "@/components/icons";
 import { useMediaQuery } from "@/lib/media";
 import type { RoomFraming } from "@/types/database";
 import { ROLE_LABEL, type StageParticipant, type StageRole, isHostRole, onStage } from "./stage";
-import { frameIsEmpty, frameLength, frameNewsKey, framePeople } from "./frameModel";
+import { FRAME_MAX_LINES, frameIsEmpty, frameLength, frameLines, frameNewsKey, framePeople } from "./frameModel";
 
 const ABOUT_MAX = 1200;
 const STANCE_MAX = 200;
@@ -96,7 +96,10 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const about = aboutDraft ?? serverAbout;
   const aboutDirty = about.trim() !== serverAbout.trim();
   const aboutLen = frameLength(about);
-  const aboutOver = aboutLen > ABOUT_MAX;
+  const aboutLines = frameLines(about);
+  const aboutTooLong = aboutLen > ABOUT_MAX;
+  const aboutTooTall = aboutLines > FRAME_MAX_LINES;
+  const aboutOver = aboutTooLong || aboutTooTall;
   const myStance = currentUserId ? (framing?.stances?.[currentUserId]?.text ?? "") : "";
   const line = lineDraft ?? myStance;
   const empty = frameIsEmpty(framing);
@@ -247,8 +250,8 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
                 </div>
                 <div className="ag-frame-row">
                   <span className={`ag-frame-hint ${aboutOver ? "over" : ""}`}>
-                    {aboutLen}/{ABOUT_MAX}
-                    {aboutOver ? " · too long" : framing?.about_at ? ` · set ${timeAgo(framing.about_at)}` : ""}
+                    {aboutLen}/{ABOUT_MAX} · {aboutLines}/{FRAME_MAX_LINES} lines
+                    {aboutTooLong ? " · too long" : aboutTooTall ? " · too many lines" : framing?.about_at ? ` · set ${timeAgo(framing.about_at)}` : ""}
                   </span>
                   <button type="button" className="ag-frame-save" onClick={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy === "about"}>
                     {busy === "about" ? "Saving…" : "Save"}
