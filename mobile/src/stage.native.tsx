@@ -1,45 +1,28 @@
-/* Who is here, who is speaking, and the mic. Rendered inside the call
-   host, so LiveKit's hooks see the room. */
-import { Pressable, ScrollView, Text, View } from "react-native";
+/* Who is audibly speaking, the mic, and the connection state, all from
+   LiveKit, rendered inside the call host so the hooks see the room. */
+import { Pressable, Text } from "react-native";
 import * as Haptics from "expo-haptics";
-import { ConnectionState, type Participant } from "livekit-client";
+import { ConnectionState } from "livekit-client";
 import { loadLiveKit, type LiveKit } from "./livekit";
 import { colors } from "./theme";
 import { Button, Note } from "./ui";
-import { Stage as Fallback } from "./stage";
+import { useSpeakingIds as noSpeaking, MicButton as NoMic, ConnectionNote as NoConnection } from "./stage";
 
-export function Stage() {
+export function useSpeakingIds(): Set<string> {
   const lk = loadLiveKit();
-  if (!lk) return <Fallback />;
-  return <NativeStage lk={lk} />;
+  // Hooks are called unconditionally per platform: lk is fixed for the app's life.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return lk ? useNativeSpeaking(lk) : noSpeaking();
 }
 
-function NativeStage({ lk }: { lk: LiveKit }) {
-  const state = lk.useConnectionState();
-  const participants = lk.useParticipants();
-  const { localParticipant } = lk.useLocalParticipant();
-  return (
-    <View style={{ flex: 1 }}>
-      <Note>
-        {state === ConnectionState.Connected
-          ? `${participants.length} here`
-          : state === ConnectionState.Reconnecting
-            ? "Reconnecting…"
-            : "Connecting…"}
-      </Note>
-      <ScrollView style={{ flex: 1, marginTop: 10 }}>
-        {participants.map((p) => (
-          <Person key={p.identity} lk={lk} p={p} me={p.identity === localParticipant.identity} />
-        ))}
-      </ScrollView>
-    </View>
-  );
+function useNativeSpeaking(lk: LiveKit): Set<string> {
+  const speaking = lk.useSpeakingParticipants();
+  return new Set(speaking.map((p) => p.identity));
 }
 
-/** The mic, for anyone the token lets publish; nothing for listeners. */
 export function MicButton({ compact }: { compact?: boolean }) {
   const lk = loadLiveKit();
-  if (!lk) return null;
+  if (!lk) return <NoMic compact={compact} />;
   return <NativeMic lk={lk} compact={compact} />;
 }
 
@@ -65,25 +48,13 @@ function NativeMic({ lk, compact }: { lk: LiveKit; compact?: boolean }) {
   );
 }
 
-function Person({ lk, p, me }: { lk: LiveKit; p: Participant; me: boolean }) {
-  const speaking = lk.useIsSpeaking(p);
-  const canSpeak = p.permissions?.canPublish ?? false;
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-      <View
-        style={{
-          width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
-          backgroundColor: speaking ? colors.yellow : colors.surface2, borderWidth: 1, borderColor: speaking ? colors.yellow : colors.border,
-        }}
-      >
-        <Text style={{ color: speaking ? colors.ink : colors.text, fontWeight: "800" }}>{(p.name || p.identity).slice(0, 1).toUpperCase()}</Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.text, fontSize: 14, fontWeight: "600" }}>
-          {p.name || p.identity}{me ? " (you)" : ""}
-        </Text>
-        <Text style={{ color: colors.muted, fontSize: 11.5 }}>{canSpeak ? (p.isMicrophoneEnabled ? "on the mic" : "on stage, muted") : "listening"}</Text>
-      </View>
-    </View>
-  );
+export function ConnectionNote() {
+  const lk = loadLiveKit();
+  if (!lk) return <NoConnection />;
+  return <NativeConnection lk={lk} />;
+}
+
+function NativeConnection({ lk }: { lk: LiveKit }) {
+  const state = lk.useConnectionState();
+  return <Note>{state === ConnectionState.Connected ? "Connected" : state === ConnectionState.Reconnecting ? "Reconnecting…" : "Connecting…"}</Note>;
 }
