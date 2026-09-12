@@ -11,6 +11,7 @@ import {
   discordWebhook,
   escapeMd,
   featuredPostMessage,
+  gateJoinMessage,
   plainText,
   recordingReadyMessage,
   roomCardMessage,
@@ -468,5 +469,18 @@ describe("reportMessage", () => {
     expect(e.description).toContain("**someone** reported **[ghost](https://agorasphere.net/@ghost)**");
     expect(e.description).toContain(" └ · The message:\n> you @everyone are wrong");
     expect(reportMessage({ id: "r3", reason: "threats_violence", description: null, context: "profile", message_content: null, created_at: "2026-09-12T01:00:00.000Z" }, null, null, null, ORIGIN).embeds![0].title).toBe("Report: Threats or violence");
+  });
+});
+
+describe("gateJoinMessage", () => {
+  it("tells #team who the door let in, and through which server", () => {
+    const m = gateJoinMessage({ username: "red_1", name: "Red *One*", via: "POLITICS" }, "https://agorasphere.net");
+    const e = m.embeds![0];
+    expect(e.title).toBe("Red \\*One\\* came in through POLITICS");
+    expect(e.color).toBe(0x2f7fe0);
+    expect(e.description).toContain("**@red\\_1**");
+    expect(e.description).toContain("**POLITICS**");
+    expect(e.footer?.text).toBe("The door is the only way in • AgoraSphere beta");
+    expect(m.allowed_mentions).toEqual({ parse: [] });
   });
 });

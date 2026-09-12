@@ -4,6 +4,7 @@ import { getAppConfig } from "@/lib/appConfig";
 import { emailConfigured } from "@/lib/email";
 import { newsConfigured } from "@/lib/news";
 import { discordConfigured } from "@/lib/discord";
+import { gateConfigured } from "@/lib/discordGate";
 
 /* Integration health: which optional backends are live. Safe to expose —
    booleans only, never values. Hit this after pasting a key into Vercel
@@ -39,6 +40,7 @@ export async function GET() {
     discord: discordConfigured(),
     discordBot: Boolean(process.env.DISCORD_BOT_TOKEN && process.env.DISCORD_GUILD_ID),
     discordInteractions: Boolean(process.env.DISCORD_PUBLIC_KEY),
+    discordGate: gateConfigured(),
     vercelWebhook: Boolean(process.env.VERCEL_WEBHOOK_SECRET),
   });
 }

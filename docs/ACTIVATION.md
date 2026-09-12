@@ -70,6 +70,19 @@ Community mode, rules screening, welcome screen, onboarding, AutoMod, the
 pinned cards, the command and the webhooks, and writes the values for step 1
 to `.env.discord.local`. Safe to run again.
 
+**The door.** Membership can be limited to a partner server's members
+(`discordGate`). `DISCORD_GATE_GUILDS` lists the partner servers as
+`id:Label:invite` (comma-separated; the id of a public server comes from
+`https://discord.com/api/v10/invites/<code>`). `/discord` explains it and sends
+the visitor through Discord's sign-in (scopes identify, guilds, guilds.join);
+`/api/discord/callback` reads which servers they are in and, for a partner's
+member, the bot adds them wearing the partner's role, and #team hears about it.
+Then `node scripts/discord-setup.mjs` again: it makes the role, words the cards,
+and deletes every invite link once `/api/health` says the door is live, so the
+link in the partner's post (`https://agorasphere.net/discord`) is the only way
+in. Turning it off is unsetting `DISCORD_GATE_GUILDS` and running the script
+once more (it makes an invite again).
+
 1. Add to Vercel (Production):
    - `DISCORD_WEBHOOK_LIVE`, `DISCORD_WEBHOOK_RECORDINGS`,
      `DISCORD_WEBHOOK_ANNOUNCEMENTS`, `DISCORD_WEBHOOK_TEAM` — the webhook URLs (by hand: channel →
@@ -78,6 +91,11 @@ to `.env.discord.local`. Safe to run again.
    - `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID` — for the digest (`discordBot`).
    - `DISCORD_PUBLIC_KEY` — Developer Portal → General Information → Public Key,
      for the key button and `/beta` (`discordInteractions`).
+   - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` — Developer Portal → OAuth2
+     (Reset Secret to see one), and `DISCORD_GATE_GUILDS` — for the door
+     (`discordGate`). Register `https://agorasphere.net/api/discord/callback`
+     (and `http://localhost:3000/api/discord/callback` for the dev server)
+     under OAuth2 → Redirects there.
    - `VERCEL_WEBHOOK_SECRET` — Team Settings → Webhooks → Create → event
      "Deployment Succeeded" → URL `https://agorasphere.net/api/webhook/vercel`
      → the secret it shows (`vercelWebhook`).

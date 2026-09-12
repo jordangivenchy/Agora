@@ -34,6 +34,17 @@
    Vercel → Settings → Environment Variables → Production, redeploy, and
    /api/health says "discord": true. The invite link is printed.
 
+   The door (optional). Set DISCORD_GATE_GUILDS in .env.local to make a
+   partner server's members the only people who can get in:
+     DISCORD_GATE_GUILDS=367092205539557376:POLITICS:https://discord.gg/politics
+   The script then adds a role named after the partner, words the cards
+   for it, and, once the site reports the door live (/api/health says
+   "discordGate": true — DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET and
+   DISCORD_GATE_GUILDS set there, and the callback URL registered under
+   OAuth2 → Redirects in the Developer Portal), deletes every invite
+   link. Until then the invites stay, so nobody is locked out. The way
+   in becomes https://agorasphere.net/discord.
+
    No dependencies: Node 18+ and the Discord REST API (v10). */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -63,6 +74,15 @@ const API = (process.env.DISCORD_API_BASE || "https://discord.com/api/v10").repl
 const WEBHOOK_HOST = process.env.DISCORD_WEBHOOK_HOST || "https://discord.com";
 const OUT = process.env.DISCORD_OUT_FILE || path.join(ROOT, ".env.discord.local");
 const SITE = process.env.DISCORD_SITE_ORIGIN || "https://agorasphere.net";
+/* Partner servers whose members may come in (id:Label:invite, comma-separated; see the notes). */
+const GATES = (process.env.DISCORD_GATE_GUILDS ?? "")
+  .split(",")
+  .map((e) => e.trim().split(":"))
+  .filter(([id]) => /^\d{15,22}$/.test(id ?? ""))
+  .map(([id, label, ...rest]) => ({ id, label: (label ?? "").trim() || "a partner server", invite: rest.join(":").trim() || null }));
+const GATED = GATES.length > 0;
+const GATE_LABEL = GATES.map((g) => g.label).join(" or ");
+const DOOR = `${SITE}/discord`;
 
 if (!TOKEN || !GUILD) {
   console.error("Need DISCORD_BOT_TOKEN and DISCORD_GUILD_ID (in .env.local or the environment). See the notes at the top of this file.");
@@ -193,6 +213,10 @@ const ROLES = [
   },
 ];
 
+/* One role per partner server, worn by everyone the door lets in, so
+   the team can see where people came from. No colour, no powers. */
+const PARTNER_ROLES = GATES.map((g) => ({ name: g.label, color: 0, hoist: false, mentionable: false, permissions: "0" }));
+
 /* Picked in onboarding ("What are you testing on?"), so the team can
    reach the right testers: "@iPhone, the mic fix is up". */
 const PLATFORM_ROLES = [
@@ -272,7 +296,9 @@ const WELCOME_CARD = {
     `${TREE}{#live-now} shows rooms as they go live. Hop in.`,
     `${TREE}{#general} for everything else.`,
     "",
-    "*The beta is closed. Keep the key, this server, and screenshots to yourself for now.*",
+    GATED
+      ? `*The beta is closed. Membership comes through ${GATE_LABEL}, at ${DOOR}; there are no invite links. Keep the key and screenshots to yourself for now.*`
+      : "*The beta is closed. Keep the key, this server, and screenshots to yourself for now.*",
   ].join("\n"),
   footer: { text: "Read the rules once, then say hello in general • AgoraSphere beta" },
 };
@@ -283,7 +309,9 @@ const RULES_CARD = {
   description: [
     "**1. Argue the point, not the person.** Same as in the app.",
     "**2. One bug per post in {#bugs}**, with your device and what you expected.",
-    "**3. The beta is closed.** Do not share the key, the invite link, or screenshots outside this server.",
+    GATED
+      ? "**3. The beta is closed.** Do not share the key or screenshots outside this server."
+      : "**3. The beta is closed.** Do not share the key, the invite link, or screenshots outside this server.",
     "**4. What people say in rooms stays in rooms.** Do not post recordings or transcripts here unless the app itself published them.",
     "**5. No spam, no promotion, no NSFW.**",
     "**6. Moderators can remove anything and anyone.** Unsure? Ask in {#general}.",
@@ -300,6 +328,19 @@ const DESCRIPTION = "The closed beta of AgoraSphere, a place to argue well.";
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
 const log = (s) => console.log(s);
+
+/* Whether the site can open the door: /api/health reports the OAuth
+   pair, the bot and a partner all set. Any doubt counts as no. */
+async function doorLive() {
+  try {
+    const res = await fetch(`${SITE}/api/health`, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return false;
+    const j = await res.json();
+    return j?.discordGate === true;
+  } catch {
+    return false;
+  }
+}
 /* Discord's validation errors are a nested JSON tree; say the first one. */
 function firstError(node, path = []) {
   if (!node || typeof node !== "object") return null;
@@ -385,7 +426,7 @@ async function main() {
   /* A role dragged above the bot's own is out of the bot's reach from
      then on (Discord's hierarchy): it is found and left as it is. */
   const roleId = {};
-  for (const spec of [...ROLES, ...PLATFORM_ROLES]) {
+  for (const spec of [...ROLES, ...PLATFORM_ROLES, ...PARTNER_ROLES]) {
     const body = { ...spec };
     delete body.emoji;
     const found = roles.find((r) => same(r.name, spec.name));
@@ -790,14 +831,28 @@ async function main() {
     out.push(`${spec.webhook}=${WEBHOOK_HOST}/api/webhooks/${hook.id}/${hook.token}`);
   }
 
-  /* One invite that never runs out, reused if it exists. */
+  /* The way in. With a door: every invite link goes, once the site can
+     actually open the door (otherwise nobody could get in at all).
+     Without one: an invite that never runs out, reused if it exists. */
   const invites = (await api("GET", `/guilds/${GUILD}/invites`).catch(() => [])) ?? [];
-  let invite = invites.find((i) => i.max_age === 0 && i.max_uses === 0 && i.inviter?.id === me.id);
-  if (!invite) {
-    invite = await api("POST", `/channels/${chanId.welcome}/invites`, { max_age: 0, max_uses: 0, unique: true });
-    log("✓ invite created (never expires, no use limit)");
+  let wayIn;
+  if (GATED) {
+    const live = await doorLive();
+    if (live) {
+      for (const i of invites) await api("DELETE", `/invites/${i.code}`);
+      log(invites.length ? `✓ ${invites.length} invite link${invites.length === 1 ? "" : "s"} deleted: the door at ${DOOR} is the only way in` : `✓ no invite links: the door at ${DOOR} is the only way in`);
+    } else {
+      log(`! ${invites.length} invite link${invites.length === 1 ? "" : "s"} kept: ${DOOR} is not live yet (${SITE}/api/health must say "discordGate": true — DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_GATE_GUILDS on the site, redirect registered, deployed). Run this again after that.`);
+    }
+    wayIn = DOOR;
+  } else {
+    let invite = invites.find((i) => i.max_age === 0 && i.max_uses === 0 && i.inviter?.id === me.id);
+    if (!invite) {
+      invite = await api("POST", `/channels/${chanId.welcome}/invites`, { max_age: 0, max_uses: 0, unique: true });
+      log("✓ invite created (never expires, no use limit)");
+    }
+    wayIn = `https://discord.gg/${invite.code}`;
   }
-  const inviteUrl = `https://discord.gg/${invite.code}`;
 
   writeFileSync(
     OUT,
@@ -815,8 +870,15 @@ async function main() {
       `#   ${SITE}/api/webhook/discord`,
       "# DISCORD_PUBLIC_KEY=<the public key>",
       "",
-      "# Testers' invite (never expires). Put it in the welcome post on AgoraSphere.",
-      `DISCORD_INVITE_URL=${inviteUrl}`,
+      ...(GATED
+        ? [
+            `# The door: ${GATE_LABEL} members sign in with Discord there and the bot brings them in.`,
+            "# Needs, on the site: DISCORD_CLIENT_ID (Developer Portal → OAuth2 → Client ID), DISCORD_CLIENT_SECRET",
+            `# (same page, Reset Secret), and DISCORD_GATE_GUILDS as in .env.local; register ${SITE}/api/discord/callback`,
+            "# under OAuth2 → Redirects. Put this link in the partner server's post.",
+            `DISCORD_DOOR_URL=${wayIn}`,
+          ]
+        : ["# Testers' invite (never expires). Put it in the welcome post on AgoraSphere.", `DISCORD_INVITE_URL=${wayIn}`]),
       "",
     ].join("\n"),
     { mode: 0o600 }
@@ -824,7 +886,7 @@ async function main() {
 
   log("");
   log(`Done. Webhook URLs are in ${path.relative(process.cwd(), OUT) || OUT} (not shown here).`);
-  log(`Invite for testers: ${inviteUrl}`);
+  log(GATED ? `The door, for ${GATE_LABEL} members: ${wayIn}` : `Invite for testers: ${wayIn}`);
   log("Next: paste the webhook URLs, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN and DISCORD_PUBLIC_KEY into Vercel and redeploy; then set the");
   log(`      Interactions Endpoint URL in the Developer Portal to ${SITE}/api/webhook/discord so the key button answers.`);
   log("      Give Moderator to the site moderators (Server Settings → Members).");

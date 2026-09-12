@@ -38,7 +38,7 @@ function BetaGateForm() {
   }
 
   return (
-    <AuthShell width={380} brandHref={null}>
+    <AuthShell width={380} brandHref={null} footer={<a href="/discord" className="auth-link">No key? Get one on our Discord</a>}>
       <form onSubmit={submit} className="auth-form">
         <h1 className="auth-title">Closed beta</h1>
         <p className="auth-sub" style={{ marginBottom: 6 }}>AgoraSphere is invite-only right now. Enter your beta key to come in.</p>

@@ -13,6 +13,8 @@ const BETA_EXEMPT = [
   "/api/internal", // pg_net webhooks (room-ended, transcribe-replay) — Bearer-authed
   "/api/email", // one-click unsubscribe links land logged-out
   "/api/health", // integration status booleans only — needed for machine checks
+  "/discord", // the door to the Discord server: visitors have no pass yet
+  "/api/discord", // its OAuth round trip
 
   "/auth",
   "/logo.png",

@@ -680,6 +680,29 @@ async function send(url: string, init: RequestInit): Promise<Response | null> {
 }
 
 /** Posts one message; the message id when Discord accepted it. Never throws. */
+/* ── The door: a partner's member came in ─────────────────────────── */
+
+export interface GateArrival {
+  username: string;
+  name: string;
+  /** The partner server they were found in (the label from DISCORD_GATE_GUILDS). */
+  via: string;
+}
+
+/** For #team: who the door let in, and through which partner server. */
+export function gateJoinMessage(a: GateArrival, origin: string): DiscordMessage {
+  return card(origin, {
+    title: `${escapeMd(a.name)} came in through ${escapeMd(a.via)}`,
+    color: DISCORD_BLUE,
+    lines: [
+      "New in the server. Say hello when they do.",
+      `${TREE}Discord: **@${escapeMd(a.username)}**`,
+      `${TREE}Through: **${escapeMd(a.via)}**, signed in at the door`,
+    ],
+    note: "The door is the only way in",
+  });
+}
+
 export async function postDiscord(url: string, message: DiscordMessage): Promise<{ ok: boolean; id: string | null }> {
   const res = await send(`${url}${url.includes("?") ? "&" : "?"}wait=true`, {
     method: "POST",
