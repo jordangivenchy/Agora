@@ -1,9 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
   betaKeyEmbed,
+  callTroubleMessage,
   clip,
   deployMessage,
+  deviceLabel,
   digestMessage,
+  reportMessage,
   discordConfigured,
   discordWebhook,
   escapeMd,
@@ -317,7 +320,7 @@ describe("digestMessage", () => {
 
   it("counts and lists bugs then feedback, with authors and tags", () => {
     const e = digestMessage([item("bug", "Mic stays muted", ["Calls", "Phone"]), item("feedback", "Queue copy is confusing"), item("bug", "Second bug")], ORIGIN)!.embeds![0];
-    expect(e.title).toBe("Since yesterday in bugs and feedback");
+    expect(e.title).toBe("Since yesterday on AgoraSphere");
     expect(e.description).toBe(
       [
         "**2 new bugs** · **1 new feedback post**",
@@ -380,10 +383,90 @@ describe("betaKeyEmbed", () => {
   });
 });
 
-describe("digestMessage with keys", () => {
+describe("digestMessage with keys and the pulse", () => {
   it("adds the key line, and posts for keys alone", () => {
     const e = digestMessage([], ORIGIN, { minted: 4, redeemed: 3, testers: 12 })!.embeds![0];
     expect(e.description).toContain("**0 new bugs** · **0 new feedback posts**\n**3 keys used** · **4 handed out** · **12** testers in so far");
     expect(digestMessage([], ORIGIN, { minted: 0, redeemed: 0, testers: 12 })).toBeNull();
+  });
+
+  it("opens with the site's day when there is one", () => {
+    const pulse = { signups: 2, rooms: 5, minutes: 137, posts: 3, comments: 11, matches: 1 };
+    const e = digestMessage([], ORIGIN, undefined, pulse)!.embeds![0];
+    expect(e.description!.split("\n")[0]).toBe("**2 sign-ups** · **5 rooms** held (`2 h 17 min` in all) · **3 posts**, **11 comments** · **1 queue match**");
+    expect(digestMessage([], ORIGIN, undefined, { signups: 0, rooms: 0, minutes: 0, posts: 0, comments: 0, matches: 0 })).toBeNull();
+  });
+});
+
+describe("deviceLabel", () => {
+  it("names the device and browser", () => {
+    expect(deviceLabel("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1")).toBe("iPhone · Safari");
+    expect(deviceLabel("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36")).toBe("Mac · Chrome");
+    expect(deviceLabel("Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Mobile Safari/537.36")).toBe("Android · Chrome");
+    expect(deviceLabel(null)).toBeNull();
+    expect(deviceLabel("curl/8.0")).toBeNull();
+  });
+});
+
+describe("callTroubleMessage", () => {
+  it("lists the room's trouble, newest first, with who and what device", () => {
+    const events = [
+      { event: "connect_fail", reason: "ice", meta: { ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 Version/26.6.1 Mobile/15E148 Safari/604.1", net: "4g" }, created_at: "2026-09-12T01:10:00.000Z", user: HOST },
+      { event: "reopened_after_unclean_exit", reason: "reload", meta: null, created_at: "2026-09-12T01:05:00.000Z", user: null },
+    ];
+    const e = callTroubleMessage(ROOM, events, ORIGIN).embeds![0];
+    expect(e.title).toBe("Call trouble: Voting should be mandatory");
+    expect(e.url).toBe("https://agorasphere.net/agora/voting-should-be-mandatory-6c0ba6be");
+    expect(e.color).toBe(0xe0655a);
+    expect(e.description).toBe(
+      [
+        "Tap the title to open the room.",
+        "",
+        `**2 events** in this room · latest <t:${unix("2026-09-12T01:10:00.000Z")}:R>`,
+        ` └ · <t:${unix("2026-09-12T01:10:00.000Z")}:t> · **connect failed** · [Jordan Jaca](https://agorasphere.net/@jordan) · iPhone · Safari · 4g · ice`,
+        ` └ · <t:${unix("2026-09-12T01:05:00.000Z")}:t> · **came back after an unclean exit** · reload`,
+        "",
+        "*From the room's own telemetry: connect and token failures, and returns after an unclean exit.*",
+      ].join("\n")
+    );
+    expect(e.footer?.text).toBe("One card per room, updated as it goes • AgoraSphere beta");
+  });
+
+  it("caps the list at eight", () => {
+    const many = Array.from({ length: 11 }, (_, i) => ({ event: "token_fail", reason: null, meta: null, created_at: `2026-09-12T01:${String(i).padStart(2, "0")}:00.000Z`, user: null }));
+    const e = callTroubleMessage(ROOM, many, ORIGIN).embeds![0];
+    expect(e.description).toContain("**11 events**");
+    expect(e.description).toContain(" └ · and 3 more");
+  });
+});
+
+describe("reportMessage", () => {
+  it("says who reported whom, why, and where", () => {
+    const report = { id: "r1", reason: "harassment", description: "Kept interrupting and *insulting* me.", context: "room", message_content: null, created_at: "2026-09-12T01:00:00.000Z" };
+    const red = { username: "red", display_name: "Red", avatar_url: null };
+    const e = reportMessage(report, red, HOST, ROOM, ORIGIN).embeds![0];
+    expect(e.title).toBe("Report: Harassment");
+    expect(e.url).toBe("https://agorasphere.net/@jordan");
+    expect(e.description).toBe(
+      [
+        "Tap the title to open the reported profile.",
+        "",
+        `**[Red](https://agorasphere.net/@red)** reported **[Jordan Jaca](https://agorasphere.net/@jordan)** <t:${unix("2026-09-12T01:00:00.000Z")}:R>`,
+        " └ · Where: **in a room**",
+        " └ · Room: **[Voting should be mandatory](https://agorasphere.net/agora/voting-should-be-mandatory-6c0ba6be)**",
+        "> Kept interrupting and insulting me.",
+        "",
+        "*Handle it in the app, then say what was done in a thread here.*",
+      ].join("\n")
+    );
+    expect(e.footer?.text).toBe("Reports from the app • AgoraSphere beta");
+  });
+
+  it("copes with a missing account and a quoted message", () => {
+    const e = reportMessage({ id: "r2", reason: null, description: null, context: null, message_content: "you @everyone are **wrong**", created_at: "2026-09-12T01:00:00.000Z" }, null, { username: "ghost" }, null, ORIGIN).embeds![0];
+    expect(e.title).toBe("Report: no reason given");
+    expect(e.description).toContain("**someone** reported **[ghost](https://agorasphere.net/@ghost)**");
+    expect(e.description).toContain(" └ · The message:\n> you @everyone are wrong");
+    expect(reportMessage({ id: "r3", reason: "threats_violence", description: null, context: "profile", message_content: null, created_at: "2026-09-12T01:00:00.000Z" }, null, null, null, ORIGIN).embeds![0].title).toBe("Report: Threats or violence");
   });
 });

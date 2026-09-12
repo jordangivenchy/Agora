@@ -42,8 +42,10 @@ Cloudflare R2 works identically (and has free egress) if preferred.
 The site posts cards into the testers' Discord: one card per public room in
 #live-now, rewritten as the room goes scheduled → live → ended → recorded;
 a recording landing (#past-discussions); a post featured on the home page and
-every production deploy (#announcements); and a morning digest of new bugs and
-feedback for the team (#team). It also answers the "Get my beta key" button
+every production deploy (#announcements); call trouble as a room records it
+and reports filed in the app (#team, `DISCORD_WEBHOOK_TEAM`, migration
+`20260908_discord_team_alerts`); and a morning digest for the team (#team):
+new bugs and feedback, keys, and the site's day in numbers. It also answers the "Get my beta key" button
 and the `/beta` command with the invite code, for that person's eyes only.
 
 **The key.** Testers never see the master code. The button (or `/beta`) mints
@@ -70,7 +72,7 @@ to `.env.discord.local`. Safe to run again.
 
 1. Add to Vercel (Production):
    - `DISCORD_WEBHOOK_LIVE`, `DISCORD_WEBHOOK_RECORDINGS`,
-     `DISCORD_WEBHOOK_ANNOUNCEMENTS` — the webhook URLs (by hand: channel →
+     `DISCORD_WEBHOOK_ANNOUNCEMENTS`, `DISCORD_WEBHOOK_TEAM` — the webhook URLs (by hand: channel →
      Edit channel → Integrations → Webhooks → New webhook → Copy webhook URL).
      One channel for everything: set only `DISCORD_WEBHOOK_URL`.
    - `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID` — for the digest (`discordBot`).

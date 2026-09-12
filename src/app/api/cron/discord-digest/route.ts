@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAppConfig } from "@/lib/appConfig";
 import { betaKeyCounts } from "@/lib/betaKeys";
 import { digestMessage, type DigestItem } from "@/lib/discord";
+import { pulseCounts } from "@/lib/pulse";
 import { hasAdminCredentials } from "@/lib/supabase-admin";
 
 /* Every morning: the bugs and feedback posted in Discord since
@@ -105,7 +106,14 @@ export async function GET(req: Request) {
           return undefined;
         })
       : undefined;
-    const message = digestMessage(items, cfg.app_origin ?? "https://agorasphere.net", keys);
+    /* And the site's day: sign-ups, rooms, posts, matches. */
+    const pulse = hasAdminCredentials()
+      ? await pulseCounts(new Date(since).toISOString()).catch((e) => {
+          console.error("[discord-digest] pulse failed:", e);
+          return undefined;
+        })
+      : undefined;
+    const message = digestMessage(items, cfg.app_origin ?? "https://agorasphere.net", keys, pulse);
     if (!message) return NextResponse.json({ ok: true, posted: false, items: 0 });
 
     const sent = await api<{ id: string }>(`/channels/${team.id}/messages`, {

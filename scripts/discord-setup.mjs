@@ -239,7 +239,7 @@ const CHANNELS = [
   { name: "general", cat: "Talk", type: T.TEXT, topic: "Everything else." },
   { name: "backchannel", cat: "Talk", type: T.VOICE, aliases: ["General"] },
   { name: "town-hall", cat: "Talk", type: T.STAGE, needsCommunity: true, fallback: T.VOICE, stageMods: true, topic: "The weekly call with the team: what broke, what's next." },
-  { name: "team", cat: "Team", type: T.TEXT, topic: "Team and moderators. Triage, decisions, who is fixing what. The morning digest lands here.", teamOnly: true, aliases: ["moderator-only"] },
+  { name: "team", cat: "Team", type: T.TEXT, topic: "Team and moderators. Triage, decisions, who is fixing what. The morning digest, call trouble and reports land here.", teamOnly: true, aliases: ["moderator-only"], webhook: "DISCORD_WEBHOOK_TEAM" },
 ];
 
 /* The two pinned cards, in the same shape as the cards the site posts:

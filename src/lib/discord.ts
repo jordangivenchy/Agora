@@ -30,12 +30,13 @@ import { displayName } from "@/lib/names";
 import { pathFor } from "@/lib/routes";
 import { replayPath, roomPath, userPath } from "@/lib/urls";
 
-export type DiscordChannel = "live" | "recordings" | "announcements";
+export type DiscordChannel = "live" | "recordings" | "announcements" | "team";
 
 const ENV: Record<DiscordChannel, string> = {
   live: "DISCORD_WEBHOOK_LIVE",
   recordings: "DISCORD_WEBHOOK_RECORDINGS",
   announcements: "DISCORD_WEBHOOK_ANNOUNCEMENTS",
+  team: "DISCORD_WEBHOOK_TEAM",
 };
 
 const WEBHOOK_RE = /^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/;
@@ -55,6 +56,7 @@ export function discordConfigured(): boolean {
 export const DISCORD_YELLOW = 0xffb700;
 export const DISCORD_BLUE = 0x2f7fe0;
 export const DISCORD_GREY = 0x4e5058;
+export const DISCORD_RED = 0xe0655a;
 
 export interface DiscordEmbed {
   title?: string;
@@ -118,6 +120,35 @@ export interface DigestItem {
   author: string | null;
   createdAt: string;
   tags: string[];
+}
+
+/** Yesterday on the site, for the digest. */
+export interface PulseCounts {
+  signups: number;
+  rooms: number;
+  minutes: number;
+  posts: number;
+  comments: number;
+  matches: number;
+}
+
+/** One row of room_call_events, with the person resolved. */
+export interface TroubleEvent {
+  event: string;
+  reason: string | null;
+  meta: Record<string, unknown> | null;
+  created_at: string;
+  user: DiscordUser | null;
+}
+
+export interface DiscordReport {
+  id: string;
+  reason: string | null;
+  description: string | null;
+  context: string | null;
+  message_content: string | null;
+  created_at: string;
+  status?: string | null;
 }
 
 const BRAND = "AgoraSphere beta";
@@ -334,6 +365,134 @@ export function recordingReadyMessage(
   });
 }
 
+/* ── For the team: call trouble and reports ──────────────────────── */
+
+/** "iPhone · Safari", "Mac · Chrome": the device behind a user agent. */
+export function deviceLabel(ua: string | null | undefined): string | null {
+  if (!ua) return null;
+  const os = /iPhone/.test(ua)
+    ? "iPhone"
+    : /iPad/.test(ua)
+      ? "iPad"
+      : /Android/.test(ua)
+        ? "Android"
+        : /Macintosh/.test(ua)
+          ? "Mac"
+          : /Windows/.test(ua)
+            ? "Windows"
+            : /Linux/.test(ua)
+              ? "Linux"
+              : null;
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Firefox\//.test(ua)
+      ? "Firefox"
+      : /Chrome\//.test(ua) || /CriOS\//.test(ua)
+        ? "Chrome"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : null;
+  return [os, browser].filter(Boolean).join(" · ") || null;
+}
+
+const TROUBLE_LABEL: Record<string, string> = {
+  connect_fail: "connect failed",
+  token_fail: "token failed",
+  reopened_after_unclean_exit: "came back after an unclean exit",
+};
+
+/** The #team card for a room's call trouble: one per room, rewritten as events pile up. Newest first. */
+export function callTroubleMessage(room: DiscordRoom, events: TroubleEvent[], origin: string): DiscordMessage {
+  const url = `${origin}${roomPath(room)}`;
+  const line = (e: TroubleEvent) => {
+    const meta = e.meta ?? {};
+    const bits = [
+      timeChip(e.created_at, "t"),
+      `**${escapeMd(TROUBLE_LABEL[e.event] ?? e.event.replace(/_/g, " "))}**`,
+      e.user ? person(e.user, origin) : null,
+      deviceLabel(typeof meta.ua === "string" ? meta.ua : null),
+      typeof meta.net === "string" && meta.net ? meta.net : null,
+      e.reason ? escapeMd(e.reason) : null,
+    ].filter(Boolean);
+    return `${TREE}${bits.join(" · ")}`;
+  };
+  const latest = events[0];
+  return card(origin, {
+    title: `Call trouble: ${motionOf(room)}`,
+    url,
+    color: DISCORD_RED,
+    lines: [
+      "Tap the title to open the room.",
+      "",
+      `**${events.length} ${events.length === 1 ? "event" : "events"}** in this room${latest ? ` · latest ${timeChip(latest.created_at, "R")}` : ""}`,
+      ...events.slice(0, 8).map(line),
+      events.length > 8 ? `${TREE}and ${events.length - 8} more` : null,
+      "",
+      "*From the room's own telemetry: connect and token failures, and returns after an unclean exit.*",
+    ],
+    note: "One card per room, updated as it goes",
+  });
+}
+
+/* The app's report reasons and places, as people would say them. */
+const REASON_LABEL: Record<string, string> = {
+  harassment: "Harassment",
+  hate_speech: "Hate speech",
+  threats_violence: "Threats or violence",
+  spam: "Spam",
+  sexual_content: "Sexual content",
+  misinformation: "Misinformation",
+  impersonation: "Impersonation",
+  inappropriate_username: "Inappropriate username",
+  other: "Other",
+};
+const CONTEXT_LABEL: Record<string, string> = { room: "in a room", profile: "on a profile", chat: "in chat", history: "in the history" };
+
+function reasonLabel(reason: string | null): string {
+  const raw = (reason ?? "").trim();
+  const known = REASON_LABEL[raw.toLowerCase()];
+  if (known) return known;
+  const t = plainText(raw.replace(/_/g, " "));
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+}
+
+/** The #team card for a report filed in the app. */
+export function reportMessage(
+  report: DiscordReport,
+  reporter: DiscordUser | null,
+  reported: DiscordUser | null,
+  room: DiscordRoom | null,
+  origin: string
+): DiscordMessage {
+  const target = reported?.username ? `${origin}${userPath(reported.username)}` : undefined;
+  const quote = (s: string | null, max: number) =>
+    s?.trim()
+      ? escapeMd(clip(plainText(s), max))
+          .split("\n")
+          .map((l) => `> ${l}`)
+          .join("\n")
+      : null;
+  const when = timeChip(report.created_at, "R");
+  return card(origin, {
+    title: `Report: ${clip(reasonLabel(report.reason) || "no reason given", 120)}`,
+    url: target,
+    color: DISCORD_YELLOW,
+    lines: [
+      target ? "Tap the title to open the reported profile." : "The reported account could not be found.",
+      "",
+      `**${person(reporter, origin)}** reported **${person(reported, origin)}**${when ? ` ${when}` : ""}`,
+      report.context ? `${TREE}Where: **${CONTEXT_LABEL[report.context] ?? escapeMd(report.context)}**` : null,
+      room ? `${TREE}Room: **[${escapeMd(motionOf(room))}](${origin}${roomPath(room)})**` : null,
+      quote(report.description, 400),
+      report.message_content ? `${TREE}The message:` : null,
+      quote(report.message_content, 200),
+      "",
+      "*Handle it in the app, then say what was done in a thread here.*",
+    ],
+    note: "Reports from the app",
+  });
+}
+
 /* ── Posts, deploys, the digest, the key ─────────────────────────── */
 
 export function featuredPostMessage(
@@ -390,10 +549,18 @@ export interface KeyCounts {
   testers: number;
 }
 
+function minutesLabel(m: number): string {
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest ? `${h} h ${rest} min` : `${h} h`;
+}
+
 /** The morning digest for the team; null when there is nothing to say. */
-export function digestMessage(items: DigestItem[], origin: string, keys?: KeyCounts): DiscordMessage | null {
+export function digestMessage(items: DigestItem[], origin: string, keys?: KeyCounts, pulse?: PulseCounts): DiscordMessage | null {
   const keyNews = Boolean(keys && (keys.minted || keys.redeemed));
-  if (!items.length && !keyNews) return null;
+  const pulseNews = Boolean(pulse && (pulse.signups || pulse.rooms || pulse.posts || pulse.comments || pulse.matches));
+  if (!items.length && !keyNews && !pulseNews) return null;
   const bugs = items.filter((i) => i.kind === "bug");
   const fb = items.filter((i) => i.kind === "feedback");
   const line = (i: DigestItem) =>
@@ -402,9 +569,12 @@ export function digestMessage(items: DigestItem[], origin: string, keys?: KeyCou
     list.length ? [`**${name}**`, ...list.slice(0, 10).map(line), list.length > 10 ? `${TREE}and ${list.length - 10} more` : null] : [];
   const n = (k: number, one: string, many: string) => `**${k} ${k === 1 ? one : many}**`;
   return card(origin, {
-    title: "Since yesterday in bugs and feedback",
+    title: "Since yesterday on AgoraSphere",
     color: DISCORD_YELLOW,
     lines: [
+      pulse
+        ? `${n(pulse.signups, "sign-up", "sign-ups")} · ${n(pulse.rooms, "room", "rooms")} held${pulse.minutes ? ` (\`${minutesLabel(pulse.minutes)}\` in all)` : ""} · ${n(pulse.posts, "post", "posts")}, ${n(pulse.comments, "comment", "comments")} · ${n(pulse.matches, "queue match", "queue matches")}`
+        : null,
       `${n(bugs.length, "new bug", "new bugs")} · ${n(fb.length, "new feedback post", "new feedback posts")}`,
       keys ? `${n(keys.redeemed, "key used", "keys used")} · ${n(keys.minted, "handed out", "handed out")} · **${keys.testers}** ${keys.testers === 1 ? "tester" : "testers"} in so far` : null,
       "",
