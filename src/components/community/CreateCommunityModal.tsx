@@ -34,13 +34,14 @@ const COLORS = ["#4a9eff", "#ffb700", "#00b894", "#e05a5a", "#9d8fd9", "#d98fb9"
 /* community_creation_status() / the creation trigger (20260889). */
 type CreationStatus = {
   allowed: boolean;
-  reason: "signed_out" | "email_unverified" | "account_too_new" | "community_limit" | null;
+  reason: "signed_out" | "email_unverified" | "not_verified" | "account_too_new" | "community_limit" | null;
   count: number;
   cap: number | null;
   account_age_hours?: number;
 };
 const GUARD_MESSAGES: Record<string, string> = {
   email_unverified: "Verify your email address before creating a community.",
+  not_verified: "During the beta, only verified accounts can create a community.",
   account_too_new: "New accounts can create communities after their first day.",
   community_limit: "You've reached the limit of communities one account can create.",
 };
@@ -339,17 +340,19 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           {gate && !gate.allowed && gate.reason && (
             <div className="ccm-gate" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "26px 12px 18px" }}>
               <span style={{ width: 54, height: 54, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "rgba(255,183,0,0.12)", color: "#ffb700", border: "1px solid rgba(255,183,0,0.25)" }}>
-                <Icon name={gate.reason === "email_unverified" ? "mail" : gate.reason === "account_too_new" ? "clock" : "landmark"} size={22} />
+                <Icon name={gate.reason === "email_unverified" ? "mail" : gate.reason === "not_verified" ? "user-check" : gate.reason === "account_too_new" ? "clock" : "landmark"} size={22} />
               </span>
               <p style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#f5f5f0" }}>
                 {gate.reason === "email_unverified" && "Verify your email first"}
+                {gate.reason === "not_verified" && "Communities are for verified accounts for now"}
                 {gate.reason === "account_too_new" && "Your account is brand new"}
                 {gate.reason === "community_limit" && "You've made the most communities one account can"}
                 {gate.reason === "signed_out" && "Sign in to create a community"}
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(238,238,245,0.55)", maxWidth: 340 }}>
                 {gate.reason === "email_unverified" && <>We sent a link to <span style={{ color: "rgba(238,238,245,0.85)" }}>{userEmail ?? "your inbox"}</span>. Open it, then come back — communities need a verified address.</>}
-                {gate.reason === "account_too_new" && `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few boards and post in the meantime.`}
+                {gate.reason === "not_verified" && "During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in the Discord if you\u2019d like to run one."}
+                {gate.reason === "account_too_new" && `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few communities and post in the meantime.`}
                 {gate.reason === "community_limit" && `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more communities are coming; for now, grow the ones you have.`}
                 {gate.reason === "signed_out" && "Communities are created from an account."}
               </p>
