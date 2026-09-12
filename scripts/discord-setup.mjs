@@ -503,6 +503,12 @@ async function main() {
       await pinMessage(id, msg.id);
       log(`✓ #${name} card posted and pinned`);
     }
+    /* Discord adds a "pinned a message" notice (type 6) to the channel
+       for every pin: an empty grey line under the card. Not in these two. */
+    const recent = await api("GET", `/channels/${id}/messages?limit=50`).catch(() => []);
+    const notices = (Array.isArray(recent) ? recent : []).filter((m) => m.type === 6);
+    for (const m of notices) await api("DELETE", `/channels/${id}/messages/${m.id}`);
+    if (notices.length) log(`✓ #${name}: ${notices.length} "pinned a message" notice${notices.length > 1 ? "s" : ""} removed`);
   }
 
   /* Webhooks: one per channel the site posts into. */
