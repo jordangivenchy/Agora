@@ -159,8 +159,13 @@ const EVERYONE_PERMS = bits(
   "SEND_POLLS"
 );
 
+const OFF_WHITE = 0xf4f2ec;
+
+/* Top to bottom in the member list. The owner is Founder; Team is the
+   @agorasphere account and whoever builds the product. */
 const ROLES = [
-  { name: "Team", color: YELLOW, hoist: true, mentionable: true, permissions: bits("ADMINISTRATOR") },
+  { name: "Founder", color: YELLOW, hoist: true, mentionable: false, permissions: bits("ADMINISTRATOR") },
+  { name: "Team", color: OFF_WHITE, hoist: true, mentionable: true, permissions: bits("ADMINISTRATOR") },
   {
     name: "Moderator",
     color: BLUE,
@@ -331,8 +336,19 @@ async function main() {
       log(`✓ role ${spec.name} (created)`);
     }
   }
-  /* The owner is Team. */
-  await api("PUT", `/guilds/${GUILD}/members/${guild.owner_id}/roles/${roleId.Team}`);
+  /* Founder above Team above Moderator, so the member list groups in
+     that order. A new role lands at the bottom otherwise. */
+  try {
+    await api("PATCH", `/guilds/${GUILD}/roles`, [
+      { id: roleId.Moderator, position: 1 },
+      { id: roleId.Team, position: 2 },
+      { id: roleId.Founder, position: 3 },
+    ]);
+  } catch (e) {
+    log(`! role order could not be set by the bot (${why(e)}). Drag Founder above Team in Server Settings → Roles.`);
+  }
+  /* The owner is the Founder. */
+  await api("PUT", `/guilds/${GUILD}/members/${guild.owner_id}/roles/${roleId.Founder}`);
 
   /* Categories. */
   let channels = await api("GET", `/guilds/${GUILD}/channels`);
@@ -362,8 +378,7 @@ async function main() {
     }
     if (spec.teamOnly) {
       ow.push({ id: GUILD, type: 0, allow: "0", deny: P.VIEW_CHANNEL.toString() });
-      ow.push({ id: roleId.Team, type: 0, allow: P.VIEW_CHANNEL.toString(), deny: "0" });
-      ow.push({ id: roleId.Moderator, type: 0, allow: P.VIEW_CHANNEL.toString(), deny: "0" });
+      for (const r of ["Founder", "Team", "Moderator"]) ow.push({ id: roleId[r], type: 0, allow: P.VIEW_CHANNEL.toString(), deny: "0" });
     }
     return ow;
   };
