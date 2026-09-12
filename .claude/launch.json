@@ -35,6 +35,21 @@
         "start:go"
       ],
       "port": 8081
+    },
+    {
+      "name": "mobile-native",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "mobile",
+        "run",
+        "start",
+        "--",
+        "--port",
+        "8081",
+        "--dev-client"
+      ],
+      "port": 8081
     }
   ]
 }
