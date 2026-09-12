@@ -8,10 +8,11 @@ import {
   handFastLaneCapFromEnv,
 } from "@/lib/audienceMode";
 
-/* LiveKit token mint. Identity is server-verified: the Supabase cookie
-   session decides who you are — the client's claimed userId is never
-   trusted, so nobody can join the call wearing someone else's id. Guests
-   (no session) get a guest- identity and are subscribe-only.
+/* LiveKit token mint. Identity is server-verified: the Supabase session
+   (the browser's cookie, or the app's bearer token) decides who you are —
+   the client's claimed userId is never trusted, so nobody can join the
+   call wearing someone else's id. Guests (no session) get a guest-
+   identity and are subscribe-only.
 
    Scheduled rooms enforce the 30-minute door here too: the room page
    gates the UI, but a token is the thing that actually admits you. */
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "LiveKit not configured" }, { status: 500 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createClient(request);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -229,4 +230,9 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Failed to generate token" }, { status: 500 });
   }
+}
+
+/* Preflight for the app's web preview (CORS headers come from next.config). */
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
 }

@@ -3,7 +3,9 @@ import { BETA_COOKIE, BETA_COOKIE_MAX_AGE, issuePass } from "@/lib/betaGate";
 import { redeemBetaKey } from "@/lib/betaKeys";
 
 /* Closed-beta pass issuance: POST { code } → sets the pass cookie when the
-   code is the master code, or a live one-time key (spent by this call).
+   code is the master code, or a live one-time key (spent by this call),
+   and returns the same pass in the body for the phone app, which keeps it
+   and sends it back as the x-agora-beta header (src/proxy.ts).
    See src/lib/betaGate.ts for the scheme. */
 export async function POST(req: Request) {
   const expected = process.env.BETA_INVITE_CODE;
@@ -29,8 +31,9 @@ export async function POST(req: Request) {
   }
   if (!who) return NextResponse.json({ error: "invalid_code" }, { status: 401 });
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(BETA_COOKIE, await issuePass(expected, who), {
+  const pass = await issuePass(expected, who);
+  const res = NextResponse.json({ ok: true, pass });
+  res.cookies.set(BETA_COOKIE, pass, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -38,4 +41,9 @@ export async function POST(req: Request) {
     path: "/",
   });
   return res;
+}
+
+/* Preflight for the app's web preview (CORS headers come from next.config). */
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
 }

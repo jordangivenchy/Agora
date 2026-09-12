@@ -13,6 +13,22 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  /* The phone app's web preview (mobile/, Metro on :8081) calls this
+     server's API from another origin. Development only; phones have no
+     origin and production answers agorasphere.net itself. */
+  async headers() {
+    if (process.env.NODE_ENV !== "development") return [];
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "http://localhost:8081" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "content-type, authorization, x-agora-beta" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

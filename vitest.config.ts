@@ -5,6 +5,7 @@ import path from "node:path";
    tests too, so test modules can runtime-import from `@/lib/...` the same way
    app code does. Purely additive — relative imports are unaffected. */
 export default defineConfig({
+  test: { exclude: ["**/node_modules/**", "mobile/**"] },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

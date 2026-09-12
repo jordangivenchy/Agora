@@ -23,7 +23,7 @@ const BETA_EXEMPT = [
 export async function proxy(request: NextRequest) {
   /* ── Closed-beta gate (armed only while BETA_INVITE_CODE is set) ── */
   const betaCode = process.env.BETA_INVITE_CODE;
-  if (betaCode) {
+  if (betaCode && request.method !== "OPTIONS") {
     const { pathname } = request.nextUrl;
     const sp = request.nextUrl.searchParams;
     const exempt =
@@ -32,7 +32,9 @@ export async function proxy(request: NextRequest) {
          its own room token in the URL and can't hold a beta cookie. */
       (pathname.startsWith("/agora/") && sp.has("token") && sp.has("url"));
     if (!exempt) {
-      const pass = request.cookies.get(BETA_COOKIE)?.value;
+      /* The browser carries the pass as a cookie; the phone app sends the
+         same pass in a header, since it has no cookie jar. */
+      const pass = request.cookies.get(BETA_COOKIE)?.value ?? request.headers.get("x-agora-beta") ?? undefined;
       if (!(await verifyPass(pass, betaCode))) {
         const url = request.nextUrl.clone();
         url.pathname = "/beta";
