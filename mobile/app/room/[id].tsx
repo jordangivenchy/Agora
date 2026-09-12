@@ -18,7 +18,7 @@ import { hostName, type RoomRow } from "../../src/rooms";
 import { fetchSeats, heartbeat, host, raiseHand, subscribeRoom, takeSeat, vacateSeat } from "../../src/seats";
 import { deriveStageRole, isHostRole, onStage, type Seat, type StageRole } from "../../src/stageModel";
 import { StageView, type StageActions } from "../../src/stageView";
-import { ConnectionNote, MicButton, useSpeakingIds } from "../../src/stage";
+import { ConnectionNote, MicButton, WithSpeaking } from "../../src/stage";
 import { colors } from "../../src/theme";
 import { Button, Note, Screen, Spinner } from "../../src/ui";
 
@@ -37,7 +37,6 @@ export default function RoomScreen() {
   const [seats, setSeats] = useState<Seat[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [handBusy, setHandBusy] = useState(false);
-  const speaking = useSpeakingIds();
   const inThisRoom = active?.roomId === id;
 
   const refresh = useCallback(async (): Promise<RoomDetail | null> => {
@@ -189,16 +188,20 @@ export default function RoomScreen() {
         ) : inThisRoom && room ? (
           <View>
             <ConnectionNote />
-            <StageView
-              seats={seats}
-              hostId={room.host_id}
-              meId={meId}
-              myRole={myRole}
-              speaking={speaking}
-              actions={actions}
-              requestsLocked={locked}
-              onToggleLock={() => void host.lockRequests(supabase, id, !locked).then(() => refresh())}
-            />
+            <WithSpeaking>
+              {(speaking) => (
+                <StageView
+                  seats={seats}
+                  hostId={room.host_id}
+                  meId={meId}
+                  myRole={myRole}
+                  speaking={speaking}
+                  actions={actions}
+                  requestsLocked={locked}
+                  onToggleLock={() => void host.lockRequests(supabase, id, !locked).then(() => refresh())}
+                />
+              )}
+            </WithSpeaking>
           </View>
         ) : (
           <Note>Getting you in…</Note>

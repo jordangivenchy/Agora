@@ -1,23 +1,37 @@
 /* Who is audibly speaking, the mic, and the connection state, all from
    LiveKit, rendered inside the call host so the hooks see the room. */
+import type { ReactNode } from "react";
 import { Pressable, Text } from "react-native";
 import * as Haptics from "expo-haptics";
 import { ConnectionState } from "livekit-client";
 import { loadLiveKit, type LiveKit } from "./livekit";
+import { useCall } from "./callSession";
 import { colors } from "./theme";
 import { Button, Note } from "./ui";
-import { useSpeakingIdsFallback as noSpeaking, MicButtonFallback as NoMic, ConnectionNoteFallback as NoConnection } from "./stageFallback";
+import { WithSpeakingFallback as NoSpeaking, MicButtonFallback as NoMic, ConnectionNoteFallback as NoConnection } from "./stageFallback";
 
-export function useSpeakingIds(): Set<string> {
+/* Who is audibly speaking. LiveKit's hooks throw outside a room, and
+   the room screen renders before the call is joined, so the hook only
+   runs in a child that exists once there is a room context. */
+export function WithSpeaking({ children }: { children: (speaking: Set<string>) => ReactNode }) {
   const lk = loadLiveKit();
-  // Hooks are called unconditionally per platform: lk is fixed for the app's life.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return lk ? useNativeSpeaking(lk) : noSpeaking();
+  if (!lk) return <NoSpeaking>{children}</NoSpeaking>;
+  return <MaybeSpeaking lk={lk}>{children}</MaybeSpeaking>;
 }
 
-function useNativeSpeaking(lk: LiveKit): Set<string> {
+const NONE = new Set<string>();
+
+/* The call host wraps the app in LiveKitRoom exactly while a call is
+   active, so "is there a room context" is "is there an active call". */
+function MaybeSpeaking({ lk, children }: { lk: LiveKit; children: (speaking: Set<string>) => ReactNode }) {
+  const { active } = useCall();
+  if (!active) return <>{children(NONE)}</>;
+  return <RoomSpeaking lk={lk}>{children}</RoomSpeaking>;
+}
+
+function RoomSpeaking({ lk, children }: { lk: LiveKit; children: (speaking: Set<string>) => ReactNode }) {
   const speaking = lk.useSpeakingParticipants();
-  return new Set(speaking.map((p) => p.identity));
+  return <>{children(new Set(speaking.map((p) => p.identity)))}</>;
 }
 
 export function MicButton({ compact }: { compact?: boolean }) {
