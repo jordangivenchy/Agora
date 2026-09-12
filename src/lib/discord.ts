@@ -13,7 +13,12 @@
    discord, migration 20260905); the route re-reads the row and hands it
    to the builders below. The builders are pure so they can be tested;
    postDiscord never throws — Discord being down must never fail the
-   caller. Server-only: the webhook URLs are secrets. */
+   caller. Server-only: the webhook URLs are secrets.
+
+   Every message is one embed, in the shape of a good status card: the
+   title is the link, the body opens with what to do, then the facts in
+   bold with tree sub-lines and Discord's own time chips (<t:…>), then
+   an italic note; the footer carries the standing caveat and the brand. */
 
 import { displayName } from "@/lib/names";
 import { pathFor } from "@/lib/routes";
@@ -45,14 +50,11 @@ export const DISCORD_YELLOW = 0xffb700;
 export const DISCORD_BLUE = 0x2f7fe0;
 
 export interface DiscordEmbed {
-  author?: { name: string; url?: string; icon_url?: string };
   title?: string;
   description?: string;
   url?: string;
   color?: number;
-  timestamp?: string;
   footer?: { text: string; icon_url?: string };
-  thumbnail?: { url: string };
 }
 
 export interface DiscordMessage {
@@ -89,9 +91,10 @@ export interface DiscordPost {
   featured_at?: string | null;
 }
 
-const FOOTER = "AgoraSphere beta";
+const BRAND = "AgoraSphere beta";
+const TREE = " └ · ";
 
-/** Discord renders markdown in content and descriptions; user text must not. */
+/** Discord renders markdown in descriptions; user text must not. */
 export function escapeMd(s: string): string {
   return s.replace(/([\\*_~`|>#[\]()-])/g, "\\$1");
 }
@@ -123,8 +126,10 @@ export function clip(s: string, max: number): string {
   return (cut > max * 0.6 ? head.slice(0, cut) : head).trimEnd() + "…";
 }
 
-function httpsUrl(u: string | null | undefined): string | undefined {
-  return u && /^https:\/\//.test(u) ? u : undefined;
+/** Discord's time chip: t = 3:12 PM, f = 11 September 2026 15:12, R = 7 days ago. Viewer's own zone. */
+export function timeChip(iso: string | null | undefined, style: "t" | "f" | "R"): string | null {
+  const s = Math.floor(Date.parse(iso ?? "") / 1000);
+  return Number.isFinite(s) ? `<t:${s}:${style}>` : null;
 }
 
 function person(u: DiscordUser | null | undefined, origin: string): string {
@@ -145,13 +150,18 @@ function runLabel(startedAt: string | null | undefined, endedAt: string | null |
   return rest ? `${h} h ${rest} min` : `${h} h`;
 }
 
-/* Every message is one embed and nothing else: no bare text above it.
-   The kind of card sits in the author line, the title is the link. */
-function brand(origin: string, kind: string, embed: DiscordEmbed): DiscordMessage {
+function card(origin: string, embed: DiscordEmbed & { note: string; lines: Array<string | null> }): DiscordMessage {
+  const { note, lines, ...rest } = embed;
   return {
     username: "AgoraSphere",
     avatar_url: `${origin}/mark-512.png`,
-    embeds: [{ author: { name: kind }, footer: { text: FOOTER }, ...embed }],
+    embeds: [
+      {
+        ...rest,
+        description: lines.filter((l) => l !== null).join("\n"),
+        footer: { text: `${note} • ${BRAND}` },
+      },
+    ],
     allowed_mentions: { parse: [] },
   };
 }
@@ -170,16 +180,24 @@ export function roomLiveMessage(
   community: { name: string | null } | null,
   origin: string
 ): DiscordMessage {
-  const where = community?.name ? ` in **${escapeMd(community.name)}**` : "";
-  const how = isDuel(room) ? " · matched from the queue" : "";
   const url = `${origin}${roomPath(room)}`;
-  return brand(origin, "🔴 Live now", {
+  const at = timeChip(room.started_at, "t");
+  const ago = timeChip(room.started_at, "R");
+  return card(origin, {
     title: motionOf(room),
     url,
-    description: `Hosted by ${person(host, origin)}${where}${how}\n**[Join the room](${url})**`,
     color: DISCORD_YELLOW,
-    timestamp: room.started_at ?? new Date().toISOString(),
-    thumbnail: host?.avatar_url ? { url: httpsUrl(host.avatar_url) ?? "" } : undefined,
+    lines: [
+      `Tap the title or **[Join the room](${url})** to take a seat in the audience.`,
+      "",
+      at ? `**Live** since ${at} (${ago})` : "**Live** now",
+      `${TREE}Host: **${person(host, origin)}**`,
+      community?.name ? `${TREE}Community: **${escapeMd(community.name)}**` : null,
+      isDuel(room) ? `${TREE}**1 v 1**, matched from the queue` : null,
+      "",
+      "*Raise a hand in the room if you want the floor.*",
+    ],
+    note: "Public rooms only, the moment they open",
   });
 }
 
@@ -189,16 +207,25 @@ export function recordingReadyMessage(
   community: { name: string | null } | null,
   origin: string
 ): DiscordMessage {
-  const where = community?.name ? ` in **${escapeMd(community.name)}**` : "";
-  const run = runLabel(room.started_at, room.ended_at);
   const url = `${origin}${replayPath(room)}`;
-  return brand(origin, "🎧 Past discussion", {
+  const run = runLabel(room.started_at, room.ended_at);
+  const ago = timeChip(room.recording_ended_at ?? room.ended_at, "R");
+  const when = timeChip(room.started_at, "f");
+  return card(origin, {
     title: motionOf(room),
     url,
-    description: `Hosted by ${person(host, origin)}${where}${run ? ` · ${run}` : ""}\n**[Open the past discussion](${url})**`,
     color: DISCORD_BLUE,
-    timestamp: room.recording_ended_at ?? room.ended_at ?? new Date().toISOString(),
-    thumbnail: host?.avatar_url ? { url: httpsUrl(host.avatar_url) ?? "" } : undefined,
+    lines: [
+      `Tap the title or **[Open the past discussion](${url})** to watch it back.`,
+      "",
+      `**Recorded**${ago ? ` ${ago}` : ""}${run ? ` · \`${run}\`` : ""}`,
+      `${TREE}Host: **${person(host, origin)}**`,
+      community?.name ? `${TREE}Community: **${escapeMd(community.name)}**` : null,
+      when ? `${TREE}Held ${when}` : null,
+      "",
+      "*Comments are open under the recording.*",
+    ],
+    note: "Recordings land here as they finish",
   });
 }
 
@@ -207,16 +234,22 @@ export function featuredPostMessage(
   author: DiscordUser | null,
   origin: string
 ): DiscordMessage {
-  const title = clip(plainText(post.title) || "A post from the team", 200);
-  const excerpt = clip(plainText(post.body), 600);
   const url = `${origin}${pathFor.post(post.id)}`;
-  return brand(origin, "📣 From the AgoraSphere team", {
-    title,
+  const excerpt = clip(plainText(post.body), 600);
+  const ago = timeChip(post.featured_at, "R");
+  return card(origin, {
+    title: clip(plainText(post.title) || "A post from the team", 200),
     url,
-    description: `${excerpt ? `${escapeMd(excerpt)}\n\n` : ""}Posted by ${person(author, origin)} · **[Read the post](${url})**`,
     color: DISCORD_YELLOW,
-    timestamp: post.featured_at ?? new Date().toISOString(),
-    footer: { text: `${FOOTER} · featured on the home page` },
+    lines: [
+      `Tap the title or **[Read the post](${url})** for the whole thing.`,
+      "",
+      excerpt ? escapeMd(excerpt).split("\n").map((l) => `> ${l}`).join("\n") : null,
+      excerpt ? "" : null,
+      `**Featured**${ago ? ` ${ago}` : ""} · by **${person(author, origin)}**`,
+      "*On the home page for the next two weeks.*",
+    ],
+    note: "Featured on the home page by the team",
   });
 }
 
@@ -224,12 +257,7 @@ export function featuredPostMessage(
 
 /** Posts one message; true when Discord accepted it. Retries a rate limit once. Never throws. */
 export async function postDiscord(url: string, message: DiscordMessage): Promise<boolean> {
-  const embeds = message.embeds?.map((e) => {
-    const copy = { ...e };
-    if (!copy.thumbnail?.url) delete copy.thumbnail;
-    return copy;
-  });
-  const body = JSON.stringify({ ...message, embeds, allowed_mentions: { parse: [] } });
+  const body = JSON.stringify({ ...message, allowed_mentions: { parse: [] } });
   const target = `${url}${url.includes("?") ? "&" : "?"}wait=true`;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
