@@ -3677,3 +3677,123 @@
     max-height: 72vh;
   }
 }
+
+/* ── The docked card: the frame on screen the whole time ─────────── */
+.ag-frame-dock {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: 360px;
+  max-height: 44vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0b0b0d;
+  border: 1px solid #23232b;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  text-align: left;
+}
+
+.ag-frame-dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 8px 6px 12px;
+}
+
+.ag-frame-dock-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ag-frame-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #23232b;
+  background: #121215;
+  color: #9aa0ac;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ag-frame-mini:hover { color: #fff; border-color: #3a3a46; }
+.ag-frame-mini.on { color: #ffb700; border-color: #4a3a12; }
+
+.ag-frame-dock-body,
+.ag-frame-dock-empty {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0 12px 10px;
+  border: 0;
+  background: none;
+  color: #e7e9ee;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ag-frame-dock-body {
+  max-height: 150px;
+  overflow: hidden;
+  mask-image: linear-gradient(#000 74%, transparent);
+}
+
+.ag-frame-dock-body .rich-text > :first-child { margin-top: 0; }
+.ag-frame-dock-body .rich-text > :last-child { margin-bottom: 0; }
+
+.ag-frame-dock-empty { color: #9aa0ac; }
+.ag-frame-dock-empty:hover { color: #fff; }
+
+.ag-frame-dock-people {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px 10px;
+  border-top: 1px solid #1c1c22;
+  display: grid;
+  gap: 5px;
+}
+
+.ag-frame-dock-person {
+  display: grid;
+  grid-template-columns: 16px auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.ag-frame-dock-name {
+  font-weight: 600;
+  color: #cfd3dc;
+  white-space: nowrap;
+}
+
+.ag-frame-dock-line {
+  color: #e7e9ee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 639px) {
+  .ag-frame-dock {
+    position: fixed;
+    top: 58px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: 40vh;
+  }
+}

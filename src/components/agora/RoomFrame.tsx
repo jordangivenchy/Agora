@@ -1,24 +1,63 @@
 "use client";
 
-/* About this debate: a pop-out under the top bar's actions. The host (or
-   a co-host) writes the frame, what is being argued and on what terms;
-   everyone on the stage writes one line on where they stand; the
-   audience reads. Changes ride on the room row, so the room's realtime
-   subscription brings them to everyone; the button shows a dot when
-   the frame changed while the panel was closed. */
+/* About this debate. The frame, what is being argued and on what terms,
+   and one line per person on the stage saying where they stand.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+   Two faces. A docked card under the top bar's actions keeps the frame
+   on screen the whole time: the text, then the lines, compact, read-only.
+   The full panel opens on the About button, or on the card, for editing
+   (the host writes the frame with the communities' editor; people on
+   the stage write their line) and for reading everything. The card can
+   be hidden with its ×, remembered per device; phones start hidden. A
+   dot on the button says the frame moved while nothing was showing.
+
+   Changes ride on the room row, so the room's realtime subscription
+   brings them to everyone in the room. */
+
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import UserAvatar from "@/components/UserAvatar";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
 import { Icon } from "@/components/icons";
+import { useMediaQuery } from "@/lib/media";
 import type { RoomFraming } from "@/types/database";
 import { ROLE_LABEL, type StageParticipant, type StageRole, isHostRole, onStage } from "./stage";
 import { frameIsEmpty, frameNewsKey, framePeople } from "./frameModel";
 
 const ABOUT_MAX = 1200;
 const STANCE_MAX = 200;
+
+/* "Keep it on screen": one flag per device. */
+const DOCK_KEY = "agora:frame-docked";
+const dockListeners = new Set<() => void>();
+function readDock(): string | null {
+  try {
+    return localStorage.getItem(DOCK_KEY);
+  } catch {
+    return null;
+  }
+}
+function subscribeDock(cb: () => void) {
+  dockListeners.add(cb);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === DOCK_KEY) cb();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    dockListeners.delete(cb);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+function writeDock(on: boolean) {
+  try {
+    localStorage.setItem(DOCK_KEY, on ? "1" : "0");
+  } catch {
+    /* private mode: the default stands for this visit */
+  }
+  dockListeners.forEach((l) => l());
+}
+const noDock = () => null;
 
 interface Props {
   room: { id: string; host_id: string; framing?: RoomFraming | null };
@@ -44,6 +83,10 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const [error, setError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
+  const phone = useMediaQuery("(max-width: 639px)");
+  const storedDock = useSyncExternalStore(subscribeDock, readDock, noDock);
+  const docked = storedDock === null ? !phone : storedDock === "1";
+
   const canFrame = isHostRole(myRole);
   const canSpeak = !!currentUserId && onStage(myRole);
   const me = useMemo(() => (currentUserId ? { id: currentUserId, role: myRole } : null), [currentUserId, myRole]);
@@ -55,16 +98,21 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const aboutOver = about.length > ABOUT_MAX;
   const myStance = currentUserId ? (framing?.stances?.[currentUserId]?.text ?? "") : "";
   const line = lineDraft ?? myStance;
+  const empty = frameIsEmpty(framing);
 
-  const hasNews = !open && key !== seenKey;
-  const toggle = () => {
+  /* The card shows while something is on screen to read, or the host
+     still has to write it. Nothing showing → the button carries the dot. */
+  const showCard = docked && !open && (canFrame || !empty);
+  const hasNews = !open && !showCard && key !== seenKey;
+  const openPanel = () => {
     setSeenKey(key);
-    setOpen((o) => !o);
+    setOpen(true);
   };
   const close = () => {
     setSeenKey(key);
     setOpen(false);
   };
+  const toggle = () => (open ? close() : openPanel());
 
   /* Click outside closes, as the room's other menus do. */
   useEffect(() => {
@@ -108,7 +156,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const clearLine = (userId: string) => call("clear_room_stance", { p_room: room.id, p_user: userId }, "clear");
 
   const setter = framing?.about_by ? people.find((p) => p.id === framing.about_by) : null;
-  const empty = frameIsEmpty(framing);
+  const said = people.filter((p) => p.stance);
 
   return (
     <div className="ag-frame-wrap" ref={wrapRef}>
@@ -125,13 +173,61 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
         {hasNews && <span className="ag-about-dot" aria-label="The frame changed" />}
       </button>
 
+      {showCard && (
+        <div className="ag-frame-dock" role="region" aria-label="About this debate">
+          <div className="ag-frame-dock-head">
+            <span className="ag-frame-label">About this debate</span>
+            <span className="ag-frame-dock-tools">
+              <button type="button" className="ag-frame-mini" onClick={openPanel} title={canFrame ? "Edit" : "Read it all"} aria-label={canFrame ? "Edit the frame" : "Open the whole frame"}>
+                <Icon name={canFrame ? "pencil" : "maximize"} size={12} />
+              </button>
+              <button type="button" className="ag-frame-mini" onClick={() => writeDock(false)} title="Hide. The About button brings it back." aria-label="Hide the card">
+                ×
+              </button>
+            </span>
+          </div>
+          {serverAbout.trim() ? (
+            <button type="button" className="ag-frame-dock-body" onClick={openPanel} title="Open the whole frame">
+              <RichText text={serverAbout} />
+            </button>
+          ) : (
+            <button type="button" className="ag-frame-dock-empty" onClick={openPanel}>
+              Set the frame, so people know what is being argued and on what terms.
+            </button>
+          )}
+          {said.length > 0 && (
+            <ul className="ag-frame-dock-people">
+              {said.map((p) => (
+                <li key={p.id} className="ag-frame-dock-person" title={`${p.name}: ${p.stance?.text ?? ""}`}>
+                  <UserAvatar size={16} username={p.username || p.name} avatarUrl={p.avatarUrl} seed={p.id} />
+                  <span className="ag-frame-dock-name">{p.name}</span>
+                  <span className="ag-frame-dock-line">{p.stance?.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {open && (
         <div className="ag-frame" role="dialog" aria-label="About this debate">
           <div className="ag-frame-head">
             <span>About this debate</span>
-            <button type="button" className="ag-frame-close" onClick={close} aria-label="Close">
-              ×
-            </button>
+            <span className="ag-frame-dock-tools">
+              <button
+                type="button"
+                className={`ag-frame-mini ${docked ? "on" : ""}`}
+                onClick={() => writeDock(!docked)}
+                title={docked ? "Kept on screen. Click to hide it when this closes." : "Keep it on screen when this closes"}
+                aria-pressed={docked}
+                aria-label="Keep the frame on screen"
+              >
+                <Icon name={docked ? "pin" : "pin-off"} size={12} />
+              </button>
+              <button type="button" className="ag-frame-close" onClick={close} aria-label="Close">
+                ×
+              </button>
+            </span>
           </div>
 
           <section className="ag-frame-sec">
