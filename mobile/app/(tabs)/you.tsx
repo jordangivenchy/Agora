@@ -48,6 +48,12 @@ export default function You() {
       <View style={{ height: 10 }} />
       <Button kind="secondary" onPress={() => void signOut().then(() => router.replace("/sign-in"))}>Sign out</Button>
       <Note>Editing your profile, settings and communities stay on agorasphere.net for now.</Note>
+      {__DEV__ && (
+        <>
+          <View style={{ height: 24 }} />
+          <Button kind="secondary" onPress={() => router.push("/dev/stage")}>Stage design (development only)</Button>
+        </>
+      )}
     </Screen>
   );
 }
