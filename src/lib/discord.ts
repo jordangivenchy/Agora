@@ -1,24 +1,30 @@
 /* Discord, for the beta server. Three channels hear from the app:
 
-     #live-now          a public room goes live       DISCORD_WEBHOOK_LIVE
-     #past-discussions  a recording is ready          DISCORD_WEBHOOK_RECORDINGS
-     #announcements     a moderator features a post   DISCORD_WEBHOOK_ANNOUNCEMENTS
+     #live-now          one card per public room, edited as it goes:
+                        scheduled → live → ended → recorded    DISCORD_WEBHOOK_LIVE
+     #past-discussions  a recording is ready                   DISCORD_WEBHOOK_RECORDINGS
+     #announcements     a moderator features a post, and
+                        every production deploy                 DISCORD_WEBHOOK_ANNOUNCEMENTS
 
    Each variable holds a Discord webhook URL (channel → Edit channel →
    Integrations → Webhooks → New webhook → Copy webhook URL). One that is
    missing falls back to DISCORD_WEBHOOK_URL, so a single channel can
    take everything. Nothing set → nothing posts, and /api/health says so.
 
-   The database raises the events (trigger → pg_net → /api/internal/
-   discord, migration 20260905); the route re-reads the row and hands it
-   to the builders below. The builders are pure so they can be tested;
-   postDiscord never throws — Discord being down must never fail the
-   caller. Server-only: the webhook URLs are secrets.
+   The database raises the room and post events (trigger → pg_net →
+   /api/internal/discord, migrations 20260905 and 20260906); the route
+   re-reads the row and hands it to the builders below. Vercel raises
+   deploys (/api/webhook/vercel); a cron writes the morning digest
+   (/api/cron/discord-digest); the beta key is answered to a button or
+   /beta (/api/webhook/discord). The builders are pure so they can be
+   tested; postDiscord and editDiscord never throw — Discord being down
+   must never fail the caller. Server-only: the webhook URLs are secrets.
 
    Every message is one embed, in the shape of a good status card: the
    title is the link, the body opens with what to do, then the facts in
    bold with tree sub-lines and Discord's own time chips (<t:…>), then
-   an italic note; the footer carries the standing caveat and the brand. */
+   an italic note; the black tile top right; the footer carries the
+   standing caveat and the brand. */
 
 import { displayName } from "@/lib/names";
 import { pathFor } from "@/lib/routes";
@@ -48,6 +54,7 @@ export function discordConfigured(): boolean {
 
 export const DISCORD_YELLOW = 0xffb700;
 export const DISCORD_BLUE = 0x2f7fe0;
+export const DISCORD_GREY = 0x4e5058;
 
 export interface DiscordEmbed {
   title?: string;
@@ -58,11 +65,22 @@ export interface DiscordEmbed {
   thumbnail?: { url: string };
 }
 
+export interface DiscordComponent {
+  type: number;
+  components?: DiscordComponent[];
+  style?: number;
+  label?: string;
+  custom_id?: string;
+  url?: string;
+  emoji?: { name: string };
+}
+
 export interface DiscordMessage {
   content?: string;
   username?: string;
   avatar_url?: string;
   embeds?: DiscordEmbed[];
+  components?: DiscordComponent[];
   allowed_mentions?: { parse: string[] };
 }
 
@@ -71,6 +89,7 @@ export interface DiscordRoom {
   motion: string | null;
   status: string | null;
   is_private?: boolean | null;
+  scheduled_start?: string | null;
   started_at?: string | null;
   ended_at?: string | null;
   recording_url?: string | null;
@@ -90,6 +109,15 @@ export interface DiscordPost {
   title: string | null;
   body: string | null;
   featured_at?: string | null;
+}
+
+export interface DigestItem {
+  kind: "bug" | "feedback";
+  title: string;
+  url: string;
+  author: string | null;
+  createdAt: string;
+  tags: string[];
 }
 
 const BRAND = "AgoraSphere beta";
@@ -178,6 +206,79 @@ function isDuel(room: DiscordRoom): boolean {
   return (room.pro_size ?? 10) === 1 && (room.con_size ?? 10) === 1;
 }
 
+/* ── Rooms: one card, edited as the room moves along ─────────────── */
+
+export type RoomPhase = "scheduled" | "live" | "ended" | "recorded" | "cancelled";
+
+/** Where a room is in its life, or null when it has nothing to show yet. */
+export function roomPhase(room: DiscordRoom): RoomPhase | null {
+  if (room.status === "live") return "live";
+  if (room.status === "ended") return room.recording_url && room.recording_ended_at ? "recorded" : "ended";
+  if (room.status === "cancelled") return "cancelled";
+  if (room.scheduled_start && (room.status === "created" || room.status === "scheduled")) return "scheduled";
+  return null;
+}
+
+/** The #live-now card for a room in its current phase. */
+export function roomCardMessage(
+  room: DiscordRoom,
+  host: DiscordUser | null,
+  community: { name: string | null } | null,
+  origin: string
+): DiscordMessage | null {
+  const phase = roomPhase(room);
+  if (!phase) return null;
+  if (phase === "recorded") return recordingReadyMessage(room, host, community, origin);
+  if (phase === "live") return roomLiveMessage(room, host, community, origin);
+  const url = `${origin}${roomPath(room)}`;
+  const who = [
+    `${TREE}Host: **${person(host, origin)}**`,
+    community?.name ? `${TREE}Community: **${escapeMd(community.name)}**` : null,
+    isDuel(room) ? `${TREE}**1 v 1**, matched from the queue` : null,
+  ];
+  if (phase === "scheduled") {
+    return card(origin, {
+      title: motionOf(room),
+      url,
+      color: DISCORD_GREY,
+      lines: [
+        `Tap the title or **[Open the room](${url})** to be there when it starts.`,
+        "",
+        `**Scheduled** for ${timeChip(room.scheduled_start, "f")} (${timeChip(room.scheduled_start, "R")})`,
+        ...who,
+        "",
+        "*This card changes when the room goes live.*",
+      ],
+      note: "Public rooms only",
+    });
+  }
+  if (phase === "cancelled") {
+    return card(origin, {
+      title: motionOf(room),
+      url,
+      color: DISCORD_GREY,
+      lines: ["**Cancelled** before it started.", ...who, "", "*Keep an eye on this channel for the next one.*"],
+      note: "Public rooms only",
+    });
+  }
+  const run = runLabel(room.started_at, room.ended_at);
+  const ago = timeChip(room.ended_at, "R");
+  return card(origin, {
+    title: motionOf(room),
+    url,
+    color: DISCORD_GREY,
+    lines: [
+      `Tap the title or **[Open the room](${url})** to see what was said.`,
+      "",
+      `**Ended**${ago ? ` ${ago}` : ""}${run ? ` · \`${run}\`` : ""}`,
+      ...who,
+      "",
+      room.recording_url ? "*The recording lands here when it's ready.*" : "*No recording for this one.*",
+    ],
+    note: "Public rooms only",
+  });
+}
+
 export function roomLiveMessage(
   room: DiscordRoom,
   host: DiscordUser | null,
@@ -233,6 +334,8 @@ export function recordingReadyMessage(
   });
 }
 
+/* ── Posts, deploys, the digest, the key ─────────────────────────── */
+
 export function featuredPostMessage(
   post: DiscordPost,
   author: DiscordUser | null,
@@ -257,33 +360,137 @@ export function featuredPostMessage(
   });
 }
 
+/** A production deploy went out. */
+export function deployMessage(
+  d: { sha: string | null; message: string | null; author?: string | null; at?: string | null },
+  origin: string
+): DiscordMessage {
+  const first = clip(plainText(d.message).split("\n")[0] || "A new build", 200);
+  const ago = timeChip(d.at, "R");
+  return card(origin, {
+    title: "A new build is live",
+    url: origin,
+    color: DISCORD_YELLOW,
+    lines: [
+      `Tap the title to open the site. A hard refresh gets you the new build.`,
+      "",
+      `**Deployed**${ago ? ` ${ago}` : ""}`,
+      `${TREE}${escapeMd(first)}`,
+      d.sha ? `${TREE}\`${d.sha.slice(0, 7)}\`${d.author ? ` · ${escapeMd(d.author)}` : ""}` : null,
+      "",
+      "*If something you reported is in there, try it again and say so on the post.*",
+    ],
+    note: "Every production deploy",
+  });
+}
+
+/** The morning digest for the team; null when there is nothing to say. */
+export function digestMessage(items: DigestItem[], origin: string): DiscordMessage | null {
+  if (!items.length) return null;
+  const bugs = items.filter((i) => i.kind === "bug");
+  const fb = items.filter((i) => i.kind === "feedback");
+  const line = (i: DigestItem) =>
+    `${TREE}[${escapeMd(clip(i.title, 80))}](${i.url})${i.author ? ` · ${escapeMd(i.author)}` : ""}${i.tags.length ? ` · ${i.tags.map(escapeMd).join(", ")}` : ""}`;
+  const group = (name: string, list: DigestItem[]) =>
+    list.length ? [`**${name}**`, ...list.slice(0, 10).map(line), list.length > 10 ? `${TREE}and ${list.length - 10} more` : null] : [];
+  const n = (k: number, one: string, many: string) => `**${k} ${k === 1 ? one : many}**`;
+  return card(origin, {
+    title: "Since yesterday in bugs and feedback",
+    color: DISCORD_YELLOW,
+    lines: [
+      `${n(bugs.length, "new bug", "new bugs")} · ${n(fb.length, "new feedback post", "new feedback posts")}`,
+      "",
+      ...group("Bugs", bugs),
+      bugs.length && fb.length ? "" : null,
+      ...group("Feedback", fb),
+      "",
+      "*Tag each bug as you go: Confirmed, In progress, Fixed, Can't reproduce or By design.*",
+    ],
+    note: "Every morning, for the team",
+  });
+}
+
+/** The reply to the button or /beta: the shared code, for that person's eyes only. */
+export function betaKeyEmbed(code: string | null, origin: string): DiscordEmbed {
+  const thumbnail = { url: `${origin}/mark-512.png` };
+  const footer = { text: `Given to members of this server • ${BRAND}` };
+  if (!code) {
+    return {
+      title: "The door is open",
+      url: origin,
+      color: DISCORD_YELLOW,
+      thumbnail,
+      footer,
+      description: `No key is needed right now: **[agorasphere.net](${origin})** lets you straight in.\n\n*Only you can see this message.*`,
+    };
+  }
+  return {
+    title: "Your beta key",
+    url: `${origin}/beta`,
+    color: DISCORD_YELLOW,
+    thumbnail,
+    footer,
+    description: [
+      `Go to **[agorasphere.net/beta](${origin}/beta)** and enter:`,
+      "```",
+      code,
+      "```",
+      `${TREE}One key for the whole beta, so keep it to yourself.`,
+      `${TREE}The pass lasts 30 days on each device. Come back here when it runs out.`,
+      "",
+      "*Only you can see this message.*",
+    ].join("\n"),
+  };
+}
+
 /* ── Delivery ─────────────────────────────────────────────────────── */
 
-/** Posts one message; true when Discord accepted it. Retries a rate limit once. Never throws. */
-export async function postDiscord(url: string, message: DiscordMessage): Promise<boolean> {
-  const body = JSON.stringify({ ...message, allowed_mentions: { parse: [] } });
-  const target = `${url}${url.includes("?") ? "&" : "?"}wait=true`;
+async function send(url: string, init: RequestInit): Promise<Response | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await fetch(target, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal: AbortSignal.timeout(8000),
-      });
-      if (res.ok) return true;
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });
       if (res.status === 429 && attempt === 0) {
         const j = (await res.json().catch(() => null)) as { retry_after?: number } | null;
         const wait = Math.min(5000, Math.max(500, Number(j?.retry_after ?? 1) * 1000));
         await new Promise((r) => setTimeout(r, wait));
         continue;
       }
-      console.error("[discord] webhook refused", res.status, (await res.text().catch(() => "")).slice(0, 200));
-      return false;
+      return res;
     } catch (e) {
-      console.error("[discord] webhook failed", e instanceof Error ? e.message : e);
-      return false;
+      console.error("[discord] request failed", e instanceof Error ? e.message : e);
+      return null;
     }
   }
-  return false;
+  return null;
+}
+
+/** Posts one message; the message id when Discord accepted it. Never throws. */
+export async function postDiscord(url: string, message: DiscordMessage): Promise<{ ok: boolean; id: string | null }> {
+  const res = await send(`${url}${url.includes("?") ? "&" : "?"}wait=true`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...message, allowed_mentions: { parse: [] } }),
+  });
+  if (!res) return { ok: false, id: null };
+  if (!res.ok) {
+    console.error("[discord] webhook refused", res.status, (await res.text().catch(() => "")).slice(0, 200));
+    return { ok: false, id: null };
+  }
+  const j = (await res.json().catch(() => null)) as { id?: string } | null;
+  return { ok: true, id: j?.id ?? null };
+}
+
+/** Rewrites a message the webhook sent earlier. "gone" when Discord no longer has it. Never throws. */
+export async function editDiscord(url: string, messageId: string, message: DiscordMessage): Promise<"ok" | "gone" | "failed"> {
+  const { embeds, components } = message;
+  const res = await send(`${url}/messages/${messageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ embeds, components, allowed_mentions: { parse: [] } }),
+  });
+  if (!res) return "failed";
+  if (res.ok) return "ok";
+  if (res.status === 404) return "gone";
+  console.error("[discord] edit refused", res.status, (await res.text().catch(() => "")).slice(0, 200));
+  return "failed";
 }

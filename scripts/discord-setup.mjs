@@ -2,14 +2,18 @@
 /* Sets up the AgoraSphere beta Discord server.
 
    Discord keeps two things for a human: making the empty server and
-   inviting a bot into it. Everything after that is here — the icon, two
-   roles and the @everyone permissions, five categories and ten channels
-   (forums for bugs and feedback, a voice backchannel, a private team
-   room), Community mode, the welcome and rules messages pinned, one
+   inviting a bot into it. Everything after that is here — the icon, the
+   roles (Founder, Team, Moderator; iPhone, Android, Desktop for
+   onboarding) and the @everyone permissions, five categories and eleven
+   channels (forums for bugs and feedback with triage tags, a voice
+   backchannel, a town-hall stage, a private team room), Community mode,
+   the rules newcomers accept and the welcome screen, the onboarding
+   question, AutoMod, the welcome and rules cards pinned (with the
+   "Get my beta key" button), the /beta command, an :as: emoji, one
    webhook per channel the site posts into, and a never-expiring invite.
    Safe to run again: existing roles and channels are found by name and
-   brought up to date, nothing is duplicated, pinned channels are left
-   alone.
+   brought up to date, nothing is duplicated, pinned cards are edited
+   in place.
 
    Once:
      1. Discord → + → Create My Own → For me and my friends → name it
@@ -17,8 +21,9 @@
      2. discord.com/developers/applications → New Application →
         "AgoraSphere" → Bot → Reset Token → copy it. Put it in .env.local
         as DISCORD_BOT_TOKEN=... (the file is git-ignored).
-     3. OAuth2 → URL Generator → scope "bot" → permission
-        "Administrator" → open the generated URL → pick the server.
+     3. OAuth2 → URL Generator → scopes "bot" and "applications.commands"
+        → permission "Administrator" → open the generated URL → pick the
+        server.
      4. Server Settings → Widget → copy the Server ID (or turn on
         Developer Mode and right-click the server → Copy Server ID).
         Put it in .env.local as DISCORD_GUILD_ID=...
@@ -57,6 +62,7 @@ const GUILD = process.env.DISCORD_GUILD_ID;
 const API = (process.env.DISCORD_API_BASE || "https://discord.com/api/v10").replace(/\/$/, "");
 const WEBHOOK_HOST = process.env.DISCORD_WEBHOOK_HOST || "https://discord.com";
 const OUT = process.env.DISCORD_OUT_FILE || path.join(ROOT, ".env.discord.local");
+const SITE = process.env.DISCORD_SITE_ORIGIN || "https://agorasphere.net";
 
 if (!TOKEN || !GUILD) {
   console.error("Need DISCORD_BOT_TOKEN and DISCORD_GUILD_ID (in .env.local or the environment). See the notes at the top of this file.");
@@ -85,7 +91,7 @@ async function api(method, route, body) {
     }
     const text = await res.text();
     if (!res.ok) {
-      const err = new Error(`${method} ${route} → ${res.status}${text ? `: ${text.slice(0, 400)}` : ""}`);
+      const err = new Error(`${method} ${route} → ${res.status}${text ? `: ${text.slice(0, 4000)}` : ""}`);
       err.status = res.status;
       throw err;
     }
@@ -99,6 +105,7 @@ const P = {
   CREATE_INSTANT_INVITE: 1n << 0n,
   KICK_MEMBERS: 1n << 1n,
   ADMINISTRATOR: 1n << 3n,
+  MANAGE_CHANNELS: 1n << 4n,
   ADD_REACTIONS: 1n << 6n,
   VIEW_AUDIT_LOG: 1n << 7n,
   STREAM: 1n << 9n,
@@ -119,6 +126,7 @@ const P = {
   CHANGE_NICKNAME: 1n << 26n,
   MANAGE_NICKNAMES: 1n << 27n,
   USE_APPLICATION_COMMANDS: 1n << 31n,
+  REQUEST_TO_SPEAK: 1n << 32n,
   MANAGE_THREADS: 1n << 34n,
   CREATE_PUBLIC_THREADS: 1n << 35n,
   CREATE_PRIVATE_THREADS: 1n << 36n,
@@ -131,10 +139,11 @@ const P = {
 };
 const bits = (...names) => names.reduce((acc, n) => acc | P[n], 0n).toString();
 
-const T = { TEXT: 0, VOICE: 2, CATEGORY: 4, FORUM: 15 };
+const T = { TEXT: 0, VOICE: 2, CATEGORY: 4, STAGE: 13, FORUM: 15 };
 
 const YELLOW = 0xffb700;
 const BLUE = 0x4a9eff;
+const OFF_WHITE = 0xf4f2ec;
 
 /* ── The plan ─────────────────────────────────────────────────────── */
 
@@ -155,11 +164,10 @@ const EVERYONE_PERMS = bits(
   "SPEAK",
   "USE_VAD",
   "STREAM",
+  "REQUEST_TO_SPEAK",
   "SEND_VOICE_MESSAGES",
   "SEND_POLLS"
 );
-
-const OFF_WHITE = 0xf4f2ec;
 
 /* Top to bottom in the member list. The owner is Founder; Team is the
    @agorasphere account and whoever builds the product. */
@@ -185,39 +193,60 @@ const ROLES = [
   },
 ];
 
+/* Picked in onboarding ("What are you testing on?"), so the team can
+   reach the right testers: "@iPhone, the mic fix is up". */
+const PLATFORM_ROLES = [
+  { name: "iPhone", emoji: "📱" },
+  { name: "Android", emoji: "🤖" },
+  { name: "Desktop", emoji: "💻" },
+].map((r) => ({ ...r, color: 0, hoist: false, mentionable: true, permissions: "0" }));
+
 const CATEGORIES = ["Start here", "Testing", "Live", "Talk", "Team"];
+
+const TRIAGE = ["Confirmed", "In progress", "Fixed", "Can't reproduce", "By design"];
 
 const CHANNELS = [
   { name: "welcome", cat: "Start here", type: T.TEXT, topic: "Start here. What the beta is, what to try this week, and where things go.", readOnly: true, noThreads: true },
   { name: "rules", cat: "Start here", type: T.TEXT, topic: "Six rules. Read them once.", readOnly: true, noThreads: true },
-  { name: "announcements", cat: "Start here", type: T.TEXT, topic: "From the team. Anything featured on the AgoraSphere home page lands here too.", readOnly: true, webhook: "DISCORD_WEBHOOK_ANNOUNCEMENTS" },
+  { name: "announcements", cat: "Start here", type: T.TEXT, topic: "From the team: what was featured on the home page, and every new build.", readOnly: true, webhook: "DISCORD_WEBHOOK_ANNOUNCEMENTS" },
   {
     name: "bugs",
     cat: "Testing",
     type: T.FORUM,
+    needsCommunity: true,
+    fallback: T.TEXT,
     guidelines:
-      'One bug per post. Title it like a headline: "Mic stays muted after rejoining on iPhone".\n\nWhat you did\nWhat happened\nWhat you expected\nDevice and browser (iPhone 15 Safari, Pixel 8 Chrome, Mac Chrome)\nA screenshot or screen recording if you have one\n\nTag it: Calls, Communities, Home, Queue, Phone, Desktop, Account.',
-    tags: ["Calls", "Communities", "Home", "Queue", "Phone", "Desktop", "Account"],
+      'One bug per post. Title it like a headline: "Mic stays muted after rejoining on iPhone".\n\nWhat you did\nWhat happened\nWhat you expected\nDevice and browser (iPhone 15 Safari, Pixel 8 Chrome, Mac Chrome)\nA screenshot or screen recording if you have one\n\nTag it: Calls, Communities, Home, Queue, Phone, Desktop, Account. The team adds the state: Confirmed, In progress, Fixed, Can\'t reproduce, By design.',
+    tags: [
+      ...["Calls", "Communities", "Home", "Queue", "Phone", "Desktop", "Account"].map((name) => ({ name, moderated: false })),
+      ...TRIAGE.map((name) => ({ name, moderated: true })),
+    ],
   },
   {
     name: "feedback",
     cat: "Testing",
     type: T.FORUM,
-    guidelines: "What felt off, slow, or confusing, and what you would change. One thing per post, so the team can answer each one.\n\nTag it: Idea, Confusing, Slow, Love it.",
-    tags: ["Idea", "Confusing", "Slow", "Love it"],
+    needsCommunity: true,
+    fallback: T.TEXT,
+    guidelines: "What felt off, slow, or confusing, and what you would change. One thing per post, so the team can answer each one.\n\nTag it: Idea, Confusing, Slow, Love it. The team adds: Planned, Done, Not now.",
+    tags: [
+      ...["Idea", "Confusing", "Slow", "Love it"].map((name) => ({ name, moderated: false })),
+      ...["Planned", "Done", "Not now"].map((name) => ({ name, moderated: true })),
+    ],
   },
-  { name: "live-now", cat: "Live", type: T.TEXT, topic: "Rooms going live on AgoraSphere, posted by the site as they open. Hop in.", readOnly: true, noThreads: true, webhook: "DISCORD_WEBHOOK_LIVE" },
+  { name: "live-now", cat: "Live", type: T.TEXT, topic: "One card per public room, kept up to date as it goes: scheduled, live, ended, recorded. Hop in while it says live.", readOnly: true, noThreads: true, webhook: "DISCORD_WEBHOOK_LIVE" },
   { name: "past-discussions", cat: "Live", type: T.TEXT, topic: "Recordings as they land. Reply in a thread.", readOnly: true, webhook: "DISCORD_WEBHOOK_RECORDINGS" },
   { name: "general", cat: "Talk", type: T.TEXT, topic: "Everything else." },
   { name: "backchannel", cat: "Talk", type: T.VOICE, aliases: ["General"] },
-  { name: "team", cat: "Team", type: T.TEXT, topic: "Team and moderators. Triage, decisions, who is fixing what.", teamOnly: true, aliases: ["moderator-only"] },
+  { name: "town-hall", cat: "Talk", type: T.STAGE, needsCommunity: true, fallback: T.VOICE, stageMods: true, topic: "The weekly call with the team: what broke, what's next." },
+  { name: "team", cat: "Team", type: T.TEXT, topic: "Team and moderators. Triage, decisions, who is fixing what. The morning digest lands here.", teamOnly: true, aliases: ["moderator-only"] },
 ];
 
 /* The two pinned cards, in the same shape as the cards the site posts:
    title, the facts in bold with tree sub-lines, an italic note, the
    black tile, a footer. {#name} becomes a real channel mention once the
    ids are known. */
-const MARK_URL = process.env.DISCORD_MARK_URL || "https://agorasphere.net/mark-512.png";
+const MARK_URL = process.env.DISCORD_MARK_URL || `${SITE}/mark-512.png`;
 const TREE = " └ · ";
 
 const WELCOME_CARD = {
@@ -227,6 +256,9 @@ const WELCOME_CARD = {
     "AgoraSphere is a place to argue well: live rooms where people take the floor and make their point, communities where the threads carry on after the call, and a queue that pairs you with someone who disagrees.",
     "",
     "This server is where the beta lives. Say what broke, what confused you, and what you would change. Nothing is too small.",
+    "",
+    "**Your key**",
+    "Tap **Get my beta key** below, or type `/beta` anywhere. Only you see the answer.",
     "",
     "**Try this first**",
     "**1.** Open a room from the **+** menu and hold a call with someone. Phone and desktop both.",
@@ -240,7 +272,7 @@ const WELCOME_CARD = {
     `${TREE}{#live-now} shows rooms as they go live. Hop in.`,
     `${TREE}{#general} for everything else.`,
     "",
-    "*The beta is closed. Keep the invite code, this server, and screenshots to yourself for now.*",
+    "*The beta is closed. Keep the key, this server, and screenshots to yourself for now.*",
   ].join("\n"),
   footer: { text: "Read the rules once, then say hello in general • AgoraSphere beta" },
 };
@@ -251,7 +283,7 @@ const RULES_CARD = {
   description: [
     "**1. Argue the point, not the person.** Same as in the app.",
     "**2. One bug per post in {#bugs}**, with your device and what you expected.",
-    "**3. The beta is closed.** Do not share the invite code, the invite link, or screenshots outside this server.",
+    "**3. The beta is closed.** Do not share the key, the invite link, or screenshots outside this server.",
     "**4. What people say in rooms stays in rooms.** Do not post recordings or transcripts here unless the app itself published them.",
     "**5. No spam, no promotion, no NSFW.**",
     "**6. Moderators can remove anything and anyone.** Unsure? Ask in {#general}.",
@@ -261,10 +293,37 @@ const RULES_CARD = {
   footer: { text: "By staying in this server you accept these • AgoraSphere beta" },
 };
 
+const KEY_BUTTON = [{ type: 1, components: [{ type: 2, style: 1, label: "Get my beta key", custom_id: "beta-key", emoji: { name: "🔑" } }] }];
+
+const DESCRIPTION = "The closed beta of AgoraSphere, a place to argue well.";
+
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
 const log = (s) => console.log(s);
-const why = (e) => String(e?.message ?? e).split(":").slice(-1)[0].trim();
+/* Discord's validation errors are a nested JSON tree; say the first one. */
+function firstError(node, path = []) {
+  if (!node || typeof node !== "object") return null;
+  if (Array.isArray(node._errors) && node._errors[0]) return `${path.join(".")}: ${node._errors[0].message}`;
+  for (const [k, v] of Object.entries(node)) {
+    const r = firstError(v, [...path, k]);
+    if (r) return r;
+  }
+  return null;
+}
+const why = (e) => {
+  const s = String(e?.message ?? e);
+  const i = s.indexOf(": {");
+  if (i >= 0) {
+    try {
+      const j = JSON.parse(s.slice(i + 2));
+      const first = firstError(j.errors);
+      return `${j.message ?? ""}${first ? ` (${first})` : ""}`.trim() || s;
+    } catch {
+      /* not JSON after all */
+    }
+  }
+  return s.split(":").slice(-1)[0].trim();
+};
 const same = (a, b) => (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
 /* Channel names as people type them: "Back channel" is #backchannel. */
 const norm = (s) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -317,38 +376,57 @@ async function main() {
   }
 
   /* Roles. */
-  let roles = await api("GET", `/guilds/${GUILD}/roles`);
+  const roles = await api("GET", `/guilds/${GUILD}/roles`);
   const everyone = roles.find((r) => r.id === GUILD);
   if (everyone.permissions !== EVERYONE_PERMS) {
     await api("PATCH", `/guilds/${GUILD}/roles/${GUILD}`, { permissions: EVERYONE_PERMS });
     log("✓ @everyone permissions set (testers: talk, thread, react, attach, voice; no invites, no @everyone)");
   }
+  /* A role dragged above the bot's own is out of the bot's reach from
+     then on (Discord's hierarchy): it is found and left as it is. */
   const roleId = {};
-  for (const spec of ROLES) {
+  for (const spec of [...ROLES, ...PLATFORM_ROLES]) {
+    const body = { ...spec };
+    delete body.emoji;
     const found = roles.find((r) => same(r.name, spec.name));
     if (found) {
-      await api("PATCH", `/guilds/${GUILD}/roles/${found.id}`, spec);
       roleId[spec.name] = found.id;
-      log(`✓ role ${spec.name} (updated)`);
+      try {
+        await api("PATCH", `/guilds/${GUILD}/roles/${found.id}`, body);
+        log(`✓ role ${spec.name} (updated)`);
+      } catch (e) {
+        if (e.status !== 403) throw e;
+        log(`✓ role ${spec.name} (above the bot's role, left as it is)`);
+      }
     } else {
-      const made = await api("POST", `/guilds/${GUILD}/roles`, spec);
+      const made = await api("POST", `/guilds/${GUILD}/roles`, body);
       roleId[spec.name] = made.id;
       log(`✓ role ${spec.name} (created)`);
     }
   }
   /* Founder above Team above Moderator, so the member list groups in
-     that order. A new role lands at the bottom otherwise. */
-  try {
-    await api("PATCH", `/guilds/${GUILD}/roles`, [
-      { id: roleId.Moderator, position: 1 },
-      { id: roleId.Team, position: 2 },
-      { id: roleId.Founder, position: 3 },
-    ]);
-  } catch (e) {
-    log(`! role order could not be set by the bot (${why(e)}). Drag Founder above Team in Server Settings → Roles.`);
+     that order. A new role lands at the bottom otherwise. Skipped once
+     the order is already right, or when a role is out of reach. */
+  const order = ["Moderator", "Team", "Founder"].map((n) => roles.find((r) => r.id === roleId[n])).filter(Boolean);
+  const ordered = order.length === 3 && order[0].position < order[1].position && order[1].position < order[2].position;
+  if (!ordered) {
+    try {
+      await api("PATCH", `/guilds/${GUILD}/roles`, [
+        { id: roleId.Moderator, position: 1 },
+        { id: roleId.Team, position: 2 },
+        { id: roleId.Founder, position: 3 },
+      ]);
+    } catch (e) {
+      log(`! role order could not be set by the bot (${why(e)}). Drag AgoraSphere (the bot's role) to the top, then Founder, Team, Moderator beneath it, in Server Settings → Roles.`);
+    }
   }
   /* The owner is the Founder. */
-  await api("PUT", `/guilds/${GUILD}/members/${guild.owner_id}/roles/${roleId.Founder}`);
+  try {
+    await api("PUT", `/guilds/${GUILD}/members/${guild.owner_id}/roles/${roleId.Founder}`);
+  } catch (e) {
+    if (e.status !== 403) throw e;
+    log("! Founder is above the bot's role, so the bot cannot hand it out; give it to yourself in Server Settings → Members if you lack it.");
+  }
 
   /* Categories. */
   let channels = await api("GET", `/guilds/${GUILD}/channels`);
@@ -365,9 +443,9 @@ async function main() {
     }
   }
 
-  /* Channels. Two passes: everything that isn't a forum, then Community
-     mode (it needs the rules and updates channels to exist), then the
-     forums, which need Community mode. */
+  /* Channels. Two passes: everything that doesn't need Community mode,
+     then Community mode (it needs the rules and updates channels to
+     exist), then the forums and the stage, which need it. */
   const chanId = {};
   const overwritesFor = (spec) => {
     const ow = [];
@@ -380,25 +458,31 @@ async function main() {
       ow.push({ id: GUILD, type: 0, allow: "0", deny: P.VIEW_CHANNEL.toString() });
       for (const r of ["Founder", "Team", "Moderator"]) ow.push({ id: roleId[r], type: 0, allow: P.VIEW_CHANNEL.toString(), deny: "0" });
     }
+    if (spec.stageMods) {
+      /* Stage moderators: Manage Channel plus mute and move, which the role has. */
+      ow.push({ id: roleId.Moderator, type: 0, allow: P.MANAGE_CHANNELS.toString(), deny: "0" });
+    }
     return ow;
   };
 
   async function ensureChannel(spec, position, community) {
-    const wantType = spec.type === T.FORUM && !community ? T.TEXT : spec.type;
+    const wantType = spec.needsCommunity && !community ? spec.fallback : spec.type;
     const names = [spec.name, ...(spec.aliases ?? [])];
     /* Same kind of channel, by name or alias. Kind first: the template's
        "General" voice channel is not the text #general. */
     let found = channels.find((c) => c.type === wantType && names.some((n) => norm(c.name) === norm(n)));
-    if (!found && (wantType === T.FORUM || wantType === T.TEXT)) {
-      /* A text #bugs left by a run before Community mode was on (or a
-         forum when it is off): replace it while it is still empty. */
-      const twin = channels.find((c) => (c.type === T.FORUM || c.type === T.TEXT) && c.type !== wantType && norm(c.name) === norm(spec.name));
+    if (!found && spec.fallback !== undefined) {
+      /* A text #bugs (or voice town-hall) left by a run before Community
+         mode was on, or the other way round: replace it while it is
+         still empty. */
+      const other = wantType === spec.type ? spec.fallback : spec.type;
+      const twin = channels.find((c) => c.type === other && norm(c.name) === norm(spec.name));
       if (twin && (await channelIsEmpty(twin.id))) {
         await api("DELETE", `/channels/${twin.id}`);
         channels.splice(channels.indexOf(twin), 1);
-        log(`✓ #${twin.name} replaced with ${wantType === T.FORUM ? "a forum" : "a text channel"}`);
+        log(`✓ #${twin.name} replaced with ${wantType === T.FORUM ? "a forum" : wantType === T.STAGE ? "a stage" : "a plain channel"}`);
       } else if (twin) {
-        log(`! #${twin.name} already has posts, so it stays ${twin.type === T.FORUM ? "a forum" : "a text channel"}`);
+        log(`! #${twin.name} already has posts, so it stays as it is`);
         found = twin;
       }
     }
@@ -416,9 +500,9 @@ async function main() {
       body.default_sort_order = 0;
       body.default_forum_layout = 1;
       const existing = found?.available_tags ?? [];
-      body.available_tags = spec.tags.map((name) => {
-        const keep = existing.find((t) => same(t.name, name));
-        return keep ? { id: keep.id, name, moderated: false } : { name, moderated: false };
+      body.available_tags = spec.tags.map((t) => {
+        const keep = existing.find((x) => same(x.name, t.name));
+        return keep ? { id: keep.id, name: t.name, moderated: t.moderated } : { name: t.name, moderated: t.moderated };
       });
     }
     if (found) {
@@ -439,9 +523,10 @@ async function main() {
 
   const pos = {};
   const nextPos = (cat) => (pos[cat] = (pos[cat] ?? -1) + 1);
-  for (const spec of CHANNELS) if (spec.type !== T.FORUM) await ensureChannel(spec, nextPos(spec.cat), false);
+  for (const spec of CHANNELS) if (!spec.needsCommunity) await ensureChannel(spec, nextPos(spec.cat), false);
 
-  /* Community mode: forums, and the rules channel shown to newcomers. */
+  /* Community mode: forums, the stage, and the rules channel shown to
+     newcomers. */
   let community = (guild.features ?? []).includes("COMMUNITY");
   if (!community) {
     try {
@@ -466,14 +551,14 @@ async function main() {
     if (Object.keys(patch).length) await api("PATCH", `/guilds/${GUILD}`, patch);
   }
 
-  for (const spec of CHANNELS) if (spec.type === T.FORUM) await ensureChannel(spec, nextPos(spec.cat), community);
+  for (const spec of CHANNELS) if (spec.needsCommunity) await ensureChannel(spec, nextPos(spec.cat), community);
 
   /* Hand-made twins of the planned channels (a second #team, a "back
      channel" beside #backchannel): removed while they are empty. */
   channels = await api("GET", `/guilds/${GUILD}/channels`);
   for (const spec of CHANNELS) {
     const names = [spec.name, ...(spec.aliases ?? [])].map(norm);
-    const kinds = spec.type === T.FORUM ? [T.FORUM, T.TEXT] : [spec.type];
+    const kinds = [spec.type, spec.fallback].filter((k) => k !== undefined);
     for (const c of channels.filter((c) => c.id !== chanId[spec.name] && kinds.includes(c.type) && names.includes(norm(c.name)))) {
       if (await channelIsEmpty(c.id)) {
         await api("DELETE", `/channels/${c.id}`);
@@ -498,24 +583,24 @@ async function main() {
      message is brought up to date in place (an older plain-text one
      becomes the card); a pin someone else made is left alone. */
   const mention = (s) => s.replace(/\{#([a-z-]+)\}/g, (_, n) => (chanId[n] ? `<#${chanId[n]}>` : `#${n}`));
-  const shape = (e) => JSON.stringify({ t: e?.title, d: e?.description, c: e?.color, f: e?.footer?.text, i: e?.thumbnail?.url });
-  for (const [name, spec] of [
-    ["welcome", WELCOME_CARD],
-    ["rules", RULES_CARD],
+  const shape = (e, buttons) => JSON.stringify({ t: e?.title, d: e?.description, c: e?.color, f: e?.footer?.text, i: e?.thumbnail?.url, b: buttons ? 1 : 0 });
+  for (const [name, spec, components] of [
+    ["welcome", WELCOME_CARD, KEY_BUTTON],
+    ["rules", RULES_CARD, []],
   ]) {
     const id = chanId[name];
     const embed = { ...spec, description: mention(spec.description), thumbnail: { url: MARK_URL } };
     const pins = await pinnedMessages(id);
     const mine = pins.find((p) => p.author?.id === me.id);
     if (mine) {
-      if (shape(mine.embeds?.[0]) !== shape(embed) || mine.content) {
-        await api("PATCH", `/channels/${id}/messages/${mine.id}`, { content: "", embeds: [embed], allowed_mentions: { parse: [] } });
+      if (shape(mine.embeds?.[0], mine.components?.length) !== shape(embed, components.length) || mine.content) {
+        await api("PATCH", `/channels/${id}/messages/${mine.id}`, { content: "", embeds: [embed], components, allowed_mentions: { parse: [] } });
         log(`✓ #${name} card updated`);
       }
     } else if (pins.length) {
       log(`! #${name} has a pinned message by someone else; left alone`);
     } else {
-      const msg = await api("POST", `/channels/${id}/messages`, { embeds: [embed], allowed_mentions: { parse: [] } });
+      const msg = await api("POST", `/channels/${id}/messages`, { embeds: [embed], components, allowed_mentions: { parse: [] } });
       await pinMessage(id, msg.id);
       log(`✓ #${name} card posted and pinned`);
     }
@@ -569,6 +654,125 @@ async function main() {
       log(`! welcome screen could not be set by the bot (${why(e)}).`);
       log("  By hand: Server Settings → Onboarding → Welcome Screen → add welcome, bugs, feedback, live-now, general.");
     }
+
+    /* Onboarding: one question, "What are you testing on?", which hands
+       out the platform roles. Discord wants every public channel listed
+       as a default, and an id on every prompt and option: the existing
+       ones are reused so answers already given survive a re-run; new
+       ones get placeholders Discord replaces. */
+    try {
+      const QUESTION = "What are you testing on?";
+      const publicIds = CHANNELS.filter((s) => !s.teamOnly).map((s) => chanId[s.name]).filter(Boolean);
+      const current = await api("GET", `/guilds/${GUILD}/onboarding`).catch(() => null);
+      const prev = (current?.prompts ?? []).find((p) => p.title === QUESTION);
+      await api("PUT", `/guilds/${GUILD}/onboarding`, {
+        enabled: true,
+        mode: 0,
+        default_channel_ids: publicIds,
+        prompts: [
+          {
+            id: prev?.id ?? "0",
+            type: 0,
+            title: QUESTION,
+            single_select: false,
+            required: true,
+            in_onboarding: true,
+            options: PLATFORM_ROLES.map((r, i) => ({
+              id: (prev?.options ?? []).find((o) => o.title === r.name)?.id ?? String(i + 1),
+              title: r.name,
+              description: "",
+              emoji_name: r.emoji,
+              role_ids: [roleId[r.name]],
+              channel_ids: [],
+            })),
+          },
+        ],
+      });
+      log("✓ onboarding on: newcomers pick iPhone, Android or Desktop and get the role");
+    } catch (e) {
+      log(`! onboarding could not be set by the bot (${why(e)}).`);
+      log("  By hand: Server Settings → Onboarding → Default Channels: all public ones → Questions: \"What are you testing on?\" → iPhone / Android / Desktop → the matching role → Enable.");
+    }
+
+    /* The line under the server name in the invite preview. */
+    if (guild.description !== DESCRIPTION) {
+      await api("PATCH", `/guilds/${GUILD}`, { description: DESCRIPTION }).then(
+        () => log("✓ server description set"),
+        (e) => log(`! server description could not be set (${why(e)})`)
+      );
+    }
+  }
+
+  /* AutoMod: the rules the testers agreed to, kept by Discord. Invite
+     links are the team's to share; mention floods and spam are blocked.
+     Alerts land in #team. Founder, Team and Moderator are exempt. */
+  const exempt = ["Founder", "Team", "Moderator"].map((r) => roleId[r]).filter(Boolean);
+  const alert = chanId.team ? [{ type: 2, metadata: { channel_id: chanId.team } }] : [];
+  const AUTOMOD = [
+    {
+      name: "No invite links",
+      event_type: 1,
+      trigger_type: 1,
+      trigger_metadata: { regex_patterns: ["(?:discord\\.gg|discord(?:app)?\\.com/invite)/[A-Za-z0-9-]+"], keyword_filter: [], allow_list: [] },
+      actions: [{ type: 1, metadata: { custom_message: "Invites are the team's to share. Ask in #general if someone should be here." } }, ...alert],
+    },
+    {
+      name: "No mention floods",
+      event_type: 1,
+      trigger_type: 5,
+      trigger_metadata: { mention_total_limit: 5, mention_raid_protection_enabled: true },
+      actions: [{ type: 1, metadata: { custom_message: "That's a lot of people at once. Say it without the pings." } }, ...alert],
+    },
+    {
+      name: "No spam",
+      event_type: 1,
+      trigger_type: 3,
+      trigger_metadata: {},
+      actions: [{ type: 1, metadata: {} }, ...alert],
+    },
+  ];
+  try {
+    const existing = (await api("GET", `/guilds/${GUILD}/auto-moderation/rules`)) ?? [];
+    for (const rule of AUTOMOD) {
+      const body = { ...rule, enabled: true, exempt_roles: exempt, exempt_channels: [] };
+      const found = existing.find((r) => same(r.name, rule.name) || r.trigger_type === rule.trigger_type);
+      if (found) {
+        await api("PATCH", `/guilds/${GUILD}/auto-moderation/rules/${found.id}`, body);
+      } else {
+        await api("POST", `/guilds/${GUILD}/auto-moderation/rules`, body);
+        log(`✓ AutoMod: ${rule.name} (created)`);
+      }
+    }
+  } catch (e) {
+    log(`! AutoMod could not be set by the bot (${why(e)}). By hand: Server Settings → AutoMod.`);
+  }
+
+  /* An :as: emoji, from the mark. */
+  if (icon) {
+    try {
+      const emojis = (await api("GET", `/guilds/${GUILD}/emojis`)) ?? [];
+      if (!emojis.some((e) => e.name === "as")) {
+        await api("POST", `/guilds/${GUILD}/emojis`, { name: "as", image: icon });
+        log("✓ emoji :as: added");
+      }
+    } catch (e) {
+      log(`! emoji could not be added (${why(e)})`);
+    }
+  }
+
+  /* The /beta command. Needs the applications.commands scope on this
+     server: the OAuth2 URL from the notes at the top grants it. */
+  let commandNote = null;
+  try {
+    const app = await api("GET", "/oauth2/applications/@me");
+    await api("PUT", `/applications/${app.id}/guilds/${GUILD}/commands`, [{ name: "beta", description: "Get your AgoraSphere beta key", type: 1 }]);
+    log("✓ /beta command registered");
+  } catch (e) {
+    const app = await api("GET", "/oauth2/applications/@me").catch(() => null);
+    commandNote = app
+      ? `${WEBHOOK_HOST}/oauth2/authorize?client_id=${app.id}&scope=bot%20applications.commands&permissions=8`
+      : "the OAuth2 URL with the applications.commands scope";
+    log(`! /beta command could not be registered (${why(e)}). Open ${commandNote} once, pick the server, then run this again. The button on the welcome card works regardless.`);
   }
 
   /* Webhooks: one per channel the site posts into. */
@@ -598,9 +802,18 @@ async function main() {
   writeFileSync(
     OUT,
     [
-      "# Paste these three into Vercel → Settings → Environment Variables (Production), then redeploy.",
-      "# They are secrets: whoever holds one can post as the site into that channel.",
+      "# Paste these into Vercel → Settings → Environment Variables (Production), then redeploy.",
+      "# The webhook URLs are secrets: whoever holds one can post as the site into that channel.",
       ...out,
+      "",
+      "# For the morning digest (reads the forums as the bot) — the same values as in .env.local:",
+      `DISCORD_GUILD_ID=${GUILD}`,
+      "# DISCORD_BOT_TOKEN=<the bot token>",
+      "",
+      "# For the beta-key button and /beta: the application's public key (Developer Portal →",
+      "# General Information → Public Key), then set the Interactions Endpoint URL there to",
+      `#   ${SITE}/api/webhook/discord`,
+      "# DISCORD_PUBLIC_KEY=<the public key>",
       "",
       "# Testers' invite (never expires). Put it in the welcome post on AgoraSphere.",
       `DISCORD_INVITE_URL=${inviteUrl}`,
@@ -612,7 +825,9 @@ async function main() {
   log("");
   log(`Done. Webhook URLs are in ${path.relative(process.cwd(), OUT) || OUT} (not shown here).`);
   log(`Invite for testers: ${inviteUrl}`);
-  log("Next: give Moderator to the site moderators (Server Settings → Members), paste the three webhook URLs into Vercel, redeploy.");
+  log("Next: paste the webhook URLs, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN and DISCORD_PUBLIC_KEY into Vercel and redeploy; then set the");
+  log(`      Interactions Endpoint URL in the Developer Portal to ${SITE}/api/webhook/discord so the key button answers.`);
+  log("      Give Moderator to the site moderators (Server Settings → Members).");
 }
 
 main().catch((e) => {

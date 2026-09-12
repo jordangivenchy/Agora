@@ -37,6 +37,9 @@ export async function GET() {
     webPush: push,
     cron: Boolean(process.env.CRON_SECRET),
     discord: discordConfigured(),
+    discordBot: Boolean(process.env.DISCORD_BOT_TOKEN && process.env.DISCORD_GUILD_ID),
+    discordInteractions: Boolean(process.env.DISCORD_PUBLIC_KEY),
+    vercelWebhook: Boolean(process.env.VERCEL_WEBHOOK_SECRET),
   });
 }
 

@@ -39,25 +39,42 @@ Cloudflare R2 works identically (and has free egress) if preferred.
 
 ## 4. Discord, the beta server — `discord: true`
 
-The site posts three kinds of card into the testers' Discord: a public
-room going live (#live-now), a recording landing (#past-discussions), and
-a post featured on the home page (#announcements). The database raises
-each event (migration `20260905_discord_notify`, trigger → pg_net →
-`/api/internal/discord`); the route re-reads the row and posts to the
-channel's webhook. Nothing posts until a webhook is set.
+The site posts cards into the testers' Discord: one card per public room in
+#live-now, rewritten as the room goes scheduled → live → ended → recorded;
+a recording landing (#past-discussions); a post featured on the home page and
+every production deploy (#announcements); and a morning digest of new bugs and
+feedback for the team (#team). It also answers the "Get my beta key" button
+and the `/beta` command with the invite code, for that person's eyes only.
 
-The quick way: make the empty server, invite a bot with Administrator, and
-run `node scripts/discord-setup.mjs` (the notes at the top of the file walk
-through the bot token and server id). It builds the channels, roles,
-permissions, pinned texts and webhooks, and writes the webhook URLs to
-`.env.discord.local` for step 2 below. Safe to run again. By hand:
+The database raises the room and post events (migrations `20260905_discord_notify`
+and `20260906_discord_cards`, trigger → pg_net → `/api/internal/discord`).
+Vercel raises deploys (`/api/webhook/vercel`). A cron writes the digest
+(`/api/cron/discord-digest`, 14:00 UTC). Discord posts button presses and
+commands to `/api/webhook/discord`. Nothing posts until the variables exist.
 
-1. In Discord, for each channel: Edit channel → Integrations → Webhooks →
-   New webhook → name it `AgoraSphere` → Copy webhook URL.
-2. Add to Vercel: `DISCORD_WEBHOOK_LIVE`, `DISCORD_WEBHOOK_RECORDINGS`,
-   `DISCORD_WEBHOOK_ANNOUNCEMENTS`. One channel for everything: set only
-   `DISCORD_WEBHOOK_URL` (it is the fallback for all three).
-3. Redeploy, then `/api/health` → `discord: true`.
+The quick way to build the server: make the empty server, invite a bot with
+Administrator (scopes `bot` and `applications.commands`), and run
+`node scripts/discord-setup.mjs` (the notes at the top of the file walk through
+the bot token and server id). It builds the channels, roles, permissions,
+Community mode, rules screening, welcome screen, onboarding, AutoMod, the
+pinned cards, the command and the webhooks, and writes the values for step 1
+to `.env.discord.local`. Safe to run again.
+
+1. Add to Vercel (Production):
+   - `DISCORD_WEBHOOK_LIVE`, `DISCORD_WEBHOOK_RECORDINGS`,
+     `DISCORD_WEBHOOK_ANNOUNCEMENTS` — the webhook URLs (by hand: channel →
+     Edit channel → Integrations → Webhooks → New webhook → Copy webhook URL).
+     One channel for everything: set only `DISCORD_WEBHOOK_URL`.
+   - `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID` — for the digest (`discordBot`).
+   - `DISCORD_PUBLIC_KEY` — Developer Portal → General Information → Public Key,
+     for the key button and `/beta` (`discordInteractions`).
+   - `VERCEL_WEBHOOK_SECRET` — Team Settings → Webhooks → Create → event
+     "Deployment Succeeded" → URL `https://agorasphere.net/api/webhook/vercel`
+     → the secret it shows (`vercelWebhook`).
+2. Redeploy, then `/api/health` → `discord: true` and the three flags above.
+3. Developer Portal → General Information → **Interactions Endpoint URL** →
+   `https://agorasphere.net/api/webhook/discord` → Save. Discord pings the
+   route to check it; it only passes once step 2 is live.
 4. Prove a webhook from a terminal (the URL is the secret — keep it out of
    chats and commits):
 
@@ -66,8 +83,8 @@ permissions, pinned texts and webhooks, and writes the webhook URLs to
      -d '{"username":"AgoraSphere","content":"Webhook connected."}'
    ```
 
-The bot's avatar is `public/mark-512.png`, fetched by Discord from the
-production origin (PNGs bypass the beta gate).
+The bot's avatar and the tile on every card is `public/mark-512.png`,
+fetched by Discord from the production origin (PNGs bypass the beta gate).
 
 ## Also worth setting while you're in there
 

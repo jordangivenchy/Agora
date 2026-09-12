@@ -1,13 +1,18 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
+  betaKeyEmbed,
   clip,
+  deployMessage,
+  digestMessage,
   discordConfigured,
   discordWebhook,
   escapeMd,
   featuredPostMessage,
   plainText,
   recordingReadyMessage,
+  roomCardMessage,
   roomLiveMessage,
+  roomPhase,
   timeChip,
 } from "./discord";
 
@@ -23,6 +28,7 @@ const ROOM = {
 };
 const HOST = { username: "jordan", display_name: "Jordan Jaca", avatar_url: "https://cdn.example/a.png" };
 const unix = (iso: string) => Math.floor(Date.parse(iso) / 1000);
+const TILE = { url: "https://agorasphere.net/mark-512.png" };
 
 const HOOK = "https://discord.com/api/webhooks/123456789/abcDEF_ghi-JKL";
 
@@ -83,6 +89,19 @@ describe("text helpers", () => {
   });
 });
 
+describe("roomPhase", () => {
+  it("reads the room's state", () => {
+    expect(roomPhase(ROOM)).toBe("live");
+    expect(roomPhase({ ...ROOM, status: "ended" })).toBe("ended");
+    expect(roomPhase({ ...ROOM, status: "ended", recording_url: "https://r/x.m3u8", recording_ended_at: "2026-09-11T16:31:05.000Z" })).toBe("recorded");
+    expect(roomPhase({ ...ROOM, status: "ended", recording_url: "https://r/x.m3u8", recording_ended_at: null })).toBe("ended");
+    expect(roomPhase({ ...ROOM, status: "scheduled", scheduled_start: "2026-09-12T18:00:00.000Z" })).toBe("scheduled");
+    expect(roomPhase({ ...ROOM, status: "created", scheduled_start: "2026-09-12T18:00:00.000Z" })).toBe("scheduled");
+    expect(roomPhase({ ...ROOM, status: "cancelled" })).toBe("cancelled");
+    expect(roomPhase({ ...ROOM, status: "created" })).toBeNull();
+  });
+});
+
 describe("roomLiveMessage", () => {
   it("is one embed shaped like a status card, pings nobody", () => {
     const m = roomLiveMessage(ROOM, HOST, { name: "Politics club" }, ORIGIN);
@@ -108,7 +127,7 @@ describe("roomLiveMessage", () => {
       ].join("\n")
     );
     expect(e.footer?.text).toBe("Public rooms only, the moment they open • AgoraSphere beta");
-    expect(e.thumbnail).toEqual({ url: "https://agorasphere.net/mark-512.png" });
+    expect(e.thumbnail).toEqual(TILE);
   });
 
   it("marks a queue match and survives a nameless host with no start time", () => {
@@ -125,6 +144,56 @@ describe("roomLiveMessage", () => {
     expect(m.embeds![0].title).toBe("@everyone look at this now");
     expect(m.embeds![0].description).toContain("Community: **a\\*b**");
     expect(m.allowed_mentions).toEqual({ parse: [] });
+  });
+});
+
+describe("roomCardMessage", () => {
+  const url = "https://agorasphere.net/agora/voting-should-be-mandatory-6c0ba6be";
+
+  it("is the live card for a live room and nothing for a bare lobby", () => {
+    expect(roomCardMessage(ROOM, HOST, null, ORIGIN)).toEqual(roomLiveMessage(ROOM, HOST, null, ORIGIN));
+    expect(roomCardMessage({ ...ROOM, status: "created" }, HOST, null, ORIGIN)).toBeNull();
+  });
+
+  it("announces a scheduled room in grey with when", () => {
+    const when = "2026-09-12T18:00:00.000Z";
+    const e = roomCardMessage({ ...ROOM, status: "scheduled", scheduled_start: when }, HOST, { name: "Politics club" }, ORIGIN)!.embeds![0];
+    expect(e.color).toBe(0x4e5058);
+    expect(e.url).toBe(url);
+    expect(e.description).toBe(
+      [
+        `Tap the title or **[Open the room](${url})** to be there when it starts.`,
+        "",
+        `**Scheduled** for <t:${unix(when)}:f> (<t:${unix(when)}:R>)`,
+        " └ · Host: **[Jordan Jaca](https://agorasphere.net/@jordan)**",
+        " └ · Community: **Politics club**",
+        "",
+        "*This card changes when the room goes live.*",
+      ].join("\n")
+    );
+    expect(e.footer?.text).toBe("Public rooms only • AgoraSphere beta");
+  });
+
+  it("closes the card when the room ends, saying whether a recording is coming", () => {
+    const ended = "2026-09-11T16:31:00.000Z";
+    const withRec = roomCardMessage({ ...ROOM, status: "ended", ended_at: ended, recording_url: "https://r/x.m3u8" }, HOST, null, ORIGIN)!.embeds![0];
+    expect(withRec.description).toContain(`**Ended** <t:${unix(ended)}:R> · \`1 h 19 min\``);
+    expect(withRec.description).toContain("*The recording lands here when it's ready.*");
+    const none = roomCardMessage({ ...ROOM, status: "ended", ended_at: ended }, HOST, null, ORIGIN)!.embeds![0];
+    expect(none.description).toContain("*No recording for this one.*");
+    expect(none.color).toBe(0x4e5058);
+  });
+
+  it("becomes the recording card once the recording is in", () => {
+    const room = { ...ROOM, status: "ended", ended_at: "2026-09-11T16:31:00.000Z", recording_url: "https://r/x.m3u8", recording_ended_at: "2026-09-11T16:31:05.000Z" };
+    expect(roomCardMessage(room, HOST, null, ORIGIN)).toEqual(recordingReadyMessage(room, HOST, null, ORIGIN));
+  });
+
+  it("says so when a room is cancelled", () => {
+    const e = roomCardMessage({ ...ROOM, status: "cancelled" }, HOST, null, ORIGIN)!.embeds![0];
+    expect(e.description).toBe(
+      "**Cancelled** before it started.\n └ · Host: **[Jordan Jaca](https://agorasphere.net/@jordan)**\n\n*Keep an eye on this channel for the next one.*"
+    );
   });
 });
 
@@ -150,7 +219,7 @@ describe("recordingReadyMessage", () => {
       ].join("\n")
     );
     expect(e.footer?.text).toBe("Recordings land here as they finish • AgoraSphere beta");
-    expect(e.thumbnail).toEqual({ url: "https://agorasphere.net/mark-512.png" });
+    expect(e.thumbnail).toEqual(TILE);
   });
 
   it("omits the run and the chips when the times are unknown", () => {
@@ -192,7 +261,7 @@ describe("featuredPostMessage", () => {
       ].join("\n")
     );
     expect(e.footer?.text).toBe("Featured on the home page by the team • AgoraSphere beta");
-    expect(e.thumbnail).toEqual({ url: "https://agorasphere.net/mark-512.png" });
+    expect(e.thumbnail).toEqual(TILE);
   });
 
   it("keeps a long body under Discord's limits and copes with no body", () => {
@@ -203,5 +272,101 @@ describe("featuredPostMessage", () => {
     expect(bare.embeds![0].title).toBe("A post from the team");
     expect(bare.embeds![0].description).not.toContain(">");
     expect(bare.embeds![0].description).toContain("**Featured** · by **someone**");
+  });
+});
+
+describe("deployMessage", () => {
+  it("names the build by its first commit line and short sha", () => {
+    const at = "2026-09-12T01:00:00.000Z";
+    const e = deployMessage({ sha: "f8d2e6f0123456789", message: "Discord: cards in the shape of a status card\n\nLong body here", author: "Jordan Jaca", at }, ORIGIN).embeds![0];
+    expect(e.title).toBe("A new build is live");
+    expect(e.url).toBe(ORIGIN);
+    expect(e.description).toBe(
+      [
+        "Tap the title to open the site. A hard refresh gets you the new build.",
+        "",
+        `**Deployed** <t:${unix(at)}:R>`,
+        " └ · Discord: cards in the shape of a status card",
+        " └ · `f8d2e6f` · Jordan Jaca",
+        "",
+        "*If something you reported is in there, try it again and say so on the post.*",
+      ].join("\n")
+    );
+    expect(e.footer?.text).toBe("Every production deploy • AgoraSphere beta");
+  });
+
+  it("copes with a deploy that carries no commit", () => {
+    const e = deployMessage({ sha: null, message: null }, ORIGIN).embeds![0];
+    expect(e.description).toContain("**Deployed**\n └ · A new build\n\n");
+  });
+});
+
+describe("digestMessage", () => {
+  const item = (kind: "bug" | "feedback", title: string, tags: string[] = []) => ({
+    kind,
+    title,
+    url: `https://discord.com/channels/1/${title.length}`,
+    author: "red",
+    createdAt: "2026-09-12T01:00:00.000Z",
+    tags,
+  });
+
+  it("is nothing when nothing happened", () => {
+    expect(digestMessage([], ORIGIN)).toBeNull();
+  });
+
+  it("counts and lists bugs then feedback, with authors and tags", () => {
+    const e = digestMessage([item("bug", "Mic stays muted", ["Calls", "Phone"]), item("feedback", "Queue copy is confusing"), item("bug", "Second bug")], ORIGIN)!.embeds![0];
+    expect(e.title).toBe("Since yesterday in bugs and feedback");
+    expect(e.description).toBe(
+      [
+        "**2 new bugs** · **1 new feedback post**",
+        "",
+        "**Bugs**",
+        " └ · [Mic stays muted](https://discord.com/channels/1/15) · red · Calls, Phone",
+        " └ · [Second bug](https://discord.com/channels/1/10) · red",
+        "",
+        "**Feedback**",
+        " └ · [Queue copy is confusing](https://discord.com/channels/1/23) · red",
+        "",
+        "*Tag each bug as you go: Confirmed, In progress, Fixed, Can't reproduce or By design.*",
+      ].join("\n")
+    );
+    expect(e.footer?.text).toBe("Every morning, for the team • AgoraSphere beta");
+  });
+
+  it("caps a busy day at ten per group", () => {
+    const many = Array.from({ length: 13 }, (_, i) => item("bug", `Bug ${i}`));
+    const e = digestMessage(many, ORIGIN)!.embeds![0];
+    expect(e.description).toContain(" └ · and 3 more");
+    expect(e.description).not.toContain("Feedback");
+  });
+});
+
+describe("betaKeyEmbed", () => {
+  it("hands over the key in a code block, for that person only", () => {
+    const e = betaKeyEmbed("AGORA-2026", ORIGIN);
+    expect(e.title).toBe("Your beta key");
+    expect(e.url).toBe("https://agorasphere.net/beta");
+    expect(e.description).toBe(
+      [
+        "Go to **[agorasphere.net/beta](https://agorasphere.net/beta)** and enter:",
+        "```",
+        "AGORA-2026",
+        "```",
+        " └ · One key for the whole beta, so keep it to yourself.",
+        " └ · The pass lasts 30 days on each device. Come back here when it runs out.",
+        "",
+        "*Only you can see this message.*",
+      ].join("\n")
+    );
+    expect(e.thumbnail).toEqual(TILE);
+    expect(e.footer?.text).toBe("Given to members of this server • AgoraSphere beta");
+  });
+
+  it("says the door is open when the gate is off", () => {
+    const e = betaKeyEmbed(null, ORIGIN);
+    expect(e.title).toBe("The door is open");
+    expect(e.description).toContain("No key is needed right now");
   });
 });
