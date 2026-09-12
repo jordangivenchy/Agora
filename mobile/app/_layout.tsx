@@ -19,6 +19,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="beta" options={{ headerShown: false }} />
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="home" options={{ title: "AgoraSphere", headerBackVisible: false }} />
         <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
       </Stack>

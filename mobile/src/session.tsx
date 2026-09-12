@@ -6,11 +6,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AppState, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { apiFetch } from "./api";
 
 const PASS_KEY = "agora_beta_pass";
+
+WebBrowser.maybeCompleteAuthSession();
 
 async function readPass(): Promise<string | null> {
   try {
@@ -39,6 +43,8 @@ interface SessionState {
   /** Whether the site's gate is armed: null until probed. */
   gated: boolean | null;
   signIn(email: string, password: string): Promise<string | null>;
+  /** Google through Supabase, in the system browser. Resolves to an error message, or null. */
+  signInWithGoogle(): Promise<string | null>;
   signOut(): Promise<void>;
   /** Trade a beta key for a pass. Resolves to an error message, or null. */
   redeemKey(code: string): Promise<string | null>;
@@ -88,6 +94,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return error ? error.message : null;
   }, []);
 
+  /* The same Google provider the website uses. Supabase hands back a URL
+     for Google's consent screen; the system browser opens it and returns
+     to the app at the redirect (exp://… in Expo Go, agorasphere://auth in
+     the build; both must be on Supabase's redirect allow-list) carrying a
+     code the client trades for a session. */
+  const signInWithGoogle = useCallback(async () => {
+    const redirectTo = Linking.createURL("/auth");
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+    if (error || !data.url) return error?.message ?? "Couldn't start Google sign-in.";
+    if (Platform.OS === "web") {
+      window.location.assign(data.url);
+      return null;
+    }
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== "success") return result.type === "cancel" || result.type === "dismiss" ? "Sign-in was cancelled." : "Google sign-in didn't finish.";
+    const params = new URL(result.url).searchParams;
+    const code = params.get("code");
+    const desc = params.get("error_description");
+    if (!code) return desc ?? "Google sent no code back.";
+    const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+    return exchangeErr ? exchangeErr.message : null;
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -106,8 +138,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ ready, session, pass, gated, signIn, signOut, redeemKey }),
-    [ready, session, pass, gated, signIn, signOut, redeemKey]
+    () => ({ ready, session, pass, gated, signIn, signInWithGoogle, signOut, redeemKey }),
+    [ready, session, pass, gated, signIn, signInWithGoogle, signOut, redeemKey]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

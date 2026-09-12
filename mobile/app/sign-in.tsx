@@ -9,11 +9,22 @@ import { colors } from "../src/theme";
 import { Button, Field, Note, Screen, Sub, Title } from "../src/ui";
 
 export default function SignIn() {
-  const { signIn } = useSession();
+  const { signIn, signInWithGoogle } = useSession();
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function google() {
+    if (googleBusy) return;
+    setGoogleBusy(true);
+    setError(null);
+    const err = await signInWithGoogle();
+    setGoogleBusy(false);
+    if (err) setError(err);
+    else router.replace("/home");
+  }
 
   async function submit() {
     if (!email.trim() || !password || busy) return;
@@ -31,6 +42,17 @@ export default function SignIn() {
         <View style={{ maxWidth: 420, width: "100%", alignSelf: "center" }}>
           <Title>Sign in</Title>
           <Sub>The account you use on agorasphere.net.</Sub>
+          <Pressable
+            onPress={() => void google()}
+            disabled={googleBusy}
+            style={({ pressed }) => ({
+              height: 46, borderRadius: 999, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center",
+              flexDirection: "row", gap: 10, marginBottom: 14, opacity: googleBusy ? 0.6 : pressed ? 0.9 : 1,
+            })}
+          >
+            <Text style={{ color: "#1f1f1f", fontSize: 14.5, fontWeight: "600" }}>{googleBusy ? "Opening Google…" : "Continue with Google"}</Text>
+          </Pressable>
+          <Text style={{ color: colors.faint, fontSize: 11.5, textAlign: "center", marginBottom: 12 }}>or with email</Text>
           <Field value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" />
           <Field value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry textContentType="password" onSubmitEditing={submit} returnKeyType="go" />
           {error && <Note tone="error">{error}</Note>}
