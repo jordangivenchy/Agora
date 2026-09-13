@@ -10,7 +10,7 @@ import { useSession } from "../../src/session";
 import { fetchCommunities, fetchPosts, setFavorite, toggleJoin, votePost, type Community, type PostRow, type PostSort } from "../../src/communities";
 import { CARD, CommunityTile, META, PostCard, SortChips } from "../../src/postCard";
 import { HomeHeader } from "../../src/header";
-import { openWeb } from "../../src/web";
+import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -26,6 +26,7 @@ export default function Communities() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const { openCommunity } = useCreate();
 
   const load = useCallback(async () => {
     try {
@@ -112,7 +113,7 @@ export default function Communities() {
                 <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 22, letterSpacing: -0.3 }}>Communities</Text>
                 <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, marginTop: 4 }}>Communities for your school, team, or topic</Text>
               </View>
-              <Pressable onPress={() => openWeb("/communities")} accessibilityLabel="Add" style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, backgroundColor: pressed ? "#ffc22e" : colors.yellow, alignItems: "center", justifyContent: "center" })}>
+              <Pressable onPress={() => openCommunity()} accessibilityLabel="New community" style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, backgroundColor: pressed ? "#ffc22e" : colors.yellow, alignItems: "center", justifyContent: "center" })}>
                 <Ionicons name="add" size={26} color={colors.ink} />
               </Pressable>
             </View>

@@ -11,7 +11,7 @@ import { useSession } from "../src/session";
 import { fetchFriends, searchPeople, setFavoriteFriend, type Friend } from "../src/friends";
 import { setFollowing } from "../src/profile";
 import { Avatar } from "../src/avatar";
-import { openWeb } from "../src/web";
+import { usePresence } from "../src/presence";
 import { colors, fonts } from "../src/theme";
 import { Note, Screen, Sub, Title, Button } from "../src/ui";
 
@@ -21,6 +21,7 @@ const name = (u: Friend) => u.display_name?.trim() || `@${u.username}`;
 export default function Friends() {
   const { session } = useSession();
   const uid = session?.user.id ?? null;
+  const presence = usePresence();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [followsMe, setFollowsMe] = useState<Friend[]>([]);
@@ -110,7 +111,10 @@ export default function Friends() {
           const u = item.user;
           return (
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: u.username } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 9, paddingHorizontal: 8, borderRadius: 12, backgroundColor: pressed ? colors.surface2 : "transparent" })}>
-              <Avatar url={u.avatar_url} name={name(u)} size={40} />
+              <View>
+                <Avatar url={u.avatar_url} name={name(u)} size={40} />
+                {presence.has(u.id) && <View style={{ position: "absolute", right: -1, bottom: -1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: colors.bg, backgroundColor: presence.get(u.id)?.room_id ? colors.live : presence.get(u.id)?.queued ? colors.gold : colors.green }} />}
+              </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14.5 }}>{name(u)}</Text>
                 <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>@{u.username}{item.kind === "friend" && u.since ? ` · friends since ${new Date(u.since).toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : ""}</Text>
@@ -120,7 +124,7 @@ export default function Friends() {
                   <Pressable onPress={() => star(u)} hitSlop={8} accessibilityLabel={item.favorite ? "Unpin" : "Pin"}>
                     <Ionicons name={item.favorite ? "star" : "star-outline"} size={18} color={item.favorite ? colors.gold : "rgba(238,238,245,0.3)"} />
                   </Pressable>
-                  <Pressable onPress={() => openWeb(`/messages/${encodeURIComponent(u.username)}`)} hitSlop={8} accessibilityLabel="Message" style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}>
+                  <Pressable onPress={() => router.push({ pathname: "/messages/[username]", params: { username: u.username } })} hitSlop={8} accessibilityLabel="Message" style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}>
                     <Ionicons name="chatbubble-outline" size={16} color={colors.text} />
                   </Pressable>
                 </>

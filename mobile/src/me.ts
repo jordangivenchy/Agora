@@ -5,7 +5,7 @@ import { supabase } from "./supabase";
 import { useSession } from "./session";
 import type { Person } from "./home";
 
-export interface Me extends Person { is_moderator?: boolean | null }
+export interface Me extends Person { is_moderator?: boolean | null; verified?: boolean | null }
 
 let cached: { id: string; me: Me } | null = null;
 const listeners = new Set<() => void>();
@@ -30,7 +30,7 @@ export function useMe(): Me | null {
     if (!id) { setMe(null); return; }
     if (cached && cached.id === id) { setMe(cached.me); return; }
     let live = true;
-    void supabase.from("users").select("id, username, display_name, avatar_url, is_moderator").eq("id", id).maybeSingle().then(({ data }) => {
+    void supabase.from("users").select("id, username, display_name, avatar_url, is_moderator, verified").eq("id", id).maybeSingle().then(({ data }) => {
       if (!live || !data) return;
       cached = { id, me: data as Me };
       setMe(data as Me);

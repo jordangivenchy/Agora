@@ -11,17 +11,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { useSession } from "./session";
 import { ActionSheet } from "./actionSheet";
-import { ComposerSheet } from "./composer";
+import { ComposerSheet, type ComposeClip } from "./composer";
+import { attachPostTopic } from "./postTopic";
+import { CreateCommunitySheet } from "./createCommunity";
+import { useMe } from "./me";
+import { SITE } from "./api";
+import { showToast } from "./toast";
 import { createPost, fetchCommunities, type Community } from "./communities";
 import { CommunityTile } from "./postCard";
 import { TOPICS, darkInkOn } from "./topics";
 import { colors, fonts } from "./theme";
 
 export interface RoomPrefill { motion?: string; topic?: string }
+export interface PostRequest { clip?: ComposeClip; to?: Community }
 interface CreateState {
   openMenu(): void;
   openRoom(prefill?: RoomPrefill): void;
-  openPost(): void;
+  openPost(req?: PostRequest): void;
+  openCommunity(): void;
 }
 const Ctx = createContext<CreateState | null>(null);
 export function useCreate(): CreateState {
@@ -37,12 +44,22 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const [room, setRoom] = useState<{ open: boolean; prefill: RoomPrefill }>({ open: false, prefill: {} });
   const [picking, setPicking] = useState(false);
   const [postIn, setPostIn] = useState<Community | null>(null);
+  const [clip, setClip] = useState<ComposeClip | null>(null);
+  const [community, setCommunity] = useState(false);
+  const me = useMe();
+  const [verified, setVerified] = useState(false);
+  useEffect(() => {
+    if (!uid) { setVerified(false); return; }
+    void supabase.from("users").select("verified").eq("id", uid).maybeSingle().then(({ data }) => setVerified(!!(data as { verified?: boolean } | null)?.verified));
+  }, [uid]);
+  void me;
 
   const needSignIn = useCallback(() => { router.push("/sign-in"); }, []);
   const value = useMemo<CreateState>(() => ({
     openMenu: () => (uid ? setMenu(true) : needSignIn()),
     openRoom: (prefill = {}) => (uid ? setRoom({ open: true, prefill }) : needSignIn()),
-    openPost: () => (uid ? setPicking(true) : needSignIn()),
+    openPost: (req = {}) => { if (!uid) return needSignIn(); setClip(req.clip ?? null); if (req.to) setPostIn(req.to); else setPicking(true); },
+    openCommunity: () => (uid ? setCommunity(true) : needSignIn()),
   }), [uid, needSignIn]);
 
   return (
@@ -54,21 +71,31 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         onClose={() => setMenu(false)}
         actions={[
           { label: "New room", primary: true, onPress: () => { setMenu(false); setRoom({ open: true, prefill: {} }); } },
-          { label: "New post", onPress: () => { setMenu(false); setPicking(true); } },
+          { label: "New post", onPress: () => { setMenu(false); setClip(null); setPicking(true); } },
+          { label: "New community", onPress: () => { setMenu(false); setCommunity(true); } },
         ]}
       />
+      <CreateCommunitySheet open={community} onClose={() => setCommunity(false)} />
       <NewRoomSheet open={room.open} prefill={room.prefill} onClose={() => setRoom({ open: false, prefill: {} })} />
       <CommunityPicker open={picking} uid={uid} onClose={() => setPicking(false)} onPick={(c) => { setPicking(false); setPostIn(c); }} />
       <ComposerSheet
         open={!!postIn}
         kind="post"
-        context={postIn ? `in ${postIn.name}` : null}
-        onClose={() => setPostIn(null)}
-        onSubmit={async ({ title, body }) => {
+        context={postIn ? `in ${postIn.kind === "profile" ? `u/${postIn.name.replace(/^@/, "")}` : postIn.name}` : null}
+        communityId={postIn?.id ?? null}
+        userId={uid}
+        canAttachTopic={verified}
+        clip={clip}
+        onClose={() => { setPostIn(null); setClip(null); }}
+        onSubmit={async ({ title, body, imageUrl, tagId, topic }) => {
           if (!uid || !postIn) return "Sign in to post.";
           try {
-            const id = await createPost(supabase, { communityId: postIn.id, authorId: uid, title, body: body || null });
+            /* A clip rides as its link at the end of the body, as on the site. */
+            const text = [body, clip ? `${SITE}/clips/${clip.id}` : ""].filter(Boolean).join("\n\n");
+            const id = await createPost(supabase, { communityId: postIn.id, authorId: uid, title, body: text || null, tagId, imageUrl });
+            if (topic) { try { await attachPostTopic(supabase, id, topic, title); } catch (e) { showToast(e instanceof Error ? `Posted, but the queue wasn't attached: ${e.message}` : "Posted, but the queue wasn't attached."); } }
             setPostIn(null);
+            setClip(null);
             router.push({ pathname: "/posts/[id]", params: { id } });
             return null;
           } catch (e) {

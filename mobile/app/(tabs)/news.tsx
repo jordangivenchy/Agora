@@ -10,7 +10,8 @@ import { fetchNews, type NewsStory } from "../../src/home";
 import { newsTimeAgo, outletIcon, topicFor } from "../../src/discover";
 import { useCreate } from "../../src/create";
 import { HomeHeader } from "../../src/header";
-import { openUrl, openWeb } from "../../src/web";
+import { openUrl } from "../../src/web";
+import { isQueuedFor, openQueue } from "../../src/queue";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -79,7 +80,7 @@ export default function News() {
                   <Outlets story={st} />
                   {st.url && <Btn kind="read" label={`Read at ${src?.name ?? "source"} ↗`} onPress={() => openUrl(st.url!)} />}
                   <Btn kind="discuss" label="Start a discussion" onPress={() => openRoom({ motion: st.headline, topic: topicFor(st.category) })} />
-                  <Btn kind="queue" label="Queue a conversation" onPress={() => openWeb("/news")} />
+                  <Btn kind="queue" label={isQueuedFor(st.headline) ? "In line" : "Queue a conversation"} onPress={() => openQueue({ id: null, question: st.headline, topicKey: topicFor(st.category), queueCount: 0, sourceUrl: st.url ?? null })} />
                 </View>
               </View>
             );

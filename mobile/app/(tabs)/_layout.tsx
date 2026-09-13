@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/session";
 import { MiniPlayer } from "../../src/miniPlayer";
+import { QueueDock } from "../../src/queue";
 import { AppTabBar, TAB_BAR_HEIGHT } from "../../src/tabBar";
 import { useCreate } from "../../src/create";
 import { colors } from "../../src/theme";
@@ -33,6 +34,7 @@ export default function TabsLayout() {
       <View style={{ position: "absolute", left: 0, right: 0, bottom: TAB_BAR_HEIGHT + insets.bottom }}>
         <MiniPlayer />
       </View>
+      <QueueDock bottom={TAB_BAR_HEIGHT + insets.bottom} />
     </View>
   );
 }

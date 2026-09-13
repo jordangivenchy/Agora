@@ -3,6 +3,7 @@
    keeps audio going); below it the motion, the host, the field, and
    when it happened. The recording is the same file the site plays. */
 import { useEffect, useState } from "react";
+import { useEvent } from "expo";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +14,10 @@ import { personName, type Person } from "../../src/home";
 import { roomDuration, fmtCount } from "../../src/discover";
 import { topicOf } from "../../src/topics";
 import { Avatar } from "../../src/avatar";
+import { useSession } from "../../src/session";
+import { ClipEditorSheet } from "../../src/clipEditor";
+import { ClipTile } from "../../src/clipTile";
+import { fetchClips, type ClipTileData } from "../../src/clips";
 import { colors, fonts } from "../../src/theme";
 
 type ReplayRoom = {
@@ -43,6 +48,12 @@ export default function ReplayScreen() {
   }, [id]);
   const player = useVideoPlayer(room?.recording_url ?? null, (p) => { p.loop = false; });
   useEffect(() => { if (room?.recording_url) player.play(); }, [room?.recording_url, player]);
+  const { session } = useSession();
+  const [editor, setEditor] = useState<{ at: number } | null>(null);
+  const [clips, setClips] = useState<ClipTileData[]>([]);
+  const { status } = useEvent(player, "statusChange", { status: player.status });
+  useEffect(() => { if (typeof id === "string") void fetchClips(supabase, { limit: 24 }).then((rows) => setClips(rows.filter((c) => c.room_id === id))); }, [id, editor]);
+  void status;
   const host = room ? one(room.host) : null;
   const height = Math.round((width * 9) / 16);
 
@@ -69,14 +80,27 @@ export default function ReplayScreen() {
                 <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>hosted · {topicOf(room.topic_key).label}</Text>
               </View>
             </Pressable>
+            <Pressable onPress={() => { player.pause(); setEditor({ at: player.currentTime }); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start", marginTop: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: pressed ? "#3d2a00" : "#2a1f05", borderWidth: 1, borderColor: "#6b5a2a" })}>
+              <Ionicons name="cut-outline" size={14} color={colors.gold} />
+              <Text style={{ color: colors.gold, fontFamily: fonts.semi, fontSize: 12.5 }}>Clip this moment</Text>
+            </Pressable>
             <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12.5, marginTop: 14 }}>
               {room.started_at ? new Date(room.started_at).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : ""}
               {roomDuration(room.started_at, room.ended_at) ? ` · ${roomDuration(room.started_at, room.ended_at)}` : ""}
               {room.replay_views ? ` · ${fmtCount(room.replay_views)} watched` : ""}
             </Text>
+            {clips.length > 0 && (
+              <View style={{ marginTop: 22 }}>
+                <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 16, marginBottom: 10 }}>Clips from this discussion</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                  {clips.map((c) => <ClipTile key={c.id} clip={c} width={(width - 40 - 12) / 2} onPress={() => router.push({ pathname: "/clips/[id]", params: { id: c.id } })} />)}
+                </View>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
+      {room && <ClipEditorSheet open={!!editor} player={player} duration={player.duration || 0} captureAt={editor?.at ?? 0} roomId={room.id} uid={session?.user.id ?? null} onClose={() => setEditor(null)} />}
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top - 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : colors.bg, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border })}>
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>

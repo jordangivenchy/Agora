@@ -161,10 +161,16 @@ function friendly(message: string, kind: "post" | "comment"): string {
   return message;
 }
 
-export async function createPost(supabase: SupabaseClient, input: { communityId: string; authorId: string; title: string; body: string | null }): Promise<string> {
+export interface Tag { id: string; community_id: string; name: string; color: string | null }
+export async function fetchTags(supabase: SupabaseClient, communityId: string): Promise<Tag[]> {
+  const { data } = await supabase.from("community_tags").select("id, community_id, name, color").eq("community_id", communityId);
+  return (data ?? []) as Tag[];
+}
+
+export async function createPost(supabase: SupabaseClient, input: { communityId: string; authorId: string; title: string; body: string | null; tagId?: string | null; imageUrl?: string | null }): Promise<string> {
   const { data, error } = await supabase
     .from("community_posts")
-    .insert({ community_id: input.communityId, author_id: input.authorId, title: input.title, body: input.body, tag_id: null, image_url: null })
+    .insert({ community_id: input.communityId, author_id: input.authorId, title: input.title, body: input.body, tag_id: input.tagId ?? null, image_url: input.imageUrl ?? null })
     .select("id")
     .single();
   if (error) throw new Error(friendly(error.message, "post"));
@@ -201,10 +207,10 @@ export async function fetchComments(supabase: SupabaseClient, postId: string, of
   return (data ?? []) as CommentRow[];
 }
 
-export async function createComment(supabase: SupabaseClient, input: { postId: string; parentId: string | null; authorId: string; body: string }): Promise<{ id: string; created_at: string }> {
+export async function createComment(supabase: SupabaseClient, input: { postId: string; parentId: string | null; authorId: string; body: string; imageUrl?: string | null }): Promise<{ id: string; created_at: string }> {
   const { data, error } = await supabase
     .from("community_comments")
-    .insert({ post_id: input.postId, parent_id: input.parentId, author_id: input.authorId, body: input.body, image_url: null })
+    .insert({ post_id: input.postId, parent_id: input.parentId, author_id: input.authorId, body: input.body, image_url: input.imageUrl ?? null })
     .select("id, created_at")
     .single();
   if (error) throw new Error(friendly(error.message, "comment"));

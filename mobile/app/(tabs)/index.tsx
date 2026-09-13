@@ -11,7 +11,7 @@ import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
 import { TopicBoard } from "../../src/board";
 import { Starfield } from "../../src/starfield";
-import { openWeb } from "../../src/web";
+import { isQueued, leaveQueue, onQueueChanged, openQueue } from "../../src/queue";
 import { colors } from "../../src/theme";
 
 /* The hero takes the first stories; the strip gets the rest. */
@@ -48,6 +48,7 @@ export default function Home() {
   );
 
   /* A room going live shows up at once, as on the site. */
+  useEffect(() => onQueueChanged(() => void load()), [load]);
   useEffect(() => {
     const ch = supabase
       .channel("home-rooms")
@@ -68,7 +69,7 @@ export default function Home() {
         <Starfield width={width} height={1100} />
         <HeroCarousel rooms={heroRooms} posts={posts} news={news.slice(0, HERO_NEWS)} />
         <NewsTicker stories={news.slice(HERO_NEWS)} />
-        <TopicBoard topics={topics} rooms={rooms} onQueue={() => openWeb("/")} />
+        <TopicBoard topics={topics} rooms={rooms} onQueue={(t) => (t.am_queued || isQueued(t.id) ? void leaveQueue(t.id) : openQueue({ id: t.id, question: t.question, topicKey: t.topic_key, queueCount: t.queue_count, proCount: t.pro_count, conCount: t.con_count }))} />
       </ScrollView>
     </View>
   );

@@ -155,7 +155,7 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
       showToast(error ? "Failed: " + (error.message || fn) : ok);
     };
     /* Sheets and alerts after the menu's modal is down. */
-    const later = (f: () => void) => setTimeout(f, 320);
+    const later = (f: () => void) => setTimeout(f, 420);
     switch (id) {
       case "view_profile":
         later(() => router.push({ pathname: "/u/[username]", params: { username: target.username } }));

@@ -14,6 +14,7 @@ import { Badge, META, PostCard, RoleBadge, SortChips } from "../../src/postCard"
 import { RichText, plainPreview } from "../../src/richText";
 import { ComposerSheet } from "../../src/composer";
 import { Avatar } from "../../src/avatar";
+import { openImage } from "../../src/lightbox";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -96,7 +97,7 @@ export default function ThreadScreen() {
               <View style={{ marginTop: 3 }}>
                 <RichText text={c.body} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 20 }} />
               </View>
-              {c.image_url && <Image source={{ uri: c.image_url }} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 200 }} resizeMode="cover" />}
+              {c.image_url && <Pressable onPress={() => openImage(c.image_url!)}><Image source={{ uri: c.image_url }} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 200 }} resizeMode="cover" /></Pressable>}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
                   <Pressable onPress={() => voteHere(c, c.my_vote === 1 ? 0 : 1)} hitSlop={6} style={{ paddingVertical: 6 }}>
@@ -165,10 +166,11 @@ export default function ThreadScreen() {
         context={reply.parent ? plainPreview(reply.parent.body) : post ? plainPreview(post.title) : null}
         contextName={reply.parent ? `@${reply.parent.author_username}` : null}
         onClose={() => setReply({ open: false, parent: null })}
-        onSubmit={async ({ body }) => {
+        userId={uid}
+        onSubmit={async ({ body, imageUrl }) => {
           if (!uid) return "Sign in to comment.";
           try {
-            await createComment(supabase, { postId: id, parentId: reply.parent?.id ?? null, authorId: uid, body });
+            await createComment(supabase, { postId: id, parentId: reply.parent?.id ?? null, authorId: uid, body, imageUrl });
             await load();
             return null;
           } catch (e) {

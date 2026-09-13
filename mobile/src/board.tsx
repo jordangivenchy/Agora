@@ -178,9 +178,9 @@ function QuestionCard({ topic, onQueue }: { topic: TopicRow; onQueue: () => void
       </View>
       <Pressable
         onPress={onQueue}
-        style={({ pressed }) => ({ height: 32, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#2f6fd6" : colors.blue })}
+        style={({ pressed }) => ({ height: 32, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: inQueue ? colors.surface2 : topic.queue_count > 0 ? colors.yellow : pressed ? "#2f6fd6" : colors.blue, borderWidth: inQueue ? 1 : 0, borderColor: colors.border, opacity: pressed ? 0.85 : 1 })}
       >
-        <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 12.5 }}>Queue</Text>
+        <Text style={{ color: inQueue ? "#c9c9d2" : topic.queue_count > 0 ? colors.ink : "#fff", fontFamily: fonts.bold, fontSize: 12.5 }}>{inQueue ? "Leave" : topic.queue_count > 0 ? "Queue · match now" : "Queue"}</Text>
       </Pressable>
     </View>
   );

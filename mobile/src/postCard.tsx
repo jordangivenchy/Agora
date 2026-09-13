@@ -1,12 +1,17 @@
 /* The site's post card (components/community/PostCard.tsx): votes down
    the left, the community's tile, the meta line, the title, a two-line
-   preview, the picture, and the actions. The thread view uses it whole. */
+   preview, the picture (tap to see it big), the clip it shares, the
+   conversation it carries, the repost's original, and the actions. The
+   thread view uses it whole. */
 import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { timeAgo, type PostRow } from "./communities";
 import { RichText } from "./richText";
 import { SITE } from "./api";
+import { openImage } from "./lightbox";
+import { clipIdInBody, stripClipLink } from "./clips";
+import { PostTopicQueue } from "./postTopic";
 import { colors, fonts } from "./theme";
 
 export const META = "rgba(238,238,245,0.5)";
@@ -47,6 +52,17 @@ export function TagChip({ name, color }: { name: string; color: string | null })
   );
 }
 
+/* A post that shares a clip carries the link in its body; the card shows a chip to the clip's page. */
+export function ClipChip({ clipId, small }: { clipId: string | null; small?: boolean }) {
+  if (!clipId) return null;
+  return (
+    <Pressable onPress={() => router.push({ pathname: "/clips/[id]", params: { id: clipId } })} style={{ flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start", marginTop: 8, paddingVertical: small ? 5 : 7, paddingLeft: 6, paddingRight: 12, borderRadius: 999, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38" }}>
+      <View style={{ width: small ? 20 : 24, height: small ? 20 : 24, borderRadius: 6, backgroundColor: colors.yellow, alignItems: "center", justifyContent: "center" }}><Ionicons name="play" size={small ? 9 : 11} color={colors.ink} /></View>
+      <Text style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: small ? 11.5 : 12.5 }}>Clip</Text>
+    </Pressable>
+  );
+}
+
 export function VoteBox({ score, myVote, onVote, size = 13 }: { score: number; myVote: number; onVote: (v: number) => void; size?: number }) {
   return (
     <View style={{ width: 34, alignItems: "center", alignSelf: "center" }}>
@@ -63,7 +79,7 @@ export function VoteBox({ score, myVote, onVote, size = 13 }: { score: number; m
 
 export interface CommunityArt { name: string; color?: string | null; avatarUrl?: string | null }
 
-export function PostCard({ post: p, communityArt, showCommunity, full, onVote, onOpen, onOpenCommunity }: {
+export function PostCard({ post: p, communityArt, showCommunity, full, onVote, onOpen, onOpenCommunity, actions }: {
   post: PostRow;
   communityArt?: CommunityArt;
   showCommunity?: boolean;
@@ -72,8 +88,12 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
   onVote: (v: number) => void;
   onOpen?: () => void;
   onOpenCommunity?: () => void;
+  /** More actions on the row (repost, pin, delete…), from the page. */
+  actions?: React.ReactNode;
 }) {
   const share = () => void Share.share({ message: p.title, url: `${SITE}/posts/${p.id}` }).catch(() => undefined);
+  const body = stripClipLink(p.body);
+  const origBody = stripClipLink(p.orig_body);
   return (
     <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [CARD, { padding: 14, marginBottom: 12, opacity: pressed ? 0.92 : 1 }]}>
       <View style={{ flexDirection: "row", gap: 12 }}>
@@ -94,19 +114,33 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
             {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} />}
           </View>
           <RichText text={p.title} numberOfLines={full ? undefined : 3} style={{ color: "#eeeef5", fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, marginTop: 2 }} />
-          {!!p.body && (
+          {!!body && (
             <View style={{ marginTop: 4 }}>
-              <RichText text={p.body} numberOfLines={full ? undefined : 2} style={{ color: full ? "#d6d6de" : "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: full ? 13.5 : 12, lineHeight: full ? 20 : 18 }} />
+              <RichText text={body} numberOfLines={full ? undefined : 2} style={{ color: full ? "#d6d6de" : "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: full ? 13.5 : 12, lineHeight: full ? 20 : 18 }} />
             </View>
           )}
-          {p.image_url && <Image source={{ uri: p.image_url }} style={{ marginTop: 8, borderRadius: 8, width: "100%", height: full ? 260 : 180 }} resizeMode="cover" />}
-          {p.is_repost && (p.orig_title || p.orig_body) && (
+          <ClipChip clipId={clipIdInBody(p.body)} small={!full} />
+          {p.image_url && (
+            <Pressable onPress={() => openImage(p.image_url!)} accessibilityLabel="Open image">
+              <Image source={{ uri: p.image_url }} style={{ marginTop: 8, borderRadius: 8, width: "100%", height: full ? 260 : 180 }} resizeMode="cover" />
+            </Pressable>
+          )}
+          <PostTopicQueue postId={p.id} compact={!full} />
+          {p.is_repost && (
             <View style={{ marginTop: 8, padding: 10, borderRadius: 8, backgroundColor: colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
-              <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10 }}>
-                <Ionicons name="repeat-outline" size={10} color={META} /> from <Text style={{ color: colors.gold }}>{p.orig_community_name}</Text> · @{p.orig_author_username}
-              </Text>
-              {!!p.orig_title && <Text style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, marginTop: 5 }}>{p.orig_title}</Text>}
-              {!!p.orig_body && <RichText text={p.orig_body} numberOfLines={2} style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, marginTop: 3 }} />}
+              {p.repost_of ? (
+                <>
+                  <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10 }}>
+                    <Ionicons name="repeat-outline" size={10} color={META} /> from <Text style={{ color: colors.gold }}>{p.orig_community_name}</Text> · @{p.orig_author_username}
+                  </Text>
+                  {!!p.orig_title && <Text onPress={() => router.push({ pathname: "/posts/[id]", params: { id: p.repost_of! } })} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, marginTop: 5 }}>{p.orig_title}</Text>}
+                  {!!origBody && <RichText text={origBody} numberOfLines={2} style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, marginTop: 3 }} />}
+                  <ClipChip clipId={clipIdInBody(p.orig_body)} small />
+                  {p.orig_image_url && <Pressable onPress={() => openImage(p.orig_image_url!)}><Image source={{ uri: p.orig_image_url }} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 140 }} resizeMode="cover" /></Pressable>}
+                </>
+              ) : (
+                <Text style={{ color: META, fontFamily: fonts.body, fontSize: 11.5 }}>The original post was unavailable or deleted.</Text>
+              )}
             </View>
           )}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginTop: 12 }}>
@@ -118,6 +152,7 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
               <Ionicons name="share-social-outline" size={13} color="#c9c9d2" />
               <Text style={{ color: "#c9c9d2", fontFamily: fonts.medium, fontSize: 11.5 }}>Share</Text>
             </Pressable>
+            {actions}
           </View>
         </View>
       </View>

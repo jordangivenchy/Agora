@@ -13,6 +13,9 @@ import { useSession } from "../../src/session";
 import { createPost, fetchCommunities, fetchPosts, toggleJoin, votePost, type Community, type PostRow, type PostSort } from "../../src/communities";
 import { CARD, META, PostCard, SortChips } from "../../src/postCard";
 import { ComposerSheet } from "../../src/composer";
+import { useMe } from "../../src/me";
+import { attachPostTopic } from "../../src/postTopic";
+import { showToast } from "../../src/toast";
 import { ActionSheet } from "../../src/actionSheet";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
@@ -23,6 +26,7 @@ export default function CommunityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useSession();
   const uid = session?.user.id ?? null;
+  const me = useMe();
   const [c, setC] = useState<Community | null>(null);
   const [sort, setSort] = useState<PostSort>("best");
   const [posts, setPosts] = useState<PostRow[]>([]);
@@ -156,11 +160,15 @@ export default function CommunityScreen() {
       <ComposerSheet
         open={composing}
         kind="post"
+        communityId={id}
+        userId={uid}
+        canAttachTopic={!!me?.verified}
         onClose={() => setComposing(false)}
-        onSubmit={async ({ title, body }) => {
+        onSubmit={async ({ title, body, imageUrl, tagId, topic }) => {
           if (!uid) return "Sign in to post.";
           try {
-            await createPost(supabase, { communityId: id, authorId: uid, title, body: body || null });
+            const postId = await createPost(supabase, { communityId: id, authorId: uid, title, body: body || null, tagId, imageUrl });
+            if (topic) { try { await attachPostTopic(supabase, postId, topic, title); } catch (e) { showToast(e instanceof Error ? `Posted, but the queue wasn't attached: ${e.message}` : "Posted, but the queue wasn't attached."); } }
             await load();
             return null;
           } catch (e) {

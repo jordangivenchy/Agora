@@ -8,8 +8,11 @@ import { CallHost } from "../src/callHost";
 import { CreateProvider } from "../src/create";
 import { UserMenuProvider } from "../src/userMenu";
 import { ToastHost } from "../src/toast";
+import { LightboxHost } from "../src/lightbox";
 import { BootSplash } from "../src/boot";
 import { loadReduceMotion, setReduceMotion } from "../src/motion";
+import { ensurePresence } from "../src/presence";
+import { useCall } from "../src/callSession";
 import { supabase } from "../src/supabase";
 import { colors } from "../src/theme";
 import { useAppFonts } from "../src/fonts";
@@ -18,7 +21,9 @@ import { useAppFonts } from "../src/fonts";
    motion applies from storage at once, then from the account. */
 function Boot({ fontsReady }: { fontsReady: boolean }) {
   const { ready, session } = useSession();
+  const { active } = useCall();
   useEffect(() => { void loadReduceMotion(); }, []);
+  useEffect(() => { ensurePresence(session?.user.id ?? null, active?.roomId ?? null); }, [session?.user.id, active?.roomId]);
   useEffect(() => {
     const id = session?.user.id;
     if (!id) return;
@@ -66,6 +71,13 @@ export default function RootLayout() {
                     <Stack.Screen name="settings/[section]" options={{ title: "Settings", headerBackTitle: "Back" }} />
                     <Stack.Screen name="edit-profile" options={{ title: "Edit profile", headerBackTitle: "Back" }} />
                     <Stack.Screen name="mod" options={{ title: "Moderation", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="search" options={{ title: "Search", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="notifications" options={{ title: "Notifications", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="messages/index" options={{ title: "Messages", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="messages/[username]" options={{ headerShown: false }} />
+                    <Stack.Screen name="messages/g/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="clips/index" options={{ title: "Clips", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="clips/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="replay/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="c/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
@@ -73,6 +85,7 @@ export default function RootLayout() {
                   </Stack>
                 )}
                 <ToastHost />
+                <LightboxHost />
                 <Boot fontsReady={fontsReady} />
               </View>
             </UserMenuProvider>
