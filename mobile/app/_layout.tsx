@@ -4,8 +4,11 @@ import { SessionProvider } from "../src/session";
 import { CallProvider } from "../src/callSession";
 import { CallHost } from "../src/callHost";
 import { colors } from "../src/theme";
+import { useAppFonts } from "../src/fonts";
 
 export default function RootLayout() {
+  const fontsReady = useAppFonts();
+  if (!fontsReady) return null;
   return (
     <SessionProvider>
       <CallProvider>
@@ -25,6 +28,7 @@ export default function RootLayout() {
             <Stack.Screen name="sign-in" options={{ headerShown: false }} />
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
+            <Stack.Screen name="you" options={{ title: "You", headerBackTitle: "Back" }} />
         <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
           </Stack>
         </CallHost>

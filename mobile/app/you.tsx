@@ -2,11 +2,11 @@
 import { useEffect, useState } from "react";
 import { Image, Linking, Text, View } from "react-native";
 import { router } from "expo-router";
-import { supabase } from "../../src/supabase";
-import { useSession } from "../../src/session";
-import { SITE } from "../../src/api";
-import { colors } from "../../src/theme";
-import { Button, Note, Screen } from "../../src/ui";
+import { supabase } from "../src/supabase";
+import { useSession } from "../src/session";
+import { SITE } from "../src/api";
+import { colors } from "../src/theme";
+import { Button, Note, Screen } from "../src/ui";
 
 interface Me {
   username: string | null;

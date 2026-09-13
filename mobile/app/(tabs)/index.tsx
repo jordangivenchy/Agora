@@ -1,34 +1,43 @@
-/* Live: what is on now, what is coming. Tap a room to enter. */
-import { useCallback, useState } from "react";
-import { AppState, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+/* Home: the website's phone home — the hero, the news strip and the
+   board of fields — under the site's header, above its tab bar. */
+import { useCallback, useEffect, useState } from "react";
+import { AppState, RefreshControl, ScrollView, View, useWindowDimensions } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
-import { fetchRooms, hostName, whenLabel, type RoomRow } from "../../src/rooms";
+import { useSession } from "../../src/session";
+import { fetchBoard, fetchFeatured, fetchHeroRooms, fetchNews, type BoardRoom, type FeaturedPost, type HeroRoom, type NewsStory, type TopicRow } from "../../src/home";
+import { HomeHeader } from "../../src/header";
+import { HeroCarousel } from "../../src/hero";
+import { NewsTicker } from "../../src/ticker";
+import { TopicBoard } from "../../src/board";
+import { Starfield } from "../../src/starfield";
+import { openWeb } from "../../src/web";
 import { colors } from "../../src/theme";
-import { Note, Screen } from "../../src/ui";
 
-export default function Live() {
-  const [live, setLive] = useState<RoomRow[]>([]);
-  const [scheduled, setScheduled] = useState<RoomRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/* The hero takes the first stories; the strip gets the rest. */
+const HERO_NEWS = 3;
+
+export default function Home() {
+  const { session, pass } = useSession();
+  const { width } = useWindowDimensions();
+  const [news, setNews] = useState<NewsStory[]>([]);
+  const [posts, setPosts] = useState<FeaturedPost[]>([]);
+  const [heroRooms, setHeroRooms] = useState<HeroRoom[]>([]);
+  const [topics, setTopics] = useState<TopicRow[]>([]);
+  const [rooms, setRooms] = useState<BoardRoom[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const token = session?.access_token ?? null;
 
   const load = useCallback(async () => {
-    try {
-      const r = await fetchRooms(supabase);
-      setLive(r.live);
-      setScheduled(r.scheduled);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load rooms.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    const [n, p, h, b] = await Promise.all([fetchNews({ token, pass }), fetchFeatured(supabase), fetchHeroRooms(supabase), fetchBoard(supabase)]);
+    setNews(n);
+    setPosts(p);
+    setHeroRooms(h);
+    setTopics(b.topics);
+    setRooms(b.rooms);
+  }, [token, pass]);
 
-  /* Fresh whenever the tab is looked at: on focus, every half minute while
-     it stays in front, and when the app comes back from the background. A
-     room that ended while the phone was in a pocket shouldn't still say LIVE. */
+  /* Fresh on focus, every half minute in front, and back from the background. */
   useFocusEffect(
     useCallback(() => {
       void load();
@@ -38,60 +47,29 @@ export default function Live() {
     }, [load]),
   );
 
+  /* A room going live shows up at once, as on the site. */
+  useEffect(() => {
+    const ch = supabase
+      .channel("home-rooms")
+      .on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load())
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await load(); } finally { setRefreshing(false); }
+  }, [load]);
+
   return (
-    <Screen style={{ paddingHorizontal: 0 }}>
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.yellow} />}
-      >
-        <Section title="Live now" count={live.length}>
-          {live.length === 0 && !loading && <Note>No one is live right now. Rooms are hosted from agorasphere.net for now.</Note>}
-          {live.map((r) => <RoomCard key={r.id} room={r} live />)}
-        </Section>
-        <Section title="Scheduled" count={scheduled.length}>
-          {scheduled.length === 0 && !loading && <Note>Nothing on the calendar yet.</Note>}
-          {scheduled.map((r) => <RoomCard key={r.id} room={r} />)}
-        </Section>
-        {error && <Note tone="error">{error}</Note>}
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <HomeHeader />
+      <ScrollView contentContainerStyle={{ paddingBottom: 110 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}>
+        <Starfield width={width} height={1100} />
+        <HeroCarousel rooms={heroRooms} posts={posts} news={news.slice(0, HERO_NEWS)} />
+        <NewsTicker stories={news.slice(HERO_NEWS)} />
+        <TopicBoard topics={topics} rooms={rooms} onQueue={() => openWeb("/")} />
       </ScrollView>
-    </Screen>
-  );
-}
-
-function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
-  return (
-    <View style={{ marginTop: 18 }}>
-      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: "800" }}>{title}</Text>
-        {count > 0 && <Text style={{ color: colors.muted, fontSize: 12.5 }}>{count}</Text>}
-      </View>
-      {children}
     </View>
-  );
-}
-
-function RoomCard({ room, live }: { room: RoomRow; live?: boolean }) {
-  return (
-    <Pressable
-      onPress={() => router.push({ pathname: "/room/[id]", params: { id: room.id } })}
-      style={({ pressed }) => ({
-        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14,
-        padding: 14, marginBottom: 10, opacity: pressed ? 0.85 : 1,
-      })}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        {live ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.red }} />
-            <Text style={{ color: colors.red, fontSize: 11, fontWeight: "800", letterSpacing: 0.4 }}>LIVE</Text>
-          </View>
-        ) : (
-          <Text style={{ color: colors.yellow, fontSize: 11, fontWeight: "800", letterSpacing: 0.4 }}>{whenLabel(room.scheduled_start).toUpperCase()}</Text>
-        )}
-        {live && room.viewer_count ? <Text style={{ color: colors.muted, fontSize: 11.5 }}>{room.viewer_count} watching</Text> : null}
-      </View>
-      <Text style={{ color: colors.text, fontSize: 15.5, fontWeight: "700", lineHeight: 21 }}>{room.motion}</Text>
-      <Text style={{ color: colors.muted, fontSize: 12.5, marginTop: 4 }}>Hosted by {hostName(room)}</Text>
-    </Pressable>
   );
 }

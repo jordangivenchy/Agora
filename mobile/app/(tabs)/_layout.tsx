@@ -1,44 +1,50 @@
-/* The door, then the three tabs. Past the gate and signed in, you land
-   on Live; otherwise the door sends you to the key or to sign-in. The
-   mini-player sits above the tab bar while a call is on. */
+/* The door, then the site's phone shell: its tab bar under the screens,
+   the mini-player above it while a call is on, and the Create sheet. */
+import { useState } from "react";
 import { Redirect, Tabs } from "expo-router";
 import { View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/session";
 import { MiniPlayer } from "../../src/miniPlayer";
+import { AppTabBar, TAB_BAR_HEIGHT } from "../../src/tabBar";
+import { ActionSheet } from "../../src/actionSheet";
+import { openWeb } from "../../src/web";
 import { colors } from "../../src/theme";
 import { Spinner } from "../../src/ui";
 
 export default function TabsLayout() {
   const { ready, session, pass, gated, guest } = useSession();
   const insets = useSafeAreaInsets();
+  const [creating, setCreating] = useState(false);
   if (!ready) return <Spinner />;
   if (gated && !pass) return <Redirect href="/beta" />;
   if (!session && !guest) return <Redirect href="/sign-in" />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Tabs
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: "800" },
-          headerShadowVisible: false,
-          sceneStyle: { backgroundColor: colors.bg },
-          tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border },
-          tabBarActiveTintColor: colors.yellow,
-          tabBarInactiveTintColor: colors.muted,
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-        }}
+        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}
+        tabBar={(props) => <AppTabBar state={props.state} navigation={props.navigation} onCreate={() => setCreating(true)} />}
       >
-        <Tabs.Screen name="index" options={{ title: "Live", tabBarIcon: ({ color, size }) => <Ionicons name="radio-outline" color={color} size={size} /> }} />
-        <Tabs.Screen name="queue" options={{ title: "Queue", tabBarIcon: ({ color, size }) => <Ionicons name="swap-horizontal-outline" color={color} size={size} /> }} />
-        <Tabs.Screen name="you" options={{ title: "You", tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" color={color} size={size} /> }} />
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="feed" />
+        <Tabs.Screen name="explore" />
+        <Tabs.Screen name="communities" />
+        <Tabs.Screen name="trending" />
+        <Tabs.Screen name="news" />
       </Tabs>
-      {/* Above the tab bar: its 49pt plus the home indicator's inset. */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 49 + insets.bottom }}>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: TAB_BAR_HEIGHT + insets.bottom }}>
         <MiniPlayer />
       </View>
+      <ActionSheet
+        open={creating}
+        title="Create"
+        sub="Rooms and posts are made on the web for now."
+        onClose={() => setCreating(false)}
+        actions={[
+          { label: "New room", primary: true, onPress: () => { setCreating(false); openWeb("/?create=1"); } },
+          { label: "New post", onPress: () => { setCreating(false); openWeb("/?create=1"); } },
+        ]}
+      />
     </View>
   );
 }

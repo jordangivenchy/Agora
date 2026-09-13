@@ -1,0 +1,58 @@
+/* The site's top bar on a phone: the wordmark, search, and you. */
+import { Image, Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSession } from "./session";
+import { useMe } from "./me";
+import { openWeb } from "./web";
+import { colors, fonts } from "./theme";
+
+const LOGO_RATIO = 2039 / 274;
+
+export function HomeHeader() {
+  const insets = useSafeAreaInsets();
+  const { session } = useSession();
+  const me = useMe();
+  const initial = (me?.display_name || me?.username || "?").trim().charAt(0).toUpperCase();
+  return (
+    <View style={{ paddingTop: insets.top, backgroundColor: colors.bg }}>
+      <View style={{ height: 60, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 10 }}>
+        <Pressable onPress={() => router.navigate("/")} hitSlop={8}>
+          <Image source={require("../assets/logo.png")} style={{ height: 24, width: 24 * LOGO_RATIO }} resizeMode="contain" accessibilityLabel="AgoraSphere" />
+        </Pressable>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={() => openWeb("/search")}
+          accessibilityLabel="Search"
+          style={({ pressed }) => ({
+            width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
+            backgroundColor: pressed ? colors.surface2 : colors.surface, borderWidth: 1, borderColor: colors.border,
+          })}
+        >
+          <Ionicons name="search-outline" size={18} color={colors.text} />
+        </Pressable>
+        {session ? (
+          <Pressable onPress={() => router.push("/you")} accessibilityLabel="You" hitSlop={6}>
+            <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderColor: colors.yellow, padding: 1.5 }}>
+              {me?.avatar_url ? (
+                <Image source={{ uri: me.avatar_url }} style={{ flex: 1, borderRadius: 15 }} />
+              ) : (
+                <View style={{ flex: 1, borderRadius: 15, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 13 }}>{initial}</Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => router.push("/sign-in")}
+            style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#2f6fd6" : colors.blue })}
+          >
+            <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 14 }}>Sign in</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+}
