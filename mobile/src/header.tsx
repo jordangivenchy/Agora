@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "./session";
 import { useMe } from "./me";
 import { openWeb } from "./web";
-import { ActionSheet } from "./actionSheet";
+import { Dropdown } from "./dropdown";
 import { colors, fonts } from "./theme";
 
 const LOGO_RATIO = 2039 / 274;
@@ -56,17 +56,18 @@ export function HomeHeader() {
           </Pressable>
         )}
       </View>
-      {/* The site's avatar menu. */}
-      <ActionSheet
+      {/* The site's avatar menu, dropping from under the avatar. */}
+      <Dropdown
         open={menu}
-        title={me?.display_name || me?.username || "You"}
-        sub={me?.username ? `@${me.username}` : undefined}
         onClose={() => setMenu(false)}
-        actions={[
-          { label: "Profile", primary: true, onPress: () => router.push("/you") },
-          { label: "Friends", onPress: () => router.push("/friends") },
-          { label: "Settings", onPress: () => openWeb("/settings") },
-          { label: "Log out", danger: true, onPress: () => void signOut().then(() => router.replace("/sign-in")) },
+        top={insets.top + 57}
+        name={me?.display_name || me?.username || "You"}
+        sub={me?.username ? `@${me.username}` : undefined}
+        items={[
+          { label: "Profile", icon: "person-outline", onPress: () => router.push("/you") },
+          { label: "Settings", icon: "settings-outline", onPress: () => openWeb("/settings") },
+          { label: "Friends", icon: "people-outline", onPress: () => router.push("/friends") },
+          { label: "Log out", icon: "log-out-outline", danger: true, dividerAbove: true, onPress: () => void signOut().then(() => router.replace("/sign-in")) },
         ]}
       />
     </View>
