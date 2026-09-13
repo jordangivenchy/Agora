@@ -81,8 +81,10 @@ export default function ThreadScreen() {
       <View key={c.id}>
         <Pressable onPress={() => toggle(c.id)} style={{ borderRadius: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7, minHeight: 24, opacity: isCollapsed ? 0.72 : 1 }}>
-            <Avatar url={avatars.get(c.author_id ?? "") ?? null} name={c.author_username} size={24} />
-            <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }}>@{c.author_username}</Text>
+            <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author_username } })} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Avatar url={avatars.get(c.author_id ?? "") ?? null} name={c.author_username} size={24} />
+              <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }}>@{c.author_username}</Text>
+            </Pressable>
             {isAuthor && <Text style={{ color: colors.yellow, fontFamily: fonts.bold, fontSize: 10.5 }}>author</Text>}
             <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
             <RoleBadge role={c.author_role} />

@@ -3,6 +3,7 @@
    preview, the picture, and the actions. The thread view uses it whole. */
 import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { timeAgo, type PostRow } from "./communities";
 import { RichText } from "./richText";
 import { SITE } from "./api";
@@ -86,7 +87,7 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
             <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10.5 }}>
               {showCommunity && <Text style={{ color: colors.gold }} onPress={onOpenCommunity}>{p.community_name} · </Text>}
-              @{p.author_username} · {timeAgo(p.created_at)}{p.edited_at ? " · edited" : ""}
+              <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: p.author_username } })}>@{p.author_username}</Text> · {timeAgo(p.created_at)}{p.edited_at ? " · edited" : ""}
             </Text>
             <RoleBadge role={p.author_role} />
             {p.pinned_at && <Badge label="PINNED" color={colors.blueText} icon="pin-outline" />}
