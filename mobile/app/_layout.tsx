@@ -29,7 +29,7 @@ export default function RootLayout() {
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
             <Stack.Screen name="you" options={{ title: "You", headerBackTitle: "Back" }} />
-            <Stack.Screen name="c/[id]" options={{ title: "Community", headerBackTitle: "Back" }} />
+            <Stack.Screen name="c/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
         <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
           </Stack>
