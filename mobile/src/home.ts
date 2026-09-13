@@ -16,6 +16,7 @@ export interface NewsStory {
   sources: NewsSource[];
   imageUrl?: string | null;
   summary?: string | null;
+  category?: string | null;
   major?: boolean;
 }
 

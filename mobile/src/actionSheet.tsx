@@ -22,7 +22,10 @@ export function ActionSheet({ open, title, sub, actions, onClose }: { open: bool
               key={a.label}
               onPress={() => {
                 onClose();
-                a.onPress();
+                /* After the sheet is down: anything the action presents
+                   (a browser, another sheet) is dropped while this Modal
+                   is still dismissing. */
+                setTimeout(a.onPress, 280);
               }}
               style={({ pressed }) => ({
                 height: 46, borderRadius: 999, alignItems: "center", justifyContent: "center", marginBottom: 8,

@@ -7,7 +7,8 @@ import { useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchNews, type NewsStory } from "../../src/home";
-import { newsTimeAgo, outletIcon } from "../../src/discover";
+import { newsTimeAgo, outletIcon, topicFor } from "../../src/discover";
+import { useCreate } from "../../src/create";
 import { HomeHeader } from "../../src/header";
 import { openUrl, openWeb } from "../../src/web";
 import { colors, fonts } from "../../src/theme";
@@ -22,6 +23,7 @@ export default function News() {
   const [stories, setStories] = useState<NewsStory[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { openRoom } = useCreate();
   void supabase;
 
   const load = useCallback(async () => {
@@ -76,7 +78,7 @@ export default function News() {
                   {!!st.summary && <Text numberOfLines={3} style={{ color: "#a9a9b4", fontFamily: fonts.body, fontSize: 13, lineHeight: 19.5 }}>{st.summary}</Text>}
                   <Outlets story={st} />
                   {st.url && <Btn kind="read" label={`Read at ${src?.name ?? "source"} ↗`} onPress={() => openUrl(st.url!)} />}
-                  <Btn kind="discuss" label="Start a discussion" onPress={() => openWeb("/?create=1")} />
+                  <Btn kind="discuss" label="Start a discussion" onPress={() => openRoom({ motion: st.headline, topic: topicFor(st.category) })} />
                   <Btn kind="queue" label="Queue a conversation" onPress={() => openWeb("/news")} />
                 </View>
               </View>
@@ -97,7 +99,7 @@ export default function News() {
               </View>
               <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
                 {st.url && <View style={{ flex: 1 }}><Btn kind="read" label={`Read at ${src?.name ?? "source"} ↗`} onPress={() => openUrl(st.url!)} /></View>}
-                <View style={{ flex: 1 }}><Btn kind="discuss" label="Start a discussion" onPress={() => openWeb("/?create=1")} /></View>
+                <View style={{ flex: 1 }}><Btn kind="discuss" label="Start a discussion" onPress={() => openRoom({ motion: st.headline, topic: topicFor(st.category) })} /></View>
               </View>
             </View>
           );

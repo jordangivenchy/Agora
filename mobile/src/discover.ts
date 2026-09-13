@@ -114,3 +114,16 @@ export function outletIcon(domain: string, size = 64): string {
   const d = domain.trim().toLowerCase().replace(/^www\./, "");
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=${size}`;
 }
+
+/* NewsData categories → our fields (world desk → Foreign Policy), as the site maps them. */
+export function topicFor(category: string | null | undefined): string {
+  switch (category) {
+    case "politics": return "politics-law";
+    case "business": return "economics";
+    case "science":
+    case "technology": return "science-tech";
+    case "sports": return "sports";
+    case "entertainment": return "culture";
+    default: return "foreign-policy";
+  }
+}

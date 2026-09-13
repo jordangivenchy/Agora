@@ -10,6 +10,7 @@ import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
 import { openWeb } from "../../src/web";
+import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -21,6 +22,7 @@ export default function Trending() {
   const [chip, setChip] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { openRoom } = useCreate();
 
   const load = useCallback(async () => {
     try {
@@ -104,7 +106,7 @@ export default function Trending() {
             <View style={{ padding: 16, alignItems: "center", borderRadius: 12, backgroundColor: colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}>
               <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 14 }}>Nothing trending yet</Text>
               <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 6, marginBottom: 12 }}>Discussions appear here the moment they go live.</Text>
-              <Pressable onPress={() => openWeb("/?create=1")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: pressed ? "#ffc22e" : colors.yellow })}>
+              <Pressable onPress={() => openRoom()} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: pressed ? "#ffc22e" : colors.yellow })}>
                 <Ionicons name="sparkles-outline" size={12} color={colors.ink} />
                 <Text style={{ color: colors.ink, fontFamily: fonts.semi, fontSize: 12 }}>Start the first one</Text>
               </Pressable>

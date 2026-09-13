@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   // Hide the floating Next.js dev-tools button (the "N" circle,
   // dev-only — production never had it) so dev matches what ships.
   devIndicators: false,
+  /* The phone (and the simulator) reach the dev server by the Mac's LAN
+     address; without this, Next refuses its dev endpoints to that host. */
+  allowedDevOrigins: ["10.0.0.219", "localhost", "127.0.0.1"],
   // Pin the Turbopack workspace root to this project. Without this, Next.js
   // walks up and finds /Users/aryamangandhi/Personal/AgoraSphere/package.json
   // (a stray scratch file with playwright) and picks the parent dir as root,

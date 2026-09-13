@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { SessionProvider } from "../src/session";
 import { CallProvider } from "../src/callSession";
 import { CallHost } from "../src/callHost";
+import { CreateProvider } from "../src/create";
 import { colors } from "../src/theme";
 import { useAppFonts } from "../src/fonts";
 
@@ -13,6 +14,7 @@ export default function RootLayout() {
     <SessionProvider>
       <CallProvider>
         <CallHost>
+          <CreateProvider>
           <StatusBar style="light" />
           <Stack
             screenOptions={{
@@ -34,6 +36,7 @@ export default function RootLayout() {
             <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
         <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
           </Stack>
+          </CreateProvider>
         </CallHost>
       </CallProvider>
     </SessionProvider>

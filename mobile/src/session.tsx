@@ -11,6 +11,7 @@ import * as WebBrowser from "expo-web-browser";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { apiFetch } from "./api";
+import { setWebAuth } from "./web";
 
 const PASS_KEY = "agora_beta_pass";
 
@@ -58,6 +59,10 @@ const Ctx = createContext<SessionState | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pass, setPass] = useState<string | null>(null);
+  /* The website inside the app signs in as this session (src/web.ts). */
+  useEffect(() => {
+    setWebAuth(session ? { access: session.access_token, refresh: session.refresh_token, pass } : null);
+  }, [session, pass]);
   const [gated, setGated] = useState<boolean | null>(null);
   const [guest, setGuest] = useState(false);
   const [ready, setReady] = useState(false);

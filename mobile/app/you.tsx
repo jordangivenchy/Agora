@@ -27,6 +27,8 @@ export default function You() {
     <ProfileScreen
       username={me.username}
       menu={[
+        { label: "Messages", onPress: () => openWeb("/messages") },
+        { label: "Clips", onPress: () => openWeb("/clips") },
         { label: "Settings", onPress: () => openWeb("/settings") },
         ...(__DEV__ ? [{ label: "Stage design (development only)", onPress: () => router.push("/dev/stage") }] : []),
         { label: "Sign out", danger: true, onPress: () => void signOut().then(() => router.replace("/sign-in")) },
