@@ -18,7 +18,7 @@ export default function RootLayout() {
             screenOptions={{
               headerStyle: { backgroundColor: colors.bg },
               headerTintColor: colors.text,
-              headerTitleStyle: { fontWeight: "700" },
+              headerTitleStyle: { fontFamily: "SpaceGrotesk_700Bold", fontSize: 17 },
               headerShadowVisible: false,
               contentStyle: { backgroundColor: colors.bg },
             }}
@@ -29,6 +29,8 @@ export default function RootLayout() {
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
             <Stack.Screen name="you" options={{ title: "You", headerBackTitle: "Back" }} />
+            <Stack.Screen name="c/[id]" options={{ title: "Community", headerBackTitle: "Back" }} />
+            <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
         <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
           </Stack>
         </CallHost>
