@@ -40,7 +40,7 @@ export default function Trending() {
   }, [load]);
 
   const shown = (rooms ?? []).filter((r) => !chip || r.topic_key === chip);
-  const open = (r: TrendingRoom) => (r.status === "ended" ? openWeb(`/agora/${r.id}`) : router.push({ pathname: "/room/[id]", params: { id: r.id } }));
+  const open = (r: TrendingRoom) => (r.status === "ended" ? router.push({ pathname: "/replay/[id]", params: { id: r.id } }) : router.push({ pathname: "/room/[id]", params: { id: r.id } }));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

@@ -101,7 +101,7 @@ export default function Feed() {
     return (
       <View style={{ marginBottom: 12 }}>
         {reason}
-        <Pressable onPress={() => (replay ? openWeb(`/agora/${r.id}`) : router.push({ pathname: "/room/[id]", params: { id: r.id } }))} style={[card, { padding: 12, flexDirection: "row", gap: 12, alignItems: "center" }]}>
+        <Pressable onPress={() => (replay ? router.push({ pathname: "/replay/[id]", params: { id: r.id } }) : router.push({ pathname: "/room/[id]", params: { id: r.id } }))} style={[card, { padding: 12, flexDirection: "row", gap: 12, alignItems: "center" }]}>
           <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface2 }}>
             {(r.thumbnail_url || r.host?.avatar_url) && <Image source={{ uri: (r.thumbnail_url || r.host?.avatar_url)! }} style={{ width: 64, height: 64 }} />}
           </View>

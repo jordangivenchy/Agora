@@ -248,11 +248,11 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
 const card = { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline, borderRadius: 14 } as const;
 
 /* A recorded discussion: the picture wide, Watch on it, the motion and
-   the part this person played. Replays play on the web for now. */
+   the part this person played. Tap to play it in the app. */
 function DebateCard({ d, fallback }: { d: DebateRow; /** The page's own avatar, for rooms this person hosted. */ fallback: string | null }) {
   const img = d.thumbnail_url || d.host_avatar_url || (d.role === "host" ? fallback : null);
   return (
-    <Pressable onPress={() => openWeb(`/agora/${d.id}`)} style={({ pressed }) => [card, { overflow: "hidden", marginBottom: 12, opacity: pressed ? 0.9 : 1 }]}>
+    <Pressable onPress={() => router.push({ pathname: "/replay/[id]", params: { id: d.id } })} style={({ pressed }) => [card, { overflow: "hidden", marginBottom: 12, opacity: pressed ? 0.9 : 1 }]}>
       <View style={{ aspectRatio: 16 / 9, backgroundColor: "#0d1b3e" }}>
         {img && <Image source={{ uri: img }} style={StyleSheet.absoluteFill} resizeMode="cover" />}
         <View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.bg, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 }}>
