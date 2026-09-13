@@ -32,6 +32,7 @@ export default function RootLayout() {
             <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
             <Stack.Screen name="you" options={{ headerShown: false }} />
             <Stack.Screen name="u/[username]" options={{ headerShown: false }} />
+            <Stack.Screen name="friends" options={{ title: "Friends", headerBackTitle: "Back" }} />
             <Stack.Screen name="c/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
         <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />

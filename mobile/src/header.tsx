@@ -1,4 +1,5 @@
 /* The site's top bar on a phone: the wordmark, search, and you. */
+import { useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,14 +7,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "./session";
 import { useMe } from "./me";
 import { openWeb } from "./web";
+import { ActionSheet } from "./actionSheet";
 import { colors, fonts } from "./theme";
 
 const LOGO_RATIO = 2039 / 274;
 
 export function HomeHeader() {
   const insets = useSafeAreaInsets();
-  const { session } = useSession();
+  const { session, signOut } = useSession();
   const me = useMe();
+  const [menu, setMenu] = useState(false);
   const initial = (me?.display_name || me?.username || "?").trim().charAt(0).toUpperCase();
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: colors.bg }}>
@@ -33,7 +36,7 @@ export function HomeHeader() {
           <Ionicons name="search-outline" size={18} color={colors.text} />
         </Pressable>
         {session ? (
-          <Pressable onPress={() => router.push("/you")} accessibilityLabel="You" hitSlop={6}>
+          <Pressable onPress={() => setMenu(true)} accessibilityLabel="You" hitSlop={6}>
             <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderColor: colors.yellow, padding: 1.5 }}>
               {me?.avatar_url ? (
                 <Image source={{ uri: me.avatar_url }} style={{ flex: 1, borderRadius: 15 }} />
@@ -53,6 +56,19 @@ export function HomeHeader() {
           </Pressable>
         )}
       </View>
+      {/* The site's avatar menu. */}
+      <ActionSheet
+        open={menu}
+        title={me?.display_name || me?.username || "You"}
+        sub={me?.username ? `@${me.username}` : undefined}
+        onClose={() => setMenu(false)}
+        actions={[
+          { label: "Profile", primary: true, onPress: () => router.push("/you") },
+          { label: "Friends", onPress: () => router.push("/friends") },
+          { label: "Settings", onPress: () => openWeb("/settings") },
+          { label: "Log out", danger: true, onPress: () => void signOut().then(() => router.replace("/sign-in")) },
+        ]}
+      />
     </View>
   );
 }

@@ -27,6 +27,7 @@ export default function You() {
     <ProfileScreen
       username={me.username}
       menu={[
+        { label: "Friends", onPress: () => router.push("/friends") },
         { label: "Messages", onPress: () => openWeb("/messages") },
         { label: "Clips", onPress: () => openWeb("/clips") },
         { label: "Settings", onPress: () => openWeb("/settings") },
