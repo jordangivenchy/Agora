@@ -7,7 +7,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { TOPICS, darkInkOn, type IconName, type Topic } from "./topics";
 import { fmtRotate, isScheduled, msToUtcMidnight, personName, roomHost, type BoardRoom, type TopicRow } from "./home";
 import { whenLabel } from "./rooms";
-import { openWeb } from "./web";
 import { colors, fonts } from "./theme";
 
 const QUESTIONS_SHOWN = 4;
@@ -44,7 +43,7 @@ export function TopicBoard({ topics, rooms, onQueue }: { topics: TopicRow[]; roo
         ))}
       </ScrollView>
       <View style={{ paddingHorizontal: 20 }}>
-        <SectionHead title="Popular rooms" color={colors.blueText} right={popular.length > 2 ? "Explore all →" : undefined} onRight={() => openWeb("/explore")} />
+        <SectionHead title="Popular rooms" color={colors.blueText} right={popular.length > 2 ? "Explore all →" : undefined} onRight={() => router.navigate("/explore")} />
         {popular.length === 0 ? <Empty>No open rooms in {sel.label} yet.</Empty> : <Strip>{popular.map((r) => <RoomTile key={r.id} room={r} />)}</Strip>}
         <SectionHead title="Scheduled" color={colors.purple} />
         {scheduled.length === 0 ? <Empty>Nothing on the calendar in {sel.label} yet.</Empty> : <Strip>{scheduled.map((r) => <RoomTile key={r.id} room={r} />)}</Strip>}

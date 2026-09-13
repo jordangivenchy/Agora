@@ -7,7 +7,7 @@
    brings every change back; a promotion re-asks for a token that can
    publish. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
@@ -20,7 +20,8 @@ import { deriveStageRole, isHostRole, onStage, type Seat, type StageRole } from 
 import { StageView, type StageActions } from "../../src/stageView";
 import { ConnectionNote, MicButton, WithSpeaking } from "../../src/stage";
 import { colors } from "../../src/theme";
-import { Button, Note, Screen, Spinner } from "../../src/ui";
+import { Button, Note, Screen } from "../../src/ui";
+import { LoadingScreen } from "../../src/sky";
 
 const LIVEKIT_URL = process.env.EXPO_PUBLIC_LIVEKIT_URL ?? "";
 const SELECT = "id, motion, status, scheduled_start, viewer_count, host_id, topic_key, created_at, speaker_requests_locked, host:users!host_id(username, display_name, avatar_url)";
@@ -156,11 +157,21 @@ export default function RoomScreen() {
     router.back();
   }
 
-  if (!room && !error) return <Spinner />;
+  /* Entering: the sky over everything until the call is up (the site's
+     room entrance shows the same). */
+  const entering = !error && !(inThisRoom && room);
+  if (entering) {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <LoadingScreen label={room ? "Getting you in" : undefined} />
+      </View>
+    );
+  }
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: room?.status === "live" ? "Live" : "Room" }} />
+      <Stack.Screen options={{ headerShown: true, title: room?.status === "live" ? "Live" : "Room" }} />
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} style={{ flex: 1 }}>
         {room && (
           <View style={{ paddingTop: 12, paddingBottom: 14 }}>
@@ -203,9 +214,7 @@ export default function RoomScreen() {
               )}
             </WithSpeaking>
           </View>
-        ) : (
-          <Note>Getting you in…</Note>
-        )}
+        ) : null}
       </ScrollView>
       {!error && inThisRoom && room && (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12 }}>

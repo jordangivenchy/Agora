@@ -6,7 +6,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "./session";
 import { useMe } from "./me";
-import { openWeb } from "./web";
 import { Dropdown } from "./dropdown";
 import { colors, fonts } from "./theme";
 
@@ -26,7 +25,7 @@ export function HomeHeader() {
         </Pressable>
         <View style={{ flex: 1 }} />
         <Pressable
-          onPress={() => openWeb("/search")}
+          onPress={() => router.push("/search")}
           accessibilityLabel="Search"
           style={({ pressed }) => ({
             width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
@@ -65,7 +64,7 @@ export function HomeHeader() {
         sub={me?.username ? `@${me.username}` : undefined}
         items={[
           { label: "Profile", icon: "person-outline", onPress: () => router.push("/you") },
-          { label: "Settings", icon: "settings-outline", onPress: () => openWeb("/settings") },
+          { label: "Settings", icon: "settings-outline", onPress: () => router.push("/settings") },
           { label: "Friends", icon: "people-outline", onPress: () => router.push("/friends") },
           { label: "Log out", icon: "log-out-outline", danger: true, dividerAbove: true, onPress: () => void signOut().then(() => router.replace("/sign-in")) },
         ]}

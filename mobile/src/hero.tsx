@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Image, Pressable, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { router } from "expo-router";
 import { dateLabel, personName, type FeaturedPost, type HeroRoom, type NewsStory } from "./home";
-import { openUrl, openWeb } from "./web";
+import { openUrl } from "./web";
 import { colors, fonts } from "./theme";
 
 export const HERO_HEIGHT = 300;
@@ -107,7 +107,7 @@ function PostSlide({ post }: { post: FeaturedPost }) {
       {!!post.tags && <Text numberOfLines={1} style={{ color: "#a7a7b3", fontFamily: fonts.medium, fontSize: 13.5, marginTop: 8 }}>{post.tags}</Text>}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginTop: 14 }}>
         <Pressable
-          onPress={() => openWeb(`/?post=${post.id}`)}
+          onPress={() => router.push({ pathname: "/posts/[id]", params: { id: post.id } })}
           style={({ pressed }) => ({ height: 40, paddingHorizontal: 20, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#ffc22e" : colors.yellow })}
         >
           <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 14.5 }}>Read more</Text>

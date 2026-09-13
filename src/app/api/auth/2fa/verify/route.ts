@@ -7,7 +7,7 @@ import {
   hashesMatch,
   twoFactorSecret,
 } from "@/lib/twoFactor";
-import { getClientIp, logSecurityEvent, mintSessionCookies } from "@/lib/twoFactorServer";
+import { getClientIp, logSecurityEvent, mintSessionCookies, mintSessionTokens, wantsTokens } from "@/lib/twoFactorServer";
 
 /* Second step of a 2FA login: code in, session cookies out. All failure
    modes share one message so the response never distinguishes "no such
@@ -80,7 +80,16 @@ export async function POST(request: NextRequest) {
 
   const { data: userData } = await admin.auth.admin.getUserById(row.user_id);
   const email = userData?.user?.email;
-  if (!email || !(await mintSessionCookies(email))) {
+  if (!email) {
+    return NextResponse.json({ error: "Couldn't finish signing in. Try again." }, { status: 500 });
+  }
+  if (wantsTokens(request)) {
+    const session = await mintSessionTokens(email);
+    if (!session) return NextResponse.json({ error: "Couldn't finish signing in. Try again." }, { status: 500 });
+    await logSecurityEvent("2fa_login_success", { user_id: row.user_id }, ip);
+    return NextResponse.json({ ok: true, session });
+  }
+  if (!(await mintSessionCookies(email))) {
     return NextResponse.json({ error: "Couldn't finish signing in. Try again." }, { status: 500 });
   }
 

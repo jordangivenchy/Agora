@@ -18,6 +18,7 @@ import {
   logSecurityEvent,
   revokeSession,
   verifyPasswordServerSide,
+  wantsTokens,
 } from "@/lib/twoFactorServer";
 
 /* Password sign-in, server-side. The browser never receives a session
@@ -91,7 +92,10 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (!twoFa?.enabled) {
-    // No second factor — hand the session straight to the browser.
+    // No second factor — the app takes its tokens; the browser gets cookies.
+    if (wantsTokens(request)) {
+      return NextResponse.json({ ok: true, twoFactor: false, session: { access_token: check.accessToken, refresh_token: check.refreshToken } });
+    }
     const server = await createClient();
     const { error } = await server.auth.setSession({
       access_token: check.accessToken,

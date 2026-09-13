@@ -1,7 +1,8 @@
 /* Who you are and whether you may come in. Holds the Supabase session and
    the beta pass, refreshes the token while the app is in the foreground,
    and answers the two questions every screen asks: signed in? past the
-   gate? */
+   gate? Password sign-in goes through the site's route so accounts with
+   two-factor get their emailed code; the route hands the app its tokens. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppState, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -11,7 +12,6 @@ import * as WebBrowser from "expo-web-browser";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { apiFetch } from "./api";
-import { setWebAuth } from "./web";
 
 const PASS_KEY = "agora_beta_pass";
 
@@ -36,6 +36,9 @@ async function writePass(pass: string | null) {
   }
 }
 
+/** The outcome of a password sign-in: in, a code to enter, or a message. */
+export type SignInResult = { ok: true } | { ok: false; twoFactor: string; email: string } | { ok: false; error: string; unconfirmed?: boolean };
+
 interface SessionState {
   ready: boolean;
   session: Session | null;
@@ -46,7 +49,13 @@ interface SessionState {
   /** Listening without an account, like a visitor on the website. */
   guest: boolean;
   listenAsGuest(): void;
-  signIn(email: string, password: string): Promise<string | null>;
+  signIn(email: string, password: string): Promise<SignInResult>;
+  /** The second step of a two-factor sign-in. Resolves to an error message, or null. */
+  verifyTwoFactor(pending: string, code: string): Promise<string | null>;
+  resendTwoFactor(pending: string): Promise<string | null>;
+  /** A new account, the way the site makes one. Resolves to a notice or an error. */
+  signUp(email: string, password: string, username: string): Promise<{ ok: true; session: boolean } | { ok: false; error: string }>;
+  resendConfirmation(email: string): Promise<string | null>;
   /** Google through Supabase, in the system browser. Resolves to an error message, or null. */
   signInWithGoogle(): Promise<string | null>;
   signOut(): Promise<void>;
@@ -56,13 +65,24 @@ interface SessionState {
 
 const Ctx = createContext<SessionState | null>(null);
 
+function friendlyError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login credentials")) return "Wrong email or password.";
+  if (m.includes("already registered")) return "That email already has an account — try signing in.";
+  if (m.includes("password should be")) return "Password must be at least 6 characters.";
+  if (m.includes("database error saving new user")) return "Couldn't create the account — try a different username or email.";
+  if (m.includes("rate limit")) return "Too many attempts — wait a minute and try again.";
+  if (m.includes("not confirmed")) return "Verify your email first — open the link we sent you, then sign in.";
+  return message;
+}
+
+/* The app names itself so the site's sign-in routes answer with tokens
+   rather than cookies. */
+const APP_HEADERS = { "x-agora-client": "app" };
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pass, setPass] = useState<string | null>(null);
-  /* The website inside the app signs in as this session (src/web.ts). */
-  useEffect(() => {
-    setWebAuth(session ? { access: session.access_token, refresh: session.refresh_token, pass } : null);
-  }, [session, pass]);
   const [gated, setGated] = useState<boolean | null>(null);
   const [guest, setGuest] = useState(false);
   const [ready, setReady] = useState(false);
@@ -98,22 +118,68 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+  const signIn = useCallback(async (email: string, password: string): Promise<SignInResult> => {
+    const clean = email.trim();
+    let res: Response | null = null;
+    try {
+      res = await apiFetch("/api/auth/2fa/login", {}, { method: "POST", headers: APP_HEADERS, body: JSON.stringify({ email: clean, password }) });
+    } catch {
+      res = null;
+    }
+    /* The site out of reach, an older one without the app's answer, or
+       one without its admin key (a dev server): the plain sign-in, which
+       the auth hook refuses for two-factor accounts, as intended. */
+    if (!res || res.status === 404 || res.status === 503) {
+      const { error } = await supabase.auth.signInWithPassword({ email: clean, password });
+      return error ? { ok: false, error: friendlyError(error.message) } : { ok: true };
+    }
+    const json = (await res.json().catch(() => ({}))) as { error?: string; twoFactor?: boolean; pending?: string; unconfirmed?: boolean; session?: { access_token: string; refresh_token: string } };
+    if (!res.ok) return { ok: false, error: json.error ?? "Sign-in failed. Try again.", unconfirmed: !!json.unconfirmed };
+    if (json.twoFactor && json.pending) return { ok: false, twoFactor: json.pending, email: clean };
+    if (!json.session) {
+      const { error } = await supabase.auth.signInWithPassword({ email: clean, password });
+      return error ? { ok: false, error: friendlyError(error.message) } : { ok: true };
+    }
+    const { error } = await supabase.auth.setSession(json.session);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }, []);
+
+  const verifyTwoFactor = useCallback(async (pending: string, code: string) => {
+    const res = await apiFetch("/api/auth/2fa/verify", {}, { method: "POST", headers: APP_HEADERS, body: JSON.stringify({ pending, code }) }).catch(() => null);
+    if (!res) return "Verification failed. Check your connection and try again.";
+    const json = (await res.json().catch(() => ({}))) as { error?: string; session?: { access_token: string; refresh_token: string } };
+    if (!res.ok) return json.error ?? "Invalid or expired code.";
+    if (!json.session) return "Couldn't finish signing in. Try again.";
+    const { error } = await supabase.auth.setSession(json.session);
     return error ? error.message : null;
+  }, []);
+
+  const resendTwoFactor = useCallback(async (pending: string) => {
+    const res = await apiFetch("/api/auth/2fa/resend", {}, { method: "POST", body: JSON.stringify({ pending }) }).catch(() => null);
+    if (!res) return "Couldn't resend the code. Check your connection.";
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    return res.ok ? null : json.error ?? "Couldn't resend the code.";
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string, username: string) => {
+    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { preferred_username: username.trim().toLowerCase() } } });
+    if (error) return { ok: false as const, error: friendlyError(error.message) };
+    return { ok: true as const, session: !!data.session };
+  }, []);
+
+  const resendConfirmation = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+    return error ? friendlyError(error.message) : null;
   }, []);
 
   /* The same Google provider the website uses. Supabase hands back a URL
      for Google's consent screen; the system browser opens it and returns
      to the app at the redirect (exp://… in Expo Go, agorasphere://auth in
-     the build; both must be on Supabase's redirect allow-list) carrying a
-     code the client trades for a session. */
+     the build; both must be on Supabase's redirect allow-list) carrying
+     the session in the fragment. */
   const listenAsGuest = useCallback(() => setGuest(true), []);
 
   const signInWithGoogle = useCallback(async () => {
-    /* Expo Go needs its exp:// address. Every build answers to the app's
-       own scheme (app.json) — createURL would prepend Metro's host in a
-       development build, giving an address Supabase doesn't know. */
     const fromExpoGo = Linking.createURL("/auth");
     const redirectTo = /^exps?:\/\//.test(fromExpoGo) ? fromExpoGo : "agorasphere://auth";
     try {
@@ -128,8 +194,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
       if (result.type !== "success") return result.type === "cancel" || result.type === "dismiss" ? "Sign-in was cancelled." : "Google sign-in didn't finish.";
-      /* Supabase sends the session back in the URL fragment; errors can
-         arrive in either the query or the fragment. */
       const back = new URL(result.url);
       const params = new URLSearchParams(back.search);
       new URLSearchParams(back.hash.replace(/^#/, "")).forEach((v, k) => params.set(k, v));
@@ -162,8 +226,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ ready, session, pass, gated, guest, listenAsGuest, signIn, signInWithGoogle, signOut, redeemKey }),
-    [ready, session, pass, gated, guest, listenAsGuest, signIn, signInWithGoogle, signOut, redeemKey]
+    () => ({ ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signOut, redeemKey }),
+    [ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signOut, redeemKey]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -172,4 +236,10 @@ export function useSession(): SessionState {
   const v = useContext(Ctx);
   if (!v) throw new Error("useSession outside SessionProvider");
   return v;
+}
+
+/** A brand-new account (made in the last five minutes) gets the welcome flow, as on the site. */
+export function isNewAccount(session: Session | null): boolean {
+  const at = session?.user.created_at;
+  return !!at && Date.now() - new Date(at).getTime() < 5 * 60 * 1000;
 }

@@ -13,7 +13,9 @@
         "NSMicrophoneUsageDescription": "AgoraSphere uses your microphone when you speak on a stage.",
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSCameraUsageDescription": "AgoraSphere uses your camera when you turn it on while speaking on a stage.",
+        "NSPhotoLibraryUsageDescription": "AgoraSphere needs your photos to set a profile picture, a banner, or attach an image."
       }
     },
     "android": {
@@ -26,8 +28,9 @@
       "predictiveBackGestureEnabled": false,
       "package": "net.agorasphere.app",
       "permissions": [
-        "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS"
+        "CAMERA",
+        "MODIFY_AUDIO_SETTINGS",
+        "RECORD_AUDIO"
       ]
     },
     "web": {
@@ -46,7 +49,30 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AgoraSphere needs your photos to set a profile picture, a banner, or attach an image.",
+          "cameraPermission": "AgoraSphere uses your camera to take a photo for your profile or a post."
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/as-mark.png",
+          "imageWidth": 120,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "scheme": "agorasphere",
     "backgroundColor": "#000000"

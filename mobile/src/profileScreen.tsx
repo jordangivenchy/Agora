@@ -5,7 +5,7 @@
    past discussions, scheduled, posts, reposts, comments, communities. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
@@ -17,7 +17,7 @@ import { RichText, plainPreview } from "./richText";
 import { ActionSheet, type SheetAction } from "./actionSheet";
 import { topicOf } from "./topics";
 import { whenLabel } from "./feed";
-import { openWeb } from "./web";
+import { useUserMenu } from "./userMenu";
 import { colors, fonts } from "./theme";
 import { Note } from "./ui";
 
@@ -45,6 +45,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { openUserMenu } = useUserMenu();
   const BANNER = insets.top + 130;
   const BAR = insets.top + 44;
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -66,7 +67,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
       setProfile((p) => p ?? null);
     }
   }, [username]);
-  useEffect(() => { void load(); }, [load]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const isSelf = !!profile && profile.id === viewerId;
   const follow = async () => {
@@ -139,7 +140,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
   }
 
   const actionLabel = !profile ? "" : isSelf ? "Edit profile" : profile.is_following ? "Following" : profile.is_followed_by ? "Add friend back" : "Add friend";
-  const menuActions: SheetAction[] = [...(isSelf ? [{ label: "Edit profile", onPress: () => { setMenuOpen(false); openWeb("/settings"); } }] : []), ...(menu ?? []).map((a) => ({ ...a, onPress: () => { setMenuOpen(false); a.onPress(); } }))];
+  const menuActions: SheetAction[] = [...(isSelf ? [{ label: "Edit profile", onPress: () => { setMenuOpen(false); router.push("/edit-profile"); } }] : []), ...(menu ?? []).map((a) => ({ ...a, onPress: () => { setMenuOpen(false); a.onPress(); } }))];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -162,7 +163,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
             <View style={{ flex: 1 }} />
             {profile && (
               <Pressable
-                onPress={() => (isSelf ? openWeb("/settings") : void follow())}
+                onPress={() => (isSelf ? router.push("/edit-profile") : void follow())}
                 disabled={busy}
                 style={({ pressed }) => ({ height: 32, marginBottom: -16, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", opacity: pressed || busy ? 0.85 : 1,
                   backgroundColor: isSelf || profile.is_following ? colors.surface2 : colors.blue, borderWidth: isSelf || profile.is_following ? StyleSheet.hairlineWidth : 0, borderColor: colors.border })}
@@ -170,8 +171,8 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
                 <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 12.5 }}>{actionLabel}</Text>
               </Pressable>
             )}
-            {menuActions.length > 0 && (
-              <Pressable onPress={() => setMenuOpen(true)} accessibilityLabel="More" style={({ pressed }) => ({ width: 32, height: 32, marginBottom: -16, borderRadius: 16, backgroundColor: pressed ? colors.border : colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" })}>
+            {(menuActions.length > 0 || (profile && !isSelf)) && (
+              <Pressable onPress={() => (isSelf ? setMenuOpen(true) : profile && openUserMenu({ userId: profile.id, username: profile.username, displayName: profile.display_name }, { hideViewProfile: true }))} accessibilityLabel="More" style={({ pressed }) => ({ width: 32, height: 32, marginBottom: -16, borderRadius: 16, backgroundColor: pressed ? colors.border : colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" })}>
                 <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
               </Pressable>
             )}
@@ -198,8 +199,8 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
               </Text>
               {!!profile.bio && <Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginTop: 10 }}>{profile.bio}</Text>}
               <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 18, marginTop: 12 }}>
-                <Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13.5 }}><Text style={{ color: colors.text, fontFamily: fonts.bold }}>{profile.follower_count}</Text> Followers</Text>
-                <Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13.5 }}><Text style={{ color: colors.text, fontFamily: fonts.bold }}>{profile.following_count}</Text> Following</Text>
+                <Pressable onPress={() => router.push({ pathname: "/people", params: { user: profile.id, mode: "followers" } })} hitSlop={6}><Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13.5 }}><Text style={{ color: colors.text, fontFamily: fonts.bold }}>{profile.follower_count}</Text> Followers</Text></Pressable>
+                <Pressable onPress={() => router.push({ pathname: "/people", params: { user: profile.id, mode: "following" } })} hitSlop={6}><Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13.5 }}><Text style={{ color: colors.text, fontFamily: fonts.bold }}>{profile.following_count}</Text> Following</Text></Pressable>
                 {typeof profile.karma === "number" && <Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13.5 }}><Text style={{ color: colors.text, fontFamily: fonts.bold }}>{profile.karma}</Text> Goatedness</Text>}
                 {profile.is_friend && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}>

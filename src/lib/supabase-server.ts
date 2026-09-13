@@ -1,14 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 /* The browser keeps its session in cookies; the phone app keeps it as a
    token and sends `Authorization: Bearer …`. Given the request, a bearer
    makes a client scoped to that user: row security sees the token on
    every query, and getUser() checks it with the auth server (the cookie
-   client does the same from its cookie). Routes that pass the request
-   serve both; routes that don't keep the cookie session only. */
+   client does the same from its cookie). Without the request, the
+   bearer is read from the incoming headers, so every route serves the
+   app as well as the browser. */
 export async function createClient(request?: Request) {
-  const bearer = request?.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  const authorization = request ? request.headers.get("authorization") : (await headers()).get("authorization");
+  const bearer = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   if (bearer) {
     const client = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

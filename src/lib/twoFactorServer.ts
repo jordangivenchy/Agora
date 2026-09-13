@@ -91,6 +91,23 @@ export async function revokeSession(accessToken: string): Promise<void> {
     without ever having stored their tokens: generate a magic-link token
     server-side and immediately verify it through the cookie-writing
     client. The password hook doesn't fire on this path. */
+/** The same magic-link mint, handed back as tokens for the phone app
+    (which keeps its session itself rather than in cookies). */
+export async function mintSessionTokens(email: string): Promise<{ access_token: string; refresh_token: string } | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+  const tokenHash = data?.properties?.hashed_token;
+  if (error || !tokenHash) return null;
+  const { data: verified, error: verifyErr } = await throwawayAuthClient().auth.verifyOtp({ type: "email", token_hash: tokenHash });
+  if (verifyErr || !verified.session) return null;
+  return { access_token: verified.session.access_token, refresh_token: verified.session.refresh_token };
+}
+
+/** The phone app names itself; it gets tokens in the body, not cookies. */
+export function wantsTokens(request: NextRequest): boolean {
+  return request.headers.get("x-agora-client") === "app";
+}
+
 export async function mintSessionCookies(email: string): Promise<boolean> {
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
