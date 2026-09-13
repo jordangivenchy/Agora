@@ -88,21 +88,19 @@ export default function CommunityScreen() {
                   <View style={{ height: BANNER, backgroundColor: c.color }} />
                 )}
                 <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
-                  <View style={{ width: 76, height: 76, borderRadius: 20, marginTop: -41, borderWidth: 3, borderColor: colors.bg, backgroundColor: c.color, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                    {c.avatar_url ? <Image source={{ uri: c.avatar_url }} style={{ width: 70, height: 70 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.title, fontSize: 30 }}>{c.name.charAt(0).toUpperCase()}</Text>}
-                  </View>
-                  {/* The name, with the way in and the + level with it. */}
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
-                    <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      {c.is_private && <Ionicons name="lock-closed-outline" size={14} color={colors.text} />}
-                      <Text style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.title, fontSize: 20, letterSpacing: -0.3 }}>{c.name}</Text>
+                  {/* The tile hangs off the banner; the way in and the + sit
+                      centred on the tile's bottom edge, hanging 16 below it. */}
+                  <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+                    <View style={{ width: 76, height: 76, borderRadius: 20, marginTop: -41, borderWidth: 3, borderColor: colors.bg, backgroundColor: c.color, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+                      {c.avatar_url ? <Image source={{ uri: c.avatar_url }} style={{ width: 70, height: 70 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.title, fontSize: 30 }}>{c.name.charAt(0).toUpperCase()}</Text>}
                     </View>
+                    <View style={{ flex: 1 }} />
                     {c.my_role === "owner" ? (
-                      <Text style={{ color: colors.gold, fontFamily: fonts.extra, fontSize: 9, letterSpacing: 0.8 }}>OWNER</Text>
+                      <Text style={{ color: colors.gold, fontFamily: fonts.extra, fontSize: 9, letterSpacing: 0.8, marginBottom: -5 }}>OWNER</Text>
                     ) : (
                       <Pressable
                         onPress={() => void join()}
-                        style={({ pressed }) => ({ height: 32, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1,
+                        style={({ pressed }) => ({ height: 32, marginBottom: -16, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1,
                           backgroundColor: c.joined ? colors.surface2 : c.requested ? "transparent" : colors.blue,
                           borderWidth: c.joined || c.requested ? StyleSheet.hairlineWidth : 0, borderColor: c.requested ? colors.gold : colors.border })}
                       >
@@ -110,10 +108,14 @@ export default function CommunityScreen() {
                       </Pressable>
                     )}
                     {canPost && (
-                      <Pressable onPress={() => setComposing(true)} accessibilityLabel="New post" style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? "#ffc22e" : colors.yellow, alignItems: "center", justifyContent: "center" })}>
+                      <Pressable onPress={() => setComposing(true)} accessibilityLabel="New post" style={({ pressed }) => ({ width: 36, height: 36, marginBottom: -18, borderRadius: 18, backgroundColor: pressed ? "#ffc22e" : colors.yellow, alignItems: "center", justifyContent: "center" })}>
                         <Ionicons name="add" size={22} color={colors.ink} />
                       </Pressable>
                     )}
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 28 }}>
+                    {c.is_private && <Ionicons name="lock-closed-outline" size={14} color={colors.text} />}
+                    <Text style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.title, fontSize: 20, letterSpacing: -0.3 }}>{c.name}</Text>
                   </View>
                   {!!c.description && <Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 6 }}>{c.description}</Text>}
                   <Text style={{ color: META, fontFamily: fonts.body, fontSize: 11, marginTop: 8 }}>{c.members} member{c.members === 1 ? "" : "s"}{c.is_private ? " · private" : ""}</Text>
