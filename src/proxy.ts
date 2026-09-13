@@ -17,6 +17,7 @@ const BETA_EXEMPT = [
   "/api/discord", // its OAuth round trip
 
   "/auth",
+  "/app/open", // the phone app handing its login to the website inside it
   "/logo.png",
 ];
 
