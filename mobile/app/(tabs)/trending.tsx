@@ -9,7 +9,6 @@ import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, roomDuration, ty
 import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
-import { openWeb } from "../../src/web";
 import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";

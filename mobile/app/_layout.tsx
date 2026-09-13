@@ -62,7 +62,7 @@ export default function RootLayout() {
                     <Stack.Screen name="auth" options={{ headerShown: false }} />
                     <Stack.Screen name="welcome" options={{ headerShown: false }} />
                     <Stack.Screen name="forgot-password" options={{ title: "", headerBackTitle: "Back" }} />
-                    <Stack.Screen name="room/[id]" options={{ title: "Room", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="room/[id]" options={{ headerShown: false, gestureEnabled: false }} />
                     <Stack.Screen name="you" options={{ headerShown: false }} />
                     <Stack.Screen name="u/[username]" options={{ headerShown: false }} />
                     <Stack.Screen name="people" options={{ title: "People", headerBackTitle: "Back" }} />

@@ -17,7 +17,6 @@ import { RichText, plainPreview } from "../../src/richText";
 import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
-import { openWeb } from "../../src/web";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 

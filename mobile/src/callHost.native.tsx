@@ -8,11 +8,15 @@ import { loadLiveKit } from "./livekit";
 import { useCall } from "./callSession";
 
 export function CallHost({ children }: { children: ReactNode }) {
-  const { active, leave } = useCall();
+  const { active, dropCall } = useCall();
   const lk = loadLiveKit();
   useEffect(() => {
     if (!lk || !active) return;
-    void lk.AudioSession.startAudioSession();
+    /* A room is listened to out loud: the speaker by default, the
+       phone's own route picker for headphones and AirPlay. */
+    void lk.AudioSession.configureAudio({ ios: { defaultOutput: "speaker" }, android: { preferredOutputList: ["speaker", "bluetooth", "headset", "earpiece"], audioTypeOptions: lk.AndroidAudioTypePresets.communication } })
+      .catch(() => undefined)
+      .then(() => lk.AudioSession.startAudioSession());
     return () => {
       void lk.AudioSession.stopAudioSession();
     };
@@ -20,7 +24,7 @@ export function CallHost({ children }: { children: ReactNode }) {
   if (!lk || !active) return <>{children}</>;
   const Room = lk.LiveKitRoom;
   return (
-    <Room serverUrl={active.serverUrl} token={active.token} connect audio={false} video={false} onDisconnected={leave}>
+    <Room serverUrl={active.serverUrl} token={active.token} connect audio={false} video={false} onDisconnected={dropCall}>
       {children}
     </Room>
   );

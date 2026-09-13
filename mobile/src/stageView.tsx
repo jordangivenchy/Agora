@@ -2,7 +2,7 @@
    they talk, the raised hands as a strip the host works from, the
    audience as faces along the bottom. Hosts tap a tile or a hand for
    the choices; everyone else just watches it move. */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Avatar } from "./avatar";
 import { ActionSheet, type SheetAction } from "./actionSheet";
@@ -17,8 +17,13 @@ export interface StageActions {
 }
 
 export function StageView({
-  seats, hostId, meId, myRole, speaking, actions, requestsLocked, onToggleLock,
-}: { seats: Seat[]; hostId: string; meId: string | null; myRole: StageRole; speaking: Set<string>; actions: StageActions | null; requestsLocked: boolean; onToggleLock: () => void }) {
+  seats, hostId, meId, myRole, speaking, actions, requestsLocked, onToggleLock, stageSlot, onPressPerson,
+}: { seats: Seat[]; hostId: string; meId: string | null; myRole: StageRole; speaking: ReadonlySet<string>; actions: StageActions | null; requestsLocked: boolean; onToggleLock: () => void;
+  /** Something else draws the stage (the live pictures); the hands and the listeners still come from here. */
+  stageSlot?: ReactNode;
+  /** A listener tapped: the person, for anyone who isn't managing them. */
+  onPressPerson?: (seat: Seat) => void;
+}) {
   const [picked, setPicked] = useState<{ seat: Seat; role: StageRole } | null>(null);
   const withRole = seats.map((seat) => ({ seat, role: deriveStageRole(seat, hostId) }));
   const stage = withRole.filter((x) => onStage(x.role)).sort((a, b) => rank(a.role) - rank(b.role) || a.seat.joined_at.localeCompare(b.seat.joined_at));
@@ -42,7 +47,7 @@ export function StageView({
   return (
     <View>
       {/* The stage */}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+      {stageSlot ?? <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {stage.length === 0 && (
           <View style={{ width: "100%", padding: 22, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: "center" }}>
             <Text style={{ color: colors.muted, fontSize: 13 }}>The stage is empty.</Text>
@@ -72,7 +77,7 @@ export function StageView({
             </Pressable>
           );
         })}
-      </View>
+      </View>}
 
       {/* Hands up */}
       <View style={{ marginTop: 18 }}>
@@ -91,7 +96,7 @@ export function StageView({
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
             {requests.map((seat, i) => (
-              <Pressable key={seat.id} disabled={!canManage} onPress={() => setPicked({ seat, role: "audience" })} style={{ alignItems: "center", width: 64 }}>
+              <Pressable key={seat.id} disabled={!canManage && !onPressPerson} onPress={() => (canManage ? setPicked({ seat, role: "audience" }) : onPressPerson?.(seat))} style={{ alignItems: "center", width: 64 }}>
                 <View>
                   <Avatar url={seatUser(seat)?.avatar_url} name={seatName(seat)} size={52} />
                   <View style={{ position: "absolute", right: -4, top: -4, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.yellow, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.bg }}>
@@ -113,7 +118,9 @@ export function StageView({
         ) : (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {audience.slice(0, 24).map(({ seat }) => (
-              <Avatar key={seat.id} url={seatUser(seat)?.avatar_url} name={seatName(seat)} size={36} dim={seat.user_id !== meId} />
+              <Pressable key={seat.id} disabled={!onPressPerson} onPress={() => onPressPerson?.(seat)} accessibilityLabel={seatName(seat)}>
+                <Avatar url={seatUser(seat)?.avatar_url} name={seatName(seat)} size={36} dim={seat.user_id !== meId} />
+              </Pressable>
             ))}
             {audience.length > 24 && (
               <View style={{ height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border }}>
