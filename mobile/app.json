@@ -14,7 +14,7 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSCameraUsageDescription": "AgoraSphere uses your camera when you turn it on while speaking on a stage.",
+        "NSCameraUsageDescription": "AgoraSphere uses your camera when you turn it on while speaking on a stage, and to take a photo for your profile or a post.",
         "NSPhotoLibraryUsageDescription": "AgoraSphere needs your photos to set a profile picture, a banner, or attach an image."
       }
     },
@@ -54,7 +54,7 @@
         "expo-image-picker",
         {
           "photosPermission": "AgoraSphere needs your photos to set a profile picture, a banner, or attach an image.",
-          "cameraPermission": "AgoraSphere uses your camera to take a photo for your profile or a post."
+          "cameraPermission": "AgoraSphere uses your camera when you turn it on while speaking on a stage, and to take a photo for your profile or a post."
         }
       ],
       [

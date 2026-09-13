@@ -391,7 +391,12 @@ function Room({ roomId }: { roomId: string }) {
   }, [entering, callUp, done]);
   useEffect(() => {
     if (entering !== "leaving") return;
-    Animated.timing(skyOpacity, { toValue: 0, duration: reduce ? 0 : ENTER_FADE_MS, useNativeDriver: true }).start(() => setEntering("gone"));
+    Animated.timing(skyOpacity, { toValue: 0, duration: reduce ? 0 : ENTER_FADE_MS, useNativeDriver: true }).start();
+    /* A timer, not the animation's callback, takes the sky down: a
+       native-driven fade that never reports back must not leave the
+       sky over the room. */
+    const t = setTimeout(() => setEntering("gone"), (reduce ? 0 : ENTER_FADE_MS) + 40);
+    return () => clearTimeout(t);
   }, [entering, skyOpacity, reduce]);
 
   const onFraming = useCallback((framing: RoomFraming) => setRoom((r) => (r ? { ...r, framing } : r)), []);

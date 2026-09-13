@@ -73,7 +73,10 @@ export async function leaveQueue(topicId: string): Promise<void> {
 
 export function goToRoom(roomId: string) {
   if (state.matched) return;
-  set({ matched: roomId, open: true });
+  /* busy is cleared here too: a join that matched at once returns
+     through this path, and a busy flag left standing froze the next
+     queue on "Joining…". */
+  set({ matched: roomId, open: true, busy: false, error: null });
   setPresenceQueued(false);
   setTimeout(() => {
     set({ matched: null, open: false, entries: [], preview: null });
