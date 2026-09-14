@@ -1,8 +1,14 @@
-/* The room on a phone (app/agora/[id]/page.tsx, flat): the top bar with
-   the host, Follow, About and the room's menu; the tag line — live, the
-   clock, the audience, the field, the community; the motion; the
-   pictures; the hands and the listeners; the queue pill and the host's
-   button; the cards; the control pill. The sheets hang off it. */
+/* The room on a phone (app/agora/[id]/page.tsx): the top bar with the
+   host, Follow, About and the room's menu; the tag line — live, the
+   clock, the audience, the field, the community — with the view switch;
+   the motion; then one of two views, as on the site. The amphitheater
+   (audience view, amphitheater.tsx): the site's own 3D scene — the bowl,
+   the crowd in its seats, the line for the mic in the aisle — with the
+   discussion strip and the dock of live pictures over it. The speaker
+   view: the pictures, the hands and the listeners.
+   A queue-matched duel has no amphitheater — its two speakers, face to
+   face, are the whole room. Under both: the queue pill and the host's
+   button, the cards, the control pill; the sheets hang off it. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
@@ -19,6 +25,7 @@ import type { CallApi } from "./roomCall";
 import { ROLE_LABEL, deriveStageRole, isHostRole, onStage, seatName, seatUser, sortRequests, type Seat, type StageRole } from "./stageModel";
 import { StageView, type StageActions } from "./stageView";
 import { StageTiles, type StageTile } from "./roomTiles";
+import { Amphitheater, type AmphiPerson, type AmphiStagePerson } from "./amphitheater";
 import { ReactionOverlay } from "./reactions";
 import { CONTROLS_H, RoomControls, copyRoomLink, useSavedLayout } from "./roomControls";
 import { RoomChatSheet, useRoomChat } from "./roomChat";
@@ -75,6 +82,11 @@ export function RoomBody(p: RoomBodyProps) {
   const [topMenu, setTopMenu] = useState(false);
   const [report, setReport] = useState<ReportTarget | null>(null);
   const [tileSheet, setTileSheet] = useState<{ seat: Seat; role: StageRole } | null>(null);
+  /* The amphitheater, or the speaker view. A duel has only the speaker view. */
+  const [view, setView] = useState<"audience" | "speaker">(p.duel ? "speaker" : "audience");
+  useEffect(() => { if (p.duel) setView("speaker"); }, [p.duel]);
+  const amphitheater = view === "audience" && !p.duel;
+  const [areaH, setAreaH] = useState(0);
   const messages = useRoomChat(room.id);
   useEffect(() => { if (chatOpen) setSeenChat(messages.length); }, [chatOpen, messages.length]);
   const chatBadge = chatOpen ? 0 : Math.max(0, messages.length - seenChat);
@@ -128,6 +140,28 @@ export function RoomBody(p: RoomBodyProps) {
     return out;
   }, [stageSeats, call.tiles, call.micOn, meId, seats]);
 
+  /* ── The amphitheater's people ── */
+  const asPerson = (s: Seat): AmphiPerson => ({ id: s.user_id, name: seatName(s), handle: seatUser(s)?.username ?? null, avatarUrl: seatUser(s)?.avatar_url ?? null });
+  const seatedPeople = useMemo(
+    () => withRole.filter((x) => x.s.role === "spectator" && x.role === "audience" && !x.s.hand_raised_at && x.s.user_id !== room.mic_user_id).map((x) => asPerson(x.s)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [withRole, room.mic_user_id],
+  );
+  const linePeople = useMemo(() => queue.map(asPerson), [queue]); // eslint-disable-line react-hooks/exhaustive-deps
+  const micSeat = room.mic_user_id ? withRole.find((x) => x.s.user_id === room.mic_user_id)?.s ?? null : null;
+  /* The discussion strip, as the site computes it (stagePanes/paneStrip):
+     the two sides' debaters, or the first two on stage by rank, hold the
+     stage's panes; the strip is everyone else on stage. The dock is every
+     live picture. */
+  const strip = useMemo<AmphiStagePerson[]>(() => {
+    const overflow = stageSeats.filter((x) => x.s.role !== "debater");
+    if (!stageSeats.some((x) => x.s.role === "debater" && x.s.stance === "PRO")) overflow.shift();
+    if (!stageSeats.some((x) => x.s.role === "debater" && x.s.stance === "CON")) overflow.shift();
+    return overflow.map((x) => ({ ...asPerson(x.s), role: x.role }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageSeats]);
+  const dock = useMemo(() => tiles.filter((t) => !!t.call), [tiles]);
+
   const openPerson = (userId: string, username: string | null, displayName: string | null, isDebater: boolean) => {
     openUserMenu({ userId, username: username ?? "user", displayName }, {
       room: {
@@ -158,9 +192,19 @@ export function RoomBody(p: RoomBodyProps) {
     { label: "More…", onPress: () => openPerson(tileSheet.seat.user_id, seatUser(tileSheet.seat)?.username ?? null, seatName(tileSheet.seat), true) },
   ] : [];
 
+  const onPressStrip = (person: AmphiStagePerson) => {
+    if (person.id === meId) return;
+    const x = withRole.find((w) => w.s.user_id === person.id);
+    if (canManage && x && person.role !== "host") setTileSheet({ seat: x.s, role: person.role });
+    else openPerson(person.id, person.handle, person.name, true);
+  };
+
   const shareRoom = () => void Share.share({ message: room.motion, url: roomLink(room) }).catch(() => undefined);
   const reportHost = () => setReport({ userId: room.host_id, username: hostUser?.username ?? "host", context: "room", roomId: room.id });
   const controlsBand = CONTROLS_H + 8 + insets.bottom;
+  /* The amphitheater's stage clears the controls, and the pill and the host's button when they show. */
+  const bandA = (!!meId && (amMicHolder || myQueuePos !== null)) || canManage;
+  const amphiInset = controlsBand + 8 + (bandA ? 42 : 0);
   const stageH = Math.max(160, Math.min(width * 1.05, height - controlsBand - 260));
   const hlsAudience = !!call.hls;
 
@@ -203,12 +247,43 @@ export function RoomBody(p: RoomBodyProps) {
             {topic ? `  · ${topic.label}` : ""}{p.communityName ? `  · ${p.communityName}` : ""}
             {call.live && !call.connected ? (call.reconnecting ? "  · Reconnecting…" : "  · Connecting…") : ""}
           </Text>
+          {!p.duel && (
+            <Pressable
+              onPress={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
+              accessibilityLabel={amphitheater ? "Switch to the speaker view" : "Back to the amphitheater"}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 12, backgroundColor: pressed ? "#1b1b21" : "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" })}
+            >
+              <Ionicons name={amphitheater ? "videocam-outline" : "people-outline"} size={12} color={colors.text} />
+              <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 10.5 }}>{amphitheater ? "Speaker view" : "Amphitheater"}</Text>
+            </Pressable>
+          )}
         </View>
         <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 14, lineHeight: 18, marginTop: 3 }}>{room.motion}</Text>
       </View>
 
-      {/* ── The stage, the hands, the listeners ── */}
-      <View style={{ flex: 1 }}>
+      {/* ── The amphitheater, or the stage, the hands, the listeners ── */}
+      <View style={{ flex: 1 }} onLayout={(e) => setAreaH(Math.round(e.nativeEvent.layout.height))}>
+        {amphitheater ? (
+          areaH > 0 && (
+            <Amphitheater
+              width={width}
+              height={areaH}
+              bottomInset={amphiInset}
+              roomId={room.id}
+              audience={seatedPeople}
+              viewerCount={room.viewer_count ?? 0}
+              queue={linePeople}
+              micHolder={micSeat ? asPerson(micSeat) : null}
+              micLive={!!room.mic_user_id && call.speaking.has(room.mic_user_id)}
+              strip={strip}
+              dock={dock}
+              speaking={call.speaking}
+              broadcast={hlsAudience ? <BroadcastView url={call.hls!.url} height={72} /> : undefined}
+              onPressTile={onPressTile}
+              onPressStrip={onPressStrip}
+            />
+          )
+        ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 8, paddingBottom: controlsBand + 56 }} showsVerticalScrollIndicator={false}>
           <StageView
             seats={seats}
@@ -229,6 +304,7 @@ export function RoomBody(p: RoomBodyProps) {
             }
           />
         </ScrollView>
+        )}
         <ReactionOverlay reactions={call.reactions} />
       </View>
 
@@ -286,6 +362,7 @@ export function RoomBody(p: RoomBodyProps) {
         ]}
       />
       <ActionSheet open={!!tileSheet} title={tileSheet ? seatName(tileSheet.seat) : ""} sub={tileSheet ? ROLE_LABEL[tileSheet.role] : undefined} actions={tileActions} onClose={() => setTileSheet(null)} />
+
     </View>
   );
 }

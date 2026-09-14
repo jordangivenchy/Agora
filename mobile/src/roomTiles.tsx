@@ -29,7 +29,7 @@ export interface StageTile {
 
 const one = StyleSheet.hairlineWidth;
 
-function Tile({ tile, speaking, small, featured, onPress, onLongPress }: { tile: StageTile; speaking: boolean; small?: boolean; featured?: boolean; onPress?: () => void; onLongPress?: () => void }) {
+export function Tile({ tile, speaking, small, featured, onPress, onLongPress }: { tile: StageTile; speaking: boolean; small?: boolean; featured?: boolean; onPress?: () => void; onLongPress?: () => void }) {
   const screen = tile.source === "screen";
   return (
     <Pressable

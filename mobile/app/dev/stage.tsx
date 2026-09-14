@@ -1,11 +1,15 @@
-/* A stage with made-up people, to look at the design without a live room.
-   Development only. */
+/* A stage with made-up people, to look at the design without a live room:
+   the amphitheater (the audience view) and the speaker view's hands and
+   listeners. Development only. */
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { Stack } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StageView } from "../../src/stageView";
+import { Amphitheater, type AmphiPerson, type AmphiStagePerson } from "../../src/amphitheater";
+import type { StageTile } from "../../src/roomTiles";
 import type { Seat } from "../../src/stageModel";
-import { colors } from "../../src/theme";
+import { colors, fonts } from "../../src/theme";
 import { Button, Screen } from "../../src/ui";
 
 const HOST = "u-host";
@@ -23,10 +27,47 @@ const SEATS: Seat[] = [
   ...Array.from({ length: 9 }, (_, i) => seat(`u-a${i}`, ["Mia", "Noah", "Ava", "Leo", "Zoe", "Eli", "Ivy", "Max", "Uma"][i])),
 ];
 
+const person = (id: string, name: string): AmphiPerson => ({ id, name, handle: name.toLowerCase(), avatarUrl: null });
+const AUDIENCE = ["Mia", "Noah", "Ava", "Leo", "Zoe", "Eli", "Ivy", "Max", "Uma"].map((n, i) => person(`u-a${i}`, n));
+const QUEUE = [person("u-1", "Christian"), person("u-2", "Dada"), person("u-3", "Priya"), person("u-4", "Tom"), person("u-5", "Kai"), person("u-6", "Lena"), person("u-7", "Omar")];
+const tile = (id: string, name: string, role: string, micMuted = false): StageTile => ({ key: `${id}:camera`, identity: id, username: name, handle: name.toLowerCase(), avatarUrl: null, local: false, source: "camera", micMuted, roleLabel: role, call: null });
+const STRIP: AmphiStagePerson[] = [{ ...person(HOST, "Jordan"), role: "host" }, { ...person("u-co", "Sam"), role: "cohost" }];
+
 export default function DevStage() {
   const [asHost, setAsHost] = useState(true);
   const [locked, setLocked] = useState(false);
+  const [amphi, setAmphi] = useState(true);
+  const [mic, setMic] = useState(true);
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   if (!__DEV__) return null;
+  if (amphi) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <Stack.Screen options={{ title: "Amphitheater (design)" }} />
+        <Amphitheater
+          width={width}
+          height={height - insets.top - 130 - 70}
+          bottomInset={12}
+          roomId="design-room"
+          audience={AUDIENCE}
+          viewerCount={48}
+          queue={QUEUE}
+          micHolder={mic ? person("u-mic", "Harper") : null}
+          micLive={mic}
+          strip={mic ? [...STRIP, { ...person("u-mic", "Harper"), role: "speaker" }] : STRIP}
+          dock={[tile("u-red", "Red", "Speaker"), tile("u-alan", "Alan", "Speaker", true)]}
+          speaking={new Set(["u-red"])}
+          onPressTile={() => {}}
+          onPressStrip={() => {}}
+        />
+        <View style={{ flexDirection: "row", gap: 8, padding: 12 }}>
+          <Chip label="Speaker view" onPress={() => setAmphi(false)} />
+          <Chip label={mic ? "Free the mic" : "Take the mic"} onPress={() => setMic((v) => !v)} />
+        </View>
+      </View>
+    );
+  }
   return (
     <Screen>
       <Stack.Screen options={{ title: "Stage (design)" }} />
@@ -54,7 +95,17 @@ export default function DevStage() {
         />
         <View style={{ height: 20 }} />
         <Button kind="secondary" onPress={() => setAsHost((v) => !v)}>{asHost ? "View as a listener" : "View as the host"}</Button>
+        <View style={{ height: 10 }} />
+        <Button kind="secondary" onPress={() => setAmphi(true)}>Amphitheater</Button>
       </ScrollView>
     </Screen>
+  );
+}
+
+function Chip({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={{ height: 34, paddingHorizontal: 12, borderRadius: 17, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33", alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12 }}>{label}</Text>
+    </Pressable>
   );
 }
