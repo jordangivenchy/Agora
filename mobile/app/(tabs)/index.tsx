@@ -1,6 +1,6 @@
 /* Home: the website's phone home — the hero, the news strip and the
    board of fields — under the site's header, above its tab bar. */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, RefreshControl, ScrollView, View, useWindowDimensions } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
@@ -15,7 +15,8 @@ import { holdBoot } from "../../src/boot";
 import { isQueued, leaveQueue, onQueueChanged, openQueue } from "../../src/queue";
 import { colors } from "../../src/theme";
 
-/* The hero takes the first stories; the strip gets the rest. */
+/* The hero takes up to three of the major stories (ranked by the feed);
+   the strip gets the rest — all of them when none is major. */
 const HERO_NEWS = 3;
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -31,6 +32,10 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [tickerIn, setTickerIn] = useState(false);
   const token = session?.access_token ?? null;
+  const [heroNews, tickerNews] = useMemo(() => {
+    const majors = news.filter((s) => s.major);
+    return majors.length ? [majors.slice(0, HERO_NEWS), news.filter((s) => !s.major)] : [news.slice(0, HERO_NEWS), news.slice(HERO_NEWS)];
+  }, [news]);
 
   /* The opening sky (boot.tsx) waits, briefly, for the first load, so
      it fades to a whole page rather than one still filling in. Let go
@@ -99,8 +104,8 @@ export default function Home() {
       <HomeHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}>
         <Starfield width={width} height={1100} />
-        <HeroCarousel rooms={heroRooms} posts={posts} news={news.slice(0, HERO_NEWS)} onSettled={onHeroSettled} />
-        <NewsTicker stories={tickerIn ? news.slice(HERO_NEWS) : []} />
+        <HeroCarousel rooms={heroRooms} posts={posts} news={heroNews} onSettled={onHeroSettled} />
+        <NewsTicker stories={tickerIn ? tickerNews : []} />
         <TopicBoard topics={topics} rooms={rooms} onQueue={(t) => (t.am_queued || isQueued(t.id) ? void leaveQueue(t.id) : openQueue({ id: t.id, question: t.question, topicKey: t.topic_key, queueCount: t.queue_count, proCount: t.pro_count, conCount: t.con_count }))} />
       </ScrollView>
     </View>

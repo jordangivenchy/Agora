@@ -1,9 +1,11 @@
 /* News, as the site's page: today's headlines from the same feed, the
    major stories as picture cards with the outlet link, Start a
-   discussion and Queue a conversation, then the rest as rows. */
-import { useCallback, useState } from "react";
-import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+   discussion and Queue a conversation, then the rest as rows. A tap on
+   a story in the home hero arrives with ?story=<id>: that card scrolls
+   into view and wears a yellow ring for a moment (NewsPage.tsx). */
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Animated, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchNews, type NewsStory } from "../../src/home";
@@ -26,6 +28,9 @@ export default function News() {
   const [error, setError] = useState<string | null>(null);
   const { openRoom } = useCreate();
   void supabase;
+  const { story: wanted } = useLocalSearchParams<{ story?: string }>();
+  const listRef = useRef<FlatList<Row>>(null);
+  const [hit, setHit] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -46,11 +51,40 @@ export default function News() {
   ];
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
+  /* The story the hero sent: scroll to it, ring it, then drop the param
+     so coming back to the tab doesn't do it again. */
+  const hitIndex = wanted ? rows.findIndex((r) => r.kind !== "label" && r.story.id === wanted) : -1;
+  const [pending, setPending] = useState<{ id: string; index: number } | null>(null);
+  useEffect(() => {
+    if (!wanted || hitIndex < 0) return;
+    setPending({ id: wanted, index: hitIndex });
+    router.setParams({ story: "" });
+  }, [wanted, hitIndex]);
+  useEffect(() => {
+    if (!pending) return;
+    const t = setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: pending.index, viewPosition: 0.35, animated: true });
+      setHit(pending.id);
+      setPending(null);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [pending]);
+  useEffect(() => {
+    if (!hit) return;
+    const t = setTimeout(() => setHit(null), 3600);
+    return () => clearTimeout(t);
+  }, [hit]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <HomeHeader />
       <FlatList
+        ref={listRef}
         data={rows}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+          setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.35, animated: true }), 80);
+        }}
         keyExtractor={(r, i) => (r.kind === "label" ? `l${i}` : `${r.kind}:${r.story.id}`)}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
@@ -71,6 +105,7 @@ export default function News() {
           if (item.kind === "major") {
             return (
               <View style={[CARD, { overflow: "hidden", marginBottom: 16 }]}>
+                {hit === st.id && <Ring />}
                 <View style={{ aspectRatio: 16 / 9, backgroundColor: "#0d1b3e" }}>
                   {st.imageUrl && <Image source={{ uri: st.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />}
                 </View>
@@ -87,6 +122,7 @@ export default function News() {
           }
           return (
             <View style={[CARD, { paddingHorizontal: 18, paddingVertical: 14, marginBottom: 10 }]}>
+              {hit === st.id && <Ring />}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                 {st.imageUrl ? (
                   <Image source={{ uri: st.imageUrl }} style={{ width: 76, height: 76, borderRadius: 10 }} resizeMode="cover" />
@@ -118,6 +154,23 @@ export default function News() {
       />
     </View>
   );
+}
+
+/* The yellow ring on the story the hero sent: in quickly, out slowly.
+   On the JS driver: a native-driven fade on a view mounted in the same
+   moment never drew on iOS (toast.tsx). */
+function Ring() {
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.sequence([
+      Animated.timing(o, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.delay(2400),
+      Animated.timing(o, { toValue: 0, duration: 900, useNativeDriver: false }),
+    ]);
+    anim.start();
+    return () => anim.stop();
+  }, [o]);
+  return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 2, borderRadius: 12, borderWidth: 2, borderColor: colors.yellow, opacity: o }]} />;
 }
 
 function Outlets({ story, max = 3 }: { story: NewsStory; max?: number }) {

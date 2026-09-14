@@ -143,12 +143,26 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedP
 }
 
 /* ── The hero's rooms: live ones, the most watched first ── */
+/* One side's speaker, with the colour the hero draws their initial on. */
+export interface HeroSpeaker { name: string; color: string; open: boolean }
+
 export interface HeroRoom {
   id: string;
   motion: string;
   topicKey: string;
+  /* The room's other topics (the database's keys). */
+  secondaryTopics: string[];
+  /* "Open", "Oxford", "1v1" or "Panel". */
+  format: string;
+  /* Two letters: "EN". */
+  language: string;
+  /* The community hosting the room, when one is. */
+  community: { name: string; color: string | null } | null;
+  /* For and against, as the site's panel lists them: the first always
+     (an open seat when nobody holds it), the second when taken. */
+  speakers: HeroSpeaker[];
   viewers: number;
-  speakers: number;
+  speakerCount: number;
   audience: number;
   host: Person | null;
   imageUrl: string | null;
@@ -159,31 +173,59 @@ type HeroRoomRow = {
   id: string;
   motion: string;
   topic_key: string;
+  secondary_topics: string[] | null;
+  format: string | null;
+  language: string | null;
+  community_id: string | null;
   viewer_count: number | null;
   thumbnail_url: string | null;
   started_at: string | null;
   created_at: string | null;
   host: Person | Person[] | null;
-  participants: { role: string; left_at: string | null }[] | null;
+  participants: { role: string; left_at: string | null; stance: string | null; user: Person | Person[] | null }[] | null;
 };
+
+/* The site's colours for the speakers' initials (lib/homeData.ts). */
+const SPEAKER_PALETTE = ["#00b894", "#e17055", "#e2b96b", "#fd79a8", "#4a9eff", "#00cec9", "#64B5F6", "#1976D2"];
+const FORMAT_LABEL: Record<string, string> = { open: "Open", oxford: "Oxford", "1v1": "1v1", panel: "Panel" };
+const safeColor = (c: string | null | undefined) => (c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : null);
 
 export async function fetchHeroRooms(supabase: SupabaseClient): Promise<HeroRoom[]> {
   const { data } = await supabase
     .from("debate_rooms")
-    .select("id, motion, topic_key, viewer_count, thumbnail_url, started_at, created_at, host:users!host_id(id, username, display_name, avatar_url), participants:debate_participants(role, left_at)")
+    .select("id, motion, topic_key, secondary_topics, format, language, community_id, viewer_count, thumbnail_url, started_at, created_at, host:users!host_id(id, username, display_name, avatar_url), participants:debate_participants(role, left_at, stance, user:users(username, display_name, avatar_url))")
     .eq("status", "live")
     .order("viewer_count", { ascending: false, nullsFirst: false })
     .limit(4);
-  return ((data ?? []) as unknown as HeroRoomRow[]).map((r) => {
+  const rows = (data ?? []) as unknown as HeroRoomRow[];
+  /* A community-hosted room goes under the community's name, as on the site. */
+  const communities = new Map<string, { name: string; color: string | null }>();
+  const ids = [...new Set(rows.map((r) => r.community_id).filter(Boolean))] as string[];
+  if (ids.length) {
+    const { data: comms } = await supabase.from("communities").select("id, name, color").in("id", ids);
+    for (const c of (comms ?? []) as { id: string; name: string; color: string | null }[]) communities.set(c.id, { name: c.name, color: safeColor(c.color) });
+  }
+  return rows.map((r, i) => {
     const host = one(r.host);
     const active = (r.participants ?? []).filter((p) => !p.left_at);
+    const debaters = active.filter((p) => p.role === "debater");
+    const side = (stance: string) => one(debaters.find((p) => p.stance === stance)?.user ?? null);
+    const pro = side("PRO");
+    const con = side("CON");
+    const speakers: HeroSpeaker[] = [{ name: pro ? personName(pro) : "Open seat", color: SPEAKER_PALETTE[i % SPEAKER_PALETTE.length], open: !pro }];
+    if (con) speakers.push({ name: personName(con), color: SPEAKER_PALETTE[(i + 3) % SPEAKER_PALETTE.length], open: false });
     const pick = r.thumbnail_url || host?.avatar_url || null;
     return {
       id: r.id,
       motion: r.motion,
       topicKey: r.topic_key,
+      secondaryTopics: r.secondary_topics ?? [],
+      format: FORMAT_LABEL[r.format ?? ""] ?? "Open",
+      language: (r.language ?? "EN").toUpperCase().slice(0, 2),
+      community: r.community_id ? communities.get(r.community_id) ?? null : null,
+      speakers,
       viewers: r.viewer_count ?? 0,
-      speakers: active.filter((p) => p.role === "debater").length,
+      speakerCount: debaters.length,
       audience: active.filter((p) => p.role === "spectator").length,
       host,
       imageUrl: pick && /^https:\/\//.test(pick) ? pick : null,
