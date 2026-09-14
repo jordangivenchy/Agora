@@ -40,7 +40,8 @@ export function TopicBoard({ topics, rooms, onQueue }: { topics: TopicRow[]; roo
   const shown = showAll ? questions : questions.slice(0, QUESTIONS_SHOWN);
 
   return (
-    <View style={{ paddingTop: 22 }}>
+    /* Close under the news strip: about as far below it as the hero's dots are above. */
+    <View style={{ paddingTop: 6 }}>
       <Text style={{ paddingHorizontal: 20, color: colors.text, fontFamily: fonts.title, fontSize: 22, letterSpacing: -0.3 }}>Browse</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingVertical: 14 }}>
         {TOPICS.map((cat) => (
