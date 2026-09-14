@@ -10,8 +10,9 @@
    calls holdBoot() keeps the sky up until it lets go or HOLD_MS have
    passed, so the page the sky fades to is whole rather than filling in.
    Measured on an iPhone 16 Pro Max (release build, cold launches): the
-   sky up about 60-100 ms after the JS starts, turning at 100-114 fps
-   with at most a couple of single-frame slips, home by about 1.8 s. */
+   sky up about 60-100 ms after the JS starts and turning at 88-102 fps
+   (sky.tsx draws at three-quarter size, at most 60 redraws a second),
+   the half-second fade to the page a steady 40 fps, home by ~1.8 s. */
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet } from "react-native";
 import * as SplashScreen from "expo-splash-screen";

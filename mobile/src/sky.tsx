@@ -25,6 +25,7 @@ const TAU = Math.PI * 2;
 const MARK_RATIO = 426 / 202;
 const DRAW_SCALE = 0.75; // the turning sky's drawing size against the screen
 const MAX_STEP_MS = 20; // the most one frame may move the sky on
+const DRAW_EVERY_MS = 15; // at most one redraw a sixtieth: a 120 Hz screen would draw twice the work for no visible gain
 
 function seeded(seed: number) {
   let a = seed >>> 0;
@@ -163,16 +164,20 @@ export function Sky({ still = false, start = true, seed }: { still?: boolean; st
      afresh whenever it changes, and a fresh registration counts
      timeSinceFirstFrame from zero — the sky would snap back to its dots.
      A late frame advances it by no more than MAX_STEP_MS, so a stall
-     reads as a pause rather than a leap. */
+     reads as a pause rather than a leap; the arcs are redrawn at most
+     every DRAW_EVERY_MS. */
   const last = useSharedValue(-1);
   const elapsed = useSharedValue(0);
+  const drawn = useSharedValue(-1);
   const onFrame = useCallback((frame: FrameInfo) => {
     "worklet";
     const step = last.value < 0 ? 0 : Math.min(frame.timestamp - last.value, MAX_STEP_MS);
     last.value = frame.timestamp;
     elapsed.value += step;
+    if (drawn.value >= 0 && frame.timestamp - drawn.value < DRAW_EVERY_MS) return;
+    drawn.value = frame.timestamp;
     theta.value = turned(elapsed.value / 1000);
-  }, [last, elapsed, theta]);
+  }, [last, elapsed, drawn, theta]);
   const turn = useFrameCallback(onFrame, false);
 
   useEffect(() => {
@@ -180,6 +185,7 @@ export function Sky({ still = false, start = true, seed }: { still?: boolean; st
     if (svg) {
       last.value = -1;
       elapsed.value = 0;
+      drawn.value = -1;
       turn.setActive(true);
       return () => turn.setActive(false);
     }
