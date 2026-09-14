@@ -1,8 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import * as SplashScreen from "expo-splash-screen";
 import { SessionProvider, useSession } from "../src/session";
 import { CallProvider } from "../src/callSession";
 import { CallHost } from "../src/callHost";
@@ -19,14 +18,9 @@ import { supabase } from "../src/supabase";
 import { colors } from "../src/theme";
 import { useAppFonts } from "../src/fonts";
 
-/* The native launch screen is plain black (app.json: a blank image on
-   #000), so the sky below is the only opening anyone sees; it dissolves
-   into the sky rather than cutting to it. */
-SplashScreen.setOptions({ fade: true, duration: 300 });
-
 /* The opening: the sky until the fonts and the session are in. Reduce
    motion applies from storage at once, then from the account. */
-function Boot({ fontsReady }: { fontsReady: boolean }) {
+function Boot({ fontsReady, screenIn }: { fontsReady: boolean; screenIn: boolean }) {
   const { ready, session } = useSession();
   const { active } = useCall();
   useEffect(() => { void loadReduceMotion(); }, []);
@@ -40,11 +34,13 @@ function Boot({ fontsReady }: { fontsReady: boolean }) {
     });
     return () => { on = false; };
   }, [session?.user.id]);
-  return <BootSplash ready={fontsReady && ready} />;
+  return <BootSplash ready={fontsReady && ready} screenIn={screenIn} />;
 }
 
 export default function RootLayout() {
   const fontsReady = useAppFonts();
+  /* The navigator is laid out: the opening may show its sky (boot.tsx). */
+  const [screenIn, setScreenIn] = useState(false);
   return (
     <SessionProvider>
       <CallProvider>
@@ -55,6 +51,7 @@ export default function RootLayout() {
               <View style={{ flex: 1, backgroundColor: "#000" }}>
                 <StatusBar style="light" />
                 {fontsReady && (
+                  <View style={{ flex: 1 }} onLayout={() => setScreenIn(true)}>
                   <Stack
                     screenOptions={{
                       headerStyle: { backgroundColor: colors.bg },
@@ -92,10 +89,11 @@ export default function RootLayout() {
                     <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
                     <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
                   </Stack>
+                  </View>
                 )}
                 <ToastHost />
                 <LightboxHost />
-                <Boot fontsReady={fontsReady} />
+                <Boot fontsReady={fontsReady} screenIn={screenIn} />
               </View>
               </PostActionsProvider>
             </UserMenuProvider>

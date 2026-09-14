@@ -1,6 +1,6 @@
 /* Home: the website's phone home — the hero, the news strip and the
    board of fields — under the site's header, above its tab bar. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, RefreshControl, ScrollView, View, useWindowDimensions } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
@@ -11,11 +11,14 @@ import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
 import { TopicBoard } from "../../src/board";
 import { Starfield } from "../../src/starfield";
+import { holdBoot } from "../../src/boot";
 import { isQueued, leaveQueue, onQueueChanged, openQueue } from "../../src/queue";
 import { colors } from "../../src/theme";
 
 /* The hero takes the first stories; the strip gets the rest. */
 const HERO_NEWS = 3;
+
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 export default function Home() {
   const { session, pass } = useSession();
@@ -26,15 +29,44 @@ export default function Home() {
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [rooms, setRooms] = useState<BoardRoom[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [tickerIn, setTickerIn] = useState(false);
   const token = session?.access_token ?? null;
 
+  /* The opening sky (boot.tsx) waits, briefly, for the first load, so
+     it fades to a whole page rather than one still filling in. Let go
+     once that render is committed and the hero is at its height. */
+  const bootHold = useRef<(() => void) | null>(null);
+  const [firstLoad, setFirstLoad] = useState(false);
+  const [heroSettled, setHeroSettled] = useState(false);
+  const onHeroSettled = useCallback(() => setHeroSettled(true), []);
+  useEffect(() => {
+    bootHold.current = holdBoot();
+    return () => { bootHold.current?.(); bootHold.current = null; };
+  }, []);
+  useEffect(() => {
+    if (!firstLoad) return;
+    /* The hero measures its posts after they mount; wait for its final height too. */
+    if (!heroSettled && (heroRooms.length || posts.length || news.length)) return;
+    bootHold.current?.();
+    bootHold.current = null;
+  }, [firstLoad, heroSettled, heroRooms.length, posts.length, news.length]);
+
   const load = useCallback(async () => {
-    const [n, p, h, b] = await Promise.all([fetchNews({ token, pass }), fetchFeatured(supabase), fetchHeroRooms(supabase), fetchBoard(supabase)]);
-    setNews(n);
-    setPosts(p);
-    setHeroRooms(h);
-    setTopics(b.topics);
-    setRooms(b.rooms);
+    try {
+      const [n, p, h, b] = await Promise.all([fetchNews({ token, pass }), fetchFeatured(supabase), fetchHeroRooms(supabase), fetchBoard(supabase)]);
+      /* A frame apiece for the hero, the strip and the board: one mount of
+         all three stalled the opening sky for a few frames. */
+      setNews(n);
+      setPosts(p);
+      setHeroRooms(h);
+      await nextFrame();
+      setTickerIn(true);
+      await nextFrame();
+      setTopics(b.topics);
+      setRooms(b.rooms);
+    } finally {
+      setFirstLoad(true);
+    }
   }, [token, pass]);
 
   /* Fresh on focus, every half minute in front, and back from the background. */
@@ -67,8 +99,8 @@ export default function Home() {
       <HomeHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}>
         <Starfield width={width} height={1100} />
-        <HeroCarousel rooms={heroRooms} posts={posts} news={news.slice(0, HERO_NEWS)} />
-        <NewsTicker stories={news.slice(HERO_NEWS)} />
+        <HeroCarousel rooms={heroRooms} posts={posts} news={news.slice(0, HERO_NEWS)} onSettled={onHeroSettled} />
+        <NewsTicker stories={tickerIn ? news.slice(HERO_NEWS) : []} />
         <TopicBoard topics={topics} rooms={rooms} onQueue={(t) => (t.am_queued || isQueued(t.id) ? void leaveQueue(t.id) : openQueue({ id: t.id, question: t.question, topicKey: t.topic_key, queueCount: t.queue_count, proCount: t.pro_count, conCount: t.con_count }))} />
       </ScrollView>
     </View>

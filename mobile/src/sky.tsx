@@ -4,19 +4,26 @@
    a long exposure records it, each star drawing its arc behind a bright
    head, gathering speed over the first moments and then turning
    steadily; the AS mark comes up at the centre after a beat. The arcs
-   are SVG when the build has it (react-native-svg); a build without it,
-   or reduce motion, shows the still sky with the mark at once. */
-import { useEffect, useMemo, useRef, useState } from "react";
+   are SVG paths rebuilt on the UI thread every frame (Reanimated), and
+   the mark rises there too, so a busy JS thread — the app mounting
+   beneath the opening, a page's data arriving — never stalls the turn.
+   A build without react-native-svg, or reduce motion, shows the still
+   sky with the mark at once. */
+import { memo, useCallback, useEffect, useMemo, useRef, type ComponentType } from "react";
 import { Animated, Easing, Image, StyleSheet, Text, TurboModuleRegistry, UIManager, View, useWindowDimensions } from "react-native";
+import Reanimated, { Easing as REasing, useAnimatedProps, useAnimatedStyle, useFrameCallback, useSharedValue, withDelay, withTiming, type FrameInfo, type SharedValue } from "react-native-reanimated";
 import { useReduceMotion } from "./motion";
 
 type Star = { r: number; a: number; w: number; style: string };
-type Group = { style: string; width: number; stars: Star[] };
+/* The stars of one colour and width, as plain number lists a worklet can carry. */
+type Trail = { style: string; width: number; r: number[]; a: number[] };
 
 const COLOURS: [number, number, number][] = [[200, 225, 255], [120, 170, 255], [255, 240, 214], [255, 183, 0]];
 const SIZES: [number, number][] = [[0.7, 0.4], [1.2, 0.62], [1.9, 0.9]];
 const TAU = Math.PI * 2;
 const MARK_RATIO = 426 / 202;
+const DRAW_SCALE = 0.5; // the turning sky's drawing size against the screen
+const MAX_STEP_MS = 20; // the most one frame may move the sky on
 
 function seeded(seed: number) {
   let a = seed >>> 0;
@@ -52,17 +59,19 @@ export function scatterSky(seed: number, w: number, h: number): Star[] {
 
 /* How far the sky has turned after s seconds: gathering speed, then steady. */
 export function turned(s: number, speed = 1.3, ramp = 0.2): number {
+  "worklet";
   return speed * (s - ramp + ramp * Math.exp(-s / ramp));
 }
 
-function groupsOf(stars: Star[]): Group[] {
-  const key = new Map<string, Group>();
-  const out: Group[] = [];
+function trailsOf(stars: Star[]): Trail[] {
+  const key = new Map<string, Trail>();
+  const out: Trail[] = [];
   for (const st of stars) {
     const k = `${st.style}/${st.w}`;
-    let g = key.get(k);
-    if (!g) { g = { style: st.style, width: st.w, stars: [] }; key.set(k, g); out.push(g); }
-    g.stars.push(st);
+    let t = key.get(k);
+    if (!t) { t = { style: st.style, width: st.w, r: [], a: [] }; key.set(k, t); out.push(t); }
+    t.r.push(st.r);
+    t.a.push(st.a);
   }
   return out;
 }
@@ -82,82 +91,126 @@ function loadSvg(): SvgModule | null {
   return svgMod;
 }
 
-const f = (n: number) => n.toFixed(1);
-
-function arcsPath(g: Group, cx: number, cy: number, theta: number): string {
-  const sweep = Math.min(theta, TAU - 0.01);
+/* Each star's arc, from where it started to where the sky has turned it. */
+function arcsPath(r: number[], a: number[], cx: number, cy: number, theta: number): string {
+  "worklet";
+  const sweep = Math.min(theta, Math.PI * 2 - 0.01);
+  const large = sweep > Math.PI ? 1 : 0;
   let d = "";
-  for (const s of g.stars) {
-    const x0 = cx + s.r * Math.cos(s.a), y0 = cy + s.r * Math.sin(s.a);
+  for (let i = 0; i < r.length; i++) {
+    const x0 = (cx + r[i] * Math.cos(a[i])).toFixed(1);
+    const y0 = (cy + r[i] * Math.sin(a[i])).toFixed(1);
     if (sweep < 0.002) {
-      d += `M${f(x0)} ${f(y0)}l0.01 0`;
+      d += `M${x0} ${y0}l0.01 0`;
     } else {
-      const a1 = s.a + sweep;
-      d += `M${f(x0)} ${f(y0)}A${f(s.r)} ${f(s.r)} 0 ${sweep > Math.PI ? 1 : 0} 1 ${f(cx + s.r * Math.cos(a1))} ${f(cy + s.r * Math.sin(a1))}`;
+      const a1 = a[i] + sweep;
+      const rr = r[i].toFixed(1);
+      d += `M${x0} ${y0}A${rr} ${rr} 0 ${large} 1 ${(cx + r[i] * Math.cos(a1)).toFixed(1)} ${(cy + r[i] * Math.sin(a1)).toFixed(1)}`;
     }
   }
   return d;
 }
 
-function headsPath(g: Group, cx: number, cy: number, theta: number): string {
-  const rad = g.width * 0.9;
+/* The bright head at the leading end of each arc. */
+function headsPath(r: number[], a: number[], rad: number, cx: number, cy: number, theta: number): string {
+  "worklet";
   let d = "";
-  for (const s of g.stars) {
-    const a = s.a + theta;
-    const x = cx + s.r * Math.cos(a), y = cy + s.r * Math.sin(a);
-    d += `M${f(x + rad)} ${f(y)}a${rad} ${rad} 0 1 0 ${-2 * rad} 0a${rad} ${rad} 0 1 0 ${2 * rad} 0`;
+  for (let i = 0; i < r.length; i++) {
+    const ang = a[i] + theta;
+    const x = cx + r[i] * Math.cos(ang);
+    const y = cy + r[i] * Math.sin(ang);
+    d += `M${(x + rad).toFixed(1)} ${y.toFixed(1)}a${rad} ${rad} 0 1 0 ${-2 * rad} 0a${rad} ${rad} 0 1 0 ${2 * rad} 0`;
   }
   return d;
 }
 
-/** The sky alone, filling its parent. `still` holds it at rest. */
-export function Sky({ still = false, seed }: { still?: boolean; seed?: number }) {
+type PathProps = Record<string, unknown>;
+let AnimatedPath: ComponentType<PathProps> | null = null;
+function animatedPath(svg: SvgModule): ComponentType<PathProps> {
+  if (!AnimatedPath) AnimatedPath = Reanimated.createAnimatedComponent(svg.Path) as unknown as ComponentType<PathProps>;
+  return AnimatedPath;
+}
+
+type TrailProps = { trail: Trail; cx: number; cy: number; theta: SharedValue<number>; Path: ComponentType<PathProps> };
+
+/* Memoised: their props never change, so a re-render of the sky (it
+   starts, reduce motion loads) doesn't touch the paths. */
+const TrailArcs = memo(function TrailArcs({ trail, cx, cy, theta, Path }: TrailProps) {
+  const { r, a } = trail;
+  const animatedProps = useAnimatedProps(() => ({ d: arcsPath(r, a, cx, cy, theta.value) }));
+  return <Path animatedProps={animatedProps} stroke={trail.style} strokeWidth={trail.width} strokeLinecap="round" fill="none" />;
+});
+
+const TrailHeads = memo(function TrailHeads({ trail, cx, cy, theta, Path }: TrailProps) {
+  const { r, a } = trail;
+  const rad = +(trail.width * 0.9).toFixed(2);
+  const animatedProps = useAnimatedProps(() => ({ d: headsPath(r, a, rad, cx, cy, theta.value) }));
+  return <Path animatedProps={animatedProps} fill={trail.style} />;
+});
+
+/** The sky alone, filling its parent. `still` holds it at rest; it turns from
+    the moment `start` is true (at once by default). */
+export function Sky({ still = false, start = true, seed }: { still?: boolean; start?: boolean; seed?: number }) {
   const { width: w, height: h } = useWindowDimensions();
   const svg = loadSvg();
   const stars = useMemo(() => scatterSky(seed ?? ((Math.random() * 4294967296) >>> 0), w, h), [seed, w, h]);
-  const groups = useMemo(() => groupsOf(stars), [stars]);
-  const [theta, setTheta] = useState(0);
+  const trails = useMemo(() => trailsOf(stars), [stars]);
+  const theta = useSharedValue(0);
   const rot = useRef(new Animated.Value(0)).current;
   const cx = w / 2, cy = h / 2;
+  /* The turn keeps its own clock: useFrameCallback registers the callback
+     afresh whenever it changes, and a fresh registration counts
+     timeSinceFirstFrame from zero — the sky would snap back to its dots.
+     A late frame advances it by no more than MAX_STEP_MS, so a stall
+     reads as a pause rather than a leap. */
+  const last = useSharedValue(-1);
+  const elapsed = useSharedValue(0);
+  const onFrame = useCallback((frame: FrameInfo) => {
+    "worklet";
+    const step = last.value < 0 ? 0 : Math.min(frame.timestamp - last.value, MAX_STEP_MS);
+    last.value = frame.timestamp;
+    elapsed.value += step;
+    theta.value = turned(elapsed.value / 1000);
+  }, [last, elapsed, theta]);
+  const turn = useFrameCallback(onFrame, false);
 
   useEffect(() => {
-    if (still) { setTheta(0); return; }
-    if (!svg) {
-      /* No arcs: the heads turn as one picture, easing in then steady. */
-      rot.setValue(0);
-      const anim = Animated.sequence([
-        Animated.timing(rot, { toValue: 0.3, duration: 450, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-        Animated.timing(rot, { toValue: 0.3 + 6 * TAU, duration: (6 * TAU / 1.3) * 1000, easing: Easing.linear, useNativeDriver: true }),
-      ]);
-      anim.start();
-      return () => anim.stop();
+    if (still || !start) { theta.value = 0; return; }
+    if (svg) {
+      last.value = -1;
+      elapsed.value = 0;
+      turn.setActive(true);
+      return () => turn.setActive(false);
     }
-    let raf = 0;
-    let start: number | null = null;
-    let last = 0;
-    const frame = (now: number) => {
-      if (start === null) start = now;
-      if (now - last >= 33) {
-        last = now;
-        setTheta(turned((now - start) / 1000));
-      }
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [still, svg, rot]);
+    /* No arcs: the heads turn as one picture, easing in then steady. */
+    rot.setValue(0);
+    const anim = Animated.sequence([
+      Animated.timing(rot, { toValue: 0.3, duration: 450, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(rot, { toValue: 0.3 + 6 * TAU, duration: (6 * TAU / 1.3) * 1000, easing: Easing.linear, useNativeDriver: true }),
+    ]);
+    anim.start();
+    return () => anim.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [still, start, svg, rot]);
 
   if (svg) {
-    const { Svg, Path } = svg;
+    const { Svg } = svg;
+    const P = animatedPath(svg);
+    /* Drawn at half size and shown at full: the arcs are redrawn on the
+       CPU every frame, and a quarter of the pixels keeps that inside a
+       frame (the site caps its canvas at 1.5x for the same reason). */
     return (
-      <Svg width={w} height={h} style={StyleSheet.absoluteFill} pointerEvents="none">
-        {groups.map((g, i) => (
-          <Path key={`t${i}`} d={arcsPath(g, cx, cy, theta)} stroke={g.style} strokeWidth={g.width} fill="none" strokeLinecap={theta < 0.002 ? "round" : "butt"} />
-        ))}
-        {groups.filter((g) => g.width >= 1).map((g, i) => (
-          <Path key={`h${i}`} d={headsPath(g, cx, cy, theta)} fill={g.style} />
-        ))}
-      </Svg>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Svg
+          width={w * DRAW_SCALE}
+          height={h * DRAW_SCALE}
+          viewBox={`0 0 ${w} ${h}`}
+          style={{ position: "absolute", left: (w - w * DRAW_SCALE) / 2, top: (h - h * DRAW_SCALE) / 2, transform: [{ scale: 1 / DRAW_SCALE }] }}
+        >
+          {trails.map((t, i) => <TrailArcs key={`t${i}`} trail={t} cx={cx} cy={cy} theta={theta} Path={P} />)}
+          {trails.map((t, i) => (t.width >= 1 ? <TrailHeads key={`h${i}`} trail={t} cx={cx} cy={cy} theta={theta} Path={P} /> : null))}
+        </Svg>
+      </View>
     );
   }
   const rotate = rot.interpolate({ inputRange: [0, TAU], outputRange: ["0rad", `${TAU}rad`] });
@@ -207,20 +260,27 @@ export function LoadingLine({ label = "Loading" }: { label?: string }) {
   );
 }
 
-/** The whole screen: black, the sky turning, the mark at the centre after `markAt` ms. */
-export function LoadingScreen({ label, markAt = 1000 }: { label?: string; markAt?: number }) {
+/** The whole screen: black, the sky turning, the mark at the centre after
+    `markAt` ms — both counted from `start` (at once by default). */
+export function LoadingScreen({ label, markAt = 1000, start = true }: { label?: string; markAt?: number; start?: boolean }) {
   const reduce = useReduceMotion();
   const svg = loadSvg();
   const { width: w, height: h } = useWindowDimensions();
-  const mark = useRef(new Animated.Value(0)).current;
+  const mark = useSharedValue(0);
+  /* A sky that waits for `start` comes up out of the black as it begins. */
+  const skyIn = useSharedValue(start ? 1 : 0);
   useEffect(() => {
-    const t = setTimeout(() => Animated.timing(mark, { toValue: 1, duration: reduce ? 0 : 800, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(), reduce ? 0 : markAt);
-    return () => clearTimeout(t);
-  }, [mark, markAt, reduce]);
-  const scale = mark.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+    if (!start) return;
+    skyIn.value = reduce ? 1 : withTiming(1, { duration: 300, easing: REasing.out(REasing.quad) });
+    mark.value = reduce ? 1 : withDelay(markAt, withTiming(1, { duration: 800, easing: REasing.out(REasing.cubic) }));
+  }, [mark, skyIn, markAt, reduce, start]);
+  const skyStyle = useAnimatedStyle(() => ({ opacity: skyIn.value }));
+  const markStyle = useAnimatedStyle(() => ({ opacity: mark.value, transform: [{ scale: 0.94 + 0.06 * mark.value }] }));
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: "#000", overflow: "hidden" }]}>
-      <Sky still={reduce} />
+      <Reanimated.View style={[StyleSheet.absoluteFill, skyStyle]} pointerEvents="none">
+        <Sky still={reduce} start={start} />
+      </Reanimated.View>
       {svg && (() => {
         const { Svg, Defs, RadialGradient, Stop, Ellipse } = svg;
         return (
@@ -236,7 +296,7 @@ export function LoadingScreen({ label, markAt = 1000 }: { label?: string; markAt
           </Svg>
         );
       })()}
-      <Animated.View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", opacity: mark, transform: [{ scale }] }}>
+      <Reanimated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }, markStyle]}>
         <Image source={require("../assets/as-mark.png")} style={{ height: 22, width: 22 * MARK_RATIO }} resizeMode="contain" accessibilityLabel="AgoraSphere" />
         {!!label && (
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 14 }}>
@@ -244,7 +304,7 @@ export function LoadingScreen({ label, markAt = 1000 }: { label?: string; markAt
             <Ellipsis />
           </View>
         )}
-      </Animated.View>
+      </Reanimated.View>
     </View>
   );
 }

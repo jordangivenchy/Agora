@@ -19,7 +19,7 @@ type Slide =
   | { kind: "post"; key: string; post: FeaturedPost }
   | { kind: "news"; key: string; story: NewsStory };
 
-export function HeroCarousel({ rooms, posts, news }: { rooms: HeroRoom[]; posts: FeaturedPost[]; news: NewsStory[] }) {
+export function HeroCarousel({ rooms, posts, news, onSettled }: { rooms: HeroRoom[]; posts: FeaturedPost[]; news: NewsStory[]; onSettled?: () => void }) {
   const { width } = useWindowDimensions();
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
@@ -45,6 +45,12 @@ export function HeroCarousel({ rooms, posts, news }: { rooms: HeroRoom[]; posts:
     () => Math.max(HERO_HEIGHT, ...slides.map((s) => (s.kind === "post" ? postHeights[s.post.id] ?? 0 : 0))),
     [slides, postHeights],
   );
+  /* Settled: there are slides and every post has been measured, so the
+     hero is at its final height (the opening waits for this). */
+  const pending = slides.some((s) => s.kind === "post" && postHeights[s.post.id] === undefined);
+  useEffect(() => {
+    if (slides.length && !pending) onSettled?.();
+  }, [slides.length, pending, onSettled]);
 
   /* Auto-advance, except right after a swipe; the wrap to the first
      slide jumps rather than rewinding through every slide. */

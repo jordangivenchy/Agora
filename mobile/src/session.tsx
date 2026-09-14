@@ -94,6 +94,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!alive) return;
       setSession(data.session);
       setPass(storedPass);
+      /* A pass already opens the door whatever the gate says, so the app
+         stands up now and the probe below only fills in the answer; the
+         door waits on it only for those without one. */
+      if (storedPass) setReady(true);
       /* An empty key answers 200 when the gate is off, 401 when it is on. */
       try {
         const res = await apiFetch("/api/beta", {}, { method: "POST", body: JSON.stringify({ code: "" }) });
