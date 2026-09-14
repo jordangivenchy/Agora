@@ -12,6 +12,7 @@ import { fetchNews, type NewsStory } from "../../src/home";
 import { newsTimeAgo, outletIcon, topicFor } from "../../src/discover";
 import { useCreate } from "../../src/create";
 import { HomeHeader } from "../../src/header";
+import { withProgress } from "../../src/progress";
 import { openUrl } from "../../src/web";
 import { isQueuedFor, openQueue } from "../../src/queue";
 import { colors, fonts } from "../../src/theme";
@@ -41,7 +42,7 @@ export default function News() {
       setStories((s) => s ?? []);
     }
   }, [token, pass]);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
 
   const majors = (stories ?? []).filter((s) => s.major);
   const rest = (stories ?? []).filter((s) => !s.major);

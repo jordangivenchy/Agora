@@ -7,6 +7,7 @@ import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchBoard, fetchFeatured, fetchHeroRooms, fetchNews, type BoardRoom, type FeaturedPost, type HeroRoom, type NewsStory, type TopicRow } from "../../src/home";
 import { HomeHeader } from "../../src/header";
+import { withProgress } from "../../src/progress";
 import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
 import { TopicBoard } from "../../src/board";
@@ -74,10 +75,11 @@ export default function Home() {
     }
   }, [token, pass]);
 
-  /* Fresh on focus, every half minute in front, and back from the background. */
+  /* Fresh on focus (under the yellow bar), and quietly every half minute
+     in front and back from the background. */
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void withProgress(load());
       const tick = setInterval(() => void load(), 30_000);
       const sub = AppState.addEventListener("change", (s) => { if (s === "active") void load(); });
       return () => { clearInterval(tick); sub.remove(); };

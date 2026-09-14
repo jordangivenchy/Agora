@@ -1,4 +1,5 @@
-/* The site's top bar on a phone: the wordmark, search, and you. */
+/* The site's top bar on a phone: the wordmark, search, and you, with
+   the yellow loading bar along its bottom edge (progress.tsx). */
 import { useEffect, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -8,6 +9,7 @@ import { useSession } from "./session";
 import { useMe } from "./me";
 import { Dropdown } from "./dropdown";
 import { useUnread, watchUnread } from "./notifications";
+import { ProgressBar } from "./progress";
 import { colors, fonts } from "./theme";
 
 const LOGO_RATIO = 2039 / 274;
@@ -75,6 +77,7 @@ export function HomeHeader() {
           </Pressable>
         )}
       </View>
+      <ProgressBar />
       {/* The site's avatar menu, dropping from under the avatar. */}
       <Dropdown
         open={menu}

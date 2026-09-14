@@ -19,6 +19,7 @@ import { RichText, plainPreview } from "../../src/richText";
 import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
+import { withProgress } from "../../src/progress";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -50,7 +51,7 @@ export default function Feed() {
       setLoading(false);
     }
   }, [uid, filter]);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
   useEffect(() => {
     if (!uid) return;
     const ch = supabase.channel("feed-rooms").on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();

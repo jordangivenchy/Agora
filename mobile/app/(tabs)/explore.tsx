@@ -9,6 +9,7 @@ import { fetchExploreRooms, fetchExploreStats, type ExploreRoom, type ExploreSta
 import { RoomSquare } from "../../src/roomCard";
 import { TOPICS, darkInkOn } from "../../src/topics";
 import { HomeHeader } from "../../src/header";
+import { withProgress } from "../../src/progress";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -44,7 +45,7 @@ export default function Explore() {
       setRooms((r) => r ?? []);
     }
   }, []);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
 
   const list = useMemo(() => {
     if (!rooms) return null;

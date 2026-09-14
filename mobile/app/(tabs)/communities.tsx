@@ -11,6 +11,7 @@ import { useSession } from "../../src/session";
 import { fetchCommunities, fetchPosts, setFavorite, toggleJoin, votePost, type Community, type PostRow, type PostSort } from "../../src/communities";
 import { CARD, CommunityTile, META, PostCard, SortChips } from "../../src/postCard";
 import { HomeHeader } from "../../src/header";
+import { withProgress } from "../../src/progress";
 import { fetchCommunityRooms, type CommunityRoom } from "../../src/communityAdmin";
 import { ApplySheet } from "../../src/communitySheets";
 import { ReminderBell, useReminders } from "../../src/reminders";
@@ -48,7 +49,7 @@ export default function Communities() {
       setLoading(false);
     }
   }, [uid, sort]);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
 
   const needSignIn = () => { router.push("/sign-in"); };
 

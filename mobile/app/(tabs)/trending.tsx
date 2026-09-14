@@ -9,6 +9,7 @@ import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, roomDuration, ty
 import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
+import { withProgress } from "../../src/progress";
 import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
@@ -32,7 +33,7 @@ export default function Trending() {
       setRooms((r) => r ?? []);
     }
   }, []);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
   useEffect(() => {
     const ch = supabase.channel("trending-rooms").on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();
     return () => { void supabase.removeChannel(ch); };
