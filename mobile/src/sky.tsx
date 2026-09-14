@@ -19,10 +19,11 @@ type Star = { r: number; a: number; w: number; style: string };
 type Trail = { style: string; width: number; r: number[]; a: number[] };
 
 const COLOURS: [number, number, number][] = [[200, 225, 255], [120, 170, 255], [255, 240, 214], [255, 183, 0]];
-const SIZES: [number, number][] = [[0.7, 0.4], [1.2, 0.62], [1.9, 0.9]];
+/* Line widths a touch over the site's (0.7, 1.2, 1.9): drawn scaled down, its hairlines broke up. */
+const SIZES: [number, number][] = [[0.9, 0.4], [1.3, 0.62], [1.9, 0.9]];
 const TAU = Math.PI * 2;
 const MARK_RATIO = 426 / 202;
-const DRAW_SCALE = 0.5; // the turning sky's drawing size against the screen
+const DRAW_SCALE = 0.75; // the turning sky's drawing size against the screen
 const MAX_STEP_MS = 20; // the most one frame may move the sky on
 
 function seeded(seed: number) {
@@ -196,9 +197,10 @@ export function Sky({ still = false, start = true, seed }: { still?: boolean; st
   if (svg) {
     const { Svg } = svg;
     const P = animatedPath(svg);
-    /* Drawn at half size and shown at full: the arcs are redrawn on the
-       CPU every frame, and a quarter of the pixels keeps that inside a
-       frame (the site caps its canvas at 1.5x for the same reason). */
+    /* Drawn at three-quarter size and shown at full: the arcs are redrawn
+       on the CPU every frame, and fewer pixels keep that inside a frame
+       (the site caps its canvas at 1.5x for the same reason). Half size
+       was cheaper still, but its thinnest lines came out broken. */
     return (
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <Svg
