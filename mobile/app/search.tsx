@@ -4,7 +4,7 @@
    people across, posts and comments and communities down. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Stack, router } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../src/supabase";
 import { useSession } from "../src/session";
@@ -33,7 +33,9 @@ function Highlight({ text, query, style }: { text: string; query: string; style?
 export default function Search() {
   const { session } = useSession();
   const uid = session?.user.id ?? null;
-  const [raw, setRaw] = useState("");
+  /* A search link from a post (/search?q=…) arrives with its words. */
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [raw, setRaw] = useState(() => (typeof q === "string" ? q : ""));
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<SearchKind>("all");
   const [rows, setRows] = useState<SearchRow[] | null>(null);
@@ -149,7 +151,19 @@ export default function Search() {
   const renderOther = (r: SearchRow) => {
     if (r.kind === "post") {
       const p = r.payload;
-      return <PostCard key={r.id} post={p} showCommunity communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }} onVote={(v) => void vote(p, v)} onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: p.id } })} onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: p.community_id } })} />;
+      return (
+        <PostCard
+          key={r.id}
+          post={p}
+          showCommunity
+          communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url }}
+          onVote={(v) => void vote(p, v)}
+          onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: p.id } })}
+          onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: p.community_id } })}
+          onChanged={(patch) => setRows((list) => list?.map((x) => (x.kind === "post" && x.id === p.id ? { ...x, payload: { ...x.payload, ...patch } } : x)) ?? list)}
+          onRemoved={() => setRows((list) => list?.filter((x) => !(x.kind === "post" && x.id === p.id)) ?? list)}
+        />
+      );
     }
     if (r.kind === "comment") {
       const c = r.payload;

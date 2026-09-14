@@ -136,7 +136,17 @@ export default function CommunityScreen() {
         }
         renderItem={({ item }) => (
           <View style={{ paddingHorizontal: 16 }}>
-            <PostCard post={item} onVote={(v) => vote(item, v)} onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: item.id } })} />
+            <PostCard
+              post={item}
+              onVote={(v) => vote(item, v)}
+              onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: item.id } })}
+              onChanged={(patch) => {
+                setPosts((ps) => ps.map((x) => (x.id === item.id ? { ...x, ...patch } : x)));
+                /* Pinned posts lead the community's feed: re-sort from the server. */
+                if ("pinned_at" in patch) void load();
+              }}
+              onRemoved={() => setPosts((ps) => ps.filter((x) => x.id !== item.id))}
+            />
           </View>
         )}
         ListEmptyComponent={

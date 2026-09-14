@@ -111,7 +111,17 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
   } else if (tab === "posts" || tab === "reposts") {
     const list = tab === "posts" ? own : reposts;
     body = list.length === 0 ? empty(tab === "posts" ? "No posts yet." : "No reposts yet.") : list.map((p) => (
-      <PostCard key={p.id} post={p} showCommunity communityArt={{ name: p.community_name }} onVote={(v) => vote(p, v)} onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: p.id } })} onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: p.community_id } })} />
+      <PostCard
+        key={p.id}
+        post={p}
+        showCommunity
+        communityArt={{ name: p.community_name }}
+        onVote={(v) => vote(p, v)}
+        onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: p.id } })}
+        onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: p.community_id } })}
+        onChanged={(patch) => setPosts((ps) => ps.map((x) => (x.id === p.id ? { ...x, ...patch } : x)))}
+        onRemoved={() => setPosts((ps) => ps.filter((x) => x.id !== p.id))}
+      />
     ));
   } else if (tab === "comments") {
     body = comments.length === 0 ? empty("No comments yet.") : comments.map((c) => (

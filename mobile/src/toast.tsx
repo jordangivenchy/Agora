@@ -1,5 +1,7 @@
 /* A line at the bottom for a moment: "Following @x", "Profile link
-   copied". One host at the root; showToast from anywhere. */
+   copied". One host at the root; showToast from anywhere. The fade runs
+   on the JS driver: a native-driven view mounted in the same moment it
+   starts animating never drew on iOS (the reactions had the same fault). */
 import { useEffect, useRef, useState } from "react";
 import { Animated, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,9 +22,9 @@ export function ToastHost() {
     push = (m) => {
       setMsg(m);
       if (timer.current) clearTimeout(timer.current);
-      Animated.timing(t, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      Animated.timing(t, { toValue: 1, duration: 180, useNativeDriver: false }).start();
       timer.current = setTimeout(() => {
-        Animated.timing(t, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setMsg(null));
+        Animated.timing(t, { toValue: 0, duration: 220, useNativeDriver: false }).start(() => setMsg(null));
       }, 2400);
     };
     return () => { push = null; };

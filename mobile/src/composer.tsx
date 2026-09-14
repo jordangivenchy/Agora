@@ -4,8 +4,9 @@
    line too for posts — then the row of GIF, picture, emoji and Aa for
    the formatting strip; the community's tags and, for a verified
    account, the conversation people can queue into; a clip riding along
-   from its page. */
-import { useEffect, useRef, useState } from "react";
+   from its page. Typing @ offers people (search_mention_users, as the
+   site's editor does). The same sheet edits a post's text. */
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import { GifPicker, giphyEnabled } from "./gifPicker";
 import { pickImage, uploadPostImage, type PickedImage } from "./postImages";
 import { fetchTags, type Tag } from "./communities";
 import { TagChip } from "./postCard";
+import { Avatar } from "./avatar";
 import { TOPICS } from "./topics";
 import { cleanTextError, BODY_MIN, NAME_MIN } from "./cleanText";
 import { colors, fonts } from "./theme";
@@ -27,9 +29,13 @@ export const EMPTY_TOPIC: TopicDraft = { on: false, question: "", topicKey: "pol
 export interface ComposerResult { title: string; body: string; imageUrl: string | null; tagId: string | null; topic: TopicDraft | null }
 export interface ComposeClip { id: string; title: string; duration: string | null }
 
-export function ComposerSheet({ open, kind, context, contextName, communityId, userId, canAttachTopic, clip, onClose, onSubmit }: {
+type MentionUser = { id: string; username: string; display_name: string | null; avatar_url: string | null };
+
+export function ComposerSheet({ open, kind, initialBody, context, contextName, communityId, userId, canAttachTopic, clip, onClose, onSubmit }: {
   open: boolean;
-  kind: "post" | "comment";
+  /** "edit": a post's text only, prefilled, saved in place. */
+  kind: "post" | "comment" | "edit";
+  initialBody?: string;
   /** For replies: the line under the buttons, e.g. the comment answered. */
   context?: string | null;
   contextName?: string | null;
@@ -58,21 +64,51 @@ export function ComposerSheet({ open, kind, context, contextName, communityId, u
   const [topic, setTopic] = useState<TopicDraft>(EMPTY_TOPIC);
   const [sel, setSel] = useState({ start: 0, end: 0 });
   const bodyRef = useRef<TextInput>(null);
+  const [mentions, setMentions] = useState<MentionUser[]>([]);
   useEffect(() => {
-    if (open) { setTitle(clip?.title ?? ""); setBody(""); setError(null); setBusy(false); setAttach(null); setGif(null); setPicker(null); setFormat(false); setTagId(null); setTopic(EMPTY_TOPIC); }
-  }, [open, clip?.title]);
+    if (open) { setTitle(clip?.title ?? ""); setBody(initialBody ?? ""); setError(null); setBusy(false); setAttach(null); setGif(null); setPicker(null); setFormat(false); setTagId(null); setTopic(EMPTY_TOPIC); setMentions([]); }
+  }, [open, clip?.title, initialBody]);
+
+  /* The @name being typed right before the caret, as the site's editor
+     finds it: at the start or after anything but a word character or a
+     slash, so an email address never asks. */
+  const mentionAt = useMemo(() => {
+    if (!userId) return null;
+    const m = /(^|[^\w/])@([A-Za-z0-9_]{1,20})$/.exec(body.slice(0, sel.start));
+    return m ? { query: m[2], start: sel.start - m[2].length - 1 } : null;
+  }, [body, sel.start, userId]);
+  const mentionQuery = mentionAt?.query ?? null;
+  useEffect(() => {
+    if (!mentionQuery) { setMentions([]); return; }
+    let live = true;
+    const t = setTimeout(() => {
+      void supabase.rpc("search_mention_users", { p_query: mentionQuery, p_limit: 5 }).then(({ data }) => {
+        if (live) setMentions((data ?? []) as MentionUser[]);
+      });
+    }, 180);
+    return () => { live = false; clearTimeout(t); };
+  }, [mentionQuery]);
+  const pickMention = (u: MentionUser) => {
+    if (!mentionAt) return;
+    const end = mentionAt.start + 1 + mentionAt.query.length;
+    const caret = mentionAt.start + u.username.length + 2;
+    setBody(body.slice(0, mentionAt.start) + "@" + u.username + " " + body.slice(end));
+    setSel({ start: caret, end: caret });
+    setMentions([]);
+    requestAnimationFrame(() => bodyRef.current?.setSelection(caret, caret));
+  };
   useEffect(() => {
     if (!open || kind !== "post" || !communityId) { setTags([]); return; }
     void fetchTags(supabase, communityId).then(setTags);
   }, [open, kind, communityId]);
 
-  const max = kind === "post" ? POST_BODY_MAX : 4000;
-  const canSend = !busy && (kind === "post" ? !!title.trim() : !!body.trim() || !!attach || !!gif) && body.length <= max;
-  const insert = (s: string, wrap?: string) => {
+  const max = kind === "comment" ? 4000 : POST_BODY_MAX;
+  const canSend = !busy && (kind === "post" ? !!title.trim() : kind === "edit" ? true : !!body.trim() || !!attach || !!gif) && body.length <= max;
+  const insert = (s: string, wrap?: string, close?: string) => {
     setBody((cur) => {
       const start = Math.min(sel.start, cur.length), end = Math.min(sel.end, cur.length);
       const picked = cur.slice(start, end);
-      const piece = wrap ? `${wrap}${picked || s}${wrap}` : s;
+      const piece = wrap ? `${wrap}${picked || s}${close ?? wrap}` : s;
       return cur.slice(0, start) + piece + cur.slice(end);
     });
   };
@@ -110,9 +146,9 @@ export function ComposerSheet({ open, kind, context, contextName, communityId, u
         <View style={{ backgroundColor: colors.surface2, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: "#23232b", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 + insets.bottom, maxHeight: Math.round(height * 0.86) }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 36 }}>
             <Pressable onPress={onClose} hitSlop={8}><Text style={{ color: "#c3c3ce", fontFamily: fonts.body, fontSize: 15 }}>Cancel</Text></Pressable>
-            <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{kind === "post" ? (clip ? "Post clip" : "New post") : "Comment"}</Text>
+            <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{kind === "post" ? (clip ? "Post clip" : "New post") : kind === "edit" ? "Edit post" : "Comment"}</Text>
             <Pressable onPress={() => void send()} disabled={!canSend} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.yellow, alignItems: "center", justifyContent: "center", opacity: canSend ? 1 : 0.45 }}>
-              <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13 }}>{busy ? "Sending…" : kind === "post" ? "Post" : "Comment"}</Text>
+              <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13 }}>{busy ? (kind === "edit" ? "Saving…" : "Sending…") : kind === "post" ? "Post" : kind === "edit" ? "Save" : "Comment"}</Text>
             </Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>
@@ -134,7 +170,7 @@ export function ComposerSheet({ open, kind, context, contextName, communityId, u
                 {fmt("• List", () => insert("\n- "))}
                 {fmt("1. List", () => insert("\n1. "))}
                 {fmt("Link", () => insert("[text](https://)"))}
-                {fmt("Spoiler", () => insert("spoiler", "||"))}
+                {fmt("Spoiler", () => insert("spoiler", ">!", "!<"))}
               </View>
             )}
             <TextInput
@@ -142,9 +178,9 @@ export function ComposerSheet({ open, kind, context, contextName, communityId, u
               value={body}
               onChangeText={setBody}
               onSelectionChange={(e) => setSel(e.nativeEvent.selection)}
-              placeholder={kind === "post" ? (clip ? "Say something about the clip (optional — @ to mention someone)" : "Text (optional — @ to mention someone)") : "Take the floor"}
+              placeholder={kind === "post" ? (clip ? "Say something about the clip (optional — @ to mention someone)" : "Text (optional — @ to mention someone)") : kind === "edit" ? "Text (optional — @ to mention someone)" : "Take the floor"}
               placeholderTextColor={colors.faint}
-              autoFocus={kind === "comment" || !!clip}
+              autoFocus={kind !== "post" || !!clip}
               multiline
               maxLength={max}
               style={{ color: colors.text, fontFamily: fonts.body, fontSize: 16, lineHeight: 22, minHeight: 96, maxHeight: 220, paddingVertical: 10, textAlignVertical: "top" }}
@@ -196,9 +232,20 @@ export function ComposerSheet({ open, kind, context, contextName, communityId, u
             {error && <Text style={{ color: "#ff9d92", fontFamily: fonts.body, fontSize: 12.5, marginTop: 4 }}>{error}</Text>}
             {body.length > max * 0.9 && <Text style={{ color: body.length > max ? "#e26b6b" : "rgba(238,238,245,0.35)", fontFamily: fonts.body, fontSize: 11, marginTop: 4 }}>{body.length.toLocaleString()} / {max.toLocaleString()}</Text>}
           </ScrollView>
+          {mentions.length > 0 && (
+            <View accessibilityLabel="People to mention" style={{ paddingVertical: 4, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
+              {mentions.map((u) => (
+                <Pressable key={u.id} onPress={() => pickMention(u)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7, paddingHorizontal: 4, borderRadius: 8, backgroundColor: pressed ? "#26262e" : "transparent" })}>
+                  <Avatar url={u.avatar_url} name={u.username} size={22} />
+                  <Text style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>@{u.username}</Text>
+                  {!!u.display_name?.trim() && <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 12 }}>{u.display_name}</Text>}
+                </Pressable>
+              ))}
+            </View>
+          )}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2, paddingTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
-            {giphyEnabled && tool(<Text style={{ color: "rgba(255,255,255,0.7)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5 }}>GIF</Text>, () => setPicker("gif"))}
-            {tool(<Ionicons name="image-outline" size={22} color="rgba(255,255,255,0.7)" />, () => void attachPhoto())}
+            {giphyEnabled && kind !== "edit" && tool(<Text style={{ color: "rgba(255,255,255,0.7)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5 }}>GIF</Text>, () => setPicker("gif"))}
+            {kind !== "edit" && tool(<Ionicons name="image-outline" size={22} color="rgba(255,255,255,0.7)" />, () => void attachPhoto())}
             {tool(<Ionicons name="happy-outline" size={22} color="rgba(255,255,255,0.7)" />, () => setPicker("emoji"))}
             <View style={{ width: 1, height: 20, backgroundColor: "#2a2a34", marginHorizontal: 6 }} />
             {tool(<Text style={{ color: format ? colors.yellow : "rgba(255,255,255,0.7)", fontFamily: fonts.bold, fontSize: 14 }}>Aa</Text>, () => setFormat((f) => !f), format)}

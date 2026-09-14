@@ -74,7 +74,16 @@ export default function Feed() {
       return (
         <View>
           {reason}
-          <PostCard post={p} showCommunity communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url ?? null }} onVote={(v) => vote(p, v)} onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: p.id } })} onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: p.community_id } })} />
+          <PostCard
+            post={p}
+            showCommunity
+            communityArt={{ name: p.community_name, color: p.community_color, avatarUrl: p.community_avatar_url ?? null }}
+            onVote={(v) => vote(p, v)}
+            onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: p.id } })}
+            onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: p.community_id } })}
+            onChanged={(patch) => setItems((its) => (its ?? []).map((x) => ((x.kind === "post" || x.kind === "repost") && x.payload.id === p.id ? { ...x, payload: { ...x.payload, ...patch } } : x)))}
+            onRemoved={() => setItems((its) => (its ?? []).filter((x) => !((x.kind === "post" || x.kind === "repost") && x.payload.id === p.id)))}
+          />
         </View>
       );
     }

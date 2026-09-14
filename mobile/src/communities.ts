@@ -136,11 +136,19 @@ export async function fetchPosts(supabase: SupabaseClient, opts: { community: st
   return (data ?? []) as PostRow[];
 }
 
+/* get_community_post predates the edit and feature columns (the list RPC
+   carries them), so the thread reads those two from the row itself: the
+   "edited" mark and a moderator's "Remove from home" depend on them. */
 export async function fetchPost(supabase: SupabaseClient, id: string): Promise<PostRow | null> {
-  const { data, error } = await supabase.rpc("get_community_post", { p_post: id });
+  const [{ data, error }, extra] = await Promise.all([
+    supabase.rpc("get_community_post", { p_post: id }),
+    supabase.from("community_posts").select("featured_at, edited_at").eq("id", id).maybeSingle(),
+  ]);
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as PostRow[];
-  return rows[0] ?? null;
+  const row = ((data ?? []) as PostRow[])[0];
+  if (!row) return null;
+  const more = (extra.data ?? null) as { featured_at: string | null; edited_at: string | null } | null;
+  return more ? { ...row, featured_at: more.featured_at, edited_at: more.edited_at } : row;
 }
 
 /* The RPCs don't carry avatars; fetched once per author and kept. */

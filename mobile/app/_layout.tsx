@@ -7,6 +7,7 @@ import { CallProvider } from "../src/callSession";
 import { CallHost } from "../src/callHost";
 import { CreateProvider } from "../src/create";
 import { UserMenuProvider } from "../src/userMenu";
+import { PostActionsProvider } from "../src/postActions";
 import { ToastHost } from "../src/toast";
 import { LightboxHost } from "../src/lightbox";
 import { BootSplash } from "../src/boot";
@@ -44,6 +45,7 @@ export default function RootLayout() {
         <CallHost>
           <CreateProvider>
             <UserMenuProvider>
+              <PostActionsProvider>
               <View style={{ flex: 1, backgroundColor: "#000" }}>
                 <StatusBar style="light" />
                 {fontsReady && (
@@ -88,6 +90,7 @@ export default function RootLayout() {
                 <LightboxHost />
                 <Boot fontsReady={fontsReady} />
               </View>
+              </PostActionsProvider>
             </UserMenuProvider>
           </CreateProvider>
         </CallHost>

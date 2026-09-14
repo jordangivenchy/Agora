@@ -1,11 +1,14 @@
 /* A thread, as the site shows it on a phone: the post whole, then the
-   comments — the avatar row, the text beneath, the actions to the right,
-   replies hanging off a rail — and the dock to take the floor. */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+   comments — the avatar row, the text beneath, the actions to the right
+   (reply, share, the ⋯ sheet; press and hold opens it too), replies
+   hanging off a rail — and the dock to take the floor. A link to one
+   comment (#comment-id) opens the way to it and lights it. */
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { useMe } from "../../src/me";
@@ -13,6 +16,8 @@ import { buildTree, createComment, fetchAvatars, fetchComments, fetchPost, timeA
 import { Badge, META, PostCard, RoleBadge, SortChips } from "../../src/postCard";
 import { RichText, plainPreview } from "../../src/richText";
 import { ComposerSheet } from "../../src/composer";
+import { openCommentMenu } from "../../src/postMenu";
+import { copyPostLink } from "../../src/postActions";
 import { Avatar } from "../../src/avatar";
 import { openImage } from "../../src/lightbox";
 import { colors, fonts } from "../../src/theme";
@@ -22,7 +27,7 @@ const SORTS: { key: CommentSort; label: string }[] = [{ key: "top", label: "Top"
 type Art = { name: string; color: string | null; avatar_url: string | null };
 
 export default function ThreadScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, comment: focusId } = useLocalSearchParams<{ id: string; comment?: string }>();
   const { session } = useSession();
   const uid = session?.user.id ?? null;
   const me = useMe();
@@ -36,6 +41,12 @@ export default function ThreadScreen() {
   const [reply, setReply] = useState<{ open: boolean; parent: CommentRow | null }>({ open: false, parent: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const nodes = useRef(new Map<string, View>());
+  const focused = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -58,6 +69,28 @@ export default function ThreadScreen() {
 
   const tree = useMemo(() => buildTree(comments, sort), [comments, sort]);
 
+  /* A link to one comment: open the replies above it, bring it into
+     view, light it for a moment (the site's is-flash). */
+  useEffect(() => {
+    if (!focusId || focused.current === focusId) return;
+    const target = comments.find((c) => c.id === focusId);
+    if (!target) return;
+    focused.current = focusId;
+    const byId = new Map(comments.map((c) => [c.id, c] as const));
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      for (let c: CommentRow | undefined = target; c; c = c.parent_id ? byId.get(c.parent_id) : undefined) next.delete(c.id);
+      return next;
+    });
+    setTimeout(() => {
+      const node = nodes.current.get(focusId);
+      const content = contentRef.current;
+      if (node && content) node.measureLayout(content, (_x, y) => scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true }), () => undefined);
+      setFlash(focusId);
+      setTimeout(() => setFlash((f) => (f === focusId ? null : f)), 1800);
+    }, 300);
+  }, [focusId, comments]);
+
   const votePostHere = (v: number) => {
     if (!post) return;
     if (!uid) return router.push("/sign-in");
@@ -72,6 +105,21 @@ export default function ThreadScreen() {
   };
   const toggle = (cid: string) => setCollapsed((prev) => { const n = new Set(prev); if (n.has(cid)) n.delete(cid); else n.add(cid); return n; });
   const openReply = (parent: CommentRow | null) => (uid ? setReply({ open: true, parent }) : router.push("/sign-in"));
+  const commentMenu = (c: CommentRow, isCollapsed: boolean) =>
+    openCommentMenu(c, post, {
+      onReply: () => openReply(c),
+      collapsed: isCollapsed,
+      onToggleCollapse: () => toggle(c.id),
+      onChanged: (patch) => setComments((cs) => cs.map((x) => (x.id === c.id ? { ...x, ...patch } : x))),
+      onRemoved: () => void load(),
+    });
+  const shareComment = (c: CommentRow) => {
+    void copyPostLink(c.post_id, c.id, true).then((ok) => {
+      if (!ok) return;
+      setCopied(c.id);
+      setTimeout(() => setCopied((x) => (x === c.id ? null : x)), 1600);
+    });
+  };
 
   const renderNode = (c: CommentRow, depth: number): ReactNode => {
     const kids = tree.children.get(c.id) ?? [];
@@ -79,8 +127,13 @@ export default function ThreadScreen() {
     const hidden = tree.subtreeSize(c.id);
     const isAuthor = !!post && !!c.author_id && c.author_id === post.author_id;
     return (
-      <View key={c.id}>
-        <Pressable onPress={() => toggle(c.id)} style={{ borderRadius: 10 }}>
+      <View key={c.id} collapsable={false} ref={(el) => { if (el) nodes.current.set(c.id, el); else nodes.current.delete(c.id); }}>
+        <Pressable
+          onPress={() => toggle(c.id)}
+          onLongPress={() => { void Haptics.selectionAsync().catch(() => undefined); commentMenu(c, isCollapsed); }}
+          delayLongPress={350}
+          style={{ borderRadius: 10, marginHorizontal: -6, paddingHorizontal: 6, backgroundColor: flash === c.id ? "#1a1708" : "transparent" }}
+        >
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7, minHeight: 24, opacity: isCollapsed ? 0.72 : 1 }}>
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author_username } })} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
               <Avatar url={avatars.get(c.author_id ?? "") ?? null} name={c.author_username} size={24} />
@@ -113,6 +166,13 @@ export default function ThreadScreen() {
                   <Ionicons name="arrow-undo-outline" size={13} color="#85858f" />
                   <Text style={{ color: "#85858f", fontFamily: fonts.semi, fontSize: 11.5 }}>Reply</Text>
                 </Pressable>
+                <Pressable onPress={() => shareComment(c)} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 6 }}>
+                  <Ionicons name={copied === c.id ? "checkmark" : "share-outline"} size={13} color={copied === c.id ? "#00b894" : "#85858f"} />
+                  <Text style={{ color: copied === c.id ? "#00b894" : "#85858f", fontFamily: fonts.semi, fontSize: 11.5 }}>{copied === c.id ? "Link copied" : "Share"}</Text>
+                </Pressable>
+                <Pressable onPress={() => commentMenu(c, isCollapsed)} hitSlop={6} accessibilityLabel="More" style={{ paddingVertical: 6, paddingHorizontal: 2 }}>
+                  <Ionicons name="ellipsis-horizontal" size={16} color="#85858f" />
+                </Pressable>
               </View>
             </>
           )}
@@ -130,7 +190,8 @@ export default function ThreadScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack.Screen options={{ title: post?.community_name ?? "Thread" }} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 + insets.bottom }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 100 + insets.bottom }}>
+        <View ref={contentRef} collapsable={false}>
         {post && (
           <PostCard
             post={post}
@@ -139,6 +200,8 @@ export default function ThreadScreen() {
             communityArt={{ name: post.community_name, color: art?.color, avatarUrl: art?.avatar_url ?? null }}
             onVote={votePostHere}
             onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: post.community_id } })}
+            onChanged={(patch) => setPost((cur) => (cur ? { ...cur, ...patch } : cur))}
+            onRemoved={() => router.back()}
           />
         )}
         {error && <Note tone="error">{error}</Note>}
@@ -153,6 +216,7 @@ export default function ThreadScreen() {
           <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 24 }}>No comments yet — start the discussion.</Text>
         )}
         <View style={{ gap: 14 }}>{tree.roots.map((r) => renderNode(r, 0))}</View>
+        </View>
       </ScrollView>
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10 + insets.bottom, backgroundColor: "#0a0a0d", borderTopWidth: 1, borderColor: "#1b1b21" }}>
         <Pressable onPress={() => openReply(null)} style={({ pressed }) => ({ height: 44, borderRadius: 22, backgroundColor: pressed ? "#1f1f26" : "#17171c", borderWidth: 1, borderColor: "#26262e", flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: 9, paddingRight: 16 })}>

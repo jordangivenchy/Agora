@@ -1,17 +1,21 @@
 /* The site's post card (components/community/PostCard.tsx): votes down
    the left, the community's tile, the meta line, the title, a two-line
    preview, the picture (tap to see it big), the clip it shares, the
-   conversation it carries, the repost's original, and the actions. The
-   thread view uses it whole. */
+   conversation it carries, the repost's original, and the actions:
+   comments, share, repost. The ⋯ menu sits at the top right, where a
+   phone's width has room for it (press and hold opens it too, as on the
+   site's phones). The thread view uses it whole. */
 import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { timeAgo, type PostRow } from "./communities";
 import { RichText } from "./richText";
 import { SITE } from "./api";
 import { openImage } from "./lightbox";
 import { clipIdInBody, stripClipLink } from "./clips";
 import { PostTopicQueue } from "./postTopic";
+import { openPostMenu, startRepost, type PostHandlers } from "./postMenu";
 import { colors, fonts } from "./theme";
 
 export const META = "rgba(238,238,245,0.5)";
@@ -79,7 +83,7 @@ export function VoteBox({ score, myVote, onVote, size = 13 }: { score: number; m
 
 export interface CommunityArt { name: string; color?: string | null; avatarUrl?: string | null }
 
-export function PostCard({ post: p, communityArt, showCommunity, full, onVote, onOpen, onOpenCommunity, actions }: {
+export function PostCard({ post: p, communityArt, showCommunity, full, onVote, onOpen, onOpenCommunity, actions, onChanged, onRemoved }: {
   post: PostRow;
   communityArt?: CommunityArt;
   showCommunity?: boolean;
@@ -88,14 +92,20 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
   onVote: (v: number) => void;
   onOpen?: () => void;
   onOpenCommunity?: () => void;
-  /** More actions on the row (repost, pin, delete…), from the page. */
+  /** More actions on the row, from the page. */
   actions?: React.ReactNode;
+  /** The menu changed the post here: pinned, featured, edited. */
+  onChanged?: PostHandlers["onChanged"];
+  /** The menu deleted it. */
+  onRemoved?: PostHandlers["onRemoved"];
 }) {
   const share = () => void Share.share({ message: p.title, url: `${SITE}/posts/${p.id}` }).catch(() => undefined);
+  const handlers: PostHandlers = { onChanged, onRemoved };
+  const menu = () => openPostMenu(p, handlers);
   const body = stripClipLink(p.body);
   const origBody = stripClipLink(p.orig_body);
   return (
-    <Pressable onPress={onOpen} disabled={!onOpen} style={({ pressed }) => [CARD, { padding: 14, marginBottom: 12, opacity: pressed ? 0.92 : 1 }]}>
+    <Pressable onPress={onOpen} onLongPress={() => { void Haptics.selectionAsync().catch(() => undefined); menu(); }} delayLongPress={350} style={({ pressed }) => [CARD, { padding: 14, marginBottom: 12, opacity: pressed && onOpen ? 0.92 : 1 }]}>
       <View style={{ flexDirection: "row", gap: 12 }}>
         <VoteBox score={p.score} myVote={p.my_vote} onVote={onVote} />
         {communityArt && (
@@ -104,7 +114,8 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
           </Pressable>
         )}
         <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
             <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10.5 }}>
               {showCommunity && <Text style={{ color: colors.gold }} onPress={onOpenCommunity}>{p.community_name} · </Text>}
               <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: p.author_username } })}>@{p.author_username}</Text> · {timeAgo(p.created_at)}{p.edited_at ? " · edited" : ""}
@@ -112,6 +123,10 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
             <RoleBadge role={p.author_role} />
             {p.pinned_at && <Badge label="PINNED" color={colors.blueText} icon="pin-outline" />}
             {p.tag_name && <TagChip name={p.tag_name} color={p.tag_color} />}
+          </View>
+            <Pressable onPress={menu} hitSlop={10} accessibilityLabel="More actions" style={({ pressed }) => ({ width: 28, height: 20, marginTop: -3, marginRight: -6, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#1a1a1f" : "transparent" })}>
+              <Ionicons name="ellipsis-horizontal" size={16} color="#c9c9d2" />
+            </Pressable>
           </View>
           <RichText text={p.title} numberOfLines={full ? undefined : 3} style={{ color: "#eeeef5", fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, marginTop: 2 }} />
           {!!body && (
@@ -151,6 +166,10 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
             <Pressable onPress={share} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Ionicons name="share-social-outline" size={13} color="#c9c9d2" />
               <Text style={{ color: "#c9c9d2", fontFamily: fonts.medium, fontSize: 11.5 }}>Share</Text>
+            </Pressable>
+            <Pressable onPress={() => startRepost(p, handlers)} hitSlop={6} accessibilityLabel="Repost" style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="repeat-outline" size={14} color="#c9c9d2" />
+              <Text style={{ color: "#c9c9d2", fontFamily: fonts.medium, fontSize: 11.5 }}>Repost</Text>
             </Pressable>
             {actions}
           </View>

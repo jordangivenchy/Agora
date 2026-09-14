@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { useUserMenu } from "./userMenu";
 import { BODY_MIN, cleanTextError } from "./cleanText";
+import { LinkedText } from "./linkText";
 import { colors, fonts } from "./theme";
 
 interface Message {
@@ -145,7 +146,7 @@ export function RoomChatSheet({ open, onClose, roomId, meId, messages }: { open:
                           <Text onPress={() => person(m)} numberOfLines={1} style={{ color: userColor(m.user_id), fontFamily: fonts.semi, fontSize: 12.5, flexShrink: 1 }}>{name}</Text>
                           <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 10 }}>{fmtTime(m.created_at)}</Text>
                         </View>
-                        <Text style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>{m.content}</Text>
+                        <LinkedText text={m.content} beforeOpen={onClose} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }} />
                       </View>
                     </View>
                   );

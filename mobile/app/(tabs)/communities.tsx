@@ -133,6 +133,8 @@ export default function Communities() {
               onVote={(v) => vote(item, v)}
               onOpen={() => router.push({ pathname: "/posts/[id]", params: { id: item.id } })}
               onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: item.community_id } })}
+              onChanged={(patch) => setPosts((ps) => ps.map((x) => (x.id === item.id ? { ...x, ...patch } : x)))}
+              onRemoved={() => setPosts((ps) => ps.filter((x) => x.id !== item.id))}
             />
           );
         }}

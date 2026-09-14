@@ -19,6 +19,7 @@ import { pickImage, type PickedImage } from "./postImages";
 import { CommunityTile } from "./postCard";
 import { QUICK_REACTIONS, dayLabel, displayName, fmtTime, isGif, type InviteMeta, type Reaction } from "./messages";
 import { showToast } from "./toast";
+import { LinkedText } from "./linkText";
 import { colors, fonts } from "./theme";
 
 export interface ChatMsg { id: string; sender_id: string | null; content: string; image_url: string | null; reply_to: string | null; created_at: string; kind?: "text" | "system"; read_at?: string | null; community_id?: string | null }
@@ -184,7 +185,7 @@ export function ChatThread(p: ChatThreadProps) {
                   {!mine && invite?.joined && <Text style={{ color: mine ? INK : "#f2f2f5", fontFamily: fonts.body, fontSize: 11, opacity: 0.7 }}>✓ Joined</Text>}
                 </View>
               </View>
-            ) : hasText && <Text style={{ color: mine ? INK : "#f2f2f5", fontFamily: fonts.body, fontSize: 15, lineHeight: 21, padding: m.image_url ? 5 : 0 }}>{m.content}</Text>}
+            ) : hasText && <LinkedText text={m.content} onLongPress={() => setMenuFor(m)} linkStyle={mine ? { color: INK } : undefined} style={{ color: mine ? INK : "#f2f2f5", fontFamily: fonts.body, fontSize: 15, lineHeight: 21, padding: m.image_url ? 5 : 0 }} />}
           </Pressable>
         </View>
         {rx.length > 0 && (
