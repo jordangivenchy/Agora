@@ -39,12 +39,16 @@ export function personName(p: Person | null): string {
 const FEATURED_DAYS = 14;
 const HERO_POSTS = 3;
 
+export type NoticeItem = { lead: string; detail: string };
+export type NoticeHighlights = { heading: string | null; items: NoticeItem[] };
+
 export interface FeaturedPost {
   id: string;
   title: string;
   excerpt: string;
-  /* The post's list, if it has one, as one line: "Live rooms · Queues …" */
-  tags: string;
+  /* The post's first list — its heading, each item's lead and detail
+     ("Live rooms" — "Start one from the + button…") — when it has two or more. */
+  highlights: NoticeHighlights | null;
   createdAt: string;
   community: { name: string; color: string | null } | null;
   comments: number;
@@ -78,25 +82,39 @@ function cutAtWord(text: string, max: number): string {
   const cut = text.slice(0, max);
   return cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 40)).trimEnd() + "…";
 }
-/* The opening paragraph, and the leads of the post's first list. */
-function postCopy(md: string): { excerpt: string; tags: string } {
+/* The notice's copy, as the site reads it (lib/homeData.ts noticeCopy):
+   the opening paragraph (the first block that is neither a heading nor a
+   list), and when the post goes on to a list, that list's heading and
+   each item's lead with the rest of the item as its detail. Items written
+   with a blank line between them count as one list. */
+function postCopy(md: string): { excerpt: string; highlights: NoticeHighlights | null } {
   const blocks = md.replace(/\r/g, "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
   const isItem = (line: string) => /^([-*+]|\d+\.)\s+/.test(line);
   const isList = (b: string) => b.split("\n").map((l) => l.trim()).filter(Boolean).every(isItem);
   const isHeading = (b: string) => /^#{1,6}\s/.test(b) || (!b.includes("\n") && b.length <= 60 && !/[.!?]$/.test(b));
   const opening = blocks.find((b) => !isList(b) && !isHeading(b)) ?? blocks[0] ?? "";
-  const list = blocks.find(isList);
-  const leads = (list ? list.split("\n") : [])
-    .map((l) => l.trim().replace(/^([-*+]|\d+\.)\s+/, ""))
-    .filter(Boolean)
-    .map((t) => {
+  const raw: string[] = [];
+  let heading: string | null = null;
+  for (let i = 0; i < blocks.length; i++) {
+    if (isList(blocks[i])) {
+      if (!raw.length && i > 0 && isHeading(blocks[i - 1])) heading = plain(blocks[i - 1]);
+      for (const line of blocks[i].split("\n")) {
+        const t = line.trim();
+        if (isItem(t)) raw.push(t.replace(/^([-*+]|\d+\.)\s+/, ""));
+      }
+    } else if (raw.length) break;
+  }
+  const items = raw
+    .map((t): NoticeItem => {
       const text = plain(t);
       const m = /[.!?:]\s|\s[—–-]\s/.exec(text);
-      return (m ? text.slice(0, m.index) : text).replace(/[.:!?]+$/, "").trim();
+      const lead = (m ? text.slice(0, m.index) : text).replace(/[.:!?]+$/, "").trim();
+      const detail = m ? text.slice(m.index + m[0].length).trim() : "";
+      return { lead: lead.length > 40 ? lead.slice(0, 39).trimEnd() + "…" : lead, detail: cutAtWord(detail, 110) };
     })
-    .filter(Boolean)
+    .filter((it) => it.lead)
     .slice(0, 5);
-  return { excerpt: cutAtWord(plain(opening), 320), tags: leads.join(" · ") };
+  return { excerpt: cutAtWord(plain(opening), 320), highlights: items.length >= 2 ? { heading, items } : null };
 }
 
 export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedPost[]> {
@@ -115,7 +133,7 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedP
       id: p.id,
       title: p.title,
       excerpt: copy.excerpt,
-      tags: copy.tags,
+      highlights: copy.highlights,
       createdAt: p.created_at,
       community: one(p.community),
       comments: p.comments?.[0]?.count ?? 0,

@@ -2,7 +2,7 @@
    day's stories, one slide each, in the site's order, advancing on their
    own with the dots below. No slide leaves a blank band: a panel is as
    tall as its words and the picture takes the rest; a post sits centred,
-   as on the site's phone layout. */
+   and the hero grows to the fullest post (its opening and its list). */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { router } from "expo-router";
@@ -10,6 +10,7 @@ import { dateLabel, personName, type FeaturedPost, type HeroRoom, type NewsStory
 import { openUrl } from "./web";
 import { colors, fonts } from "./theme";
 
+/* The hero's least height; a featured post with more to say makes it taller. */
 export const HERO_HEIGHT = 264;
 const AUTO_MS = 7000;
 
@@ -35,6 +36,15 @@ export function HeroCarousel({ rooms, posts, news }: { rooms: HeroRoom[]; posts:
   const curRef = useRef(0);
   const touchedAt = useRef(0);
   const list = useRef<FlatList<Slide>>(null);
+  const [postHeights, setPostHeights] = useState<Record<string, number>>({});
+  const measure = useCallback((id: string, h: number) => {
+    const v = Math.ceil(h);
+    setPostHeights((prev) => (prev[id] === v ? prev : { ...prev, [id]: v }));
+  }, []);
+  const height = useMemo(
+    () => Math.max(HERO_HEIGHT, ...slides.map((s) => (s.kind === "post" ? postHeights[s.post.id] ?? 0 : 0))),
+    [slides, postHeights],
+  );
 
   /* Auto-advance, except right after a swipe; the wrap to the first
      slide jumps rather than rewinding through every slide. */
@@ -74,12 +84,13 @@ export function HeroCarousel({ rooms, posts, news }: { rooms: HeroRoom[]; posts:
         pagingEnabled
         bounces={false}
         showsHorizontalScrollIndicator={false}
+        extraData={height}
         getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
         onScrollBeginDrag={() => { touchedAt.current = Date.now(); }}
         onMomentumScrollEnd={onEnd}
         renderItem={({ item }) => (
-          <View style={{ width, height: HERO_HEIGHT }}>
-            {item.kind === "post" ? <PostSlide post={item.post} /> : item.kind === "news" ? <NewsSlide story={item.story} /> : <RoomSlide room={item.room} />}
+          <View style={{ width, height }}>
+            {item.kind === "post" ? <PostSlide post={item.post} onMeasure={(h) => measure(item.post.id, h)} /> : item.kind === "news" ? <NewsSlide story={item.story} /> : <RoomSlide room={item.room} />}
           </View>
         )}
       />
@@ -94,31 +105,52 @@ export function HeroCarousel({ rooms, posts, news }: { rooms: HeroRoom[]; posts:
   );
 }
 
-/* "From the team": a post a moderator featured on the home page. */
-function PostSlide({ post }: { post: FeaturedPost }) {
+/* "From the team": a post a moderator featured on the home page — the
+   title, its opening, and the list it goes on to, each item's lead with
+   the start of its detail (the site's desktop notice, stacked for a
+   phone). Its natural height is reported so the hero fits the fullest
+   post. A tap anywhere opens the thread. */
+function PostSlide({ post, onMeasure }: { post: FeaturedPost; onMeasure: (h: number) => void }) {
+  const open = () => router.push({ pathname: "/posts/[id]", params: { id: post.id } });
+  const list = post.highlights;
   return (
-    <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20, paddingVertical: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={{ color: colors.yellow, fontFamily: fonts.title, fontSize: 12.5 }}>From the team</Text>
-        <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12 }}>·  {dateLabel(post.createdAt)}</Text>
+    <Pressable onPress={open} style={{ flex: 1, justifyContent: "center" }}>
+      <View onLayout={(e) => onMeasure(e.nativeEvent.layout.height)} style={{ paddingHorizontal: 20, paddingVertical: 14 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ color: colors.yellow, fontFamily: fonts.title, fontSize: 12.5 }}>From the team</Text>
+          <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12 }}>·  {dateLabel(post.createdAt)}</Text>
+        </View>
+        <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 22, lineHeight: 26, letterSpacing: -0.3, marginTop: 6 }}>{post.title}</Text>
+        <View style={{ width: 36, height: 3, borderRadius: 2, backgroundColor: colors.yellow, marginTop: 8 }} />
+        <Text numberOfLines={list ? 2 : 3} style={{ color: colors.soft, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, marginTop: 8 }}>{post.excerpt}</Text>
+        {list && (
+          <View style={{ marginTop: 12 }}>
+            {!!list.heading && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.3 }}>{list.heading}</Text>}
+            {list.items.map((it, i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.yellow, marginRight: 9 }} />
+                <Text numberOfLines={1} style={{ flex: 1, color: "#a3a3ae", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
+                  <Text style={{ color: colors.text, fontFamily: fonts.semi }}>{it.lead}</Text>
+                  {it.detail ? ` — ${it.detail}` : ""}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 }}>
+          <Pressable
+            onPress={open}
+            style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#ffc22e" : colors.yellow })}
+          >
+            <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 }}>Read more</Text>
+          </Pressable>
+          <Text style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }} numberOfLines={1}>
+            <Text style={{ fontFamily: fonts.bold, color: colors.soft }}>{post.comments}</Text> comments
+            {post.community ? <Text> · <Text style={{ fontFamily: fonts.bold, color: colors.soft }}>{post.community.name}</Text></Text> : null}
+          </Text>
+        </View>
       </View>
-      <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 22, lineHeight: 26, letterSpacing: -0.3, marginTop: 6 }}>{post.title}</Text>
-      <View style={{ width: 36, height: 3, borderRadius: 2, backgroundColor: colors.yellow, marginTop: 9 }} />
-      <Text numberOfLines={3} style={{ color: colors.soft, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, marginTop: 9 }}>{post.excerpt}</Text>
-      {!!post.tags && <Text numberOfLines={1} style={{ color: "#a7a7b3", fontFamily: fonts.medium, fontSize: 12.5, marginTop: 6 }}>{post.tags}</Text>}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
-        <Pressable
-          onPress={() => router.push({ pathname: "/posts/[id]", params: { id: post.id } })}
-          style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#ffc22e" : colors.yellow })}
-        >
-          <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 }}>Read more</Text>
-        </Pressable>
-        <Text style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }} numberOfLines={1}>
-          <Text style={{ fontFamily: fonts.bold, color: colors.soft }}>{post.comments}</Text> comments
-          {post.community ? <Text> · <Text style={{ fontFamily: fonts.bold, color: colors.soft }}>{post.community.name}</Text></Text> : null}
-        </Text>
-      </View>
-    </View>
+    </Pressable>
   );
 }
 
