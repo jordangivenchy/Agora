@@ -5,10 +5,11 @@
    past discussions, scheduled, posts, reposts, comments, communities. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Image, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
+import { same, useFocusRefresh, useScreenOpened } from "./refresh";
 import { useSession } from "./session";
 import { fetchDebates, fetchProfile, fetchUserComments, fetchUserCommunities, fetchUserPosts, setFollowing, type DebateRow, type Profile, type UserComment, type UserCommunity } from "./profile";
 import { timeAgo, votePost, type PostRow } from "./communities";
@@ -53,23 +54,26 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
   const scrollY = useRef(new Animated.Value(0)).current;
   const barOpacity = scrollY.interpolate({ inputRange: [BANNER - BAR - 24, BANNER - BAR], outputRange: [0, 1], extrapolate: "clamp" });
 
+  const opened = useScreenOpened();
+  /* One render with everything, after the page has slid in (refresh.ts). */
   const load = useCallback(async () => {
     try {
       const p = await fetchProfile(supabase, username);
-      setProfile(p);
-      if (!p) return;
+      if (!p) { await opened(); setProfile(null); return; }
       const [d, ps, cs, ms] = await Promise.all([fetchDebates(supabase, p.id), fetchUserPosts(supabase, p.id), fetchUserComments(supabase, p.id), fetchUserCommunities(supabase, p.id)]);
-      setDebates(d);
-      setPosts(ps);
-      setComments(cs);
-      setCommunities(ms);
+      await opened();
+      setProfile(same(p));
+      setDebates(same(d));
+      setPosts(same(ps));
+      setComments(same(cs));
+      setCommunities(same(ms));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load this profile.");
       setProfile((p) => p ?? null);
     }
-  }, [username]);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  }, [username, opened]);
+  useFocusRefresh(load, { progress: false });
 
   const isSelf = !!profile && profile.id === viewerId;
   const follow = async () => {

@@ -7,7 +7,7 @@ import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchBoard, fetchFeatured, fetchHeroRooms, fetchNews, type BoardRoom, type FeaturedPost, type HeroRoom, type NewsStory, type TopicRow } from "../../src/home";
 import { HomeHeader } from "../../src/header";
-import { withProgress } from "../../src/progress";
+import { same, useFocusRefresh } from "../../src/refresh";
 import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
 import { TopicBoard } from "../../src/board";
@@ -62,24 +62,24 @@ export default function Home() {
       const [n, p, h, b] = await Promise.all([fetchNews({ token, pass }), fetchFeatured(supabase), fetchHeroRooms(supabase), fetchBoard(supabase)]);
       /* A frame apiece for the hero, the strip and the board: one mount of
          all three stalled the opening sky for a few frames. */
-      setNews(n);
-      setPosts(p);
-      setHeroRooms(h);
+      setNews(same(n));
+      setPosts(same(p));
+      setHeroRooms(same(h));
       await nextFrame();
       setTickerIn(true);
       await nextFrame();
-      setTopics(b.topics);
-      setRooms(b.rooms);
+      setTopics(same(b.topics));
+      setRooms(same(b.rooms));
     } finally {
       setFirstLoad(true);
     }
   }, [token, pass]);
 
-  /* Fresh on focus (under the yellow bar), and quietly every half minute
-     in front and back from the background. */
+  /* Fresh on focus (under the yellow bar, refresh.ts), and quietly every
+     half minute in front and back from the background. */
+  useFocusRefresh(load);
   useFocusEffect(
     useCallback(() => {
-      void withProgress(load());
       const tick = setInterval(() => void load(), 30_000);
       const sub = AppState.addEventListener("change", (s) => { if (s === "active") void load(); });
       return () => { clearInterval(tick); sub.remove(); };

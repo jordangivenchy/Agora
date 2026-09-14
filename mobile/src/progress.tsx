@@ -6,8 +6,9 @@
    runs to the end and fades once the wait is over. Waits nest: the bar
    stays until the last one ends, and one nothing ends leaves after ten
    seconds. Reduce motion holds it still at 60%. */
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { Animated, Easing, StyleSheet, View, useWindowDimensions } from "react-native";
+import { useIsFocused } from "expo-router";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useReduceMotion } from "./motion";
 
@@ -37,12 +38,16 @@ export function withProgress<T>(p: Promise<T>): Promise<T> {
   return p.finally(end);
 }
 
-function useLoading(): boolean {
-  return useSyncExternalStore(
-    (l) => { listeners.add(l); return () => { listeners.delete(l); }; },
-    () => waits > 0,
-    () => false,
-  );
+/* Every tab keeps its header, so a bar per visited tab was listening:
+   each wait re-rendered and animated all of them, the hidden ones too.
+   Only the bar on the screen in front listens now. */
+function useLoading(active: boolean): boolean {
+  const subscribe = useCallback((l: () => void) => {
+    if (!active) return () => {};
+    listeners.add(l);
+    return () => { listeners.delete(l); };
+  }, [active]);
+  return useSyncExternalStore(subscribe, () => active && waits > 0, () => false);
 }
 
 const TRICKLE = Easing.bezier(0.15, 0.6, 0.25, 1);
@@ -50,7 +55,7 @@ const HEIGHT = 3;
 
 /** The bar itself, laid along the bottom edge of its parent. */
 export function ProgressBar() {
-  const loading = useLoading();
+  const loading = useLoading(useIsFocused());
   const reduce = useReduceMotion();
   const { width } = useWindowDimensions();
   const progress = useRef(new Animated.Value(0)).current;
@@ -86,7 +91,10 @@ export function ProgressBar() {
   const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] });
   return (
     <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: HEIGHT, overflow: "visible", zIndex: 10 }}>
+      {/* Drawn once and moved as a picture: an unrasterized shadow was
+          re-rendered offscreen on every frame of the slide. */}
       <Animated.View
+        shouldRasterizeIOS
         style={{
           width, height: HEIGHT, opacity, transform: [{ translateX }],
           backgroundColor: "#ffb700",

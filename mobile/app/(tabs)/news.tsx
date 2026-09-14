@@ -5,14 +5,14 @@
    into view and wears a yellow ring for a moment (NewsPage.tsx). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchNews, type NewsStory } from "../../src/home";
 import { newsTimeAgo, outletIcon, topicFor } from "../../src/discover";
 import { useCreate } from "../../src/create";
 import { HomeHeader } from "../../src/header";
-import { withProgress } from "../../src/progress";
+import { same, useFocusRefresh } from "../../src/refresh";
 import { openUrl } from "../../src/web";
 import { isQueuedFor, openQueue } from "../../src/queue";
 import { colors, fonts } from "../../src/theme";
@@ -35,14 +35,14 @@ export default function News() {
 
   const load = useCallback(async () => {
     try {
-      setStories(await fetchNews({ token, pass }));
+      setStories(same(await fetchNews({ token, pass })));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load the headlines.");
       setStories((s) => s ?? []);
     }
   }, [token, pass]);
-  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
+  useFocusRefresh(load);
 
   const majors = (stories ?? []).filter((s) => s.major);
   const rest = (stories ?? []).filter((s) => !s.major);

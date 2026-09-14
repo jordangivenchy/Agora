@@ -4,14 +4,14 @@
    communities host. Communities you blocked stay out of all of it. */
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchCommunities, fetchPosts, setFavorite, toggleJoin, votePost, type Community, type PostRow, type PostSort } from "../../src/communities";
 import { CARD, CommunityTile, META, PostCard, SortChips } from "../../src/postCard";
 import { HomeHeader } from "../../src/header";
-import { withProgress } from "../../src/progress";
+import { same, useFocusRefresh } from "../../src/refresh";
 import { fetchCommunityRooms, type CommunityRoom } from "../../src/communityAdmin";
 import { ApplySheet } from "../../src/communitySheets";
 import { ReminderBell, useReminders } from "../../src/reminders";
@@ -39,17 +39,17 @@ export default function Communities() {
   const load = useCallback(async () => {
     try {
       const [cs, ps] = await Promise.all([fetchCommunities(supabase, uid), fetchPosts(supabase, { community: null, sort })]);
-      setCommunities(cs);
-      setPosts(ps);
+      setCommunities(same(cs));
+      setPosts(same(ps));
       setError(null);
-      setRooms(await fetchCommunityRooms(supabase, cs.filter((c) => c.joined && !c.blocked).map((c) => c.id)));
+      setRooms(same(await fetchCommunityRooms(supabase, cs.filter((c) => c.joined && !c.blocked).map((c) => c.id))));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load communities.");
     } finally {
       setLoading(false);
     }
   }, [uid, sort]);
-  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
+  useFocusRefresh(load);
 
   const needSignIn = () => { router.push("/sign-in"); };
 

@@ -2,14 +2,14 @@
    status and language pills, and the discussions as square blocks. */
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
 import { fetchExploreRooms, fetchExploreStats, type ExploreRoom, type ExploreStats } from "../../src/discover";
 import { RoomSquare } from "../../src/roomCard";
 import { TOPICS, darkInkOn } from "../../src/topics";
 import { HomeHeader } from "../../src/header";
-import { withProgress } from "../../src/progress";
+import { same, useFocusRefresh } from "../../src/refresh";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -37,15 +37,15 @@ export default function Explore() {
   const load = useCallback(async () => {
     try {
       const [rs, st] = await Promise.all([fetchExploreRooms(supabase), fetchExploreStats(supabase)]);
-      setRooms(rs);
-      setStats(st);
+      setRooms(same(rs));
+      setStats(same(st));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load discussions.");
       setRooms((r) => r ?? []);
     }
   }, []);
-  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
+  useFocusRefresh(load);
 
   const list = useMemo(() => {
     if (!rooms) return null;

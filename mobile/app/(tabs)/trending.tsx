@@ -2,14 +2,14 @@
    the rooms as wide tiles — live first, then open, then replays. */
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
 import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, roomDuration, type TrendingRoom } from "../../src/discover";
 import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
-import { withProgress } from "../../src/progress";
+import { same, useFocusRefresh } from "../../src/refresh";
 import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
@@ -26,14 +26,14 @@ export default function Trending() {
 
   const load = useCallback(async () => {
     try {
-      setRooms(await fetchTrendingRooms(supabase));
+      setRooms(same(await fetchTrendingRooms(supabase)));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load trending.");
       setRooms((r) => r ?? []);
     }
   }, []);
-  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
+  useFocusRefresh(load);
   useEffect(() => {
     const ch = supabase.channel("trending-rooms").on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();
     return () => { void supabase.removeChannel(ch); };

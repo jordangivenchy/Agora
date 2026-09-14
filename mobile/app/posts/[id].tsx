@@ -22,6 +22,7 @@ import { Avatar } from "../../src/avatar";
 import { openImage } from "../../src/lightbox";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
+import { same, useScreenOpened } from "../../src/refresh";
 
 const SORTS: { key: CommentSort; label: string }[] = [{ key: "top", label: "Top" }, { key: "new", label: "New" }];
 type Art = { name: string; color: string | null; avatar_url: string | null };
@@ -48,23 +49,29 @@ export default function ThreadScreen() {
   const nodes = useRef(new Map<string, View>());
   const focused = useRef<string | null>(null);
 
+  const opened = useScreenOpened();
+  /* Everything arrives together and lands in one render, once the thread
+     has slid in: the post, its comments, the faces and the community's
+     art each used to re-render the whole thread as they came. */
   const load = useCallback(async () => {
     try {
       const [p, cs] = await Promise.all([fetchPost(supabase, id), fetchComments(supabase, id)]);
-      setPost(p);
-      setComments(cs);
-      setAvatars(await fetchAvatars(supabase, cs.map((c) => c.author_id)));
-      if (p) {
-        const { data } = await supabase.from("communities").select("name, color, avatar_url").eq("id", p.community_id).maybeSingle();
-        if (data) setArt(data as Art);
-      }
+      const [faces, artRow] = await Promise.all([
+        fetchAvatars(supabase, cs.map((c) => c.author_id)),
+        p ? supabase.from("communities").select("name, color, avatar_url").eq("id", p.community_id).maybeSingle().then(({ data }) => data as Art | null) : Promise.resolve(null),
+      ]);
+      await opened();
+      setPost(same(p));
+      setComments(same(cs));
+      setAvatars((cur) => (JSON.stringify([...cur]) === JSON.stringify([...faces]) ? cur : faces));
+      if (artRow) setArt(same(artRow));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load this thread.");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, opened]);
   useEffect(() => { void load(); }, [load]);
 
   const tree = useMemo(() => buildTree(comments, sort), [comments, sort]);

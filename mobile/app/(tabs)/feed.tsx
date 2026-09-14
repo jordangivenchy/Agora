@@ -4,7 +4,7 @@
    here. A guest gets the way in. */
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
@@ -19,7 +19,7 @@ import { RichText, plainPreview } from "../../src/richText";
 import { personName } from "../../src/home";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
-import { withProgress } from "../../src/progress";
+import { same, useFocusRefresh } from "../../src/refresh";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -41,9 +41,9 @@ export default function Feed() {
     setLoading(true);
     try {
       const rows = await fetchFeed(supabase, filter, null);
-      setItems(rows);
+      setItems(same(rows));
       setError(null);
-      if (rows.filter((r) => r.kind !== "live" && r.kind !== "scheduled").length < 5) setSuggestions(await fetchSuggestions(supabase, 8));
+      if (rows.filter((r) => r.kind !== "live" && r.kind !== "scheduled").length < 5) setSuggestions(same(await fetchSuggestions(supabase, 8)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load your feed.");
       setItems((i) => i ?? []);
@@ -51,7 +51,7 @@ export default function Feed() {
       setLoading(false);
     }
   }, [uid, filter]);
-  useFocusEffect(useCallback(() => { void withProgress(load()); }, [load]));
+  useFocusRefresh(load);
   useEffect(() => {
     if (!uid) return;
     const ch = supabase.channel("feed-rooms").on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();

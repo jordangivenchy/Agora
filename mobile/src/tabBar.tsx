@@ -34,7 +34,9 @@ export function AppTabBar({ state, navigation, onCreate }: TabBarProps) {
         "create" in slot ? (
           <Pressable key="create" onPress={onCreate} accessibilityLabel="Create" style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             {({ pressed }) => (
+              /* Rasterized: its glow is a shadow, drawn offscreen on every frame of a screen sliding past otherwise. */
               <View
+                shouldRasterizeIOS
                 style={{
                   width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: colors.yellow,
                   transform: [{ scale: pressed ? 0.96 : 1 }], shadowColor: colors.yellow, shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },

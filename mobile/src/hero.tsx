@@ -12,7 +12,7 @@
    grows to its fullest slide. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
-import { router } from "expo-router";
+import { router, useIsFocused } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { dateLabel, personName, type FeaturedPost, type HeroRoom, type NewsStory } from "./home";
 import { outletIcon, topicFor } from "./discover";
@@ -112,16 +112,19 @@ export function HeroCarousel({ rooms, posts, news, onSettled }: { rooms: HeroRoo
     list.current?.scrollToOffset({ offset: at(index), animated: false });
   }, [n, at, show]);
 
-  /* Autoplay: each slide dwells its time; a recent touch buys another turn. */
+  /* Autoplay: each slide dwells its time; a recent touch buys another turn.
+     Only while Home is in front: behind another screen it would still
+     scroll and re-render. */
+  const focused = useIsFocused();
   useEffect(() => {
-    if (n < 2 || reduce) return;
+    if (n < 2 || reduce || !focused) return;
     const dwell = slidesRef.current[cur]?.kind === "post" ? NOTICE_MS : SLIDE_MS;
     const t = setTimeout(() => {
       if (Date.now() - touchedAt.current < dwell) { setWait((w) => w + 1); return; }
       list.current?.scrollToOffset({ offset: at(curRef.current + 1), animated: true });
     }, dwell);
     return () => clearTimeout(t);
-  }, [cur, n, reduce, at, wait]);
+  }, [cur, n, reduce, at, wait, focused]);
 
   /* The rooms' "Live for …" keeps time. */
   useEffect(() => {

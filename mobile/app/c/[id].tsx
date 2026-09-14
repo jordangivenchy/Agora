@@ -9,7 +9,7 @@
    on the banner; a solid title bar takes over once the banner scrolls away. */
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { Alert, Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../../src/supabase";
@@ -28,6 +28,7 @@ import { showToast } from "../../src/toast";
 import { copyToClipboard } from "../../src/clipboard";
 import { ActionSheet } from "../../src/actionSheet";
 import { ItemSheet, type SheetItem } from "../../src/itemSheet";
+import { same, useFocusRefresh, useScreenOpened } from "../../src/refresh";
 import { ReminderBell, useReminders } from "../../src/reminders";
 import { ApplySheet, InviteSheet } from "../../src/communitySheets";
 import { communityLink, openLink } from "../../src/siteLinks";
@@ -97,17 +98,22 @@ export default function CommunityScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const barOpacity = scrollY.interpolate({ inputRange: [BANNER - BAR - 24, BANNER - BAR], outputRange: [0, 1], extrapolate: "clamp" });
 
+  const opened = useScreenOpened();
+  /* Everything at once, landing in one render after the page has slid in
+     (refresh.ts): the head and the posts, then the mods and rooms, used to
+     re-render the page twice, mid-slide. */
   const load = useCallback(async () => {
     try {
-      const [cm, ps] = await Promise.all([fetchCommunity(supabase, id, uid), fetchPosts(supabase, { community: id, sort })]);
-      setC(cm);
-      setPosts(ps);
+      const [cm, ps, ms, rs] = await Promise.all([fetchCommunity(supabase, id, uid), fetchPosts(supabase, { community: id, sort }), fetchMods(supabase, id), fetchCommunityRooms(supabase, [id])]);
+      const mod = !!cm && (cm.my_role === "owner" || cm.my_role === "moderator");
+      const reqs = mod ? await fetchJoinRequests(supabase, id) : [];
+      await opened();
+      setC(same(cm));
+      setPosts(same(ps));
       setError(null);
       if (cm) {
-        const mod = cm.my_role === "owner" || cm.my_role === "moderator";
-        const [ms, rs, reqs] = await Promise.all([fetchMods(supabase, id), fetchCommunityRooms(supabase, [id]), mod ? fetchJoinRequests(supabase, id) : Promise.resolve([])]);
-        setMods(ms);
-        setRooms(rs);
+        setMods(same(ms));
+        setRooms(same(rs));
         setRequestCount(reqs.length);
       }
     } catch (e) {
@@ -115,8 +121,8 @@ export default function CommunityScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, uid, sort]);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  }, [id, uid, sort, opened]);
+  useFocusRefresh(load, { progress: false });
 
   const isOwner = c?.my_role === "owner";
   const isMod = isOwner || c?.my_role === "moderator";
