@@ -78,7 +78,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       <ComposerSheet
         open={!!postIn}
         kind="post"
-        context={postIn ? `in ${postIn.kind === "profile" ? `u/${postIn.name.replace(/^@/, "")}` : postIn.name}` : null}
+        context={postIn ? `in ${postIn.name}` : null}
         communityId={postIn?.id ?? null}
         userId={uid}
         canAttachTopic={verified}
@@ -129,8 +129,9 @@ function CommunityPicker({ open, uid, onClose, onPick }: { open: boolean; uid: s
             <Pressable key={c.id} onPress={() => onPick(c)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, paddingHorizontal: 8, borderRadius: 10, backgroundColor: pressed ? "#1f1f26" : "transparent" })}>
               <CommunityTile name={c.name} color={c.color} avatarUrl={c.avatar_url} size={30} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14 }}>{c.kind === "profile" ? `u/${c.name.replace(/^@/, "")}` : c.name}</Text>
-                <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5 }}>{c.kind === "profile" ? "your page" : `${c.members} member${c.members === 1 ? "" : "s"}${c.joined ? " · joined" : ""}`}</Text>
+                {/* A profile's community is named for its owner, "@jordan", as the site shows it. */}
+                <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14 }}>{c.name}</Text>
+                <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5 }}>{c.kind === "profile" ? "your profile" : `${c.members} member${c.members === 1 ? "" : "s"}${c.joined ? " · joined" : ""}`}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.faint} />
             </Pressable>
