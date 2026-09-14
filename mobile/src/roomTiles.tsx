@@ -3,16 +3,20 @@
    plate, the name tag, the mute badge, a yellow ring while they talk; a
    shared screen as a tile of its own. Gallery is Discord's grid
    (callGrid.ts): square windows as big as the room allows, a screen two
-   windows wide, nine to a page. Multi-speaker features one picture (a
-   share first, then whoever is pinned, then the last to speak) over a
-   strip of square windows. Tap a tile for the person. */
-import { useEffect, useMemo, useRef, useState } from "react";
+   windows wide; past nine places the last window is "+N", who is in view
+   decided by gallerySlots.ts, and tapping it lists the rest to pin one.
+   Multi-speaker features one picture (a share first, then whoever is
+   pinned, then the last to speak) over a strip of square windows. Tap a
+   tile for the person; hold it to pin. */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./avatar";
 import { TileVideo } from "./tileVideo";
 import type { CallTile } from "./roomCall";
 import { planGrid } from "./callGrid";
+import { planSlots, type SlotPerson } from "./gallerySlots";
+import { ItemSheet } from "./itemSheet";
 import { colors, fonts } from "./theme";
 
 export type Layout = "gallery" | "multi";
@@ -80,11 +84,14 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
     if (first) setLastSpeaker(first.key);
   }, [speaking, tiles]);
 
-  /* Windows glide to their new places when someone comes on or leaves, as Discord's do. */
-  const count = tiles.length;
-  const shown = useRef({ count, layout });
-  if (shown.current.count !== count || shown.current.layout !== layout) {
-    shown.current = { count, layout };
+  const { shown: inView, hidden: behind } = useGallerySlots(tiles, speaking, pinned, layout === "gallery");
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  /* Windows glide to their new places when someone comes on, leaves or trades a window, as Discord's do. */
+  const arrangement = `${layout}|${inView.map((t) => t.key).join(",")}|${behind.length}`;
+  const arranged = useRef(arrangement);
+  if (arranged.current !== arrangement) {
+    arranged.current = arrangement;
     LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
   }
 
@@ -95,8 +102,6 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
     if (lastSpeaker && tiles.some((t) => t.key === lastSpeaker)) return lastSpeaker;
     return tiles[0]?.key ?? null;
   }, [pinned, share, lastSpeaker, tiles]);
-
-  const [page, setPage] = useState(0);
 
   if (tiles.length === 0) {
     return (
@@ -143,44 +148,123 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
     );
   }
 
-  /* Gallery: screens first, then the cameras; nine to a page. */
-  const ordered = [...tiles.filter((t) => t.source === "screen"), ...tiles.filter((t) => t.source === "camera")];
-  const pages = Math.max(1, Math.ceil(ordered.length / PAGE));
-  const current = Math.min(page, pages - 1);
-  const pageTiles = ordered.slice(current * PAGE, current * PAGE + PAGE);
-  const pagerH = pages > 1 ? 28 : 0;
-  const plan = planGrid(pageTiles.map((t) => t.source), width, height - pagerH, GAP);
+  /* Gallery: screens first, then the people in view, then "+N" for the rest. */
+  const kinds = [...inView.map((t) => t.source), ...(behind.length ? (["camera"] as const) : [])];
+  const plan = planGrid(kinds, width, height, GAP);
   return (
     <View style={{ width, height }}>
-      <View style={{ width, height: height - pagerH }}>
-        {plan.cells.map((cell) => {
-          const t = pageTiles[cell.index];
+      {plan.cells.map((cell) => {
+        const t = inView[cell.index];
+        if (!t) {
           return (
-            <View key={t.key} style={{ position: "absolute", left: cell.x, top: cell.y, width: cell.w, height: cell.h }}>
-              <Tile tile={t} speaking={isSpeaking(t)} size={Math.min(cell.w, cell.h)} onPress={() => onPressTile(t)} onLongPress={() => onPin(t.key)} />
+            <View key="more" style={{ position: "absolute", left: cell.x, top: cell.y, width: cell.w, height: cell.h }}>
+              <MoreTile people={behind} speaking={speaking} size={Math.min(cell.w, cell.h)} onPress={() => setMoreOpen(true)} />
             </View>
           );
-        })}
-      </View>
-      {pages > 1 && (
-        <View style={{ height: pagerH, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          <Pressable onPress={() => setPage(Math.max(0, current - 1))} disabled={current === 0} hitSlop={8} accessibilityLabel="Previous page" style={{ opacity: current === 0 ? 0.35 : 1 }}>
-            <Ionicons name="chevron-back" size={16} color={colors.text} />
-          </Pressable>
-          {Array.from({ length: pages }, (_, i) => (
-            <Pressable key={i} onPress={() => setPage(i)} hitSlop={6} accessibilityLabel={`Page ${i + 1}`}>
-              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === current ? colors.yellow : "#3a3a44" }} />
-            </Pressable>
-          ))}
-          <Pressable onPress={() => setPage(Math.min(pages - 1, current + 1))} disabled={current === pages - 1} hitSlop={8} accessibilityLabel="Next page" style={{ opacity: current === pages - 1 ? 0.35 : 1 }}>
-            <Ionicons name="chevron-forward" size={16} color={colors.text} />
-          </Pressable>
-        </View>
-      )}
+        }
+        return (
+          <View key={t.key} style={{ position: "absolute", left: cell.x, top: cell.y, width: cell.w, height: cell.h }}>
+            <Tile tile={t} speaking={isSpeaking(t)} size={Math.min(cell.w, cell.h)} onPress={() => onPressTile(t)} onLongPress={() => onPin(pinned === t.key ? null : t.key)} />
+            {pinned === t.key && (
+              <Pressable onPress={() => onPin(null)} hitSlop={8} accessibilityLabel="Unpin" style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: "#0a0a0c", alignItems: "center", justifyContent: "center", borderWidth: one, borderColor: "#2a2a33" }}>
+                <Ionicons name="pin" size={12} color={colors.yellow} />
+              </Pressable>
+            )}
+          </View>
+        );
+      })}
+      <ItemSheet
+        open={moreOpen}
+        title={`${behind.length} more on stage · pick one to keep in view`}
+        onClose={() => setMoreOpen(false)}
+        items={behind.map((t) => ({
+          icon: speaking.has(t.identity) ? "mic" : t.call ? "videocam-outline" : "person-circle-outline",
+          label: t.local ? "You" : t.username,
+          run: () => onPin(t.key),
+        }))}
+      />
     </View>
   );
 }
 
+/* The last window past nine: the first few faces of everyone behind it, how many, and a yellow ring when one of them is talking. */
+function MoreTile({ people, speaking, size, onPress }: { people: StageTile[]; speaking: ReadonlySet<string>; size: number; onPress: () => void }) {
+  const talking = people.some((t) => speaking.has(t.identity));
+  const face = Math.round(Math.max(22, Math.min(44, size * 0.24)));
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${people.length} more on stage`}
+      style={({ pressed }) => ({ flex: 1, borderRadius: 12, overflow: "hidden", alignItems: "center", justifyContent: "center", gap: Math.round(size * 0.06), backgroundColor: pressed ? "#15151a" : "#0e0e11", borderWidth: talking ? 2 : one, borderColor: talking ? colors.yellow : "#2a2a33" })}
+    >
+      <View style={{ flexDirection: "row" }}>
+        {people.slice(0, 3).map((t, i) => (
+          /* The first face — a talker, when there is one — sits on top. */
+          <View key={t.key} style={{ marginLeft: i ? -Math.round(face * 0.32) : 0, zIndex: 3 - i, borderRadius: face, borderWidth: 2, borderColor: "#0e0e11" }}>
+            <Avatar url={t.avatarUrl} name={t.username} size={face} ring={speaking.has(t.identity)} />
+          </View>
+        ))}
+      </View>
+      <Text style={{ color: colors.text, fontFamily: fonts.bold, fontSize: Math.round(Math.max(13, Math.min(22, size * 0.13))) }}>+{people.length}</Text>
+    </Pressable>
+  );
+}
+
+/* The gallery's windows (gallerySlots.ts): who is in view, kept in their
+   spots from one moment to the next, re-planned as people talk and every
+   second while someone is waiting behind "+N". */
+function useGallerySlots(tiles: StageTile[], speaking: ReadonlySet<string>, pinned: string | null, active: boolean): { shown: StageTile[]; hidden: StageTile[] } {
+  const joined = useRef(new Map<string, number>());
+  const nextJoin = useRef(0);
+  const since = useRef(new Map<string, number>());
+  const last = useRef(new Map<string, number>());
+  const slots = useRef<string[]>([]);
+  const [tick, setTick] = useState(0);
+
+  const screens = tiles.filter((t) => t.source === "screen");
+  const people = tiles.filter((t) => t.source === "camera");
+  const places = Math.max(1, PLACES - screens.length * 2);
+  const crowded = active && people.length > places;
+  useEffect(() => {
+    if (!crowded) return;
+    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [crowded]);
+
+  const order = useCallback((key: string) => {
+    if (!joined.current.has(key)) joined.current.set(key, nextJoin.current++);
+    return joined.current.get(key)!;
+  }, []);
+
+  return useMemo(() => {
+    const now = Date.now();
+    for (const t of people) {
+      if (speaking.has(t.identity)) {
+        if (!since.current.has(t.key)) since.current.set(t.key, now);
+        last.current.set(t.key, now);
+      } else {
+        since.current.delete(t.key);
+      }
+    }
+    const info: SlotPerson[] = people.map((t) => ({
+      key: t.key,
+      speakingSince: since.current.get(t.key) ?? null,
+      lastSpoke: last.current.get(t.key) ?? 0,
+      cameraOn: !!t.call,
+      local: t.local,
+      host: t.roleLabel === "Host" || t.roleLabel === "Co-host",
+      join: order(t.key),
+    }));
+    const plan = active ? planSlots(slots.current, info, places, pinned, now) : { shown: info.sort((a, b) => a.join - b.join).map((p) => p.key), hidden: [] };
+    slots.current = plan.shown;
+    const byKey = new Map(people.map((t) => [t.key, t] as const));
+    return { shown: [...screens, ...plan.shown.map((k) => byKey.get(k)!)], hidden: plan.hidden.map((k) => byKey.get(k)!) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tiles, speaking, pinned, active, places, tick]);
+}
+
 const GAP = 6;
-const PAGE = 9;
+/* Three rows of three on a phone. */
+const PLACES = 9;
 const STRIP = 72;

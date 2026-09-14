@@ -14,7 +14,7 @@ const person = (id: string, name: string): AmphiPerson => ({ id, name, handle: n
 const AUDIENCE = ["Mia", "Noah", "Ava", "Leo", "Zoe", "Eli", "Ivy", "Max", "Uma"].map((n, i) => person(`u-a${i}`, n));
 const QUEUE = [person("u-1", "Christian"), person("u-2", "Dada"), person("u-3", "Priya"), person("u-4", "Tom"), person("u-5", "Kai"), person("u-6", "Lena"), person("u-7", "Omar")];
 const tile = (id: string, name: string, role: string, micMuted = false): StageTile => ({ key: `${id}:camera`, identity: id, username: name, handle: name.toLowerCase(), avatarUrl: null, local: false, source: "camera", micMuted, roleLabel: role, call: null });
-const NAMES = ["Jordan", "Red", "Alan", "Mia", "Noah", "Ava", "Leo", "Zoe", "Eli", "Ivy", "Max", "Uma"];
+const NAMES = ["Jordan", "Red", "Alan", "Mia", "Noah", "Ava", "Leo", "Zoe", "Eli", "Ivy", "Max", "Uma", "Kai", "Lena", "Omar", "Priya"];
 const STRIP: AmphiStagePerson[] = [{ ...person("u-host", "Jordan"), role: "host" }, { ...person("u-co", "Sam"), role: "cohost" }];
 
 export default function DevStage() {
@@ -23,6 +23,8 @@ export default function DevStage() {
   const [count, setCount] = useState(4);
   const [share, setShare] = useState(false);
   const [layout, setLayout] = useState<Layout>("gallery");
+  const [talker, setTalker] = useState(0);
+  const [pinned, setPinned] = useState<string | null>(null);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   if (!__DEV__) return null;
@@ -38,7 +40,7 @@ export default function DevStage() {
         height={height - insets.top - 130 - 70}
         view={view}
         onSwitchView={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
-        speakerLayout={(area) => <StageTiles tiles={tiles} speaking={new Set(["u-0"])} layout={layout} pinned={null} onPin={() => {}} width={area.width} height={area.height} onPressTile={() => {}} />}
+        speakerLayout={(area) => <StageTiles tiles={tiles} speaking={new Set([`u-${talker}`])} layout={layout} pinned={pinned} onPin={setPinned} width={area.width} height={area.height} onPressTile={() => {}} />}
         bottomInset={12}
         roomId="design-room"
         audience={AUDIENCE}
@@ -54,8 +56,9 @@ export default function DevStage() {
       />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, padding: 12 }}>
         <Chip label="−" onPress={() => setCount((c) => Math.max(0, c - 1))} />
-        <Chip label={`${count} on camera`} onPress={() => setCount((c) => (c >= 12 ? 1 : c + 1))} />
-        <Chip label="+" onPress={() => setCount((c) => Math.min(12, c + 1))} />
+        <Chip label={`${count} on stage`} onPress={() => setCount((c) => (c >= NAMES.length ? 1 : c + 1))} />
+        <Chip label="+" onPress={() => setCount((c) => Math.min(NAMES.length, c + 1))} />
+        <Chip label={`Talking: ${NAMES[talker]}`} onPress={() => setTalker((i) => (i + 1) % Math.max(1, count))} />
         <Chip label={share ? "Stop share" : "Share screen"} onPress={() => setShare((v) => !v)} />
         <Chip label={layout === "gallery" ? "Gallery" : "Multi-speaker"} onPress={() => setLayout((l) => (l === "gallery" ? "multi" : "gallery"))} />
         <Chip label={mic ? "Free the mic" : "Take the mic"} onPress={() => setMic((v) => !v)} />
