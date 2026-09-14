@@ -22,7 +22,8 @@ import { CommunityTile } from "./postCard";
 import { TOPICS, darkInkOn } from "./topics";
 import { colors, fonts } from "./theme";
 
-export interface RoomPrefill { motion?: string; topic?: string }
+/** community: a discussion its moderators start for it (create_room's p_community). */
+export interface RoomPrefill { motion?: string; topic?: string; community?: { id: string; name: string } }
 export interface PostRequest { clip?: ComposeClip; to?: Community }
 interface CreateState {
   openMenu(): void;
@@ -203,7 +204,7 @@ function NewRoomSheet({ open, prefill, onClose }: { open: boolean; prefill: Room
       p_con_size: 10,
       p_time_limit_seconds: null,
       p_scheduled_start: scheduled,
-      p_community: null,
+      p_community: prefill.community?.id ?? null,
       p_access_mode: "code",
     });
     setBusy(false);
@@ -212,6 +213,7 @@ function NewRoomSheet({ open, prefill, onClose }: { open: boolean; prefill: Room
       setError(msg.includes("max_scheduled_rooms") || msg.includes("schedule at most 3")
         ? "You can only have 3 scheduled discussions at once. End or cancel one first."
         : msg.includes("scheduled_start_too_soon") ? "Scheduled time must be at least 1 minute from now."
+        : msg.includes("not_a_mod") ? "Only moderators can start discussions for the community."
         : msg.replace(/^[a-z_]+:\s*/, "") || "Couldn't create the room.");
       return;
     }
@@ -264,6 +266,14 @@ function NewRoomSheet({ open, prefill, onClose }: { open: boolean; prefill: Room
                 style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 17, lineHeight: 23, minHeight: 64, paddingVertical: 10, textAlignVertical: "top" }}
               />
               <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, textAlign: "right" }}>{motion.length}/{MOTION_MAX}</Text>
+              {prefill.community && (
+                <View style={{ flexDirection: "row", gap: 8, padding: 10, borderRadius: 10, backgroundColor: "#17150e", borderWidth: 1, borderColor: "#4a4127", marginTop: 8 }}>
+                  <Ionicons name="business-outline" size={14} color="#c9b06a" style={{ marginTop: 1 }} />
+                  <Text style={{ flex: 1, color: "#c9b06a", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>
+                    This discussion belongs to <Text style={{ fontFamily: fonts.bold }}>{prefill.community.name}</Text> — members will be notified.
+                  </Text>
+                </View>
+              )}
               {label("Field")}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {TOPICS.map((t) => chip(topic === t.key, t.label, () => setTopic(t.key), t.color, <Ionicons name={t.icon} size={13} color={topic === t.key ? (darkInkOn(t.color) ? colors.ink : "#fff") : t.color} />))}

@@ -56,6 +56,16 @@ async function communityIdForSlug(slug: string): Promise<string | null> {
   return null;
 }
 
+/* The site's link to a community (communitySlug): its name's slug, with
+   a six-character id tail when an older community already has that slug. */
+export async function communityLink(c: { id: string; name: string }): Promise<string> {
+  const base = slugify(c.name) || c.id.slice(0, 6);
+  const { data } = await supabase.from("communities").select("id, name").order("created_at", { ascending: true });
+  const first = ((data ?? []) as { id: string; name: string }[]).find((x) => (slugify(x.name) || x.id.slice(0, 6)) === base);
+  const slug = !first || first.id === c.id ? base : `${base}-${c.id.slice(0, 6)}`;
+  return `${SITE}/communities/${encodeURIComponent(slug)}`;
+}
+
 async function roomIdFromParam(param: string): Promise<string | null> {
   const { uuid, prefix } = parseRoomParam(param);
   if (uuid) return uuid;

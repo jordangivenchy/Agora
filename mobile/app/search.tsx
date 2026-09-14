@@ -189,8 +189,9 @@ export default function Search() {
             </View>
             <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>{c.members} {c.members === 1 ? "member" : "members"}{c.description ? ` · ${c.description.slice(0, 120)}` : ""}</Text>
           </View>
-          <Pressable onPress={() => void toggleJoin(c)} disabled={joinBusy === c.id} style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: c.joined ? colors.surface2 : colors.blueText, borderWidth: c.joined ? 1 : 0, borderColor: colors.border, opacity: joinBusy === c.id ? 0.6 : 1 }}>
-            <Text style={{ color: c.joined ? "rgba(238,238,245,0.8)" : "#fff", fontFamily: fonts.semi, fontSize: 11.5 }}>{c.joined ? "Joined" : "Join"}</Text>
+          {/* A private community takes an application, which its page asks for; joining it directly would be refused. */}
+          <Pressable onPress={() => (c.is_private && !c.joined ? router.push({ pathname: "/c/[id]", params: { id: c.id } }) : void toggleJoin(c))} disabled={joinBusy === c.id} style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: c.joined ? colors.surface2 : colors.blueText, borderWidth: c.joined ? 1 : 0, borderColor: colors.border, opacity: joinBusy === c.id ? 0.6 : 1 }}>
+            <Text style={{ color: c.joined ? "rgba(238,238,245,0.8)" : "#fff", fontFamily: fonts.semi, fontSize: 11.5 }}>{c.joined ? "Joined" : c.is_private ? "Request" : "Join"}</Text>
           </Pressable>
         </Pressable>
       );

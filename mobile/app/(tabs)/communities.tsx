@@ -1,6 +1,7 @@
 /* Communities, as the site's phone page: the feed across every community
-   under Best / New / Top, then the rail — find a community, yours, and
-   the ones to discover. */
+   under Best / New / Top, then the rail — find a community, yours, the
+   ones to discover, and the live and scheduled discussions your
+   communities host. Communities you blocked stay out of all of it. */
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
@@ -10,6 +11,9 @@ import { useSession } from "../../src/session";
 import { fetchCommunities, fetchPosts, setFavorite, toggleJoin, votePost, type Community, type PostRow, type PostSort } from "../../src/communities";
 import { CARD, CommunityTile, META, PostCard, SortChips } from "../../src/postCard";
 import { HomeHeader } from "../../src/header";
+import { fetchCommunityRooms, type CommunityRoom } from "../../src/communityAdmin";
+import { ApplySheet } from "../../src/communitySheets";
+import { showToast } from "../../src/toast";
 import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
@@ -26,6 +30,8 @@ export default function Communities() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [rooms, setRooms] = useState<CommunityRoom[]>([]);
+  const [applyFor, setApplyFor] = useState<Community | null>(null);
   const { openCommunity } = useCreate();
 
   const load = useCallback(async () => {
@@ -34,6 +40,7 @@ export default function Communities() {
       setCommunities(cs);
       setPosts(ps);
       setError(null);
+      setRooms(await fetchCommunityRooms(supabase, cs.filter((c) => c.joined && !c.blocked).map((c) => c.id)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load communities.");
     } finally {
@@ -52,6 +59,8 @@ export default function Communities() {
 
   const join = useCallback(async (c: Community) => {
     if (!uid) return needSignIn();
+    /* A private community takes an application first. */
+    if (c.is_private && !c.requested) { setApplyFor(c); return; }
     try {
       await toggleJoin(supabase, c, uid);
       setCommunities(await fetchCommunities(supabase, uid));
@@ -69,8 +78,25 @@ export default function Communities() {
   const q = query.trim().toLowerCase();
   const match = (c: Community) => !q || c.name.toLowerCase().includes(q);
   /* u/ boards live on profiles, not in the directory. */
-  const joined = communities.filter((c) => c.kind !== "profile" && c.joined && match(c)).sort((a, b) => Number(b.favorite) - Number(a.favorite));
-  const discover = communities.filter((c) => c.kind !== "profile" && !c.joined && match(c));
+  const joined = communities.filter((c) => c.kind !== "profile" && c.joined && !c.blocked && match(c)).sort((a, b) => Number(b.favorite) - Number(a.favorite));
+  const discover = communities.filter((c) => c.kind !== "profile" && !c.joined && !c.blocked && match(c));
+  const blocked = new Set(communities.filter((c) => c.blocked).map((c) => c.id));
+  const visiblePosts = posts.filter((p) => !blocked.has(p.community_id));
+  const liveRooms = rooms.filter((r) => r.status === "live");
+  const upcoming = rooms.filter((r) => r.status !== "live");
+  const roomRow = (r: CommunityRoom, live: boolean) => {
+    const c = byId.get(r.community_id);
+    return (
+      <Pressable key={r.id} onPress={() => router.push({ pathname: "/room/[id]", params: { id: r.id } })} style={({ pressed }) => ({ marginBottom: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: live ? "#170d0e" : colors.surface, borderWidth: 1, borderColor: live ? "#5a2626" : colors.hairline, opacity: pressed ? 0.85 : 1 })}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 3, backgroundColor: c?.color ?? colors.blue }} />
+          <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 10.5 }}>{c?.name ?? "Community"}</Text>
+          <Text style={{ color: live ? "#e84040" : "#e2b96b", fontFamily: fonts.semi, fontSize: 10.5 }}>{live ? "● LIVE — join" : r.scheduled_start ? new Date(r.scheduled_start).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Scheduled"}</Text>
+        </View>
+        <Text numberOfLines={2} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, lineHeight: 17, marginTop: 3 }}>{r.motion}</Text>
+      </Pressable>
+    );
+  };
 
   const row = (c: Community) => (
     <Pressable key={c.id} onPress={() => router.push({ pathname: "/c/[id]", params: { id: c.id } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: pressed ? colors.surface2 : "transparent" })}>
@@ -102,7 +128,7 @@ export default function Communities() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <HomeHeader />
       <FlatList
-        data={posts}
+        data={visiblePosts}
         keyExtractor={(p) => p.id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
@@ -163,9 +189,14 @@ export default function Communities() {
             {joined.map(row)}
             {discover.length > 0 && <Label>Discover</Label>}
             {discover.map(row)}
+            {liveRooms.length > 0 && <Label>Live discussions</Label>}
+            {liveRooms.map((r) => roomRow(r, true))}
+            {upcoming.length > 0 && <Label>Scheduled discussions</Label>}
+            {upcoming.map((r) => roomRow(r, false))}
           </View>
         }
       />
+      <ApplySheet community={applyFor} onClose={() => setApplyFor(null)} onApplied={() => { showToast("Application sent"); void load(); }} />
     </View>
   );
 }

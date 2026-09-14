@@ -19,6 +19,7 @@ import { useSession } from "./session";
 import { useMe } from "./me";
 import { SITE } from "./api";
 import { showToast } from "./toast";
+import { copyToClipboard } from "./clipboard";
 import { ItemSheet, type SheetItem } from "./itemSheet";
 import { ComposerSheet, POST_BODY_MAX } from "./composer";
 import { plainPreview } from "./richText";
@@ -55,18 +56,7 @@ function friendly(message: string): string {
   return message.replace(/^[a-z_]+:\s*/, "");
 }
 
-async function copy(text: string, done: string | null): Promise<boolean> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Clipboard = require("expo-clipboard") as typeof import("expo-clipboard");
-    await Clipboard.setStringAsync(text);
-    if (done) showToast(done);
-    return true;
-  } catch {
-    showToast("Couldn't copy");
-    return false;
-  }
-}
+const copy = copyToClipboard;
 
 /** The site's link to a post or to one comment, on the clipboard; quiet when the button says it instead. */
 export function copyPostLink(postId: string, commentId?: string | null, quiet?: boolean): Promise<boolean> {

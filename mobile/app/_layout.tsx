@@ -82,6 +82,7 @@ export default function RootLayout() {
                     <Stack.Screen name="clips/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="replay/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="c/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="c/mod/[id]" options={{ title: "Mod tools", headerBackTitle: "Back" }} />
                     <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
                     <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
                   </Stack>

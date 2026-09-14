@@ -3,6 +3,7 @@
    and comments from the same RPCs, votes and joins through the same
    calls, so the app and the site agree. */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { safeBookmarks, type Bookmark } from "./communityBookmarks";
 
 /* ── The directory ── */
 export interface Community {
@@ -21,49 +22,95 @@ export interface Community {
   favorite: boolean;
   my_role: string | null;
   requested: boolean;
+  /** Mod-curated links (communities.bookmarks). */
+  bookmarks: Bookmark[];
+  /** New-post notifications from it are muted (community_mutes). */
+  muted: boolean;
+  /** Blocked: hidden from the directory and the All feed (community_blocks). */
+  blocked: boolean;
 }
 
 type CommunityRow = {
   id: string; name: string; kind: string; color: string | null; description: string | null; rules: string | null;
   is_private: boolean | null; application_prompt: string | null; banner_url: string | null; avatar_url: string | null;
+  bookmarks: unknown;
   community_members: { user_id: string; role: string; favorite: boolean | null }[] | null;
 };
+
+const COMMUNITY_SELECT = "id, name, kind, color, description, rules, is_private, application_prompt, banner_url, avatar_url, bookmarks, community_members(user_id, role, favorite)";
+const NONE = Promise.resolve({ data: [] as { community_id: string }[] });
+
+function toCommunity(c: CommunityRow, uid: string | null, flags: { requested: Set<string>; muted: Set<string>; blocked: Set<string> }): Community {
+  const members = c.community_members ?? [];
+  const mine = uid ? members.find((m) => m.user_id === uid) : undefined;
+  return {
+    id: c.id,
+    name: c.name,
+    kind: c.kind,
+    color: c.color ?? "#4a9eff",
+    description: c.description ?? null,
+    rules: c.rules ?? null,
+    is_private: !!c.is_private,
+    application_prompt: c.application_prompt ?? null,
+    banner_url: c.banner_url ?? null,
+    avatar_url: c.avatar_url ?? null,
+    members: members.length,
+    joined: !!mine,
+    favorite: !!mine?.favorite,
+    my_role: mine?.role ?? null,
+    requested: flags.requested.has(c.id),
+    bookmarks: safeBookmarks(c.bookmarks),
+    muted: flags.muted.has(c.id),
+    blocked: flags.blocked.has(c.id),
+  };
+}
+
+const ids = (res: { data: unknown }) => new Set(((res.data ?? []) as { community_id: string }[]).map((r) => r.community_id));
 
 export async function fetchCommunities(supabase: SupabaseClient, uid: string | null): Promise<Community[]> {
   /* Everyone has a u/ board to post on; made on first sight, idempotent. */
   if (uid) await supabase.rpc("ensure_profile_community").then(undefined, () => undefined);
-  const [commRes, reqRes] = await Promise.all([
-    supabase
-      .from("communities")
-      .select("id, name, kind, color, description, rules, is_private, application_prompt, banner_url, avatar_url, community_members(user_id, role, favorite)"),
-    uid ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid) : Promise.resolve({ data: [] as { community_id: string }[] }),
+  const [commRes, reqRes, muteRes, blockRes] = await Promise.all([
+    supabase.from("communities").select(COMMUNITY_SELECT),
+    uid ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid) : NONE,
+    uid ? supabase.from("community_mutes").select("community_id").eq("user_id", uid) : NONE,
+    uid ? supabase.from("community_blocks").select("community_id").eq("user_id", uid) : NONE,
   ]);
-  const requested = new Set(((reqRes.data ?? []) as { community_id: string }[]).map((r) => r.community_id));
-  return ((commRes.data ?? []) as unknown as CommunityRow[]).map((c) => {
-    const members = c.community_members ?? [];
-    const mine = uid ? members.find((m) => m.user_id === uid) : undefined;
-    return {
-      id: c.id,
-      name: c.name,
-      kind: c.kind,
-      color: c.color ?? "#4a9eff",
-      description: c.description ?? null,
-      rules: c.rules ?? null,
-      is_private: !!c.is_private,
-      application_prompt: c.application_prompt ?? null,
-      banner_url: c.banner_url ?? null,
-      avatar_url: c.avatar_url ?? null,
-      members: members.length,
-      joined: !!mine,
-      favorite: !!mine?.favorite,
-      my_role: mine?.role ?? null,
-      requested: requested.has(c.id),
-    };
-  });
+  const flags = { requested: ids(reqRes), muted: ids(muteRes), blocked: ids(blockRes) };
+  return ((commRes.data ?? []) as unknown as CommunityRow[]).map((c) => toCommunity(c, uid, flags));
 }
 
-/* Join, leave, or ask. The result says what happened. */
-export async function toggleJoin(supabase: SupabaseClient, c: Community, uid: string): Promise<"joined" | "left" | "requested" | "withdrawn"> {
+/* One community, for its own page: the row, my membership, and whether I
+   asked to join, muted it or blocked it. */
+export async function fetchCommunity(supabase: SupabaseClient, id: string, uid: string | null): Promise<Community | null> {
+  const [commRes, reqRes, muteRes, blockRes] = await Promise.all([
+    supabase.from("communities").select(COMMUNITY_SELECT).eq("id", id).maybeSingle(),
+    uid ? supabase.from("community_join_requests").select("community_id").eq("user_id", uid).eq("community_id", id) : NONE,
+    uid ? supabase.from("community_mutes").select("community_id").eq("user_id", uid).eq("community_id", id) : NONE,
+    uid ? supabase.from("community_blocks").select("community_id").eq("user_id", uid).eq("community_id", id) : NONE,
+  ]);
+  if (commRes.error) throw new Error(commRes.error.message);
+  if (!commRes.data) return null;
+  return toCommunity(commRes.data as unknown as CommunityRow, uid, { requested: ids(reqRes), muted: ids(muteRes), blocked: ids(blockRes) });
+}
+
+/* Mute a community's new-post notifications: my own row in community_mutes. */
+export async function setCommunityMuted(supabase: SupabaseClient, communityId: string, uid: string, muted: boolean): Promise<void> {
+  const { error } = muted
+    ? await supabase.from("community_mutes").insert({ community_id: communityId, user_id: uid })
+    : await supabase.from("community_mutes").delete().eq("community_id", communityId).eq("user_id", uid);
+  if (error && !(muted && error.message.includes("duplicate"))) throw new Error("Couldn't update notifications — try again.");
+}
+
+/* Block or unblock: blocking also leaves it, withdraws a request and drops
+   a mute (set_community_block does all of that). Owners can't block. */
+export async function setCommunityBlocked(supabase: SupabaseClient, communityId: string, blocked: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_community_block", { p_community: communityId, p_blocked: blocked });
+  if (error) throw new Error(error.message.includes("owner_cannot_block") ? "You own this community — you can't block it." : "Couldn't update — try again.");
+}
+
+/* Join, leave, or ask (with the application's message). The result says what happened. */
+export async function toggleJoin(supabase: SupabaseClient, c: Community, uid: string, message?: string | null): Promise<"joined" | "left" | "requested" | "withdrawn"> {
   if (c.joined) {
     if (c.my_role === "owner") throw new Error("Owners can't leave their own community.");
     const { error } = await supabase.from("community_members").delete().eq("community_id", c.id).eq("user_id", uid);
@@ -76,8 +123,8 @@ export async function toggleJoin(supabase: SupabaseClient, c: Community, uid: st
       if (error) throw new Error(error.message);
       return "withdrawn";
     }
-    const { error } = await supabase.rpc("request_to_join", { p_community: c.id, p_message: null });
-    if (error) throw new Error(error.message);
+    const { error } = await supabase.rpc("request_to_join", { p_community: c.id, p_message: message?.trim() || null });
+    if (error) throw new Error(error.message.replace(/^[a-z_]+:\s*/, ""));
     return "requested";
   }
   const { error } = await supabase.from("community_members").insert({ community_id: c.id, user_id: uid });
