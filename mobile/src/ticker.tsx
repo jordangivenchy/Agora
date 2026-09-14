@@ -1,7 +1,8 @@
 /* The news strip under the hero: the stories the hero didn't take,
-   rolling past twice over so the loop never shows a seam. */
+   rolling past twice over so the loop never shows a seam. No rules
+   above or below: it sits straight on the page. */
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, Text, View } from "react-native";
 import type { NewsStory } from "./home";
 import { openUrl } from "./web";
 import { colors, fonts } from "./theme";
@@ -28,7 +29,7 @@ export function NewsTicker({ stories }: { stories: NewsStory[] }) {
       </Pressable>
     ));
   return (
-    <View style={{ height: 48, justifyContent: "center", overflow: "hidden", backgroundColor: colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
+    <View style={{ height: 48, justifyContent: "center", overflow: "hidden", backgroundColor: colors.surface }}>
       <Animated.View style={{ flexDirection: "row", paddingLeft: 14, transform: [{ translateX: x }] }}>
         <View style={{ flexDirection: "row" }} onLayout={(e) => setW(Math.round(e.nativeEvent.layout.width))}>{items("a")}</View>
         <View style={{ flexDirection: "row" }}>{items("b")}</View>
