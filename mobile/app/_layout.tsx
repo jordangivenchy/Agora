@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { SessionProvider, useSession } from "../src/session";
 import { CallProvider } from "../src/callSession";
 import { CallHost } from "../src/callHost";
@@ -17,6 +18,11 @@ import { useCall } from "../src/callSession";
 import { supabase } from "../src/supabase";
 import { colors } from "../src/theme";
 import { useAppFonts } from "../src/fonts";
+
+/* The native launch screen is plain black (app.json: a blank image on
+   #000), so the sky below is the only opening anyone sees; it dissolves
+   into the sky rather than cutting to it. */
+SplashScreen.setOptions({ fade: true, duration: 300 });
 
 /* The opening: the sky until the fonts and the session are in. Reduce
    motion applies from storage at once, then from the account. */
