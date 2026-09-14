@@ -197,224 +197,232 @@ export function NewRoomCard({ prefill, onClose, onCreateCommunity }: { prefill: 
   const cardH = Math.min(Math.round(height * 0.88), height - insets.top - insets.bottom - 24);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} pointerEvents="box-none" style={{ flex: 1, justifyContent: "center", paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12, paddingHorizontal: 12 }}>
-      {view === "form" ? (
-        <View style={[CARD, { height: cardH, maxHeight: "100%" }]}>
-          {/* Header */}
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingTop: 16, paddingRight: 16, paddingBottom: 12, paddingLeft: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" }}>
-            <View>
-              <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 18, letterSpacing: -0.36 }}>Start a discussion</Text>
-              {onCreateCommunity && (
-                <View accessibilityRole="tablist" style={{ flexDirection: "row", alignSelf: "flex-start", marginTop: 10, padding: 3, gap: 2, borderRadius: 999, backgroundColor: FIELD, borderWidth: 1, borderColor: LINE }}>
-                  <View accessibilityRole="tab" accessibilityState={{ selected: true }} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.yellow }}>
-                    <Ionicons name="mic" size={12} color={INK} />
-                    <Text style={{ color: INK, fontFamily: fonts.bold, fontSize: 12 }}>Discussion</Text>
-                  </View>
-                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: false }} onPress={onCreateCommunity} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, opacity: pressed ? 0.7 : 1 })}>
-                    <Ionicons name="people-outline" size={12} color="rgba(238,238,245,0.7)" />
-                    <Text style={{ color: "rgba(238,238,245,0.7)", fontFamily: fonts.semi, fontSize: 12 }}>Community</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-            <CloseButton onPress={onClose} />
-          </View>
-
-          {/* Body */}
-          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 18, gap: 16 }}>
-            {!!error && (
-              <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: "#140909", borderWidth: 1, borderColor: "rgba(239,68,68,0.3)" }}>
-                <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>{error}</Text>
-              </View>
-            )}
-
-            <Group label="Topic">
-              <TextInput
-                value={motion}
-                onChangeText={(t) => { setMotion(t.slice(0, MOTION_MAX)); if (error) setError(null); }}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                placeholder="State the motion or topic..."
-                placeholderTextColor={DIM}
-                multiline
-                submitBehavior="blurAndSubmit"
-                returnKeyType="done"
-                maxLength={MOTION_MAX}
-                style={{ minHeight: 44, paddingHorizontal: 13, paddingTop: 12, paddingBottom: 12, borderRadius: 10, backgroundColor: FIELD, borderWidth: 1, borderColor: focused ? "rgba(255,255,255,0.24)" : LINE, color: "rgba(255,255,255,0.9)", fontFamily: fonts.body, fontSize: 14, lineHeight: 19, textAlignVertical: "top" }}
-              />
-              {!!motionIssue && <Text style={{ color: "#ff8a80", fontFamily: fonts.body, fontSize: 12, marginTop: 6 }}>{motionIssue}</Text>}
-            </Group>
-
-            <Group label="Category">
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {TOPICS.map((t) => {
-                  const on = topic === t.key;
-                  const ink = on ? (darkInkOn(t.color) ? INK : "#fff") : "#c9c9d2";
-                  return (
-                    <Pill key={t.key} on={on} fill={t.color} onPress={() => setTopic(t.key)}>
-                      <Ionicons name={t.icon} size={14} color={on ? ink : t.color} />
-                      <Text style={{ color: ink, fontFamily: on ? fonts.semi : fonts.medium, fontSize: 12.5 }}>{t.label}</Text>
-                    </Pill>
-                  );
-                })}
-              </View>
-            </Group>
-
-            <Group label="Language">
-              <Pressable
-                onPress={() => { animate(); setLangOpen((v) => !v); }}
-                accessibilityRole="button"
-                accessibilityLabel={`Language, ${LANGS.find((l) => l.value === language)?.label}`}
-                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 44, paddingHorizontal: 13, borderRadius: 10, backgroundColor: pressed ? "#111114" : FIELD, borderWidth: 1, borderColor: langOpen ? "rgba(255,255,255,0.24)" : LINE })}
-              >
-                <Text style={{ color: "rgba(255,255,255,0.9)", fontFamily: fonts.body, fontSize: 14 }}>{LANGS.find((l) => l.value === language)?.label}</Text>
-                <Ionicons name={langOpen ? "chevron-up" : "chevron-down"} size={15} color={MUTED} />
-              </Pressable>
-              {langOpen && (
-                <View style={{ marginTop: 6, borderRadius: 10, backgroundColor: FIELD, borderWidth: 1, borderColor: LINE, overflow: "hidden" }}>
-                  {LANGS.map((l, i) => (
-                    <Pressable
-                      key={l.value}
-                      onPress={() => { animate(); setLanguage(l.value); setLangOpen(false); }}
-                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 40, paddingHorizontal: 13, backgroundColor: pressed ? "#16161b" : "transparent", borderTopWidth: i ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" })}
-                    >
-                      <Text style={{ color: language === l.value ? TEXT : "#c9c9d2", fontFamily: language === l.value ? fonts.semi : fonts.body, fontSize: 14 }}>{l.label}</Text>
-                      {language === l.value && <Ionicons name="checkmark" size={16} color={colors.yellow} />}
+    /* The keyboard lifts the card's floor and the card gives up height to
+       fit (flexShrink), header and footer staying on screen. KeyboardAvoidingView
+       replaces its own bottom padding, so the safe-area padding sits on the
+       view inside it, and the keyboard covers the home indicator's share. A
+       percentage maxHeight clamped the card but Yoga still centred it by its
+       full height, which sent the header off the top of the screen. */
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={-insets.bottom} pointerEvents="box-none" style={{ flex: 1 }}>
+      <View pointerEvents="box-none" style={{ flex: 1, justifyContent: "center", paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12, paddingHorizontal: 12 }}>
+        {view === "form" ? (
+          <View style={[CARD, { height: cardH, flexShrink: 1 }]}>
+            {/* Header */}
+            <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingTop: 16, paddingRight: 16, paddingBottom: 12, paddingLeft: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" }}>
+              <View>
+                <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 18, letterSpacing: -0.36 }}>Start a discussion</Text>
+                {onCreateCommunity && (
+                  <View accessibilityRole="tablist" style={{ flexDirection: "row", alignSelf: "flex-start", marginTop: 10, padding: 3, gap: 2, borderRadius: 999, backgroundColor: FIELD, borderWidth: 1, borderColor: LINE }}>
+                    <View accessibilityRole="tab" accessibilityState={{ selected: true }} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.yellow }}>
+                      <Ionicons name="mic" size={12} color={INK} />
+                      <Text style={{ color: INK, fontFamily: fonts.bold, fontSize: 12 }}>Discussion</Text>
+                    </View>
+                    <Pressable accessibilityRole="tab" accessibilityState={{ selected: false }} onPress={onCreateCommunity} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, opacity: pressed ? 0.7 : 1 })}>
+                      <Ionicons name="people-outline" size={12} color="rgba(238,238,245,0.7)" />
+                      <Text style={{ color: "rgba(238,238,245,0.7)", fontFamily: fonts.semi, fontSize: 12 }}>Community</Text>
                     </Pressable>
-                  ))}
-                </View>
-              )}
-            </Group>
-
-            {/* Schedule */}
-            <Box>
-              {community && (
-                <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#0f0d07", borderWidth: 1, borderColor: "rgba(201,176,106,0.25)", marginBottom: 10 }}>
-                  <Ionicons name="business-outline" size={13} color="#c9b06a" style={{ marginTop: 2 }} />
-                  <Text style={{ flex: 1, color: "#c9b06a", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>
-                    This discussion belongs to <Text style={{ fontFamily: fonts.bold }}>{community.name}</Text> — members will be notified.
-                  </Text>
-                </View>
-              )}
-              <Toggle label="Schedule for later" value={schedule} onChange={(v) => { animate(); setSchedule(v); }} />
-              {schedule && (
-                <>
-                  <Divider />
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>STARTS AT</Text>
-                    {hasDatePicker && <DateTimeField value={startAt} minimumDate={minimumStart} onChange={setStartAt} />}
                   </View>
-                  {!hasDatePicker && (
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                      {PRESETS.map((pr) => (
-                        <Pill key={pr.key} on={preset === pr.key} fill={BLUE} onPress={() => setPreset(pr.key)}>
-                          <Text style={{ color: preset === pr.key ? "#fff" : "#c9c9d2", fontFamily: fonts.medium, fontSize: 12.5 }}>{pr.label}</Text>
+                )}
+              </View>
+              <CloseButton onPress={onClose} />
+            </View>
+
+            {/* Body */}
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 18, gap: 16 }}>
+              {!!error && (
+                <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: "#140909", borderWidth: 1, borderColor: "rgba(239,68,68,0.3)" }}>
+                  <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>{error}</Text>
+                </View>
+              )}
+
+              <Group label="Topic">
+                <TextInput
+                  value={motion}
+                  onChangeText={(t) => { setMotion(t.slice(0, MOTION_MAX)); if (error) setError(null); }}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  placeholder="State the motion or topic..."
+                  placeholderTextColor={DIM}
+                  multiline
+                  submitBehavior="blurAndSubmit"
+                  returnKeyType="done"
+                  maxLength={MOTION_MAX}
+                  style={{ minHeight: 44, paddingHorizontal: 13, paddingTop: 12, paddingBottom: 12, borderRadius: 10, backgroundColor: FIELD, borderWidth: 1, borderColor: focused ? "rgba(255,255,255,0.24)" : LINE, color: "rgba(255,255,255,0.9)", fontFamily: fonts.body, fontSize: 14, lineHeight: 19, textAlignVertical: "top" }}
+                />
+                {!!motionIssue && <Text style={{ color: "#ff8a80", fontFamily: fonts.body, fontSize: 12, marginTop: 6 }}>{motionIssue}</Text>}
+              </Group>
+
+              <Group label="Category">
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {TOPICS.map((t) => {
+                    const on = topic === t.key;
+                    const ink = on ? (darkInkOn(t.color) ? INK : "#fff") : "#c9c9d2";
+                    return (
+                      <Pill key={t.key} on={on} fill={t.color} onPress={() => setTopic(t.key)}>
+                        <Ionicons name={t.icon} size={14} color={on ? ink : t.color} />
+                        <Text style={{ color: ink, fontFamily: on ? fonts.semi : fonts.medium, fontSize: 12.5 }}>{t.label}</Text>
+                      </Pill>
+                    );
+                  })}
+                </View>
+              </Group>
+
+              <Group label="Language">
+                <Pressable
+                  onPress={() => { animate(); setLangOpen((v) => !v); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Language, ${LANGS.find((l) => l.value === language)?.label}`}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 44, paddingHorizontal: 13, borderRadius: 10, backgroundColor: pressed ? "#111114" : FIELD, borderWidth: 1, borderColor: langOpen ? "rgba(255,255,255,0.24)" : LINE })}
+                >
+                  <Text style={{ color: "rgba(255,255,255,0.9)", fontFamily: fonts.body, fontSize: 14 }}>{LANGS.find((l) => l.value === language)?.label}</Text>
+                  <Ionicons name={langOpen ? "chevron-up" : "chevron-down"} size={15} color={MUTED} />
+                </Pressable>
+                {langOpen && (
+                  <View style={{ marginTop: 6, borderRadius: 10, backgroundColor: FIELD, borderWidth: 1, borderColor: LINE, overflow: "hidden" }}>
+                    {LANGS.map((l, i) => (
+                      <Pressable
+                        key={l.value}
+                        onPress={() => { animate(); setLanguage(l.value); setLangOpen(false); }}
+                        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 40, paddingHorizontal: 13, backgroundColor: pressed ? "#16161b" : "transparent", borderTopWidth: i ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" })}
+                      >
+                        <Text style={{ color: language === l.value ? TEXT : "#c9c9d2", fontFamily: language === l.value ? fonts.semi : fonts.body, fontSize: 14 }}>{l.label}</Text>
+                        {language === l.value && <Ionicons name="checkmark" size={16} color={colors.yellow} />}
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </Group>
+
+              {/* Schedule */}
+              <Box>
+                {community && (
+                  <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#0f0d07", borderWidth: 1, borderColor: "rgba(201,176,106,0.25)", marginBottom: 10 }}>
+                    <Ionicons name="business-outline" size={13} color="#c9b06a" style={{ marginTop: 2 }} />
+                    <Text style={{ flex: 1, color: "#c9b06a", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>
+                      This discussion belongs to <Text style={{ fontFamily: fonts.bold }}>{community.name}</Text> — members will be notified.
+                    </Text>
+                  </View>
+                )}
+                <Toggle label="Schedule for later" value={schedule} onChange={(v) => { animate(); setSchedule(v); }} />
+                {schedule && (
+                  <>
+                    <Divider />
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>STARTS AT</Text>
+                      {hasDatePicker && <DateTimeField value={startAt} minimumDate={minimumStart} onChange={setStartAt} />}
+                    </View>
+                    {!hasDatePicker && (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                        {PRESETS.map((pr) => (
+                          <Pill key={pr.key} on={preset === pr.key} fill={BLUE} onPress={() => setPreset(pr.key)}>
+                            <Text style={{ color: preset === pr.key ? "#fff" : "#c9c9d2", fontFamily: fonts.medium, fontSize: 12.5 }}>{pr.label}</Text>
+                          </Pill>
+                        ))}
+                      </View>
+                    )}
+                    <Note>Scheduled discussions appear on Explore under the Scheduled filter. People can queue up, but the room only goes live when you hit Start. You can have at most 3 scheduled at once.</Note>
+                  </>
+                )}
+              </Box>
+
+              {/* Thumbnail */}
+              <Box>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <Pressable onPress={() => void addThumb()} accessibilityLabel={thumb ? "Change thumbnail" : "Add a thumbnail"} style={({ pressed }) => ({ width: 56, height: 56, borderRadius: 12, overflow: "hidden", backgroundColor: pressed ? "#141418" : FIELD, borderWidth: 1, borderStyle: thumb ? "solid" : "dashed", borderColor: thumb ? LINE : "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" })}>
+                    {thumb ? <Image source={{ uri: thumb.uri }} style={{ width: 56, height: 56 }} resizeMode="cover" /> : <Ionicons name="add" size={22} color="rgba(255,255,255,0.5)" />}
+                  </Pressable>
+                  <Pressable onPress={() => void addThumb()} style={{ flex: 1 }}>
+                    <Text style={{ color: "rgba(255,255,255,0.78)", fontFamily: fonts.semi, fontSize: 13 }}>Thumbnail</Text>
+                    <Text style={{ color: DIM, fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, marginTop: 2 }}>Optional cover for your room's card — defaults to your profile picture.</Text>
+                  </Pressable>
+                  {thumb && (
+                    <Pressable onPress={() => setThumb(null)} style={({ pressed }) => ({ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: LINE })}>
+                      <Text style={{ color: MUTED, fontFamily: fonts.semi, fontSize: 11.5 }}>Remove</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </Box>
+
+              {/* Private Room */}
+              <Box>
+                <Toggle label="Private Room" value={isPrivate} onChange={(v) => { animate(); setPrivate(v); }} />
+                {isPrivate && (
+                  <>
+                    <Divider />
+                    <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: 8 }}>WHO CAN ENTER</Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                      {([["code", "Invite code"], ["followers", "My followers"], ["friends", "Friends only"], ...(community ? [["community", `${community.name} members`]] : [])] as [Access, string][]).map(([key, lab]) => (
+                        <Pill key={key} on={access === key} fill="#2f7fe0" onPress={() => { animate(); setAccess(key); }}>
+                          <Text style={{ color: access === key ? "#fff" : "#c9c9d2", fontFamily: fonts.medium, fontSize: 12.5 }}>{lab}</Text>
                         </Pill>
                       ))}
                     </View>
-                  )}
-                  <Note>Scheduled discussions appear on Explore under the Scheduled filter. People can queue up, but the room only goes live when you hit Start. You can have at most 3 scheduled at once.</Note>
-                </>
-              )}
-            </Box>
-
-            {/* Thumbnail */}
-            <Box>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <Pressable onPress={() => void addThumb()} accessibilityLabel={thumb ? "Change thumbnail" : "Add a thumbnail"} style={({ pressed }) => ({ width: 56, height: 56, borderRadius: 12, overflow: "hidden", backgroundColor: pressed ? "#141418" : FIELD, borderWidth: 1, borderStyle: thumb ? "solid" : "dashed", borderColor: thumb ? LINE : "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" })}>
-                  {thumb ? <Image source={{ uri: thumb.uri }} style={{ width: 56, height: 56 }} resizeMode="cover" /> : <Ionicons name="add" size={22} color="rgba(255,255,255,0.5)" />}
-                </Pressable>
-                <Pressable onPress={() => void addThumb()} style={{ flex: 1 }}>
-                  <Text style={{ color: "rgba(255,255,255,0.78)", fontFamily: fonts.semi, fontSize: 13 }}>Thumbnail</Text>
-                  <Text style={{ color: DIM, fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, marginTop: 2 }}>Optional cover for your room's card — defaults to your profile picture.</Text>
-                </Pressable>
-                {thumb && (
-                  <Pressable onPress={() => setThumb(null)} style={({ pressed }) => ({ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: LINE })}>
-                    <Text style={{ color: MUTED, fontFamily: fonts.semi, fontSize: 11.5 }}>Remove</Text>
-                  </Pressable>
+                    {access === "code" && <Toggle label="Allow spectators to watch" value={spectators} onChange={setSpectators} />}
+                    <Note>{accessNote(access, spectators, community?.name ?? null)}</Note>
+                  </>
                 )}
-              </View>
-            </Box>
+              </Box>
+            </ScrollView>
 
-            {/* Private Room */}
-            <Box>
-              <Toggle label="Private Room" value={isPrivate} onChange={(v) => { animate(); setPrivate(v); }} />
-              {isPrivate && (
-                <>
-                  <Divider />
-                  <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: 8 }}>WHO CAN ENTER</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                    {([["code", "Invite code"], ["followers", "My followers"], ["friends", "Friends only"], ...(community ? [["community", `${community.name} members`]] : [])] as [Access, string][]).map(([key, lab]) => (
-                      <Pill key={key} on={access === key} fill="#2f7fe0" onPress={() => { animate(); setAccess(key); }}>
-                        <Text style={{ color: access === key ? "#fff" : "#c9c9d2", fontFamily: fonts.medium, fontSize: 12.5 }}>{lab}</Text>
-                      </Pill>
-                    ))}
-                  </View>
-                  {access === "code" && <Toggle label="Allow spectators to watch" value={spectators} onChange={setSpectators} />}
-                  <Note>{accessNote(access, spectators, community?.name ?? null)}</Note>
-                </>
-              )}
-            </Box>
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
-            <Pressable onPress={() => { setCodeError(null); go("join"); }} hitSlop={8} style={{ paddingVertical: 9, paddingHorizontal: 4 }}>
-              <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13, textDecorationLine: "underline" }}>Have an invite code?</Text>
-            </Pressable>
-            <YellowButton label={busy ? "Creating…" : schedule ? "Schedule discussion" : "Create room"} disabled={busy || !motion.trim() || !!motionIssue} onPress={() => void submit()} />
+            {/* Footer */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
+              <Pressable onPress={() => { setCodeError(null); go("join"); }} hitSlop={8} style={{ paddingVertical: 9, paddingHorizontal: 4 }}>
+                <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13, textDecorationLine: "underline" }}>Have an invite code?</Text>
+              </Pressable>
+              <YellowButton label={busy ? "Creating…" : schedule ? "Schedule discussion" : "Create room"} disabled={busy || !motion.trim() || !!motionIssue} onPress={() => void submit()} />
+            </View>
           </View>
-        </View>
-      ) : view === "join" ? (
-        <View style={[CARD, { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 }]}>
-          <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 20, letterSpacing: -0.4, marginBottom: 6 }}>Join a private room</Text>
-          <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, marginBottom: 18 }}>Enter the 6-character invite code the host shared with you.</Text>
-          <TextInput
-            value={code}
-            onChangeText={(t) => { setCode(t.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 6)); setCodeError(null); }}
-            onSubmitEditing={() => void joinByCode()}
-            placeholder="ABC123"
-            placeholderTextColor="#5c5442"
-            autoFocus
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={6}
-            style={{ height: 58, borderRadius: 14, paddingHorizontal: 12, backgroundColor: "#0d0b07", borderWidth: 1, borderColor: codeError ? "rgba(239,68,68,0.5)" : "rgba(226,185,107,0.35)", color: TEXT, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 24, fontWeight: "700", letterSpacing: 7, textAlign: "center" }}
-          />
-          {!!codeError && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, marginTop: 10 }}>{codeError}</Text>}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 18 }}>
-            <Pressable onPress={() => go("form")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 9, paddingHorizontal: 4 }}>
-              <Ionicons name="arrow-back" size={14} color={MUTED} />
-              <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5 }}>Back</Text>
-            </Pressable>
-            <Pressable onPress={() => void joinByCode()} disabled={busy || code.length < 6} style={({ pressed }) => ({ paddingHorizontal: 26, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#e2ad45" : "#d9a238", opacity: busy || code.length < 6 ? 0.5 : 1 })}>
-              <Text style={{ color: "#2b1a02", fontFamily: fonts.semi, fontSize: 14 }}>{busy ? "Joining…" : "Join room"}</Text>
-            </Pressable>
+        ) : view === "join" ? (
+          <View style={[CARD, { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 }]}>
+            <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 20, letterSpacing: -0.4, marginBottom: 6 }}>Join a private room</Text>
+            <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, marginBottom: 18 }}>Enter the 6-character invite code the host shared with you.</Text>
+            <TextInput
+              value={code}
+              onChangeText={(t) => { setCode(t.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 6)); setCodeError(null); }}
+              onSubmitEditing={() => void joinByCode()}
+              placeholder="ABC123"
+              placeholderTextColor="#5c5442"
+              autoFocus
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={6}
+              style={{ height: 58, borderRadius: 14, paddingHorizontal: 12, backgroundColor: "#0d0b07", borderWidth: 1, borderColor: codeError ? "rgba(239,68,68,0.5)" : "rgba(226,185,107,0.35)", color: TEXT, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 24, fontWeight: "700", letterSpacing: 7, textAlign: "center" }}
+            />
+            {!!codeError && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, marginTop: 10 }}>{codeError}</Text>}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 18 }}>
+              <Pressable onPress={() => go("form")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 9, paddingHorizontal: 4 }}>
+                <Ionicons name="arrow-back" size={14} color={MUTED} />
+                <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5 }}>Back</Text>
+              </Pressable>
+              <Pressable onPress={() => void joinByCode()} disabled={busy || code.length < 6} style={({ pressed }) => ({ paddingHorizontal: 26, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#e2ad45" : "#d9a238", opacity: busy || code.length < 6 ? 0.5 : 1 })}>
+                <Text style={{ color: "#2b1a02", fontFamily: fonts.semi, fontSize: 14 }}>{busy ? "Joining…" : "Join room"}</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      ) : invite ? (
-        <View style={[CARD, { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 }]}>
-          <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 20, letterSpacing: -0.4, marginBottom: 6 }}>Private room created</Text>
-          <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, marginBottom: 20 }}>{inviteNote(access)}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 16, borderRadius: 14, backgroundColor: "#0d0b07", borderWidth: 1, borderColor: "rgba(226,185,107,0.35)", marginBottom: 16 }}>
-            <Text selectable style={{ color: "#ffdd85", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 26, fontWeight: "700", letterSpacing: 5.5 }}>{invite.code}</Text>
-            <Pressable onPress={() => void copyCode()} accessibilityLabel="Copy the invite code" style={({ pressed }) => ({ paddingHorizontal: 14, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#241c0c" : "#1a1508", borderWidth: 1, borderColor: "rgba(226,185,107,0.45)" })}>
-              <Text style={{ color: "#ffdd85", fontFamily: fonts.semi, fontSize: 12 }}>{copied ? "Copied!" : "Copy"}</Text>
+        ) : invite ? (
+          <View style={[CARD, { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 }]}>
+            <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 20, letterSpacing: -0.4, marginBottom: 6 }}>Private room created</Text>
+            <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, marginBottom: 20 }}>{inviteNote(access)}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 16, borderRadius: 14, backgroundColor: "#0d0b07", borderWidth: 1, borderColor: "rgba(226,185,107,0.35)", marginBottom: 16 }}>
+              <Text selectable style={{ color: "#ffdd85", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 26, fontWeight: "700", letterSpacing: 5.5 }}>{invite.code}</Text>
+              <Pressable onPress={() => void copyCode()} accessibilityLabel="Copy the invite code" style={({ pressed }) => ({ paddingHorizontal: 14, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#241c0c" : "#1a1508", borderWidth: 1, borderColor: "rgba(226,185,107,0.45)" })}>
+                <Text style={{ color: "#ffdd85", fontFamily: fonts.semi, fontSize: 12 }}>{copied ? "Copied!" : "Copy"}</Text>
+              </Pressable>
+            </View>
+            <View style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: "#060607", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginBottom: 18 }}>
+              <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 18 }}>
+                {spectators ? "This room will appear in public listings marked “Private”. Anyone can watch as a spectator, but only invited users can speak." : "This room is fully hidden — it won't appear anywhere. Only people with the code can enter."}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => { const id = invite.roomId; onClose(); if (!schedule) router.push({ pathname: "/room/[id]", params: { id } }); }}
+              style={({ pressed }) => ({ height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#5b9bf8" : BLUE })}
+            >
+              <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 14.5 }}>{schedule ? "Done" : "Enter room"}</Text>
             </Pressable>
           </View>
-          <View style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: "#060607", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginBottom: 18 }}>
-            <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 18 }}>
-              {spectators ? "This room will appear in public listings marked “Private”. Anyone can watch as a spectator, but only invited users can speak." : "This room is fully hidden — it won't appear anywhere. Only people with the code can enter."}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => { const id = invite.roomId; onClose(); if (!schedule) router.push({ pathname: "/room/[id]", params: { id } }); }}
-            style={({ pressed }) => ({ height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#5b9bf8" : BLUE })}
-          >
-            <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 14.5 }}>{schedule ? "Done" : "Enter room"}</Text>
-          </Pressable>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </KeyboardAvoidingView>
   );
 }

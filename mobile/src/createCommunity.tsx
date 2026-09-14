@@ -20,6 +20,7 @@ import { pickImage, uploadPostImage, uploadSquareImage, type PickedImage } from 
 import { InviteFriends } from "./inviteFriends";
 import { cleanTextError, BODY_MIN, NAME_MIN } from "./cleanText";
 import { useReduceMotion } from "./motion";
+import { useRevealField } from "./revealField";
 import { colors, fonts } from "./theme";
 
 export const COMMUNITY_KINDS: { key: string; label: string; icon: React.ComponentProps<typeof Ionicons>["name"]; hint: string }[] = [
@@ -79,6 +80,10 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
   const [focus, setFocus] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const nameRef = useRef<TextInput>(null);
+  const descriptionRef = useRef<TextInput>(null);
+  const rulesRef = useRef<TextInput>(null);
+  const promptRef = useRef<TextInput>(null);
+  const reveal = useRevealField(scrollRef);
   const openedAt = useRef(Date.now());
   const focusedName = useRef(false);
 
@@ -148,7 +153,11 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
   /* Type cards two to a row on a phone (.ccm-kinds). */
   const kindW = Math.floor((cardW - 2 - 40 - 8) / 2);
   const field = (key: string) => ({ borderRadius: 10, borderWidth: 1, borderColor: focus === key ? "rgba(255,255,255,0.24)" : LINE, backgroundColor: "#070708", color: TEXT, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 }) as const;
-  const focusProps = (key: string) => ({ onFocus: () => setFocus(key), onBlur: () => setFocus((f) => (f === key ? null : f)) });
+  const focusProps = (key: string, ref: React.RefObject<TextInput | null>) => ({
+    ref,
+    onFocus: () => { setFocus(key); reveal.focused(ref); },
+    onBlur: () => { setFocus((f) => (f === key ? null : f)); reveal.blurred(ref); },
+  });
 
   const preview = (
     <View style={{ borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: LINE, backgroundColor: "#0e0e11" }}>
@@ -167,240 +176,243 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
   );
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} pointerEvents="box-none" style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12, paddingHorizontal: 12 }}>
-      <View style={{ width: cardW, height: cardH, maxHeight: "100%", backgroundColor: "#000", borderRadius: 20, borderWidth: 1, borderColor: LINE, overflow: "hidden" }}>
-        {/* Header */}
-        <View style={{ paddingTop: 16, paddingRight: 16, paddingBottom: 12, paddingLeft: 20, borderBottomWidth: 1, borderBottomColor: SEP }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
-            <View>
-              <Text style={{ color: "#f4f4f5", fontFamily: fonts.bold, fontSize: 18, letterSpacing: -0.36 }}>{created ? "Invite friends" : "Create a community"}</Text>
-              {onCreateDiscussion && (
-                <View accessibilityRole="tablist" style={{ flexDirection: "row", alignSelf: "flex-start", marginTop: 10, padding: 3, gap: 2, borderRadius: 999, backgroundColor: FIELD, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
-                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: false }} onPress={onCreateDiscussion} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, opacity: pressed ? 0.7 : 1 })}>
-                    <Ionicons name="mic-outline" size={12} color="rgba(238,238,245,0.7)" />
-                    <Text style={{ color: "rgba(238,238,245,0.7)", fontFamily: fonts.semi, fontSize: 12 }}>Discussion</Text>
-                  </Pressable>
-                  <View accessibilityRole="tab" accessibilityState={{ selected: true }} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.yellow }}>
-                    <Ionicons name="people" size={12} color={INK} />
-                    <Text style={{ color: INK, fontFamily: fonts.bold, fontSize: 12 }}>Community</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close" style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" })}>
-              <Ionicons name="close" size={15} color="rgba(244,244,245,0.55)" />
-            </Pressable>
-          </View>
-          <View accessibilityLabel={`Step ${activeStep + 1} of ${STEPS.length}`} style={{ flexDirection: "row", alignItems: "center", marginTop: 12 }}>
-            {STEPS.map((s, i) => {
-              const tone = i === activeStep ? colors.yellow : i < activeStep ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)";
-              return (
-                <Fragment key={s}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: i === activeStep ? colors.yellow : i < activeStep ? "#242424" : "#0f0f0f" }}>
-                      {i < activeStep ? <Ionicons name="checkmark" size={10} color={tone} /> : <Text style={{ color: i === activeStep ? INK : tone, fontFamily: fonts.bold, fontSize: 10.5 }}>{i + 1}</Text>}
-                    </View>
-                    <Text style={{ color: tone, fontFamily: fonts.semi, fontSize: 11.5 }}>{s}</Text>
-                  </View>
-                  {i < STEPS.length - 1 && <View style={{ flexGrow: 1, flexShrink: 1, maxWidth: 14, height: 1, marginHorizontal: 5, backgroundColor: "#1f1f1f" }} />}
-                </Fragment>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Body */}
-        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 14 }}>
-          {gate && !gate.allowed && gate.reason && (
-            <View style={{ alignItems: "center", paddingTop: 26, paddingBottom: 18, paddingHorizontal: 12 }}>
-              <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#1f1807", borderWidth: 1, borderColor: "#4d3a08", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-                <Ionicons name={gate.reason === "email_unverified" ? "mail-outline" : gate.reason === "not_verified" ? "person-circle-outline" : gate.reason === "account_too_new" ? "time-outline" : "business-outline"} size={22} color={colors.yellow} />
-              </View>
-              <Text style={{ color: "#f5f5f0", fontFamily: fonts.title, fontSize: 16, textAlign: "center" }}>
-                {gate.reason === "email_unverified" ? "Verify your email first" : gate.reason === "not_verified" ? "Communities are for verified accounts for now" : gate.reason === "account_too_new" ? "Your account is brand new" : gate.reason === "community_limit" ? "You've made the most communities one account can" : "Sign in to create a community"}
-              </Text>
-              <Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 13, lineHeight: 19.5, textAlign: "center", marginTop: 6, maxWidth: 340 }}>
-                {gate.reason === "email_unverified" ? `We sent a link to ${email ?? "your inbox"}. Open it, then come back — communities need a verified address.`
-                  : gate.reason === "not_verified" ? "During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in the Discord if you'd like to run one."
-                  : gate.reason === "account_too_new" ? `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few communities and post in the meantime.`
-                  : gate.reason === "community_limit" ? `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more communities are coming; for now, grow the ones you have.`
-                  : "Communities are created from an account."}
-              </Text>
-              {gate.reason === "email_unverified" && email && (
-                <Pressable disabled={resent} onPress={() => void supabase.auth.resend({ type: "signup", email }).then(({ error: err }) => (err ? setError(err.message) : setResent(true)))} style={{ marginTop: 14, height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: resent ? "#17171c" : colors.yellow }}>
-                  <Text style={{ color: resent ? "#c9c9d2" : INK, fontFamily: fonts.bold, fontSize: 13 }}>{resent ? "Sent — check your inbox" : "Resend the link"}</Text>
-                </Pressable>
-              )}
-            </View>
-          )}
-
-          {created && (
-            <StepIn key="invite" dir={1}>
+    /* Framed as the discussion card is (newRoomSheet.tsx): the keyboard lifts the floor and the card shrinks to fit. */
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={-insets.bottom} pointerEvents="box-none" style={{ flex: 1 }}>
+      <View pointerEvents="box-none" style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12, paddingHorizontal: 12 }}>
+        <View style={{ width: cardW, height: cardH, flexShrink: 1, backgroundColor: "#000", borderRadius: 20, borderWidth: 1, borderColor: LINE, overflow: "hidden" }}>
+          {/* Header */}
+          <View style={{ paddingTop: 16, paddingRight: 16, paddingBottom: 12, paddingLeft: 20, borderBottomWidth: 1, borderBottomColor: SEP }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
               <View>
-                <Label text={`Invite friends to ${created.name}`} />
-                <InviteFriends communityId={created.id} communityName={created.name} isPrivate={isPrivate} />
-              </View>
-            </StepIn>
-          )}
-
-          {allowed && !created && step === 0 && (
-            <StepIn key="step-0" dir={dir}>
-              <View>
-                <Label text="Name" />
-                <TextInput ref={nameRef} value={name} onChangeText={(t) => setName(t.slice(0, NAME_MAX + 10))} placeholder="e.g. Georgetown Debate Society" placeholderTextColor={colors.faint} maxLength={NAME_MAX} returnKeyType="next" {...focusProps("name")} style={field("name")} />
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, marginTop: 5 }}>
-                  <Text numberOfLines={1} style={{ flex: 1, color: nameIssue ? "#ff8a80" : HINT, fontFamily: fonts.body, fontSize: 11.5 }}>
-                    {nameIssue ?? (slug ? <>Lives at <Text style={{ color: "rgba(238,238,245,0.7)" }}>agorasphere.net/communities/{slug}</Text></> : `${NAME_MIN_LEN}–${NAME_MAX} characters.`)}
-                  </Text>
-                  <Text style={{ color: trimmed.length > NAME_MAX ? "#ff8a80" : HINT, fontFamily: fonts.body, fontSize: 11.5 }}>{trimmed.length}/{NAME_MAX}</Text>
-                </View>
-              </View>
-
-              <View>
-                <Label text="Type" />
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {COMMUNITY_KINDS.map((k) => {
-                    const on = k.key === kind;
-                    return (
-                      <Pressable
-                        key={k.key}
-                        onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)); setKind(k.key); }}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: on }}
-                        style={({ pressed }) => ({ width: kindW, flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 11, backgroundColor: on ? colors.yellow : pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: on ? colors.yellow : EDGE })}
-                      >
-                        <View style={{ width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: on ? INK : "#16161a" }}><Ionicons name={k.icon} size={15} color={on ? colors.yellow : "#c0c0c8"} /></View>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={{ color: on ? INK : TEXT, fontFamily: fonts.semi, fontSize: 13 }}>{k.label}</Text>
-                          {/* One line at rest, the whole hint on the chosen card. */}
-                          <Text numberOfLines={on ? 0 : 1} style={{ color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11, lineHeight: 15 }}>{k.hint}</Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View>
-                <Label text="Description" optional />
-                <TextInput value={description} onChangeText={(t) => setDescription(t.slice(0, DESC_MAX))} placeholder="What is this community for, and who is it for?" placeholderTextColor={colors.faint} multiline {...focusProps("description")} style={[field("description"), { minHeight: 82, textAlignVertical: "top" }]} />
-                <Hint right>{description.length}/{DESC_MAX}</Hint>
-              </View>
-              <View>
-                <Label text="Rules" optional />
-                <TextInput value={rules} onChangeText={(t) => setRules(t.slice(0, RULES_MAX))} placeholder={"1. Stay on topic\n2. Argue the point, not the person"} placeholderTextColor={colors.faint} multiline {...focusProps("rules")} style={[field("rules"), { minHeight: 102, textAlignVertical: "top" }]} />
-                <Hint>{"Pinned in the community's sidebar. You can edit everything later in the community's settings."}</Hint>
-              </View>
-            </StepIn>
-          )}
-
-          {allowed && !created && step === 1 && (
-            <StepIn key="step-1" dir={dir}>
-              {preview}
-              <View>
-                <Label text="Accent colour" />
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingVertical: 4 }}>
-                  {COLORS.map((c) => {
-                    const on = color === c;
-                    return (
-                      <Pressable key={c} onPress={() => setColor(c)} hitSlop={3} accessibilityLabel={`Colour ${c}`} accessibilityState={{ selected: on }} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, transform: [{ scale: on ? 1.05 : 1 }] }}>
-                        {on && <View pointerEvents="none" style={{ position: "absolute", top: -4, left: -4, right: -4, bottom: -4, borderRadius: 19, borderWidth: 2, borderColor: c }} />}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-              {([["Avatar", "Square, shown beside the name.", avatar, setAvatar], ["Banner", "Wide, across the top of the community page.", banner, setBanner]] as const).map(([title, h, file, set]) => (
-                <View key={title} style={{ padding: 12, borderRadius: 12, borderWidth: 1, borderColor: EDGE, backgroundColor: FIELD }}>
-                  <Label text={title} optional tight />
-                  <Text style={{ color: HINT, fontFamily: fonts.body, fontSize: 11.5, marginBottom: 10 }}>{h}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    {file && <Image source={{ uri: file.uri }} style={{ width: 44, height: 44, borderRadius: 8 }} />}
-                    <Pressable onPress={() => void pick(set as (i: PickedImage | null) => void)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: pressed ? "#1a1a1f" : "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" })}>
-                      <Ionicons name="image-outline" size={13} color="#e8e8ee" /><Text style={{ color: "#e8e8ee", fontFamily: fonts.semi, fontSize: 12 }}>{file ? "Replace" : "Upload"}</Text>
+                <Text style={{ color: "#f4f4f5", fontFamily: fonts.bold, fontSize: 18, letterSpacing: -0.36 }}>{created ? "Invite friends" : "Create a community"}</Text>
+                {onCreateDiscussion && (
+                  <View accessibilityRole="tablist" style={{ flexDirection: "row", alignSelf: "flex-start", marginTop: 10, padding: 3, gap: 2, borderRadius: 999, backgroundColor: FIELD, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+                    <Pressable accessibilityRole="tab" accessibilityState={{ selected: false }} onPress={onCreateDiscussion} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, opacity: pressed ? 0.7 : 1 })}>
+                      <Ionicons name="mic-outline" size={12} color="rgba(238,238,245,0.7)" />
+                      <Text style={{ color: "rgba(238,238,245,0.7)", fontFamily: fonts.semi, fontSize: 12 }}>Discussion</Text>
                     </Pressable>
-                    {file && <Pressable onPress={() => (set as (i: PickedImage | null) => void)(null)} hitSlop={6}><Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12 }}>Remove</Text></Pressable>}
+                    <View accessibilityRole="tab" accessibilityState={{ selected: true }} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.yellow }}>
+                      <Ionicons name="people" size={12} color={INK} />
+                      <Text style={{ color: INK, fontFamily: fonts.bold, fontSize: 12 }}>Community</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+              <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close" style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" })}>
+                <Ionicons name="close" size={15} color="rgba(244,244,245,0.55)" />
+              </Pressable>
+            </View>
+            <View accessibilityLabel={`Step ${activeStep + 1} of ${STEPS.length}`} style={{ flexDirection: "row", alignItems: "center", marginTop: 12 }}>
+              {STEPS.map((s, i) => {
+                const tone = i === activeStep ? colors.yellow : i < activeStep ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)";
+                return (
+                  <Fragment key={s}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                      <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: i === activeStep ? colors.yellow : i < activeStep ? "#242424" : "#0f0f0f" }}>
+                        {i < activeStep ? <Ionicons name="checkmark" size={10} color={tone} /> : <Text style={{ color: i === activeStep ? INK : tone, fontFamily: fonts.bold, fontSize: 10.5 }}>{i + 1}</Text>}
+                      </View>
+                      <Text style={{ color: tone, fontFamily: fonts.semi, fontSize: 11.5 }}>{s}</Text>
+                    </View>
+                    {i < STEPS.length - 1 && <View style={{ flexGrow: 1, flexShrink: 1, maxWidth: 14, height: 1, marginHorizontal: 5, backgroundColor: "#1f1f1f" }} />}
+                  </Fragment>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Body */}
+          <ScrollView ref={scrollRef} onScroll={reveal.onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 14 }}>
+            {gate && !gate.allowed && gate.reason && (
+              <View style={{ alignItems: "center", paddingTop: 26, paddingBottom: 18, paddingHorizontal: 12 }}>
+                <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#1f1807", borderWidth: 1, borderColor: "#4d3a08", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                  <Ionicons name={gate.reason === "email_unverified" ? "mail-outline" : gate.reason === "not_verified" ? "person-circle-outline" : gate.reason === "account_too_new" ? "time-outline" : "business-outline"} size={22} color={colors.yellow} />
+                </View>
+                <Text style={{ color: "#f5f5f0", fontFamily: fonts.title, fontSize: 16, textAlign: "center" }}>
+                  {gate.reason === "email_unverified" ? "Verify your email first" : gate.reason === "not_verified" ? "Communities are for verified accounts for now" : gate.reason === "account_too_new" ? "Your account is brand new" : gate.reason === "community_limit" ? "You've made the most communities one account can" : "Sign in to create a community"}
+                </Text>
+                <Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 13, lineHeight: 19.5, textAlign: "center", marginTop: 6, maxWidth: 340 }}>
+                  {gate.reason === "email_unverified" ? `We sent a link to ${email ?? "your inbox"}. Open it, then come back — communities need a verified address.`
+                    : gate.reason === "not_verified" ? "During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in the Discord if you'd like to run one."
+                    : gate.reason === "account_too_new" ? `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few communities and post in the meantime.`
+                    : gate.reason === "community_limit" ? `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more communities are coming; for now, grow the ones you have.`
+                    : "Communities are created from an account."}
+                </Text>
+                {gate.reason === "email_unverified" && email && (
+                  <Pressable disabled={resent} onPress={() => void supabase.auth.resend({ type: "signup", email }).then(({ error: err }) => (err ? setError(err.message) : setResent(true)))} style={{ marginTop: 14, height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: resent ? "#17171c" : colors.yellow }}>
+                    <Text style={{ color: resent ? "#c9c9d2" : INK, fontFamily: fonts.bold, fontSize: 13 }}>{resent ? "Sent — check your inbox" : "Resend the link"}</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+
+            {created && (
+              <StepIn key="invite" dir={1}>
+                <View>
+                  <Label text={`Invite friends to ${created.name}`} />
+                  <InviteFriends communityId={created.id} communityName={created.name} isPrivate={isPrivate} />
+                </View>
+              </StepIn>
+            )}
+
+            {allowed && !created && step === 0 && (
+              <StepIn key="step-0" dir={dir}>
+                <View>
+                  <Label text="Name" />
+                  <TextInput value={name} onChangeText={(t) => setName(t.slice(0, NAME_MAX + 10))} placeholder="e.g. Georgetown Debate Society" placeholderTextColor={colors.faint} maxLength={NAME_MAX} returnKeyType="next" {...focusProps("name", nameRef)} style={field("name")} />
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, marginTop: 5 }}>
+                    <Text numberOfLines={1} style={{ flex: 1, color: nameIssue ? "#ff8a80" : HINT, fontFamily: fonts.body, fontSize: 11.5 }}>
+                      {nameIssue ?? (slug ? <>Lives at <Text style={{ color: "rgba(238,238,245,0.7)" }}>agorasphere.net/communities/{slug}</Text></> : `${NAME_MIN_LEN}–${NAME_MAX} characters.`)}
+                    </Text>
+                    <Text style={{ color: trimmed.length > NAME_MAX ? "#ff8a80" : HINT, fontFamily: fonts.body, fontSize: 11.5 }}>{trimmed.length}/{NAME_MAX}</Text>
                   </View>
                 </View>
-              ))}
-            </StepIn>
-          )}
 
-          {allowed && !created && step === 2 && (
-            <StepIn key="step-2" dir={dir}>
-              <View>
-                <Label text="Who can join" />
-                <View style={{ gap: 8 }}>
-                  {([[false, "lock-open-outline", "Public", "Anyone can find it and join."], [true, "lock-closed-outline", "Private", "People request to join; you approve."]] as const).map(([priv, icon, title, h]) => {
-                    const on = isPrivate === priv;
-                    return (
-                      <Pressable key={title} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.create(200, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)); setIsPrivate(priv); }} accessibilityRole="button" accessibilityState={{ selected: on }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 12, backgroundColor: on ? colors.yellow : pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: on ? colors.yellow : EDGE })}>
-                        <Ionicons name={icon} size={15} color={on ? INK : "#c0c0c8"} style={{ marginTop: 1 }} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: on ? INK : TEXT, fontFamily: fonts.semi, fontSize: 13 }}>{title}</Text>
-                          <Text style={{ color: on ? "rgba(26,14,0,0.72)" : "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5, marginTop: 2 }}>{h}</Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-              {isPrivate && (
                 <View>
-                  <Label text="Ask applicants" optional />
-                  <TextInput value={prompt} onChangeText={(t) => setPrompt(t.slice(0, PROMPT_MAX))} placeholder="e.g. Which school are you at, and who do you know here?" placeholderTextColor={colors.faint} multiline {...focusProps("prompt")} style={[field("prompt"), { minHeight: 62, textAlignVertical: "top" }]} />
-                  <Hint>Shown when someone requests to join; their answer comes with the request.</Hint>
+                  <Label text="Type" />
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {COMMUNITY_KINDS.map((k) => {
+                      const on = k.key === kind;
+                      return (
+                        <Pressable
+                          key={k.key}
+                          onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)); setKind(k.key); }}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: on }}
+                          style={({ pressed }) => ({ width: kindW, flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 11, backgroundColor: on ? colors.yellow : pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: on ? colors.yellow : EDGE })}
+                        >
+                          <View style={{ width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: on ? INK : "#16161a" }}><Ionicons name={k.icon} size={15} color={on ? colors.yellow : "#c0c0c8"} /></View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text numberOfLines={1} style={{ color: on ? INK : TEXT, fontFamily: fonts.semi, fontSize: 13 }}>{k.label}</Text>
+                            {/* One line at rest, the whole hint on the chosen card. */}
+                            <Text numberOfLines={on ? 0 : 1} style={{ color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11, lineHeight: 15 }}>{k.hint}</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
-              )}
-            </StepIn>
-          )}
 
-          {allowed && !created && step === 3 && (
-            <StepIn key="step-3" dir={dir}>
-              {preview}
-              <View>
-                <Label text="Everything, before it exists" />
-                <View style={{ borderRadius: 12, borderWidth: 1, borderColor: LINE, backgroundColor: FIELD, overflow: "hidden" }}>
-                  {([["Name", trimmed, 0], ["Type", kindMeta.label, 0], ["Description", description.trim() || "None", 0], ["Rules", rules.trim() ? `${rules.trim().split(/\n+/).filter(Boolean).length} rule${rules.trim().split(/\n+/).filter(Boolean).length === 1 ? "" : "s"}` : "None", 0], ["Look", `${avatar ? "Avatar" : "Initial"} · ${banner ? "banner" : "colour band"}`, 1], ["Access", isPrivate ? `Private — people apply${prompt.trim() ? ", with a question" : ""}` : "Public — anyone can join", 2]] as [string, string, number][]).map(([k, v, target], idx, arr) => (
-                    <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: SEP }}>
-                      <Text style={{ width: 84, color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>{k.toUpperCase()}</Text>
-                      <Text numberOfLines={1} style={{ flex: 1, color: TEXT, fontFamily: fonts.body, fontSize: 13 }}>{v}</Text>
-                      <Pressable onPress={() => go(target)} hitSlop={8}><Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 12 }}>Edit</Text></Pressable>
+                <View>
+                  <Label text="Description" optional />
+                  <TextInput value={description} onChangeText={(t) => setDescription(t.slice(0, DESC_MAX))} placeholder="What is this community for, and who is it for?" placeholderTextColor={colors.faint} multiline {...focusProps("description", descriptionRef)} style={[field("description"), { minHeight: 82, textAlignVertical: "top" }]} />
+                  <Hint right>{description.length}/{DESC_MAX}</Hint>
+                </View>
+                <View>
+                  <Label text="Rules" optional />
+                  <TextInput value={rules} onChangeText={(t) => setRules(t.slice(0, RULES_MAX))} placeholder={"1. Stay on topic\n2. Argue the point, not the person"} placeholderTextColor={colors.faint} multiline {...focusProps("rules", rulesRef)} style={[field("rules"), { minHeight: 102, textAlignVertical: "top" }]} />
+                  <Hint>{"Pinned in the community's sidebar. You can edit everything later in the community's settings."}</Hint>
+                </View>
+              </StepIn>
+            )}
+
+            {allowed && !created && step === 1 && (
+              <StepIn key="step-1" dir={dir}>
+                {preview}
+                <View>
+                  <Label text="Accent colour" />
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingVertical: 4 }}>
+                    {COLORS.map((c) => {
+                      const on = color === c;
+                      return (
+                        <Pressable key={c} onPress={() => setColor(c)} hitSlop={3} accessibilityLabel={`Colour ${c}`} accessibilityState={{ selected: on }} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, transform: [{ scale: on ? 1.05 : 1 }] }}>
+                          {on && <View pointerEvents="none" style={{ position: "absolute", top: -4, left: -4, right: -4, bottom: -4, borderRadius: 19, borderWidth: 2, borderColor: c }} />}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                {([["Avatar", "Square, shown beside the name.", avatar, setAvatar], ["Banner", "Wide, across the top of the community page.", banner, setBanner]] as const).map(([title, h, file, set]) => (
+                  <View key={title} style={{ padding: 12, borderRadius: 12, borderWidth: 1, borderColor: EDGE, backgroundColor: FIELD }}>
+                    <Label text={title} optional tight />
+                    <Text style={{ color: HINT, fontFamily: fonts.body, fontSize: 11.5, marginBottom: 10 }}>{h}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      {file && <Image source={{ uri: file.uri }} style={{ width: 44, height: 44, borderRadius: 8 }} />}
+                      <Pressable onPress={() => void pick(set as (i: PickedImage | null) => void)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: pressed ? "#1a1a1f" : "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" })}>
+                        <Ionicons name="image-outline" size={13} color="#e8e8ee" /><Text style={{ color: "#e8e8ee", fontFamily: fonts.semi, fontSize: 12 }}>{file ? "Replace" : "Upload"}</Text>
+                      </Pressable>
+                      {file && <Pressable onPress={() => (set as (i: PickedImage | null) => void)(null)} hitSlop={6}><Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12 }}>Remove</Text></Pressable>}
                     </View>
-                  ))}
+                  </View>
+                ))}
+              </StepIn>
+            )}
+
+            {allowed && !created && step === 2 && (
+              <StepIn key="step-2" dir={dir}>
+                <View>
+                  <Label text="Who can join" />
+                  <View style={{ gap: 8 }}>
+                    {([[false, "lock-open-outline", "Public", "Anyone can find it and join."], [true, "lock-closed-outline", "Private", "People request to join; you approve."]] as const).map(([priv, icon, title, h]) => {
+                      const on = isPrivate === priv;
+                      return (
+                        <Pressable key={title} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.create(200, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)); setIsPrivate(priv); }} accessibilityRole="button" accessibilityState={{ selected: on }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 12, backgroundColor: on ? colors.yellow : pressed ? "#141418" : FIELD, borderWidth: 1, borderColor: on ? colors.yellow : EDGE })}>
+                          <Ionicons name={icon} size={15} color={on ? INK : "#c0c0c8"} style={{ marginTop: 1 }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: on ? INK : TEXT, fontFamily: fonts.semi, fontSize: 13 }}>{title}</Text>
+                            <Text style={{ color: on ? "rgba(26,14,0,0.72)" : "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5, marginTop: 2 }}>{h}</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
-                <Hint>{"You'll be the owner. Everything here can be changed later in the community's settings."}</Hint>
+                {isPrivate && (
+                  <View>
+                    <Label text="Ask applicants" optional />
+                    <TextInput value={prompt} onChangeText={(t) => setPrompt(t.slice(0, PROMPT_MAX))} placeholder="e.g. Which school are you at, and who do you know here?" placeholderTextColor={colors.faint} multiline {...focusProps("prompt", promptRef)} style={[field("prompt"), { minHeight: 62, textAlignVertical: "top" }]} />
+                    <Hint>Shown when someone requests to join; their answer comes with the request.</Hint>
+                  </View>
+                )}
+              </StepIn>
+            )}
+
+            {allowed && !created && step === 3 && (
+              <StepIn key="step-3" dir={dir}>
+                {preview}
+                <View>
+                  <Label text="Everything, before it exists" />
+                  <View style={{ borderRadius: 12, borderWidth: 1, borderColor: LINE, backgroundColor: FIELD, overflow: "hidden" }}>
+                    {([["Name", trimmed, 0], ["Type", kindMeta.label, 0], ["Description", description.trim() || "None", 0], ["Rules", rules.trim() ? `${rules.trim().split(/\n+/).filter(Boolean).length} rule${rules.trim().split(/\n+/).filter(Boolean).length === 1 ? "" : "s"}` : "None", 0], ["Look", `${avatar ? "Avatar" : "Initial"} · ${banner ? "banner" : "colour band"}`, 1], ["Access", isPrivate ? `Private — people apply${prompt.trim() ? ", with a question" : ""}` : "Public — anyone can join", 2]] as [string, string, number][]).map(([k, v, target], idx, arr) => (
+                      <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: SEP }}>
+                        <Text style={{ width: 84, color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>{k.toUpperCase()}</Text>
+                        <Text numberOfLines={1} style={{ flex: 1, color: TEXT, fontFamily: fonts.body, fontSize: 13 }}>{v}</Text>
+                        <Pressable onPress={() => go(target)} hitSlop={8}><Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 12 }}>Edit</Text></Pressable>
+                      </View>
+                    ))}
+                  </View>
+                  <Hint>{"You'll be the owner. Everything here can be changed later in the community's settings."}</Hint>
+                </View>
+              </StepIn>
+            )}
+
+            {!!error && (
+              <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: "#140909", borderWidth: 1, borderColor: "rgba(239,68,68,0.3)" }}>
+                <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>{error}</Text>
               </View>
-            </StepIn>
-          )}
+            )}
+          </ScrollView>
 
-          {!!error && (
-            <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: "#140909", borderWidth: 1, borderColor: "rgba(239,68,68,0.3)" }}>
-              <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>{error}</Text>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Footer */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderTopWidth: 1, borderTopColor: SEP }}>
-          {created ? (
-            <>
-              <Text style={{ flex: 1, color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 12, lineHeight: 16 }}>You can invite more people from the community any time.</Text>
-              <FootButton label="Done" primary onPress={() => { const id = created.id; onClose(); router.push({ pathname: "/c/[id]", params: { id } }); }} />
-            </>
-          ) : !gate ? (
-            <View style={{ height: 38 }} />
-          ) : !gate.allowed ? (
-            <><View style={{ flex: 1 }} /><FootButton label="Close" onPress={onClose} /></>
-          ) : (
-            <>
-              {step > 0 && <FootButton label="Back" icon="arrow-back" onPress={() => go(step - 1)} />}
-              <View style={{ flex: 1 }} />
-              {step < 3
-                ? <FootButton label="Next" primary disabled={!canNext} onPress={() => canNext && go(step + 1)} />
-                : <FootButton label={busy ? "Creating…" : "Create community"} primary disabled={!canCreate || busy} onPress={() => void create()} />}
-            </>
-          )}
+          {/* Footer */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderTopWidth: 1, borderTopColor: SEP }}>
+            {created ? (
+              <>
+                <Text style={{ flex: 1, color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 12, lineHeight: 16 }}>You can invite more people from the community any time.</Text>
+                <FootButton label="Done" primary onPress={() => { const id = created.id; onClose(); router.push({ pathname: "/c/[id]", params: { id } }); }} />
+              </>
+            ) : !gate ? (
+              <View style={{ height: 38 }} />
+            ) : !gate.allowed ? (
+              <><View style={{ flex: 1 }} /><FootButton label="Close" onPress={onClose} /></>
+            ) : (
+              <>
+                {step > 0 && <FootButton label="Back" icon="arrow-back" onPress={() => go(step - 1)} />}
+                <View style={{ flex: 1 }} />
+                {step < 3
+                  ? <FootButton label="Next" primary disabled={!canNext} onPress={() => canNext && go(step + 1)} />
+                  : <FootButton label={busy ? "Creating…" : "Create community"} primary disabled={!canCreate || busy} onPress={() => void create()} />}
+              </>
+            )}
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
