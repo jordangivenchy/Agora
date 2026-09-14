@@ -1,16 +1,18 @@
 /* The room on a phone (app/agora/[id]/page.tsx): the top bar with the
    host, Follow, About and the room's menu; the tag line — live, the
-   clock, the audience, the field, the community — with the view switch;
-   the motion; then one of two views, as on the site. The amphitheater
-   (audience view, amphitheater.tsx): the site's own 3D scene — the bowl,
-   the crowd in its seats, the line for the mic in the aisle — with the
-   discussion strip and the dock of live pictures over it. The speaker
-   view: the pictures, the hands and the listeners.
+   clock, the audience, the field, the community; the motion; then the
+   room itself, as on the site (amphitheater.tsx): the site's own 3D scene
+   — the bowl, the crowd in its seats, the line for the mic in the aisle —
+   seen from the seats with the discussion strip and the dock of live
+   pictures over it, or, from the switch under the stage, from the
+   orchestra with the call layout over it (roomTiles.tsx: Discord's square
+   grid, or multi-speaker). The hands and the audience are the host's
+   sheet's, as on the site.
    A queue-matched duel has no amphitheater — its two speakers, face to
    face, are the whole room. Under both: the queue pill and the host's
    button, the cards, the control pill; the sheets hang off it. */
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { LayoutAnimation, Pressable, Share, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,9 +25,8 @@ import { host as seatHost } from "./seats";
 import { fmtElapsed, frameNewsKey, roomHost, roomLink, setSeatMuted, type PendingInvite, type RoomDetail, type RoomFraming } from "./roomData";
 import type { CallApi } from "./roomCall";
 import { ROLE_LABEL, deriveStageRole, isHostRole, onStage, seatName, seatUser, sortRequests, type Seat, type StageRole } from "./stageModel";
-import { StageView, type StageActions } from "./stageView";
 import { StageTiles, type StageTile } from "./roomTiles";
-import { Amphitheater, type AmphiPerson, type AmphiStagePerson } from "./amphitheater";
+import { Amphitheater, type AmphiPerson, type AmphiStagePerson, type AmphiView } from "./amphitheater";
 import { ReactionOverlay } from "./reactions";
 import { CONTROLS_H, RoomControls, copyRoomLink, useSavedLayout } from "./roomControls";
 import { RoomChatSheet, useRoomChat } from "./roomChat";
@@ -82,10 +83,12 @@ export function RoomBody(p: RoomBodyProps) {
   const [topMenu, setTopMenu] = useState(false);
   const [report, setReport] = useState<ReportTarget | null>(null);
   const [tileSheet, setTileSheet] = useState<{ seat: Seat; role: StageRole } | null>(null);
-  /* The amphitheater, or the speaker view. A duel has only the speaker view. */
-  const [view, setView] = useState<"audience" | "speaker">(p.duel ? "speaker" : "audience");
-  useEffect(() => { if (p.duel) setView("speaker"); }, [p.duel]);
-  const amphitheater = view === "audience" && !p.duel;
+  /* The amphitheater's vantage: the seats, or the speaker view. A duel has only its two pictures. */
+  const [view, setView] = useState<AmphiView>("audience");
+  const switchView = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+    setView((v) => (v === "audience" ? "speaker" : "audience"));
+  };
   const [areaH, setAreaH] = useState(0);
   const messages = useRoomChat(room.id);
   useEffect(() => { if (chatOpen) setSeenChat(messages.length); }, [chatOpen, messages.length]);
@@ -178,12 +181,6 @@ export function RoomBody(p: RoomBodyProps) {
     if (canManage && seat && role !== "host") setTileSheet({ seat, role });
     else openPerson(t.identity, t.handle, t.username, true);
   };
-  const hostActions = useMemo<StageActions | null>(() => canManage ? {
-    bringUp: (s) => void seatHost.bringUp(supabase, s.id).then(p.onRefresh),
-    dismiss: (s) => void seatHost.dismiss(supabase, s.id).then(p.onRefresh),
-    toAudience: (s) => void seatHost.toAudience(supabase, s.id).then(p.onRefresh),
-    makeCohost: (s, make) => void seatHost.setCohost(supabase, s.id, make).then(p.onRefresh),
-  } : null, [canManage, p.onRefresh]);
   const tileActions: SheetAction[] = tileSheet ? [
     { label: tileSheet.seat.mic_muted ? "Unmute" : "Mute", onPress: () => void setSeatMuted(supabase, tileSheet.seat.id, !tileSheet.seat.mic_muted).then(p.onRefresh) },
     ...(tileSheet.role === "speaker" && isHostViewer ? [{ label: "Make co-host", onPress: () => void seatHost.setCohost(supabase, tileSheet.seat.id, true).then(p.onRefresh) }] : []),
@@ -205,7 +202,6 @@ export function RoomBody(p: RoomBodyProps) {
   /* The amphitheater's stage clears the controls, and the pill and the host's button when they show. */
   const bandA = (!!meId && (amMicHolder || myQueuePos !== null)) || canManage;
   const amphiInset = controlsBand + 8 + (bandA ? 42 : 0);
-  const stageH = Math.max(160, Math.min(width * 1.05, height - controlsBand - 260));
   const hlsAudience = !!call.hls;
 
   return (
@@ -247,64 +243,51 @@ export function RoomBody(p: RoomBodyProps) {
             {topic ? `  · ${topic.label}` : ""}{p.communityName ? `  · ${p.communityName}` : ""}
             {call.live && !call.connected ? (call.reconnecting ? "  · Reconnecting…" : "  · Connecting…") : ""}
           </Text>
-          {!p.duel && (
-            <Pressable
-              onPress={() => setView((v) => (v === "audience" ? "speaker" : "audience"))}
-              accessibilityLabel={amphitheater ? "Switch to the speaker view" : "Back to the amphitheater"}
-              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 12, backgroundColor: pressed ? "#1b1b21" : "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" })}
-            >
-              <Ionicons name={amphitheater ? "videocam-outline" : "people-outline"} size={12} color={colors.text} />
-              <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 10.5 }}>{amphitheater ? "Speaker view" : "Amphitheater"}</Text>
-            </Pressable>
-          )}
+
         </View>
         <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 14, lineHeight: 18, marginTop: 3 }}>{room.motion}</Text>
       </View>
 
-      {/* ── The amphitheater, or the stage, the hands, the listeners ── */}
+      {/* ── The room: the amphitheater and its two vantages, or a duel's two pictures ── */}
       <View style={{ flex: 1 }} onLayout={(e) => setAreaH(Math.round(e.nativeEvent.layout.height))}>
-        {amphitheater ? (
-          areaH > 0 && (
-            <Amphitheater
-              width={width}
-              height={areaH}
-              bottomInset={amphiInset}
-              roomId={room.id}
-              audience={seatedPeople}
-              viewerCount={room.viewer_count ?? 0}
-              queue={linePeople}
-              micHolder={micSeat ? asPerson(micSeat) : null}
-              micLive={!!room.mic_user_id && call.speaking.has(room.mic_user_id)}
-              strip={strip}
-              dock={dock}
-              speaking={call.speaking}
-              broadcast={hlsAudience ? <BroadcastView url={call.hls!.url} height={72} /> : undefined}
-              onPressTile={onPressTile}
-              onPressStrip={onPressStrip}
-            />
-          )
+        {areaH > 0 && (p.duel ? (
+          <View style={{ position: "absolute", left: 10, top: 8 }}>
+            {hlsAudience ? (
+              <BroadcastView url={call.hls!.url} height={Math.round(((width - 20) * 9) / 16)} />
+            ) : (
+              <StageTiles tiles={tiles} speaking={call.speaking} layout="gallery" pinned={pinned} onPin={setPinned} width={width - 20} height={Math.max(160, areaH - amphiInset - 16)} onPressTile={onPressTile} />
+            )}
+          </View>
         ) : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 8, paddingBottom: controlsBand + 56 }} showsVerticalScrollIndicator={false}>
-          <StageView
-            seats={seats}
-            hostId={room.host_id}
-            meId={meId}
-            myRole={myRole}
-            speaking={call.speaking}
-            actions={hostActions}
-            requestsLocked={!!room.speaker_requests_locked}
-            onToggleLock={() => void seatHost.lockRequests(supabase, room.id, !room.speaker_requests_locked).then(p.onRefresh)}
-            onPressPerson={(s) => openPerson(s.user_id, seatUser(s)?.username ?? null, seatName(s), false)}
-            stageSlot={
+          <Amphitheater
+            width={width}
+            height={areaH}
+            view={view}
+            onSwitchView={switchView}
+            speakerLayout={(area) =>
               hlsAudience ? (
-                <BroadcastView url={call.hls!.url} height={stageH} />
+                <View style={{ flex: 1, justifyContent: "center" }}>
+                  <BroadcastView url={call.hls!.url} height={Math.round((area.width * 9) / 16)} />
+                </View>
               ) : (
-                <StageTiles tiles={tiles} speaking={call.speaking} layout={p.duel ? "gallery" : layout} pinned={pinned} onPin={setPinned} height={stageH} onPressTile={onPressTile} />
+                <StageTiles tiles={tiles} speaking={call.speaking} layout={layout} pinned={pinned} onPin={setPinned} width={area.width} height={area.height} onPressTile={onPressTile} />
               )
             }
+            bottomInset={amphiInset}
+            roomId={room.id}
+            audience={seatedPeople}
+            viewerCount={room.viewer_count ?? 0}
+            queue={linePeople}
+            micHolder={micSeat ? asPerson(micSeat) : null}
+            micLive={!!room.mic_user_id && call.speaking.has(room.mic_user_id)}
+            strip={strip}
+            dock={dock}
+            speaking={call.speaking}
+            broadcast={hlsAudience ? <BroadcastView url={call.hls!.url} height={72} /> : undefined}
+            onPressTile={onPressTile}
+            onPressStrip={onPressStrip}
           />
-        </ScrollView>
-        )}
+        ))}
         <ReactionOverlay reactions={call.reactions} />
       </View>
 

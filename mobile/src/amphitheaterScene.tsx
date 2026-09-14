@@ -6,9 +6,11 @@
    an Expo DOM component: a web view with WebGL, fed the room's people from
    the native screen. Nothing here is redrawn for the app; a change to the
    site's scene is a change here. metro.config.js lets this file reach
-   into the site's source. */
+   into the site's source. Its view is the site's too: the audience vantage
+   up in the seats, or the speaker vantage low in the orchestra, the camera
+   gliding between them and reporting when it lands. */
 import type { DOMProps } from "expo/dom";
-import AgoraScene3D, { type SeatedPerson } from "../../src/components/agora/AgoraScene3D";
+import AgoraScene3D, { type AgoraView, type SeatedPerson } from "../../src/components/agora/AgoraScene3D";
 
 export default function AmphitheaterScene({
   roomId,
@@ -18,6 +20,8 @@ export default function AmphitheaterScene({
   micHolder,
   micLive,
   performanceMode,
+  view,
+  onSettled,
 }: {
   roomId: string;
   audience: SeatedPerson[];
@@ -26,6 +30,9 @@ export default function AmphitheaterScene({
   micHolder: SeatedPerson | null;
   micLive: boolean;
   performanceMode: boolean;
+  view: AgoraView;
+  /** The camera has landed on this vantage (a native action: async, over the bridge). */
+  onSettled: (view: AgoraView) => Promise<void>;
   dom?: DOMProps;
 }) {
   return (
@@ -36,7 +43,8 @@ export default function AmphitheaterScene({
         roomId={roomId}
         audience={audience}
         viewerCount={viewerCount}
-        view="audience"
+        view={view}
+        onViewSettled={(v) => void onSettled(v)}
         queue={queue}
         micHolder={micHolder}
         micLive={micLive}
