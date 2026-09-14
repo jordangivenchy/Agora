@@ -196,6 +196,7 @@ export interface BoardRoom {
   created_at: string;
   viewer_count: number | null;
   thumbnail_url: string | null;
+  is_private?: boolean | null;
   host: Person | Person[] | null;
   community: { id: string; name: string; color: string | null } | { id: string; name: string; color: string | null }[] | null;
 }
@@ -208,7 +209,7 @@ export async function fetchBoard(supabase: SupabaseClient): Promise<{ topics: To
     supabase.rpc("get_debate_topics"),
     supabase
       .from("debate_rooms")
-      .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, thumbnail_url, host:users!host_id(id, username, display_name, avatar_url), community:communities!community_id(id, name, color)")
+      .select("id, motion, topic_key, status, format, scheduled_start, created_at, viewer_count, thumbnail_url, is_private, host:users!host_id(id, username, display_name, avatar_url), community:communities!community_id(id, name, color)")
       .in("status", ["live", "created", "scheduled"])
       /* Queue-matched duels (1/1 seats) are pairings, not shows. */
       .or("pro_size.neq.1,con_size.neq.1")

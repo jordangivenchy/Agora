@@ -28,6 +28,7 @@ import { showToast } from "../../src/toast";
 import { copyToClipboard } from "../../src/clipboard";
 import { ActionSheet } from "../../src/actionSheet";
 import { ItemSheet, type SheetItem } from "../../src/itemSheet";
+import { ReminderBell, useReminders } from "../../src/reminders";
 import { ApplySheet, InviteSheet } from "../../src/communitySheets";
 import { communityLink, openLink } from "../../src/siteLinks";
 import { Avatar } from "../../src/avatar";
@@ -190,6 +191,7 @@ export default function CommunityScreen() {
 
   const live = rooms.filter((r) => r.status === "live");
   const upcoming = rooms.filter((r) => r.status !== "live");
+  const { reminders, toggle: toggleReminder, busy: reminderBusy } = useReminders(upcoming.filter((r) => !r.is_private).map((r) => r.id));
   const rules = (c?.rules ?? "").split("\n").map((r) => r.trim()).filter(Boolean);
   const onlineMods = mods.filter((m) => presence.has(m.user_id)).length;
   const longAbout = (c?.description?.length ?? 0) > 130;
@@ -260,12 +262,15 @@ export default function CommunityScreen() {
   );
 
   const roomRow = (r: CommunityRoom, isLive: boolean) => (
-    <Pressable key={r.id} onPress={() => router.push({ pathname: "/room/[id]", params: { id: r.id } })} style={({ pressed }) => ({ marginBottom: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: isLive ? "#170d0e" : colors.surface, borderWidth: 1, borderColor: isLive ? "#5a2626" : colors.hairline, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        {isLive && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#e84040" }} />}
-        <Text style={{ color: isLive ? "#e84040" : GOLD, fontFamily: fonts.semi, fontSize: 10.5 }}>{isLive ? "LIVE — join" : when(r.scheduled_start) || "Scheduled"}</Text>
+    <Pressable key={r.id} onPress={() => router.push({ pathname: "/room/[id]", params: { id: r.id } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: isLive ? "#170d0e" : colors.surface, borderWidth: 1, borderColor: isLive ? "#5a2626" : colors.hairline, opacity: pressed ? 0.85 : 1 })}>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {isLive && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#e84040" }} />}
+          <Text style={{ color: isLive ? "#e84040" : GOLD, fontFamily: fonts.semi, fontSize: 10.5 }}>{isLive ? "LIVE — join" : when(r.scheduled_start) || "Scheduled"}{!isLive && (reminders[r.id]?.count ?? 0) > 0 ? ` · ${reminders[r.id].count} waiting` : ""}</Text>
+        </View>
+        <Text numberOfLines={2} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, marginTop: 3 }}>{r.motion}</Text>
       </View>
-      <Text numberOfLines={2} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, marginTop: 3 }}>{r.motion}</Text>
+      {!isLive && !r.is_private && <ReminderBell set={!!reminders[r.id]?.amSet} onPress={() => void toggleReminder(r.id)} disabled={reminderBusy === r.id} size={30} />}
     </Pressable>
   );
 

@@ -19,7 +19,7 @@ import { colors, fonts } from "./theme";
 export type MenuActionId =
   | "view_profile" | "message" | "follow" | "favorite" | "invite_room" | "mute_audio" | "hide_camera" | "block" | "report" | "copy_link"
   | "host_stage_pro" | "host_stage_con" | "host_to_audience" | "host_mute_mic" | "host_disable_cam" | "host_end_turn" | "host_give_turn" | "host_timeout" | "host_kick" | "host_ban"
-  | "mod_panel" | "mod_warn" | "mod_suspend" | "mod_ban_account";
+  | "mod_verify" | "mod_panel" | "mod_warn" | "mod_suspend" | "mod_ban_account";
 
 export interface MenuRoomContext {
   roomId: string;
@@ -36,13 +36,14 @@ export interface MenuRoomContext {
   onForceTurn?: (stance: "PRO" | "CON") => void;
 }
 export interface MenuChatContext { roomId: string; messageId: string; messagePreview: string }
-export interface OpenMenuOptions { room?: MenuRoomContext; chat?: MenuChatContext; hideViewProfile?: boolean }
+/** verify: opened from a profile, where a site moderator can verify the account (ProfileView.tsx). */
+export interface OpenMenuOptions { room?: MenuRoomContext; chat?: MenuChatContext; hideViewProfile?: boolean; verify?: { verified: boolean; onChanged?: () => void } }
 export interface MenuTarget { userId: string; username: string; displayName?: string | null }
 
 interface Sections { standard: MenuActionId[]; host: MenuActionId[]; moderator: MenuActionId[] }
 
 /* The single source of truth for which rows a person sees. */
-export function visibleActions(p: { signedIn: boolean; isSelf: boolean; inRoom: boolean; targetIsDebater: boolean; targetIsSpectator: boolean; isHost: boolean; timerActive: boolean; targetHasTurn: boolean; isModerator: boolean; hideViewProfile?: boolean }): Sections {
+export function visibleActions(p: { signedIn: boolean; isSelf: boolean; inRoom: boolean; targetIsDebater: boolean; targetIsSpectator: boolean; isHost: boolean; timerActive: boolean; targetHasTurn: boolean; isModerator: boolean; hideViewProfile?: boolean; canVerify?: boolean }): Sections {
   const standard: MenuActionId[] = [];
   const host: MenuActionId[] = [];
   const moderator: MenuActionId[] = [];
@@ -67,7 +68,10 @@ export function visibleActions(p: { signedIn: boolean; isSelf: boolean; inRoom: 
     }
     if (p.targetIsDebater || p.targetIsSpectator) host.push("host_timeout", "host_kick", "host_ban");
   }
-  if (p.signedIn && p.isModerator) moderator.push("mod_panel", "mod_warn", "mod_suspend", "mod_ban_account");
+  if (p.signedIn && p.isModerator) {
+    if (p.canVerify) moderator.push("mod_verify");
+    moderator.push("mod_panel", "mod_warn", "mod_suspend", "mod_ban_account");
+  }
   return { standard, host, moderator };
 }
 
@@ -93,6 +97,7 @@ const ROW_META: Record<MenuActionId, { icon: Icon; label: string; danger?: boole
   host_timeout: { icon: "timer-outline", label: "Timeout (5 min)", danger: true },
   host_kick: { icon: "exit-outline", label: "Remove from room", danger: true },
   host_ban: { icon: "ban-outline", label: "Ban from discussion", danger: true },
+  mod_verify: { icon: "checkmark-circle-outline", label: "Verify account" },
   mod_panel: { icon: "clipboard-outline", label: "Reports & history" },
   mod_warn: { icon: "warning-outline", label: "Warn user" },
   mod_suspend: { icon: "close-circle-outline", label: "Suspend account", danger: true },
@@ -266,6 +271,13 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
           await rpcToast("host_ban_user", { p_room: room.roomId, p_user: target.userId, p_minutes: null }, `@${target.username} banned from this discussion`);
         });
         break;
+      case "mod_verify": {
+        const was = !!opts.verify?.verified;
+        const { error } = await supabase.rpc("set_user_verified", { p_user: target.userId, p_value: !was });
+        showToast(error ? "Failed: " + (error.message.includes("not_authorized") ? "only site moderators can verify accounts" : error.message) : was ? `Removed @${target.username}'s verified badge` : `Verified @${target.username}`);
+        if (!error) opts.verify?.onChanged?.();
+        break;
+      }
       case "mod_panel":
         later(() => setModTarget(target));
         break;
@@ -301,6 +313,7 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
     targetHasTurn: !!menu.opts.room?.targetHasTurn,
     isModerator: !!me?.is_moderator,
     hideViewProfile: menu.opts.hideViewProfile,
+    canVerify: !!menu.opts.verify,
   }) : null;
 
   function rowLabel(id: MenuActionId): string {
@@ -318,6 +331,7 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
       return "Follow";
     }
     if (id === "block" && rel?.blocked) return "Unblock user";
+    if (id === "mod_verify" && menu.opts.verify?.verified) return "Remove verified badge";
     if (id === "mute_audio" && menu.opts.room?.audioMutedLocally) return "Unmute their audio";
     if (id === "hide_camera" && menu.opts.room?.cameraHiddenLocally) return "Show their camera";
     return ROW_META[id].label;

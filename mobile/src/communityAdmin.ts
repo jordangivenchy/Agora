@@ -12,7 +12,7 @@ export interface Member { user_id: string; role: string; user: MiniUser | null }
 export interface JoinRequest { user_id: string; created_at: string; message: string | null; user: MiniUser | null }
 export interface BanRow { user_id: string; banned_by: string | null; reason: string | null; created_at: string; user: MiniUser | null }
 export interface ModLogRow { id: string; actor_id: string | null; action: string; target_user: string | null; target_post: string | null; detail: string | null; created_at: string; actor: MiniUser | null; target: MiniUser | null }
-export interface CommunityRoom { id: string; motion: string; status: string; scheduled_start: string | null; community_id: string }
+export interface CommunityRoom { id: string; motion: string; status: string; scheduled_start: string | null; community_id: string; is_private: boolean | null }
 
 /* The site's six tag colours (CommunitiesPage.tsx TAG_COLORS). */
 export const TAG_COLORS = ["#e2b96b", "#64B5F6", "#00b894", "#d98fb9", "#9d8fd9", "#e0956a"];
@@ -107,7 +107,7 @@ export async function fetchCommunityRooms(supabase: SupabaseClient, communityIds
   if (communityIds.length === 0) return [];
   const { data } = await supabase
     .from("debate_rooms")
-    .select("id, motion, status, scheduled_start, community_id")
+    .select("id, motion, status, scheduled_start, community_id, is_private")
     .in("community_id", communityIds)
     .in("status", ["created", "scheduled", "live"])
     .order("scheduled_start", { ascending: true })

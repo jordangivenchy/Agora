@@ -12,6 +12,8 @@ import { FEED_FILTERS, fetchFeed, fetchSuggestions, whenLabel, type FeedFilter, 
 import { setFollowing } from "../../src/profile";
 import { timeAgo, votePost, type PostRow } from "../../src/communities";
 import { PostCard, META } from "../../src/postCard";
+import { ReminderBell, reminderToast, toggleRoomReminder } from "../../src/reminders";
+import { showToast } from "../../src/toast";
 import { RoomSquare } from "../../src/roomCard";
 import { RichText, plainPreview } from "../../src/richText";
 import { personName } from "../../src/home";
@@ -58,6 +60,24 @@ export default function Feed() {
   const vote = (p: PostRow, v: number) => {
     setItems((its) => (its ?? []).map((it) => (it.kind === "post" || it.kind === "repost") && it.payload.id === p.id ? { ...it, payload: { ...it.payload, score: it.payload.score + (v - it.payload.my_vote), my_vote: v } } : it));
     votePost(supabase, p.id, v).catch(() => void load());
+  };
+  /* The "Notify me" bell on a scheduled room, as the site's feed has it. */
+  const [reminderBusy, setReminderBusy] = useState<string | null>(null);
+  const toggleReminder = async (roomId: string) => {
+    if (!uid) return router.push("/sign-in");
+    if (reminderBusy) return;
+    setReminderBusy(roomId);
+    try {
+      const on = await toggleRoomReminder(supabase, roomId);
+      setItems((its) => (its ?? []).map((i) => (i.kind === "scheduled" && i.payload.id === roomId
+        ? { ...i, payload: { ...i.payload, am_set: on, reminder_count: Math.max(0, i.payload.reminder_count + (on === i.payload.am_set ? 0 : on ? 1 : -1)) } }
+        : i)));
+      reminderToast(on);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Couldn't set a reminder.");
+    } finally {
+      setReminderBusy(null);
+    }
   };
   const follow = async (s: Suggestion) => {
     setFollowed((f) => new Set(f).add(s.id));
@@ -116,8 +136,9 @@ export default function Feed() {
           <View style={{ flex: 1 }}>
             <Text style={{ color: replay ? "#c0c0c8" : colors.purple, fontFamily: fonts.extra, fontSize: 10, letterSpacing: 0.6 }}>{replay ? "REPLAY" : whenLabel(r.scheduled_start).toUpperCase()}</Text>
             <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 14, marginTop: 3 }}>{r.motion}</Text>
-            <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginTop: 3 }}>{r.community ? r.community.name : personName(r.host)}{!replay && r.reminder_count ? ` · ${r.reminder_count} reminded` : ""}</Text>
+            <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginTop: 3 }}>{r.community ? r.community.name : personName(r.host)}{!replay && r.reminder_count ? ` · ${r.reminder_count} waiting` : ""}</Text>
           </View>
+          {it.kind === "scheduled" && <ReminderBell set={r.am_set} onPress={() => void toggleReminder(r.id)} disabled={reminderBusy === r.id} />}
         </Pressable>
       </View>
     );

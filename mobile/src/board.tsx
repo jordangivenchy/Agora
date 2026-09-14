@@ -1,5 +1,7 @@
 /* "Browse" from the site's home: the fields as chips, then the chosen
-   field's popular rooms, its scheduled ones, and its daily topics. */
+   field's popular rooms, its scheduled ones (each with the "Notify me"
+   bell, the most awaited first, as TopicsHome.tsx sorts them), and its
+   daily topics. */
 import { useEffect, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -7,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { TOPICS, darkInkOn, type IconName, type Topic } from "./topics";
 import { fmtRotate, isScheduled, msToUtcMidnight, personName, roomHost, type BoardRoom, type TopicRow } from "./home";
 import { whenLabel } from "./rooms";
+import { ReminderBell, useReminders, type ReminderState } from "./reminders";
 import { colors, fonts } from "./theme";
 
 const QUESTIONS_SHOWN = 4;
@@ -30,7 +33,9 @@ export function TopicBoard({ topics, rooms, onQueue }: { topics: TopicRow[]; roo
       if (a.status === "live") return (b.viewer_count ?? 0) - (a.viewer_count ?? 0);
       return b.created_at.localeCompare(a.created_at);
     });
-  const scheduled = fieldRooms.filter(isScheduled).sort((a, b) => (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""));
+  const upcoming = fieldRooms.filter(isScheduled);
+  const { reminders, toggle: toggleReminder, busy: reminderBusy } = useReminders(upcoming.filter((r) => !r.is_private).map((r) => r.id));
+  const scheduled = [...upcoming].sort((a, b) => (reminders[b.id]?.count ?? 0) - (reminders[a.id]?.count ?? 0) || (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""));
   const questions = topics.filter((t) => t.topic_key === sel.key);
   const shown = showAll ? questions : questions.slice(0, QUESTIONS_SHOWN);
 
@@ -46,7 +51,7 @@ export function TopicBoard({ topics, rooms, onQueue }: { topics: TopicRow[]; roo
         <SectionHead title="Popular rooms" color={colors.blueText} right={popular.length > 2 ? "Explore all →" : undefined} onRight={() => router.navigate("/explore")} />
         {popular.length === 0 ? <Empty>No open rooms in {sel.label} yet.</Empty> : <Strip>{popular.map((r) => <RoomTile key={r.id} room={r} />)}</Strip>}
         <SectionHead title="Scheduled" color={colors.purple} />
-        {scheduled.length === 0 ? <Empty>Nothing on the calendar in {sel.label} yet.</Empty> : <Strip>{scheduled.map((r) => <RoomTile key={r.id} room={r} />)}</Strip>}
+        {scheduled.length === 0 ? <Empty>Nothing on the calendar in {sel.label} yet.</Empty> : <Strip>{scheduled.map((r) => <RoomTile key={r.id} room={r} reminder={r.is_private ? undefined : reminders[r.id] ?? { count: 0, amSet: false }} onReminder={() => void toggleReminder(r.id)} reminderBusy={reminderBusy === r.id} />)}</Strip>}
         <SectionHead title="Daily topics" color={colors.yellow} right={`new topics in ${fmtRotate(rotateLeft)}`} icon="refresh-outline" />
         {questions.length === 0 && <Empty>No standing questions in {sel.label} yet.</Empty>}
         {shown.map((t) => <QuestionCard key={t.id} topic={t} onQueue={() => onQueue(t)} />)}
@@ -129,7 +134,7 @@ function Strip({ children }: { children: ReactNode }) {
 }
 
 /* The 168-square room card: the host's picture, what's on, who's hosting. */
-function RoomTile({ room }: { room: BoardRoom }) {
+function RoomTile({ room, reminder, onReminder, reminderBusy }: { room: BoardRoom; reminder?: ReminderState; onReminder?: () => void; reminderBusy?: boolean }) {
   const host = roomHost(room);
   const img = room.thumbnail_url || host?.avatar_url || null;
   const live = room.status === "live";
@@ -155,8 +160,16 @@ function RoomTile({ room }: { room: BoardRoom }) {
       </View>
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, paddingHorizontal: 10, paddingVertical: 8 }}>
         <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 13, lineHeight: 17 }}>{room.motion}</Text>
-        <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 3 }}>{personName(host)}</Text>
+        <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 3 }}>
+          {personName(host)}
+          {reminder && <> · <Ionicons name="notifications-outline" size={10} color={colors.muted} /> {reminder.count}</>}
+        </Text>
       </View>
+      {reminder && onReminder && (
+        <View style={{ position: "absolute", top: 8, right: 8 }}>
+          <ReminderBell set={reminder.amSet} onPress={onReminder} disabled={reminderBusy} size={28} />
+        </View>
+      )}
     </Pressable>
   );
 }

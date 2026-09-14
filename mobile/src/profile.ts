@@ -55,6 +55,7 @@ export interface DebateRow {
   viewer_count: number | null;
   thumbnail_url: string | null;
   recording_url: string | null;
+  is_private?: boolean | null;
   role: "host" | "debater";
   host_id?: string | null;
   host_username?: string | null;
@@ -67,12 +68,12 @@ export async function fetchDebates(supabase: SupabaseClient, uid: string): Promi
   const [{ data: parts }, { data: hosted }] = await Promise.all([
     supabase
       .from("debate_participants")
-      .select("role, room:debate_rooms(id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, host_id)")
+      .select("role, room:debate_rooms(id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, is_private, host_id)")
       .eq("user_id", uid)
       .eq("role", "debater"),
     supabase
       .from("debate_rooms")
-      .select("id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url")
+      .select("id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, is_private")
       .eq("host_id", uid)
       .order("created_at", { ascending: false })
       .limit(40),

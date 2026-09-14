@@ -13,6 +13,7 @@ import { CARD, CommunityTile, META, PostCard, SortChips } from "../../src/postCa
 import { HomeHeader } from "../../src/header";
 import { fetchCommunityRooms, type CommunityRoom } from "../../src/communityAdmin";
 import { ApplySheet } from "../../src/communitySheets";
+import { ReminderBell, useReminders } from "../../src/reminders";
 import { showToast } from "../../src/toast";
 import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
@@ -84,6 +85,7 @@ export default function Communities() {
   const visiblePosts = posts.filter((p) => !blocked.has(p.community_id));
   const liveRooms = rooms.filter((r) => r.status === "live");
   const upcoming = rooms.filter((r) => r.status !== "live");
+  const { reminders, toggle: toggleReminder, busy: reminderBusy } = useReminders(upcoming.filter((r) => !r.is_private).map((r) => r.id));
   const roomRow = (r: CommunityRoom, live: boolean) => {
     const c = byId.get(r.community_id);
     return (
@@ -93,7 +95,10 @@ export default function Communities() {
           <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 10.5 }}>{c?.name ?? "Community"}</Text>
           <Text style={{ color: live ? "#e84040" : "#e2b96b", fontFamily: fonts.semi, fontSize: 10.5 }}>{live ? "● LIVE — join" : r.scheduled_start ? new Date(r.scheduled_start).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Scheduled"}</Text>
         </View>
-        <Text numberOfLines={2} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, lineHeight: 17, marginTop: 3 }}>{r.motion}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 3 }}>
+          <Text numberOfLines={2} style={{ flex: 1, color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, lineHeight: 17 }}>{r.motion}</Text>
+          {!live && !r.is_private && <ReminderBell set={!!reminders[r.id]?.amSet} onPress={() => void toggleReminder(r.id)} disabled={reminderBusy === r.id} size={28} />}
+        </View>
       </Pressable>
     );
   };

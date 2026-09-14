@@ -4,7 +4,7 @@
    then the name, the handle, the bio, the counts, and the tabs —
    past discussions, scheduled, posts, reposts, comments, communities. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +18,8 @@ import { ActionSheet, type SheetAction } from "./actionSheet";
 import { topicOf } from "./topics";
 import { whenLabel } from "./feed";
 import { useUserMenu } from "./userMenu";
+import { SITE } from "./api";
+import { ReminderBell, useReminders } from "./reminders";
 import { colors, fonts } from "./theme";
 import { Note } from "./ui";
 
@@ -91,6 +93,8 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
 
   const recorded = debates.filter((d) => d.status === "ended" && !!d.recording_url);
   const upcoming = debates.filter((d) => d.status !== "ended" && d.status !== "live" && !!d.scheduled_start && new Date(d.scheduled_start) > new Date());
+  /* The site's "Notify me" bells on scheduled rows (public rooms only). */
+  const { reminders, toggle: toggleReminder, busy: reminderBusy } = useReminders(upcoming.filter((d) => !d.is_private).map((d) => d.id));
   const own = posts.filter((p) => !p.is_repost);
   const reposts = posts.filter((p) => p.is_repost);
   const counts: Record<Tab, number> = { debates: recorded.length, scheduled: upcoming.length, posts: own.length, reposts: reposts.length, comments: comments.length, communities: communities.length };
@@ -102,10 +106,16 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
     body = recorded.length === 0 ? empty(isSelf ? "No recorded discussions yet." : `${first} has no recorded discussions yet.`) : recorded.map((d) => <DebateCard key={d.id} d={d} fallback={profile?.avatar_url ?? null} />);
   } else if (tab === "scheduled") {
     body = upcoming.length === 0 ? empty("Nothing scheduled.") : upcoming.map((d) => (
-      <Pressable key={d.id} onPress={() => router.push({ pathname: "/room/[id]", params: { id: d.id } })} style={[card, { padding: 14, marginBottom: 10 }]}>
-        <Text style={{ color: colors.purple, fontFamily: fonts.extra, fontSize: 10, letterSpacing: 0.6 }}>{whenLabel(d.scheduled_start).toUpperCase()}</Text>
-        <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15, marginTop: 4 }}>{d.motion}</Text>
-        <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }}>{d.role === "host" ? "hosting" : `debating · hosted by @${d.host_username ?? "?"}`} · {topicOf(d.topic_key).label}</Text>
+      <Pressable key={d.id} onPress={() => router.push({ pathname: "/room/[id]", params: { id: d.id } })} style={[card, { padding: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.purple, fontFamily: fonts.extra, fontSize: 10, letterSpacing: 0.6 }}>{whenLabel(d.scheduled_start).toUpperCase()}</Text>
+          <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15, marginTop: 4 }}>{d.motion}</Text>
+          <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }}>
+            {d.role === "host" ? "hosting" : `debating · hosted by @${d.host_username ?? "?"}`} · {topicOf(d.topic_key).label}
+            {(reminders[d.id]?.count ?? 0) > 0 ? ` · ${reminders[d.id].count} waiting` : ""}
+          </Text>
+        </View>
+        {!d.is_private && <ReminderBell set={!!reminders[d.id]?.amSet} onPress={() => void toggleReminder(d.id)} disabled={reminderBusy === d.id} />}
       </Pressable>
     ));
   } else if (tab === "posts" || tab === "reposts") {
@@ -150,7 +160,17 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
   }
 
   const actionLabel = !profile ? "" : isSelf ? "Edit profile" : profile.is_following ? "Following" : profile.is_followed_by ? "Add friend back" : "Add friend";
-  const menuActions: SheetAction[] = [...(isSelf ? [{ label: "Edit profile", onPress: () => { setMenuOpen(false); router.push("/edit-profile"); } }] : []), ...(menu ?? []).map((a) => ({ ...a, onPress: () => { setMenuOpen(false); a.onPress(); } }))];
+  /* Your own page shares its link (the site's Share profile, /@username). */
+  const shareProfile = () => {
+    if (!profile) return;
+    const url = `${SITE}/@${encodeURIComponent(profile.username)}`;
+    /* iOS shares a url and a message as two items; the link alone is one. */
+    void Share.share(Platform.OS === "ios" ? { url } : { message: url }).catch(() => undefined);
+  };
+  const menuActions: SheetAction[] = [
+    ...(isSelf ? [{ label: "Edit profile", onPress: () => { setMenuOpen(false); router.push("/edit-profile"); } }, { label: "Share profile", onPress: () => { setMenuOpen(false); setTimeout(shareProfile, 350); } }] : []),
+    ...(menu ?? []).map((a) => ({ ...a, onPress: () => { setMenuOpen(false); a.onPress(); } })),
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -182,7 +202,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
               </Pressable>
             )}
             {(menuActions.length > 0 || (profile && !isSelf)) && (
-              <Pressable onPress={() => (isSelf ? setMenuOpen(true) : profile && openUserMenu({ userId: profile.id, username: profile.username, displayName: profile.display_name }, { hideViewProfile: true }))} accessibilityLabel="More" style={({ pressed }) => ({ width: 32, height: 32, marginBottom: -16, borderRadius: 16, backgroundColor: pressed ? colors.border : colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" })}>
+              <Pressable onPress={() => (isSelf ? setMenuOpen(true) : profile && openUserMenu({ userId: profile.id, username: profile.username, displayName: profile.display_name }, { hideViewProfile: true, verify: { verified: !!profile.verified, onChanged: () => void load() } }))} accessibilityLabel="More" style={({ pressed }) => ({ width: 32, height: 32, marginBottom: -16, borderRadius: 16, backgroundColor: pressed ? colors.border : colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" })}>
                 <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
               </Pressable>
             )}

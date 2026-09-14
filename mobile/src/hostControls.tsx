@@ -15,6 +15,7 @@ import { useSession } from "./session";
 import { Avatar } from "./avatar";
 import { host as seatHost } from "./seats";
 import { pickImage } from "./postImages";
+import { uploadRoomThumbnail } from "./roomThumbnail";
 import { advanceQueue, egress, endDiscussion, muteAllSpeakers, removeFromRoom, sendInvite, setAutoAdvance, setSeatMuted, type RoomDetail } from "./roomData";
 import { ROLE_LABEL, deriveStageRole, isHostRole, onStage, seatName, seatUser, sortRequests, type Seat, type StageRole } from "./stageModel";
 import { colors, fonts } from "./theme";
@@ -113,18 +114,7 @@ export function HostControlsSheet({ open, onClose, room, seats, meId, myRole, on
       const img = await pickImage();
       if (!img) return;
       setThumbBusy(true);
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { manipulateAsync, SaveFormat } = require("expo-image-manipulator") as typeof import("expo-image-manipulator");
-      const side = Math.min(img.width, img.height);
-      const crop = { originX: Math.round((img.width - side) / 2), originY: Math.round((img.height - side) / 2), width: side, height: side };
-      const out = await manipulateAsync(img.uri, [{ crop }, { resize: { width: 512, height: 512 } }], { compress: 0.85, format: SaveFormat.JPEG });
-      const buf = await (await fetch(out.uri)).arrayBuffer();
-      const path = `${room.host_id}/${room.id}.jpg`;
-      const { error: upErr } = await supabase.storage.from("thumbnails").upload(path, buf, { upsert: true, cacheControl: "3600", contentType: "image/jpeg" });
-      if (upErr) throw new Error(upErr.message);
-      const url = supabase.storage.from("thumbnails").getPublicUrl(path).data.publicUrl;
-      const { error: dbErr } = await supabase.from("debate_rooms").update({ thumbnail_url: url }).eq("id", room.id);
-      if (dbErr) throw new Error(dbErr.message);
+      const url = await uploadRoomThumbnail(room.host_id, room.id, img);
       setThumbUrl(`${url}?t=${Date.now()}`);
       onChanged();
     } catch (e) {
