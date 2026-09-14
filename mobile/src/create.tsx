@@ -1,6 +1,9 @@
-/* The Create button, from anywhere: the menu (New room, New post, New
-   community), the New room sheet (newRoomSheet.tsx), and New post — pick
-   a community, then the same composer the community page uses. */
+/* The Create button, from anywhere: the site's Create menu (CreateMenu.tsx —
+   Create a Discussion, Write a post, New community); the Start a discussion
+   and Create a community cards (newRoomSheet.tsx, createCommunity.tsx),
+   which share one modal and trade places from their Discussion | Community
+   tabs as on the site (GlobalActions.tsx); and Write a post — pick a
+   community, then the same composer the community page uses. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
@@ -8,17 +11,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { useSession } from "./session";
-import { ActionSheet } from "./actionSheet";
+import { ItemSheet } from "./itemSheet";
 import { ComposerSheet, type ComposeClip } from "./composer";
 import { attachPostTopic } from "./postTopic";
-import { CreateCommunitySheet } from "./createCommunity";
+import { CreateCommunityCard } from "./createCommunity";
 import { useMe } from "./me";
 import { SITE } from "./api";
 import { showToast } from "./toast";
 import { createPost, fetchCommunities, type Community } from "./communities";
 import { CommunityTile } from "./postCard";
 import { colors, fonts } from "./theme";
-import { NewRoomSheet, type RoomPrefill } from "./newRoomSheet";
+import { NewRoomCard, type RoomPrefill } from "./newRoomSheet";
+import { CardSwitch, SheetModal } from "./sheetModal";
 export type { RoomPrefill };
 export interface PostRequest { clip?: ComposeClip; to?: Community }
 interface CreateState {
@@ -38,11 +42,11 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const { session } = useSession();
   const uid = session?.user.id ?? null;
   const [menu, setMenu] = useState(false);
-  const [room, setRoom] = useState<{ open: boolean; prefill: RoomPrefill }>({ open: false, prefill: {} });
+  /* The create card: which one shows, kept while the modal plays its exit. */
+  const [card, setCard] = useState<{ open: boolean; which: "discussion" | "community"; prefill: RoomPrefill }>({ open: false, which: "discussion", prefill: {} });
   const [picking, setPicking] = useState(false);
   const [postIn, setPostIn] = useState<Community | null>(null);
   const [clip, setClip] = useState<ComposeClip | null>(null);
-  const [community, setCommunity] = useState(false);
   const me = useMe();
   const [verified, setVerified] = useState(false);
   useEffect(() => {
@@ -52,28 +56,36 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   void me;
 
   const needSignIn = useCallback(() => { router.push("/sign-in"); }, []);
+  const closeCard = useCallback(() => setCard((c) => ({ ...c, open: false })), []);
   const value = useMemo<CreateState>(() => ({
     openMenu: () => (uid ? setMenu(true) : needSignIn()),
-    openRoom: (prefill = {}) => (uid ? setRoom({ open: true, prefill }) : needSignIn()),
+    openRoom: (prefill = {}) => (uid ? setCard({ open: true, which: "discussion", prefill }) : needSignIn()),
     openPost: (req = {}) => { if (!uid) return needSignIn(); setClip(req.clip ?? null); if (req.to) setPostIn(req.to); else setPicking(true); },
-    openCommunity: () => (uid ? setCommunity(true) : needSignIn()),
+    openCommunity: () => (uid ? setCard({ open: true, which: "community", prefill: {} }) : needSignIn()),
   }), [uid, needSignIn]);
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      <ActionSheet
+      <ItemSheet
         open={menu}
         title="Create"
         onClose={() => setMenu(false)}
-        actions={[
-          { label: "New room", primary: true, onPress: () => { setMenu(false); setRoom({ open: true, prefill: {} }); } },
-          { label: "New post", onPress: () => { setMenu(false); setClip(null); setPicking(true); } },
-          { label: "New community", onPress: () => { setMenu(false); setCommunity(true); } },
+        items={[
+          { icon: "sparkles-outline", label: "Create a Discussion", run: () => setCard({ open: true, which: "discussion", prefill: {} }) },
+          { icon: "create-outline", label: "Write a post", run: () => { setClip(null); setPicking(true); } },
+          { icon: "people-outline", label: "New community", run: () => setCard({ open: true, which: "community", prefill: {} }) },
         ]}
       />
-      <CreateCommunitySheet open={community} onClose={() => setCommunity(false)} />
-      <NewRoomSheet open={room.open} prefill={room.prefill} onClose={() => setRoom({ open: false, prefill: {} })} />
+      <SheetModal open={card.open} onClose={closeCard} kind="card" scrim="rgba(0,0,0,0.78)">
+        <CardSwitch
+          current={card.which}
+          render={(which) => which === "community"
+            ? <CreateCommunityCard onClose={closeCard} onCreateDiscussion={() => setCard((c) => ({ ...c, which: "discussion", prefill: {} }))} />
+            /* A community's own discussion has no Community tab. */
+            : <NewRoomCard prefill={card.prefill} onClose={closeCard} onCreateCommunity={card.prefill.community ? undefined : () => setCard((c) => ({ ...c, which: "community" }))} />}
+        />
+      </SheetModal>
       <CommunityPicker open={picking} uid={uid} onClose={() => setPicking(false)} onPick={(c) => { setPicking(false); setPostIn(c); }} />
       <ComposerSheet
         open={!!postIn}
