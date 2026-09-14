@@ -214,11 +214,14 @@ export function ModLogPanel({
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      /* target_user has no foreign key, so PostgREST can't embed it the way
+         it embeds the actor (asking for both fails the whole request): the
+         targets' names come in a second read, as the phone app does. */
       const { data, error: err } = await supabase
         .from("community_mod_log")
         .select(
           "id, actor_id, action, target_user, target_post, detail, created_at, " +
-            "actor:users!actor_id(username, display_name), target:users!target_user(username, display_name)"
+            "actor:users!actor_id(username, display_name)"
         )
         .eq("community_id", communityId)
         .order("created_at", { ascending: false })
@@ -229,8 +232,23 @@ export function ModLogPanel({
         setRows([]);
         return;
       }
+      const logged = (data ?? []) as unknown as Omit<ModLogRow, "target">[];
+      const targetIds = [...new Set(logged.map((r) => r.target_user).filter((id): id is string => !!id))];
+      const targets = new Map<string, MiniUser>();
+      if (targetIds.length) {
+        /* A failed or missing lookup (the user was deleted) leaves the
+           target unnamed ("someone") rather than hiding the whole log. */
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, username, display_name")
+          .in("id", targetIds);
+        if (cancelled) return;
+        for (const u of (users ?? []) as { id: string; username: string | null; display_name: string | null }[]) {
+          targets.set(u.id, u);
+        }
+      }
       setError(null);
-      setRows((data ?? []) as unknown as ModLogRow[]);
+      setRows(logged.map((r) => ({ ...r, target: r.target_user ? targets.get(r.target_user) ?? null : null })));
     })();
     return () => {
       cancelled = true;

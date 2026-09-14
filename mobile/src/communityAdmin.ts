@@ -63,8 +63,8 @@ export async function fetchBans(supabase: SupabaseClient, communityId: string): 
 }
 
 /* target_user has no foreign key, so it can't be embedded the way the
-   actor is (the site's panel asks for both and gets an error back): the
-   targets' names come in a second read. */
+   actor is (asking for both fails the whole request): the targets' names
+   come in a second read, as the site's panel does. */
 export async function fetchModLog(supabase: SupabaseClient, communityId: string): Promise<ModLogRow[]> {
   const { data, error } = await supabase
     .from("community_mod_log")
