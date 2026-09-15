@@ -40,6 +40,48 @@ export function parseVodPlaylist(text: string, baseUrl: string): ParsedPlaylist 
   return { segments, programDateTime: pdt, totalDuration: offset };
 }
 
+/* Where a clip has sound, without decoding it. An AAC frame of silence is
+   a handful of bytes (22 in LiveKit's recordings; 7 of them the ADTS
+   header) against hundreds for anything audible, so each frame's size
+   says whether its moment has sound. A model handed silence doesn't
+   return nothing — it returns interviews, sign-offs and streamer banter
+   (production, 2026-09: three silent recordings "transcribed"). */
+const SILENT_FRAME_MAX_BYTES = 64;
+const ADTS_RATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+
+/** One entry per second of the clip: whether any audio frame in it had sound. */
+export function soundSeconds(adts: Uint8Array): boolean[] {
+  const seconds: boolean[] = [];
+  let i = 0;
+  let samples = 0;
+  while (i + 7 <= adts.length) {
+    if (adts[i] !== 0xff || (adts[i + 1] & 0xf0) !== 0xf0) {
+      i++;
+      continue;
+    }
+    const rate = ADTS_RATES[(adts[i + 2] >> 2) & 0x0f] ?? 44100;
+    const length = ((adts[i + 3] & 0x03) << 11) | (adts[i + 4] << 3) | ((adts[i + 5] & 0xe0) >> 5);
+    if (length < 7) {
+      i++;
+      continue;
+    }
+    const second = Math.floor(samples / rate);
+    while (seconds.length <= second) seconds.push(false);
+    if (length > SILENT_FRAME_MAX_BYTES) seconds[second] = true;
+    samples += 1024 * ((adts[i + 6] & 0x03) + 1);
+    i += length;
+  }
+  return seconds;
+}
+
+/** Was there sound around `t` seconds into the clip (a second before, a few after — a line's start)? */
+export function heardAt(sound: boolean[], t: number): boolean {
+  const from = Math.max(0, Math.floor(t) - 1);
+  const to = Math.min(sound.length - 1, Math.floor(t) + 4);
+  for (let s = from; s <= to; s++) if (sound[s]) return true;
+  return false;
+}
+
 /** Group segments into transcription chunks of at most maxSeconds. */
 export function chunkSegments(segments: HlsSegment[], maxSeconds: number): HlsSegment[][] {
   const chunks: HlsSegment[][] = [];

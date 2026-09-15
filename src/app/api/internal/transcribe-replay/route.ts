@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { getAppConfig } from "@/lib/appConfig";
-import { parseVodPlaylist, chunkSegments, tsToAdts, type HlsSegment } from "@/lib/replayTranscribe";
+import { parseVodPlaylist, chunkSegments, heardAt, soundSeconds, tsToAdts, type HlsSegment } from "@/lib/replayTranscribe";
 import { parseTimeline, recordingOffset } from "@/components/agora/hlsTimeline";
 
 /* Post-run replay transcription. Fired by the replay-transcripts cron
@@ -65,7 +65,9 @@ async function fetchChunkAac(segments: HlsSegment[]): Promise<Uint8Array> {
   return out;
 }
 
-const FALLBACK_MODEL = "gemini-2.5-flash";
+/* gemini-2.5-flash answered 404 "no longer available" in September 2026
+   and failed every retry that fell back to it. */
+const FALLBACK_MODEL = "gemini-3.6-flash";
 
 /* 503/429 mean the model is momentarily out of capacity — wait and
    retry, then try the pinned fallback model before giving up. */
@@ -273,9 +275,14 @@ export async function POST(request: NextRequest) {
     for (const chunk of chunks) {
       const chunkOffset = chunk[0].offset;
       const aac = await fetchChunkAac(chunk);
-      if (aac.length < 1000) continue; // silent/empty chunk
-      const { lines: raw, model: m } = await transcribeChunkResilient(aac, apiKey, model);
+      if (aac.length < 1000) continue; // empty chunk
+      /* Silence never goes to the model, and nothing it says over
+         silence is kept. */
+      const sound = soundSeconds(aac);
+      if (!sound.some(Boolean)) continue;
+      const { lines: heard, model: m } = await transcribeChunkResilient(aac, apiKey, model);
       usedModel = m;
+      const raw = heard.filter((l) => heardAt(sound, l.t));
       for (const l of raw) {
         const videoT = chunkOffset + l.t;
         /* Store offsets in the recording_started_at frame — the same one
