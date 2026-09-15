@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseTimeline, recordingOffset, videoTime } from "./hlsTimeline";
-import { stitchPlaylists } from "./recordingParts";
+import { stitchPlaylists } from "../../lib/recordingParts";
 
 const STARTED = Date.parse("2026-09-14T18:59:07.381Z"); // recording_started_at (the request)
 const seg = (wall: string, dur: number, name: string) => `#EXT-X-PROGRAM-DATE-TIME:${wall}\n#EXTINF:${dur.toFixed(3)},\n${name}`;

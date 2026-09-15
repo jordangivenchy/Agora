@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { RoomServiceClient, WebhookReceiver, type EgressInfo } from "livekit-server-sdk";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { isRoomUuid, planWebhook } from "@/lib/roomLifecycle";
-import { egressClient, isRecording, readHlsEnv, segmentsResult, startRecordingPart } from "@/lib/recordingEgress";
+import { egressClient, isRecording, readHlsEnv, segmentsResult, startRecordingPart, writeReplayPlaylist } from "@/lib/recordingEgress";
 import { shouldRestart } from "@/lib/recordingParts";
 import { getAppConfig } from "@/lib/appConfig";
 
@@ -55,6 +55,11 @@ async function recordingEnded(info: EgressInfo, origin: string) {
   const egress = egressClient();
   const hls = readHlsEnv();
   if (!room || !egress || !hls) return;
+  /* A recording in parts: stitch again with this part's final playlist
+     (final itself once the room has ended). */
+  if (room.parts >= 2) {
+    await writeReplayPlaylist(admin, hls, roomId).catch((e) => console.error(`[recording] ${roomId}: replay playlist`, e));
+  }
   if (room.status !== "live" || !room.hls_url) return;
   const active = await egress.listEgress({ roomName: roomId, active: true });
   const otherRecorder = active.some((e) => e.egressId !== info.egressId && isRecording(e));

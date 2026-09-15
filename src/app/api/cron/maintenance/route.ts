@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { EgressClient } from "livekit-server-sdk";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
+import { readHlsEnv, writeReplayPlaylist } from "@/lib/recordingEgress";
 
 /* Daily housekeeping (see vercel.json):
      1. sweep ghost seats — participants whose tab died without stamping
@@ -105,6 +106,32 @@ export async function GET(req: Request) {
       .not("hls_url", "is", null);
   } catch (e) {
     report.egressStopped = `error: ${e instanceof Error ? e.message : "unknown"}`;
+  }
+
+  // 3b. Recordings in parts whose last stitch never landed (the final
+  //     egress_ended webhook failed): stitch the recent ones again.
+  try {
+    const hls = readHlsEnv();
+    if (hls) {
+      const { data: rooms } = await admin
+        .from("debate_rooms")
+        .select("id, recording_parts")
+        .eq("status", "ended")
+        .gt("ended_at", new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString())
+        .not("recording_url", "is", null);
+      let stitched = 0;
+      for (const r of rooms ?? []) {
+        if (!Array.isArray(r.recording_parts) || r.recording_parts.length < 2) continue;
+        try {
+          if (await writeReplayPlaylist(admin, hls, r.id as string)) stitched++;
+        } catch {
+          /* per-room best effort */
+        }
+      }
+      report.replaysStitched = stitched;
+    }
+  } catch (e) {
+    report.replaysStitched = `error: ${e instanceof Error ? e.message : "unknown"}`;
   }
 
   // 4b. Headline-created debate topics nobody is waiting on (>24h)

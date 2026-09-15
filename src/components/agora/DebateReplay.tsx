@@ -26,7 +26,7 @@ import { navigateTo } from "@/lib/progress";
 import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import { useCoarsePointer } from "@/lib/pointer";
 import { fmtDay, roomDuration } from "@/lib/duration";
-import { parseTimeline, videoTime, type TimelineSpan } from "@/lib/hlsTimeline";
+import { parseTimeline, videoTime, type TimelineSpan } from "./hlsTimeline";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
 
@@ -399,21 +399,23 @@ export default function DebateReplay({
      stamped when the recorder is REQUESTED — but its first frame lands
      several seconds later, and a recording in parts skips the gaps
      between parts. Every segment's EXT-X-PROGRAM-DATE-TIME places it on
-     the wall clock (lib/hlsTimeline), which maps every match, seek and
-     printed timestamp. No tags → offsets are video time. */
+     the wall clock (./hlsTimeline), which maps every match, seek and
+     printed timestamp. The playlist comes through our own origin: the
+     bucket sends no CORS headers, so the browser can't read it there.
+     No tags → offsets are video time. */
   const [loadedTimeline, setLoadedTimeline] = useState<{ url: string; spans: TimelineSpan[] } | null>(null);
   const startedAt = room?.recording_started_at ?? null;
   useEffect(() => {
     if (!recordingUrl || !startedAt) return;
     let alive = true;
-    fetch(recordingUrl)
+    fetch(`/api/recordings/${roomId}/timeline`)
       .then((r) => (r.ok ? r.text() : null))
       .then((txt) => {
         if (alive && txt) setLoadedTimeline({ url: recordingUrl, spans: parseTimeline(txt) });
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [recordingUrl, startedAt]);
+  }, [recordingUrl, startedAt, roomId]);
   const timeline = loadedTimeline?.url === recordingUrl ? loadedTimeline.spans : NO_SPANS;
   const startedAtMs = startedAt ? Date.parse(startedAt) : NaN;
   /** A line's position in the VIDEO's own timeline. */

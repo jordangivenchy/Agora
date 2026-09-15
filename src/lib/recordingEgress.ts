@@ -14,7 +14,8 @@ import {
   type EgressInfo,
 } from "livekit-server-sdk";
 import type { createAdminClient } from "@/lib/supabase-admin";
-import { partFiles, recordingUrlFor } from "@/lib/recordingParts";
+import { partFiles, readParts, recordingUrlFor, replayKey, stitchPlaylists } from "@/lib/recordingParts";
+import { signS3Request } from "@/lib/s3Sign";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -113,8 +114,8 @@ export async function startRecordingPart(opts: {
 
   /* index.m3u8 is the VOD playlist LiveKit finalizes when the part ends —
      it persists in the bucket, so it IS the replay (stitched with the
-     other parts past the first). Part 1 also stamps the start the
-     transcript offsets are measured from. */
+     other parts past the first, in replay.m3u8). Part 1 also stamps the
+     start the transcript offsets are measured from. */
   const base = hls.publicBase.replace(/\/$/, "");
   const hlsUrl = `${base}/${files.livePlaylistName}`;
   await admin
@@ -123,15 +124,70 @@ export async function startRecordingPart(opts: {
       n === 1
         ? {
             hls_url: hlsUrl,
-            recording_url: recordingUrlFor(base, origin, roomId, 1),
+            recording_url: recordingUrlFor(base, roomId, 1),
             recording_started_at: new Date().toISOString(),
             recording_ended_at: null,
             recording_bytes: null,
           }
-        : { hls_url: hlsUrl, recording_url: recordingUrlFor(base, origin, roomId, n), recording_ended_at: null }
+        : { hls_url: hlsUrl, recording_ended_at: null }
     )
     .eq("id", roomId);
+  if (n > 1) await writeReplayPlaylist(admin, hls, roomId).catch((e) => console.error(`[recording] ${roomId}: replay playlist`, e));
   return { egressId: info.egressId, hlsUrl, part: n };
+}
+
+/** Put one small object into the recordings bucket (path-style, signed). */
+async function putObject(hls: HlsEnv, key: string, body: string, contentType: string) {
+  const endpoint = (/^https?:\/\//.test(hls.endpoint) ? hls.endpoint : `https://${hls.endpoint}`).replace(/\/$/, "");
+  const url = `${endpoint}/${hls.bucket}/${key}`;
+  const signed = signS3Request({
+    method: "PUT",
+    url,
+    body,
+    headers: { "content-type": contentType, "cache-control": "no-cache" },
+    accessKey: hls.accessKey,
+    secret: hls.secret,
+    region: hls.region,
+  });
+  const { host: _host, ...headers } = signed;
+  void _host;
+  const res = await fetch(url, { method: "PUT", headers, body });
+  if (!res.ok) throw new Error(`put ${key}: ${res.status} ${(await res.text()).slice(0, 200)}`);
+}
+
+/** Stitch a room's parts into <room>/replay.m3u8, beside the segments.
+    Rewritten whenever a part starts or ends; final (ENDLIST) once the room
+    has ended and every part's playlist is. The replay moves to it only
+    once it's written — until then recording_url stays on part 1, which
+    plays. */
+export async function writeReplayPlaylist(admin: Admin, hls: HlsEnv, roomId: string): Promise<{ url: string; final: boolean } | null> {
+  const { data: room } = await admin
+    .from("debate_rooms")
+    .select("status, recording_url, recording_parts")
+    .eq("id", roomId)
+    .maybeSingle();
+  if (!room?.recording_url) return null;
+  const parts = readParts(room.recording_parts, room.recording_url);
+  if (parts.length < 2) return null;
+  const base = hls.publicBase.replace(/\/$/, "");
+  const playlists = await Promise.all(
+    parts.map(async (p) => {
+      const url = `${base}/${partFiles(roomId, p.n).playlistName}`;
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        return { url, text: res.ok ? await res.text() : null };
+      } catch {
+        return { url, text: null };
+      }
+    })
+  );
+  const url = `${base}/${replayKey(roomId)}`;
+  const body = stitchPlaylists(playlists, room.status === "ended", url);
+  await putObject(hls, replayKey(roomId), body, "application/vnd.apple.mpegurl");
+  if (room.recording_url !== url) {
+    await admin.from("debate_rooms").update({ recording_url: url }).eq("id", roomId);
+  }
+  return { url, final: body.includes("#EXT-X-ENDLIST") };
 }
 
 /** What LiveKit reported for a finished HLS recorder, or null for anything

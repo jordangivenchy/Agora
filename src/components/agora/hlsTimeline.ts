@@ -9,8 +9,8 @@
    One span with its first frame 0–120 s after the stamp is the old
    single "sync delta"; outside that window the stamp is trusted instead
    (the old behaviour, when the tag looked wrong). No tags: video time is
-   the offset itself. Shared by the replay page, the app's replay and the
-   transcriber. */
+   the offset itself. Shared by the replay page, the app's replay (Metro
+   watches this folder) and the transcriber. */
 
 export interface TimelineSpan {
   /** Video seconds where the span starts. */

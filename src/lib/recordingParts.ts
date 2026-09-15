@@ -2,7 +2,10 @@
    while the room is still live (production saw "CPU exhausted" cut every
    camera room to its first ~10 seconds). When that happens the LiveKit
    webhook starts the next part in a folder of its own, and the replay
-   plays the parts back in order through /api/recordings/<room>/index.m3u8.
+   plays the parts back in order from <room>/replay.m3u8 — a stitched
+   playlist written into the bucket beside the segments, since Chrome
+   won't play a playlist whose segments sit on another site that doesn't
+   allow it (the bucket sends no CORS headers).
 
    Part 1 keeps the original files — <room>/index.m3u8, <room>/live.m3u8,
    <room>/seg_* — so a recording that never broke is exactly what it
@@ -42,12 +45,16 @@ export function partFiles(roomId: string, n: number) {
   };
 }
 
-/** The replay address for a recording of `parts` parts: the bucket's own
-    playlist for one part, the stitched playlist for more. */
-export function recordingUrlFor(publicBase: string, origin: string, roomId: string, parts: number): string {
-  return parts <= 1
-    ? `${publicBase.replace(/\/$/, "")}/${roomId}/index.m3u8`
-    : `${origin.replace(/\/$/, "")}/api/recordings/${roomId}/index.m3u8`;
+/** The bucket key of the stitched playlist for a recording in parts. */
+export function replayKey(roomId: string): string {
+  return `${roomId}/replay.m3u8`;
+}
+
+/** The replay address for a recording of `parts` parts: part 1's own
+    playlist, or the stitched one once there are more. */
+export function recordingUrlFor(publicBase: string, roomId: string, parts: number): string {
+  const base = publicBase.replace(/\/$/, "");
+  return parts <= 1 ? `${base}/${roomId}/index.m3u8` : `${base}/${replayKey(roomId)}`;
 }
 
 /** The parts column, read defensively. A room recorded before parts existed
@@ -78,11 +85,13 @@ export function shouldRestart(room: { status: string | null; hls_url: string | n
 
 /** The replay playlist for a recording in parts: each part's segments in
     order, a discontinuity between parts (every part's timestamps start
-    over), segment addresses made absolute against the part's own
-    playlist. Each entry is a part's index.m3u8 (null when missing) and
+    over), each segment addressed from where the stitched playlist will
+    live (`outputUrl`) — relative when it sits in that folder, absolute
+    otherwise. Each entry is a part's index.m3u8 (null when missing) and
     the address it came from. The list ends (VOD) only once the room has
     ended and every part's playlist is final. */
-export function stitchPlaylists(parts: Array<{ text: string | null; url: string }>, roomEnded: boolean): string {
+export function stitchPlaylists(parts: Array<{ text: string | null; url: string }>, roomEnded: boolean, outputUrl?: string): string {
+  const outDir = outputUrl ? outputUrl.slice(0, outputUrl.lastIndexOf("/") + 1) : null;
   const body: string[] = [];
   let target = 1;
   let first = true;
@@ -108,6 +117,7 @@ export function stitchPlaylists(parts: Array<{ text: string | null; url: string 
         let uri = line;
         try {
           uri = new URL(line, part.url).toString();
+          if (outDir && uri.startsWith(outDir)) uri = uri.slice(outDir.length);
         } catch {
           /* leave it as written */
         }

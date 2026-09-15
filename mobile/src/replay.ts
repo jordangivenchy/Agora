@@ -7,7 +7,7 @@
    (replay_like_state, toggle_replay_like), the view count
    (bump_replay_view), and more recorded discussions to watch next. */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseTimeline, type TimelineSpan } from "../../src/lib/hlsTimeline";
+import { parseTimeline, type TimelineSpan } from "../../src/components/agora/hlsTimeline";
 import type { CommentRow } from "./communities";
 
 export interface ReplayPerson { id: string; username: string; display_name: string | null; avatar_url: string | null }
@@ -189,7 +189,7 @@ export async function bumpReplayView(supabase: SupabaseClient, roomId: string): 
    was requested; the first frame lands seconds later, and a recording in
    parts skips the gaps between parts. Every segment's
    EXT-X-PROGRAM-DATE-TIME places it on the wall clock — the site's own
-   timeline (src/lib/hlsTimeline) maps every match, seek and printed time.
+   timeline (src/components/agora/hlsTimeline) maps every match, seek and printed time.
    No playlist, no tags: offsets are video time. */
 export async function fetchTimeline(recordingUrl: string): Promise<TimelineSpan[]> {
   try {

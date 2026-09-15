@@ -31,7 +31,7 @@ import { ComposerSheet } from "../../src/composer";
 import { ClipEditorSheet } from "../../src/clipEditor";
 import { ClipTile } from "../../src/clipTile";
 import { fetchClips, type ClipTileData } from "../../src/clips";
-import { videoTime, type TimelineSpan } from "../../../src/lib/hlsTimeline";
+import { videoTime, type TimelineSpan } from "../../../src/components/agora/hlsTimeline";
 import { showToast } from "../../src/toast";
 import { colors, fonts } from "../../src/theme";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PARTS, partFiles, partPrefix, readParts, recordingUrlFor, shouldRestart, stitchPlaylists, totalBytes } from "./recordingParts";
+import { MAX_PARTS, partFiles, partPrefix, readParts, recordingUrlFor, replayKey, shouldRestart, stitchPlaylists, totalBytes } from "./recordingParts";
 
 const ROOM = "d065f134-b85b-4424-81f2-97812a0e85ee";
 const BASE = "https://pub-x.r2.dev";
@@ -43,9 +43,10 @@ describe("recording parts", () => {
     expect(partFiles(ROOM, 2)).toEqual({ filenamePrefix: `${ROOM}/p2/seg`, playlistName: `${ROOM}/p2/index.m3u8`, livePlaylistName: `${ROOM}/p2/live.m3u8` });
   });
 
-  it("plays one part from the bucket and several through the stitched playlist", () => {
-    expect(recordingUrlFor(`${BASE}/`, "https://agorasphere.net", ROOM, 1)).toBe(`${BASE}/${ROOM}/index.m3u8`);
-    expect(recordingUrlFor(BASE, "https://agorasphere.net/", ROOM, 2)).toBe(`https://agorasphere.net/api/recordings/${ROOM}/index.m3u8`);
+  it("plays one part from its own playlist and several from the stitched one, both in the bucket", () => {
+    expect(recordingUrlFor(`${BASE}/`, ROOM, 1)).toBe(`${BASE}/${ROOM}/index.m3u8`);
+    expect(recordingUrlFor(BASE, ROOM, 2)).toBe(`${BASE}/${ROOM}/replay.m3u8`);
+    expect(replayKey(ROOM)).toBe(`${ROOM}/replay.m3u8`);
   });
 
   it("reads a room recorded before parts existed as one part", () => {
@@ -90,6 +91,20 @@ describe("recording parts", () => {
     expect(lines[disc + 1]).toBe("#EXT-X-PROGRAM-DATE-TIME:2026-09-14T18:59:41.000Z");
     expect(lines.filter((l) => l === "#EXT-X-DISCONTINUITY")).toHaveLength(1);
     expect(lines[lines.length - 1]).toBe("#EXT-X-ENDLIST");
+  });
+
+  it("addresses segments from beside the stitched playlist, so they're on its own site", () => {
+    const out = stitchPlaylists(
+      [
+        { text: PART1, url: `${BASE}/${ROOM}/index.m3u8` },
+        { text: PART2 + "#EXT-X-ENDLIST\n", url: `${BASE}/${ROOM}/p2/index.m3u8` },
+      ],
+      true,
+      `${BASE}/${ROOM}/replay.m3u8`
+    );
+    expect(out.split("\n").filter((l) => l.endsWith(".ts"))).toEqual(["seg_00000.ts", "seg_00001.ts", "seg_00002.ts", "p2/seg_00000.ts", "p2/seg_00001.ts"]);
+    const elsewhere = stitchPlaylists([{ text: PART1, url: `${BASE}/${ROOM}/index.m3u8` }], true, `https://other.example/${ROOM}/replay.m3u8`);
+    expect(elsewhere).toContain(`${BASE}/${ROOM}/seg_00000.ts`);
   });
 
   it("stays open while the room is live or a part isn't final", () => {

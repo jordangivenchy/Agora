@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { getAppConfig } from "@/lib/appConfig";
 import { parseVodPlaylist, chunkSegments, tsToAdts, type HlsSegment } from "@/lib/replayTranscribe";
-import { parseTimeline, recordingOffset } from "@/lib/hlsTimeline";
+import { parseTimeline, recordingOffset } from "@/components/agora/hlsTimeline";
 
 /* Post-run replay transcription. Fired by the replay-transcripts cron
    (pg_net POST) for ended rooms whose recording has finalized: pulls the
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
     /* Live utterances give speaker attribution. Their offsets are from
        recording_started_at (the recorder REQUEST); the playlist's
        PROGRAM-DATE-TIME tags place every segment on the wall clock — the
-       same timeline the replay page maps through (lib/hlsTimeline), gaps
+       same timeline the replay page maps through (components/agora/hlsTimeline), gaps
        between recording parts included. */
     const started = room.recording_started_at ? Date.parse(room.recording_started_at) : NaN;
     const timeline = parseTimeline(playlistText);

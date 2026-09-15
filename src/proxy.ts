@@ -15,7 +15,6 @@ const BETA_EXEMPT = [
   "/api/health", // integration status booleans only — needed for machine checks
   "/discord", // the door to the Discord server: visitors have no pass yet
   "/api/discord", // its OAuth round trip
-  "/api/recordings", // stitched replay playlists: native players carry no pass, and the parts are public already
 
   "/auth",
   "/app/open", // the phone app handing its login to the website inside it
