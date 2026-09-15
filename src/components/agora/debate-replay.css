@@ -168,6 +168,26 @@
 @media (max-width: 960px) {
   .dr-grid { grid-template-columns: minmax(0, 1fr); }
 }
+/* Transcript closed: the video takes the row. */
+.dr-grid--solo { grid-template-columns: minmax(0, 1fr); }
+.dr-panel { position: relative; }
+.dr-panel-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  background: #1c1c22;
+  color: #c9c9d4;
+  cursor: pointer;
+}
+.dr-panel-close:hover { background: #26262e; color: #fff; }
+.dr-panel:has(.dr-panel-close) .dr-panel-head { padding-right: 46px; }
+.dr-btn.is-on { background: #3a3a44; color: #fff; }
 
 .dr-player {
   position: relative;

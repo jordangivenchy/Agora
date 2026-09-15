@@ -2999,7 +2999,9 @@ html.reduce-motion .nav-sparkle {
   html .dr-more-card { flex: 0 0 min(70vw, 260px); scroll-snap-align: start; }
   html .dr-toast { bottom: calc(70px + env(safe-area-inset-bottom)) !important; max-width: calc(100vw - 24px); z-index: 130 !important; }
   .rp-vol { display: none !important; }
-  .rp-controls { gap: 6px !important; }
+  /* Phones have volume buttons; the row keeps room for skip, speed, PiP. */
+  .rp-mute { display: none !important; }
+  .rp-controls { gap: 2px !important; }
   .rp-time { font-size: 11px !important; }
   .rp-btn { min-width: 36px; min-height: 36px; justify-content: center; }
   .rp-clip-panel {

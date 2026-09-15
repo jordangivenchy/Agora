@@ -1,17 +1,19 @@
 "use client";
 
 /* AgoraSphere's own VOD player chrome — a bare <video> under a custom
-   control bar (play/pause, gold seek bar, elapsed/total, mute + volume,
-   fullscreen) instead of the browser's stock controls, so replays look
-   the same everywhere and carry no download / PiP / rate menus.
+   control bar (play/pause, 10s back and forward, gold seek bar,
+   elapsed/total, mute + volume, speed, picture in picture, AirPlay or
+   Cast where the browser has them, fullscreen) instead of the browser's
+   stock controls, so replays look the same everywhere.
 
    Shared by the community-thread ReplayEmbed and the replay page; the
    page passes a ref (transcript click-to-seek writes currentTime) and
    an onTimeUpdate (transcript highlight follows playback).
 
    Controls fade while playing and reappear on any pointer or key
-   activity. Keyboard on the focused player: space toggles, ←/→ scrub
-   5s, m mutes, f fullscreens. */
+   activity. Keyboard on the focused player: space/k toggles, ←/→ scrub
+   5s, j/l 10s, </> slow down and speed up, m mutes, f fullscreens,
+   p picture in picture. */
 
 import {
   forwardRef,
@@ -34,6 +36,15 @@ function fmtTime(s: number): string {
 }
 
 const GOLD = "#e2b96b";
+const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const RATE_KEY = "agora:replay-rate";
+
+type CastableVideo = HTMLVideoElement & {
+  /* Safari's AirPlay picker. */
+  webkitShowPlaybackTargetPicker?: () => void;
+  /* The Remote Playback API (Chrome's Cast). */
+  remote?: { watchAvailability: (cb: (available: boolean) => void) => Promise<number>; cancelWatchAvailability: (id?: number) => Promise<void>; prompt: () => Promise<void> };
+};
 
 export interface ReplayPlayerProps {
   src: string | null;
@@ -69,6 +80,12 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
     const [muted, setMuted] = useState(false);
     const [vol, setVol] = useState(1);
     const [fs, setFs] = useState(false);
+    const [rate, setRate] = useState(1);
+    const [rateMenu, setRateMenu] = useState(false);
+    const [pip, setPip] = useState(false);
+    const [canPip, setCanPip] = useState(false);
+    const [airplay, setAirplay] = useState(false);
+    const [cast, setCast] = useState(false);
     const [chrome, setChrome] = useState(true);
     const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const draggingRef = useRef(false);
@@ -131,6 +148,60 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
       }
       poke();
     }, [poke]);
+
+    /* Speed: remembered on this browser, applied to every replay. */
+    const applyRate = useCallback((r: number) => {
+      const v = videoRef.current;
+      if (v) v.playbackRate = r;
+      setRate(r);
+      try { localStorage.setItem(RATE_KEY, String(r)); } catch { /* private mode */ }
+    }, []);
+    const stepRate = useCallback((dir: 1 | -1) => {
+      const i = RATES.indexOf(rate);
+      applyRate(RATES[Math.max(0, Math.min(RATES.length - 1, (i < 0 ? 2 : i) + dir))]);
+      poke();
+    }, [rate, applyRate, poke]);
+    useEffect(() => {
+      let saved = 1;
+      try { saved = Number(localStorage.getItem(RATE_KEY)) || 1; } catch { /* private mode */ }
+      const v = videoRef.current;
+      if (v && RATES.includes(saved)) {
+        v.playbackRate = saved;
+        v.defaultPlaybackRate = saved;
+        queueMicrotask(() => setRate(saved));
+      }
+    }, [src]);
+
+    /* Picture in picture, AirPlay (Safari) and Cast (the Remote Playback
+       API — Chrome): each shows only where the browser offers it. */
+    useEffect(() => {
+      const v = videoRef.current as CastableVideo | null;
+      if (!v) return;
+      const onEnterPip = () => setPip(true);
+      const onLeavePip = () => setPip(false);
+      v.addEventListener("enterpictureinpicture", onEnterPip);
+      v.addEventListener("leavepictureinpicture", onLeavePip);
+      queueMicrotask(() => setCanPip(typeof document !== "undefined" && !!document.pictureInPictureEnabled && typeof v.requestPictureInPicture === "function"));
+      const onTargets = (e: Event) => setAirplay((e as Event & { availability?: string }).availability === "available");
+      if ("WebKitPlaybackTargetAvailabilityEvent" in window) v.addEventListener("webkitplaybacktargetavailabilitychanged", onTargets);
+      let watch: number | undefined;
+      v.remote?.watchAvailability((available) => setCast(available)).then((id) => { watch = id; }).catch(() => {});
+      return () => {
+        v.removeEventListener("enterpictureinpicture", onEnterPip);
+        v.removeEventListener("leavepictureinpicture", onLeavePip);
+        v.removeEventListener("webkitplaybacktargetavailabilitychanged", onTargets);
+        if (watch !== undefined) v.remote?.cancelWatchAvailability(watch).catch(() => {});
+      };
+    }, [src]);
+    const togglePip = useCallback(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
+      else v.requestPictureInPicture?.().catch(() => {});
+      poke();
+    }, [poke]);
+    const pickAirplay = useCallback(() => { (videoRef.current as CastableVideo | null)?.webkitShowPlaybackTargetPicker?.(); }, []);
+    const pickCast = useCallback(() => { (videoRef.current as CastableVideo | null)?.remote?.prompt().catch(() => {}); }, []);
 
     useEffect(() => {
       const onFs = () => setFs(document.fullscreenElement === wrapRef.current);
@@ -198,8 +269,13 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
           if (e.key === " " || e.key === "k") { e.preventDefault(); toggle(); }
           else if (e.key === "ArrowLeft") { e.preventDefault(); seekBy(-5); }
           else if (e.key === "ArrowRight") { e.preventDefault(); seekBy(5); }
+          else if (e.key === "j") { seekBy(-10); }
+          else if (e.key === "l") { seekBy(10); }
+          else if (e.key === "<" || e.key === ",") { stepRate(-1); }
+          else if (e.key === ">" || e.key === ".") { stepRate(1); }
           else if (e.key === "m") { setVolume(muted ? (vol || 1) : 0); }
           else if (e.key === "f") { toggleFs(); }
+          else if (e.key === "p" && canPip) { togglePip(); }
         }}
         style={{
           position: "relative", width: "100%", borderRadius: fs ? 0 : 12,
@@ -211,6 +287,7 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
         <video
           ref={videoRef}
           playsInline
+          x-webkit-airplay="allow"
           preload="metadata"
           poster={poster}
           onClick={toggle}
@@ -286,10 +363,16 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
           </div>
 
           <div className="rp-controls" style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 2 }}>
+            <button onClick={() => seekBy(-10)} aria-label="Back 10 seconds" title="Back 10 seconds (j)" className="rp-btn rp-skip" style={btn}>
+              <Icon name="rotate-ccw" size={16} />
+            </button>
             <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="rp-btn" style={btn}>
               <Icon name={playing ? "pause" : "play"} size={17} style={{ fill: "currentColor" }} />
             </button>
-            <button onClick={() => setVolume(muted ? (vol || 1) : 0)} aria-label={muted ? "Unmute" : "Mute"} className="rp-btn" style={btn}>
+            <button onClick={() => seekBy(10)} aria-label="Forward 10 seconds" title="Forward 10 seconds (l)" className="rp-btn rp-skip" style={btn}>
+              <Icon name="rotate-cw" size={16} />
+            </button>
+            <button onClick={() => setVolume(muted ? (vol || 1) : 0)} aria-label={muted ? "Unmute" : "Mute"} className="rp-btn rp-mute" style={btn}>
               <Icon name={muted ? "volume-x" : "volume-2"} size={16} />
             </button>
             <input
@@ -304,6 +387,49 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
               {fmtTime(shownTime)} <span style={{ color: "#8b8b94" }}>/ {fmtTime(eDur)}</span>
             </span>
             <span style={{ flex: 1 }} />
+            <span style={{ position: "relative", display: "inline-flex" }}>
+              <button
+                onClick={() => { setRateMenu((o) => !o); poke(); }}
+                aria-label={`Playback speed, ${rate}×`}
+                aria-haspopup="menu"
+                aria-expanded={rateMenu}
+                title="Playback speed (< >)"
+                className="rp-btn"
+                style={{ ...btn, fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono', monospace", color: rate === 1 ? "#f0f0f2" : GOLD, minWidth: 34, justifyContent: "center" }}
+              >
+                {rate}×
+              </button>
+              {rateMenu && (
+                <span role="menu" aria-label="Playback speed" style={{ position: "absolute", right: 0, bottom: "calc(100% + 8px)", display: "flex", flexDirection: "column", padding: 4, borderRadius: 10, background: "#0e0e11", border: "1px solid #2a2a33", boxShadow: "0 10px 28px rgba(0,0,0,0.5)", zIndex: 3 }}>
+                  {RATES.map((r) => (
+                    <button
+                      key={r}
+                      role="menuitemradio"
+                      aria-checked={r === rate}
+                      onClick={() => { applyRate(r); setRateMenu(false); poke(); }}
+                      style={{ ...btn, padding: "6px 14px", borderRadius: 7, fontSize: 12.5, fontWeight: r === rate ? 700 : 500, color: r === rate ? GOLD : "#e5e5ec", justifyContent: "flex-end", fontFamily: "'DM Mono', monospace" }}
+                    >
+                      {r === 1 ? "Normal" : `${r}×`}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </span>
+            {canPip && (
+              <button onClick={togglePip} aria-label={pip ? "Exit picture in picture" : "Picture in picture"} title="Picture in picture (p)" className="rp-btn" style={{ ...btn, color: pip ? GOLD : btn.color }}>
+                <Icon name="picture-in-picture" size={16} />
+              </button>
+            )}
+            {airplay && (
+              <button onClick={pickAirplay} aria-label="AirPlay" title="AirPlay" className="rp-btn" style={btn}>
+                <Icon name="airplay" size={16} />
+              </button>
+            )}
+            {cast && (
+              <button onClick={pickCast} aria-label="Cast" title="Cast to a device" className="rp-btn" style={btn}>
+                <Icon name="cast" size={16} />
+              </button>
+            )}
             {clipRoomId && (
               <button
                 onClick={openClipEditor}

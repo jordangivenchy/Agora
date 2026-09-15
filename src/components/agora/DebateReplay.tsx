@@ -262,6 +262,7 @@ export default function DebateReplay({
   /* A finger has no ⌘↩: the composer keeps the hint for a keyboard. */
   const coarse = useCoarsePointer();
   const [query, setQuery] = useState("");
+  const [transcriptOpen, setTranscriptOpen] = useState<boolean | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [discussBusy, setDiscussBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -637,6 +638,9 @@ export default function DebateReplay({
     startMs && endMs ? fmtDuration(new Date(endMs).getTime() - new Date(startMs).getTime()) : null;
   const when = room.ended_at ?? room.started_at ?? room.created_at;
   const hasTranscript = lines.length > 0;
+  /* The transcript waits behind a button, as on YouTube, so the video gets
+     the width — unless there's no video, when the transcript is the page. */
+  const showTranscript = transcriptOpen ?? (!recorded && hasTranscript);
   const posterStyle = room.thumbnail_url
     ? { backgroundImage: `url(${room.thumbnail_url})`, backgroundSize: "cover", backgroundPosition: "center" }
     : undefined;
@@ -689,6 +693,16 @@ export default function DebateReplay({
             <button className="dr-btn" onClick={share} title="Copy the link">
               <Icon name="share" size={13} /> Share
             </button>
+            {recorded && hasTranscript && (
+              <button
+                className={`dr-btn${showTranscript ? " is-on" : ""}`}
+                onClick={() => setTranscriptOpen(!showTranscript)}
+                aria-expanded={showTranscript}
+                title={showTranscript ? "Hide the transcript" : "Show the transcript"}
+              >
+                <Icon name="file-text" size={13} /> {showTranscript ? "Hide transcript" : "Transcript"}
+              </button>
+            )}
           </div>
           <div className="dr-people">
             {room.speakers.map((p) => (
@@ -710,7 +724,7 @@ export default function DebateReplay({
           </div>
         </header>
 
-        <div className="dr-grid">
+        <div className={`dr-grid${showTranscript ? "" : " dr-grid--solo"}`}>
           <div className="dr-player" style={posterStyle}>
             {recorded ? (
               <>
@@ -745,6 +759,7 @@ export default function DebateReplay({
             )}
           </div>
 
+          {showTranscript && (
           <aside className="dr-panel">
             <div className="dr-panel-head">
               <span className="dr-panel-title">Transcript{lines.length ? ` · ${lines.length}` : ""}</span>
@@ -806,7 +821,13 @@ export default function DebateReplay({
               })}
             </div>
             </div>
+            {recorded && (
+              <button className="dr-panel-close" onClick={() => setTranscriptOpen(false)} aria-label="Hide the transcript" title="Hide the transcript">
+                <Icon name="x" size={14} />
+              </button>
+            )}
           </aside>
+          )}
         </div>
 
         <section className="dr-section">
