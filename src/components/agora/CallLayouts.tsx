@@ -4,11 +4,14 @@
    nothing on the wire changes. Two flat 2D layouts that overlay the 3D
    scene (which keeps running, dimmed, behind them):
 
-   - Gallery: an equal-tile grid of every live picture in the room,
-     paginated at 9 per page. Active speakers are pulled to page one, but
-     lazily — a tile only migrates after its owner has been speaking off
-     the current page for 3s, so the grid doesn't reshuffle on every
-     volume flicker.
+   - Gallery: Discord's grid, the same logic as the phone app
+     (callGrid.ts, gallerySlots.ts): 16:9 windows as big as the stage
+     allows, a shared screen a 2×2 block, a short last row centred. Past
+     nine places the last window is "+N": the pin, you, whoever is
+     talking and cameras on hold the windows, trading them in place — a
+     hidden speaker comes in after 3s of talk, over someone quiet for 8s,
+     so the grid doesn't reshuffle on every volume flicker — and "+N"
+     lists the rest to keep one in view.
    - Multi-speaker: up to three featured tiles (a live screen share
      always takes the first slot; a viewer pin takes the next) over a
      horizontal filmstrip of everyone else. Featured slots follow recent
@@ -26,6 +29,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Track } from "livekit-client";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
+import { planGrid, screenPlaces } from "./callGrid";
+import { planSlots, type SlotPerson } from "./gallerySlots";
 
 export interface LayoutTile {
   /** Stable key — identity:local:source, same recipe as tileKey(). */
@@ -42,6 +47,8 @@ export interface LayoutTile {
   /** For camera-off participants: avatar placeholder instead of video. */
   avatarUrl?: string | null;
   avatarSeed?: string;
+  /** Host or co-host: the last to give up a gallery window. */
+  host?: boolean;
 }
 
 /* ── Track → <video> element cache ─────────────────────────────────────
@@ -109,12 +116,15 @@ const CallTile = memo(function CallTile({
   small,
   pinned,
   onPin,
+  avatarSize,
 }: {
   tile: LayoutTile;
   speaking: boolean;
   small?: boolean;
   pinned?: boolean;
   onPin?: (key: string | null) => void;
+  /** The face on a camera-off window, sized to the window when the gallery knows it. */
+  avatarSize?: number;
 }) {
   const handlePin = onPin
     ? () => onPin(pinned ? null : tile.key)
@@ -138,7 +148,7 @@ const CallTile = memo(function CallTile({
         /* Camera off: same plate the stage shows — avatar centered. */
         <span className="ag-lt-video ag-lt-video--off">
           <UserAvatar
-            size={small ? 44 : 72}
+            size={avatarSize ?? (small ? 44 : 72)}
             username={tile.handle ?? tile.username}
             avatarUrl={tile.avatarUrl ?? null}
             seed={tile.avatarSeed ?? tile.identity}
@@ -192,133 +202,233 @@ function useJoinOrder(tiles: LayoutTile[]) {
 
 /* ── Gallery ─────────────────────────────────────────────────────────── */
 
-const PAGE_SIZE = 9;
-const PROMOTE_AFTER_MS = 3000;
+/* Three rows of three; windows the shape of a screen. */
+const PLACES = 9;
+const GAP = 12;
+const RATIO = 16 / 9;
 
 export function CallGallery({
   tiles,
   speaking,
+  pinnedKey = null,
   onPin,
+  onKeepInView,
 }: {
   tiles: LayoutTile[];
   speaking: ReadonlySet<string>;
-  /** Pin a tile — the page responds by switching to multi, featured. */
+  /** The viewer's pin: always in view. */
+  pinnedKey?: string | null;
+  /** A window's pin control — the page answers by switching to multi, featured. */
   onPin?: (key: string) => void;
+  /** Keep someone in view here (picked from "+N"), or let go (null). */
+  onKeepInView?: (key: string | null) => void;
 }) {
-  const joinIndex = useJoinOrder(tiles);
-  const [page, setPage] = useState(0);
-  /* Keys promoted to the front of the ordering (most recent first). Only
-     ever mutated by the 3s promotion timer, so the grid holds still. */
-  const [promoted, setPromoted] = useState<string[]>([]);
-  const offPageSinceRef = useRef<Map<string, number>>(new Map());
-
-  const ordered = useMemo(() => {
-    const rank = (t: LayoutTile) => {
-      if (t.source === "screen") return -1_000_000 + joinIndex(t.key);
-      const p = promoted.indexOf(t.key);
-      if (p >= 0) return -1000 + p;
-      return joinIndex(t.key);
-    };
-    return [...tiles].sort((a, b) => rank(a) - rank(b));
-  }, [tiles, promoted, joinIndex]);
-
-  const pageCount = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount - 1);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
   useEffect(() => {
-    if (page > pageCount - 1) setPage(pageCount - 1);
-  }, [page, pageCount]);
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setBox((b) => (Math.round(b.w) === Math.round(width) && Math.round(b.h) === Math.round(height) ? b : { w: width, h: height }));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const pageTiles = ordered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const { shown, hidden } = useGallerySlots(tiles, speaking, pinnedKey);
+  const [menuOpen, setMenuOpen] = useState(false);
+  /* Nobody left behind "+N": the list has nothing to show. */
+  if (menuOpen && !hidden.length) setMenuOpen(false);
 
-  /* Promotion timer: a speaker parked off the *current* page for longer
-     than 3s gets pulled to the front (which lands them on page 1). One
-     interval, not per-speaker timeouts — cheap and drift-proof. */
-  const speakingRef = useRef(speaking);
-  speakingRef.current = speaking;
-  const orderedRef = useRef(ordered);
-  orderedRef.current = ordered;
-  const pageRef = useRef(safePage);
-  pageRef.current = safePage;
-
-  useEffect(() => {
-    if (tiles.length <= PAGE_SIZE) {
-      offPageSinceRef.current.clear();
-      return; // one page — nothing to promote, nothing ever jumps
-    }
-    const t = setInterval(() => {
-      const now = Date.now();
-      const cur = orderedRef.current;
-      const start = pageRef.current * PAGE_SIZE;
-      const visible = new Set(cur.slice(start, start + PAGE_SIZE).map((x) => x.key));
-      const since = offPageSinceRef.current;
-      const due: string[] = [];
-      for (const tile of cur) {
-        const isSpeaking = tile.source === "camera" && speakingRef.current.has(tile.identity);
-        if (!isSpeaking || visible.has(tile.key)) {
-          since.delete(tile.key);
-          continue;
-        }
-        const t0 = since.get(tile.key);
-        if (t0 === undefined) since.set(tile.key, now);
-        else if (now - t0 >= PROMOTE_AFTER_MS) due.push(tile.key);
-      }
-      if (due.length > 0) {
-        due.forEach((k) => since.delete(k));
-        setPromoted((prev) => [...due, ...prev.filter((k) => !due.includes(k))].slice(0, PAGE_SIZE));
-      }
-    }, 1000);
-    return () => clearInterval(t);
-  }, [tiles.length]);
-
-  if (tiles.length === 0) return <EmptyState />;
-
-  const n = pageTiles.length;
-  const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
-  const rows = Math.ceil(n / cols);
+  const kinds = [...shown.map((t) => t.source), ...(hidden.length ? (["camera"] as const) : [])];
+  const plan = planGrid(kinds, box.w, box.h, GAP, RATIO);
+  const moreCell = hidden.length ? plan.cells.find((c) => c.index === shown.length) ?? null : null;
 
   return (
-    <div className="ag-lgal">
-      <div
-        className="ag-lgal-grid"
-        style={{ "--cols": cols, "--rows": rows } as React.CSSProperties}
-      >
-        {pageTiles.map((t) => (
-          <CallTile
-            key={t.key}
-            tile={t}
-            speaking={t.source === "camera" && speaking.has(t.identity)}
-            onPin={onPin ? () => onPin(t.key) : undefined}
-          />
-        ))}
-      </div>
-      {pageCount > 1 && (
-        <div className="ag-lgal-pager">
-          <button
-            className="ag-lgal-arrow"
-            aria-label="Previous page"
-            disabled={safePage === 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-          >
-            <Icon name="chevron-left" size={15} />
-          </button>
-          {Array.from({ length: pageCount }, (_, i) => (
-            <button
-              key={i}
-              className={`ag-lgal-dot${i === safePage ? " is-active" : ""}`}
-              aria-label={`Page ${i + 1}`}
-              onClick={() => setPage(i)}
-            />
-          ))}
-          <button
-            className="ag-lgal-arrow"
-            aria-label="Next page"
-            disabled={safePage === pageCount - 1}
-            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-          >
-            <Icon name="chevron-right" size={15} />
-          </button>
-        </div>
+    <div className="ag-lgal" ref={boxRef}>
+      {tiles.length === 0 ? (
+        <EmptyState />
+      ) : (
+        plan.cells.map((cell) => {
+          const style = { left: cell.x, top: cell.y, width: cell.w, height: cell.h };
+          const t = shown[cell.index];
+          if (!t) {
+            return (
+              <div key="more" className="ag-lgal-cell" style={style}>
+                <MoreTile people={hidden} speaking={speaking} height={cell.h} open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
+              </div>
+            );
+          }
+          const pinned = t.key === pinnedKey;
+          return (
+            <div key={t.key} className="ag-lgal-cell" style={style}>
+              <CallTile
+                tile={t}
+                speaking={t.source === "camera" && speaking.has(t.identity)}
+                avatarSize={Math.round(Math.max(28, Math.min(72, cell.h * 0.42)))}
+                pinned={pinned}
+                onPin={
+                  onPin || onKeepInView
+                    ? (key) => {
+                        /* The pinned window's control lets go here; any other features it in multi. */
+                        if (key === null) onKeepInView?.(null);
+                        else if (onPin) onPin(key);
+                        else onKeepInView?.(key);
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          );
+        })
       )}
+      {menuOpen && moreCell && (
+        <MoreMenu
+          people={hidden}
+          speaking={speaking}
+          anchor={moreCell}
+          box={box}
+          onPick={(key) => {
+            setMenuOpen(false);
+            onKeepInView?.(key);
+          }}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* The gallery's windows (gallerySlots.ts): who is in view, kept in their
+   spots from one moment to the next. A clock runs while someone waits
+   behind "+N"; who is talking, and since when, is kept by that clock; the
+   plan is re-made each render and remembered when it changes. */
+function useGallerySlots(tiles: LayoutTile[], speaking: ReadonlySet<string>, pinned: string | null): { shown: LayoutTile[]; hidden: LayoutTile[] } {
+  const joinIndex = useJoinOrder(tiles);
+  const screens = tiles.filter((t) => t.source === "screen").sort((a, b) => joinIndex(a.key) - joinIndex(b.key));
+  const people = tiles.filter((t) => t.source === "camera");
+  const places = Math.max(1, PLACES - screenPlaces(screens.length, RATIO));
+  const crowded = people.length > places;
+
+  const [clock, setClock] = useState(0);
+  useEffect(() => {
+    if (!crowded) return;
+    const tick = () => setClock(Date.now());
+    const first = setTimeout(tick, 0);
+    const every = setInterval(tick, 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(every);
+    };
+  }, [crowded]);
+
+  const [talk, setTalk] = useState<{ speaking: ReadonlySet<string>; clock: number; since: Record<string, number>; last: Record<string, number> }>(
+    () => ({ speaking, clock, since: {}, last: {} })
+  );
+  if (talk.speaking !== speaking || talk.clock !== clock) {
+    const since: Record<string, number> = {};
+    const last = { ...talk.last };
+    for (const t of people) {
+      if (!speaking.has(t.identity)) continue;
+      since[t.key] = talk.since[t.key] ?? clock;
+      last[t.key] = clock;
+    }
+    setTalk({ speaking, clock, since, last });
+  }
+
+  const [kept, setKept] = useState<string[]>([]);
+  const info: SlotPerson[] = people.map((t) => ({
+    key: t.key,
+    speakingSince: talk.since[t.key] ?? null,
+    lastSpoke: talk.last[t.key] ?? 0,
+    cameraOn: !!t.track || !!t.mock,
+    local: t.local,
+    host: !!t.host,
+    join: joinIndex(t.key),
+  }));
+  const plan = planSlots(kept, info, places, pinned, clock);
+  if (plan.shown.join("|") !== kept.join("|")) setKept(plan.shown);
+  const byKey = new Map(people.map((t) => [t.key, t] as const));
+  return { shown: [...screens, ...plan.shown.map((k) => byKey.get(k)!)], hidden: plan.hidden.map((k) => byKey.get(k)!) };
+}
+
+/* The last window past nine: the first faces behind it, how many, and the gold ring when one of them is talking. */
+function MoreTile({ people, speaking, height, open, onToggle }: { people: LayoutTile[]; speaking: ReadonlySet<string>; height: number; open: boolean; onToggle: () => void }) {
+  const talking = people.some((t) => speaking.has(t.identity));
+  const face = Math.round(Math.max(24, Math.min(56, height * 0.26)));
+  return (
+    <button
+      type="button"
+      className={`ag-lt ag-lt--more${talking ? " ag-lt--speaking" : ""}`}
+      onClick={onToggle}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      title={`${people.length} more on stage`}
+    >
+      <span className="ag-lt-more-faces">
+        {people.slice(0, 3).map((t, i) => (
+          <span key={t.key} className={`ag-lt-more-face${speaking.has(t.identity) ? " is-speaking" : ""}`} style={{ zIndex: 3 - i, marginLeft: i ? -Math.round(face * 0.3) : 0 }}>
+            <UserAvatar size={face} username={t.handle ?? t.username} avatarUrl={t.avatarUrl ?? null} seed={t.avatarSeed ?? t.identity} />
+          </span>
+        ))}
+      </span>
+      <span className="ag-lt-more-count" style={{ fontSize: Math.round(Math.max(14, Math.min(24, height * 0.12))) }}>+{people.length}</span>
+    </button>
+  );
+}
+
+/* Everyone behind "+N", from the "+N" window: pick one to keep in view. */
+function MoreMenu({
+  people,
+  speaking,
+  anchor,
+  box,
+  onPick,
+  onClose,
+}: {
+  people: LayoutTile[];
+  speaking: ReadonlySet<string>;
+  anchor: { x: number; y: number; w: number; h: number };
+  box: { w: number; h: number };
+  onPick: (key: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest?.(".ag-lt--more")) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+  const width = Math.min(260, box.w);
+  const left = Math.max(0, Math.min(anchor.x + anchor.w - width, box.w - width));
+  /* Opens toward the roomier side of the window. */
+  const above = anchor.y + anchor.h / 2 > box.h / 2;
+  const style = above ? { left, width, bottom: box.h - anchor.y + 8 } : { left, width, top: anchor.y + anchor.h + 8 };
+  return (
+    <div ref={ref} className="ag-lgal-menu" role="menu" style={style}>
+      <div className="ag-lgal-menu-title">{people.length} more on stage · pick one to keep in view</div>
+      {people.map((t) => {
+        const talking = speaking.has(t.identity);
+        return (
+          <button key={t.key} type="button" role="menuitem" className="ag-lgal-menu-item" onClick={() => onPick(t.key)}>
+            <UserAvatar size={26} username={t.handle ?? t.username} avatarUrl={t.avatarUrl ?? null} seed={t.avatarSeed ?? t.identity} />
+            <span className="ag-lgal-menu-name">{t.local ? "You" : t.username}</span>
+            {(talking || t.track || t.mock) && (
+              <span className={`ag-lgal-menu-state${talking ? " is-speaking" : ""}`} aria-label={talking ? "Talking" : "Camera on"}>
+                <Icon name={talking ? "mic" : "video"} size={14} />
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

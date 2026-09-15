@@ -1,10 +1,11 @@
 /* The pictures (components/agora/CallLayouts.tsx, the site's two flat
    layouts): every on-stage person as a tile, live camera or the avatar
    plate, the name tag, the mute badge, a yellow ring while they talk; a
-   shared screen as a tile of its own. Gallery is Discord's grid
-   (callGrid.ts): square windows as big as the room allows, a screen two
-   windows wide; past nine places the last window is "+N", who is in view
-   decided by gallerySlots.ts, and tapping it lists the rest to pin one.
+   shared screen as a tile of its own. Gallery is Discord's grid, the
+   site's own logic (components/agora/callGrid.ts and gallerySlots.ts,
+   shared with the website): square windows as big as the room allows, a
+   screen two windows wide; past nine places the last window is "+N", and
+   tapping it lists the rest to pin one.
    Multi-speaker features one picture (a share first, then whoever is
    pinned, then the last to speak) over a strip of square windows. Tap a
    tile for the person; hold it to pin. */
@@ -14,8 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./avatar";
 import { TileVideo } from "./tileVideo";
 import type { CallTile } from "./roomCall";
-import { planGrid } from "./callGrid";
-import { planSlots, type SlotPerson } from "./gallerySlots";
+import { planGrid } from "../../src/components/agora/callGrid";
+import { planSlots, type SlotPerson } from "../../src/components/agora/gallerySlots";
 import { ItemSheet } from "./itemSheet";
 import { colors, fonts } from "./theme";
 
@@ -150,7 +151,8 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
 
   /* Gallery: screens first, then the people in view, then "+N" for the rest. */
   const kinds = [...inView.map((t) => t.source), ...(behind.length ? (["camera"] as const) : [])];
-  const plan = planGrid(kinds, width, height, GAP);
+  /* Square windows on a phone (the site's are 16:9). */
+  const plan = planGrid(kinds, width, height, GAP, 1);
   return (
     <View style={{ width, height }}>
       {plan.cells.map((cell) => {
@@ -211,7 +213,7 @@ function MoreTile({ people, speaking, size, onPress }: { people: StageTile[]; sp
   );
 }
 
-/* The gallery's windows (gallerySlots.ts): who is in view, kept in their
+/* The gallery's windows (components/agora/gallerySlots.ts): who is in view, kept in their
    spots from one moment to the next, re-planned as people talk and every
    second while someone is waiting behind "+N". */
 function useGallerySlots(tiles: StageTile[], speaking: ReadonlySet<string>, pinned: string | null, active: boolean): { shown: StageTile[]; hidden: StageTile[] } {

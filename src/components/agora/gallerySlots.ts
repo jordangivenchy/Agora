@@ -1,6 +1,8 @@
-/* Who gets a window when the stage has more people than the grid has
-   places (nine on a phone: three rows of three). A screen takes two
-   places; the last place becomes a "+N" window for everyone else.
+/* Who gets a window in the call gallery when the stage has more people
+   than the grid has places — one piece of logic for the website
+   (CallLayouts.tsx) and the phone app (mobile/src/roomTiles.tsx). Nine
+   places: three rows of three. A screen takes its block (callGrid.ts);
+   the last place becomes a "+N" window for everyone else.
 
    While everyone fits, nobody moves: the windows keep the order people
    came on stage and the yellow ring shows who's talking. Past that, the

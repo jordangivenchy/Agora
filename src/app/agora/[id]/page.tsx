@@ -710,6 +710,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         track: t.track,
         micMuted: t.local ? !call.micOn : !!p?.mic_muted,
         avatarUrl: p?.user?.avatar_url ?? null,
+        host: !!p && !!room && isHostRole(deriveStageRole(p, room)),
       };
     });
     const haveCamera = new Set(
@@ -729,6 +730,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         micMuted: p.user_id === userId ? !call.micOn : !!p.mic_muted,
         avatarUrl: p.user?.avatar_url ?? null,
         avatarSeed: p.user_id,
+        host: isHostRole(deriveStageRole(p, room)),
       });
     }
     return tiles;
@@ -1868,6 +1870,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                 <CallGallery
                   tiles={layoutTiles}
                   speaking={call.speakingIds}
+                  pinnedKey={layoutPin}
+                  onKeepInView={setLayoutPin}
                   onPin={(key) => {
                     /* Duels stay in the two-pane gallery — EXCEPT a
                        screen share, which pins near-fullscreen. */
