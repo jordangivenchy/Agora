@@ -3,9 +3,10 @@
    plate, the name tag, the mute badge, a yellow ring while they talk; a
    shared screen as a tile of its own. Gallery is Discord's grid, the
    site's own logic (components/agora/callGrid.ts and gallerySlots.ts,
-   shared with the website): square windows as big as the room allows, a
-   screen two windows wide; past nine places the last window is "+N", and
-   tapping it lists the rest to pin one.
+   shared with the website): one person alone is the site's 16:9 picture
+   across the width; from two people, square windows as big as the room
+   allows (never past two across), a screen two windows wide; past nine
+   places the last window is "+N", and tapping it lists the rest to pin one.
    Multi-speaker features one picture (a share first, then whoever is
    pinned, then the last to speak) over a strip of square windows. Tap a
    tile for the person; hold it to pin. */
@@ -93,7 +94,7 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
   const arranged = useRef(arrangement);
   if (arranged.current !== arrangement) {
     arranged.current = arrangement;
-    LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+    LayoutAnimation.configureNext(LayoutAnimation.create(300, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
   }
 
   const share = tiles.find((t) => t.source === "screen") ?? null;
@@ -151,9 +152,11 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
 
   /* Gallery: screens first, then the people in view, then "+N" for the rest. */
   const kinds = [...inView.map((t) => t.source), ...(behind.length ? (["camera"] as const) : [])];
-  /* Square windows on a phone (the site's are 16:9), never bigger than
-     two across: one person starting off is a card, not the whole stage. */
-  const plan = planGrid(kinds, width, height, GAP, 1, Math.floor((width - GAP) / 2));
+  /* One person on their own is the site's picture: 16:9, nearly edge to
+     edge. Once someone joins, the windows become the square grid, never
+     bigger than two across, and glide there (the layout animation above). */
+  const lone = kinds.length === 1 && kinds[0] === "camera";
+  const plan = lone ? planGrid(kinds, width, height, GAP, 16 / 9) : planGrid(kinds, width, height, GAP, 1, Math.floor((width - GAP) / 2));
   return (
     <View style={{ width, height }}>
       {plan.cells.map((cell) => {
