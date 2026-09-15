@@ -151,8 +151,9 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
 
   /* Gallery: screens first, then the people in view, then "+N" for the rest. */
   const kinds = [...inView.map((t) => t.source), ...(behind.length ? (["camera"] as const) : [])];
-  /* Square windows on a phone (the site's are 16:9). */
-  const plan = planGrid(kinds, width, height, GAP, 1);
+  /* Square windows on a phone (the site's are 16:9), never bigger than
+     two across: one person starting off is a card, not the whole stage. */
+  const plan = planGrid(kinds, width, height, GAP, 1, Math.floor((width - GAP) / 2));
   return (
     <View style={{ width, height }}>
       {plan.cells.map((cell) => {

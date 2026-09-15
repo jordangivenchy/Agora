@@ -18,7 +18,11 @@
      more than 30% of the width empty and more columns keep them at least
      80% as big, the grid takes the columns (four people on a phone read
      as two by two, not a stack of four).
-   - A short last row sits centred. */
+   - A short last row sits centred.
+   - A cap, when given, keeps a nearly empty stage from blowing one person
+     up to the whole space: the app never draws a window bigger than its
+     two-column size, so one person is a card, not the screen. A screen
+     on its own is content and is never capped. */
 
 export type GridKind = "camera" | "screen";
 export interface GridCell { index: number; x: number; y: number; w: number; h: number }
@@ -96,7 +100,7 @@ function pack(spans: Span[], cols: number): { at: { col: number; row: number }[]
   return { at, rows: taken.length };
 }
 
-export function planGrid(kinds: GridKind[], width: number, height: number, gap: number, ratio = 1): GridPlan {
+export function planGrid(kinds: GridKind[], width: number, height: number, gap: number, ratio = 1, maxSize = Infinity): GridPlan {
   if (!kinds.length || width <= 0 || height <= 0) return { cols: 1, size: 0, width: 0, height: 0, cells: [] };
   const spans = spansFor(kinds, ratio);
   /* A screen among people always gets its block, so never fewer columns than the block. */
@@ -112,7 +116,8 @@ export function planGrid(kinds: GridKind[], width: number, height: number, gap: 
     const factors = Array.from({ length: rows }, () => 1 / ratio);
     if (cols === 1) at.forEach((p, i) => { if (kinds[i] === "screen") factors[p.row] = 9 / 16; });
     const units = factors.reduce((a, b) => a + b, 0);
-    const size = Math.min((width - gap * (cols - 1)) / cols, (height - gap * (rows - 1)) / units);
+    const lone = kinds.length === 1 && kinds[0] === "screen";
+    const size = Math.min((width - gap * (cols - 1)) / cols, (height - gap * (rows - 1)) / units, lone ? Infinity : maxSize);
     all.push({ cols, size, at, rows, factors });
     if (!best || size > best.size * (1 + TIE) || (size >= best.size * (1 - TIE) && cols > best.cols && rows < best.rows)) {
       best = { cols, size, at, rows, factors };

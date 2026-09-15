@@ -39,6 +39,18 @@ describe("call gallery grid", () => {
     expect(rowCounts(cams(6), 345, 698, 16 / 9)).toEqual([2, 2, 2]);
   });
 
+  it("caps a nearly empty stage at the two-column size, and never caps a lone screen", () => {
+    const half = Math.floor((420 - 6) / 2);
+    const capped = (kinds: GridKind[]) => planGrid(kinds, 420, 584, 6, 1, half);
+    expect(capped(cams(1)).cells[0].w).toBe(half);
+    expect(rowCounts(cams(2), 420, 584, 1)).toEqual([1, 1]);
+    const two = capped(cams(2)).cells;
+    expect(two[0].y).toBe(two[1].y); // side by side once capped
+    expect(capped(cams(4)).size).toBe(half);
+    expect(capped(cams(9)).size).toBeLessThan(half);
+    expect(capped(["screen"]).cells[0].w).toBe(420);
+  });
+
   it("keeps every window the chosen shape and inside the space", () => {
     for (const ratio of [1, 16 / 9]) {
       for (let n = 1; n <= 9; n++) {
