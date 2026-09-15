@@ -30,6 +30,7 @@ import { RichText } from "../../src/richText";
 import { ComposerSheet } from "../../src/composer";
 import { ClipEditorSheet } from "../../src/clipEditor";
 import { ClipTile } from "../../src/clipTile";
+import { ReplayControls } from "../../src/replayControls";
 import { fetchClips, type ClipTileData } from "../../src/clips";
 import { videoTime, type TimelineSpan } from "../../../src/components/agora/hlsTimeline";
 import { showToast } from "../../src/toast";
@@ -75,6 +76,7 @@ export default function ReplayScreen() {
   const [views, setViews] = useState<number | null>(null);
   const [timeline, setTimeline] = useState<TimelineSpan[]>([]);
   const [query, setQuery] = useState("");
+  const [transcriptOpen, setTranscriptOpen] = useState<boolean | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [userScrolled, setUserScrolled] = useState(false);
   const [more, setMore] = useState<MoreReplay[]>([]);
@@ -101,6 +103,7 @@ export default function ReplayScreen() {
   const recordingUrl = room?.recording_url ?? null;
   const recorded = !!recordingUrl;
   const player = useVideoPlayer(recordingUrl, (p) => { p.loop = false; p.timeUpdateEventInterval = 0.5; });
+  const viewRef = useRef<VideoView>(null);
   useEffect(() => { if (recordingUrl) player.play(); }, [recordingUrl, player]);
   /* A jump in the time is a seek from the player's own controls: the
      transcript follows again, as the site's onSeeking resets it. */
@@ -221,6 +224,8 @@ export default function ReplayScreen() {
   const durationLabel = startMs && endMs ? fmtDurationLong(new Date(endMs).getTime() - new Date(startMs).getTime()) : null;
   const when = room ? room.ended_at ?? room.started_at ?? room.created_at : null;
   const hasTranscript = lines.length > 0;
+  /* The transcript waits behind its row, as on YouTube, unless there's no video — then it is the page. */
+  const showTranscript = transcriptOpen ?? (!recorded && hasTranscript);
   const people = room ? (room.speakers.length ? room.speakers : host ? [{ ...host, role: "host" as const, side: null }] : []) : [];
   const count = room?.discussion_comment_count ?? 0;
   const boxMax = Math.min(Math.round(screenH * 0.5), 460);
@@ -239,7 +244,8 @@ export default function ReplayScreen() {
         <View style={{ paddingTop: insets.top, backgroundColor: "#000" }}>
           {recorded ? (
             <View>
-              <VideoView player={player} style={{ width, height: videoH }} nativeControls fullscreenOptions={{ enable: true }} allowsPictureInPicture contentFit="contain" />
+              <VideoView ref={viewRef} player={player} style={{ width, height: videoH }} nativeControls={false} fullscreenOptions={{ enable: true }} allowsPictureInPicture contentFit="contain" />
+              {!playerError && <ReplayControls player={player} viewRef={viewRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} />}
               {playerError && (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: "#050507", alignItems: "center", justifyContent: "center", padding: 20 }]}>
                   <Text style={{ color: "#c9c9d4", fontFamily: fonts.body, fontSize: 13, textAlign: "center", lineHeight: 19 }}>This recording couldn't be loaded. It may still be finalizing — try again in a minute.</Text>
@@ -318,19 +324,29 @@ export default function ReplayScreen() {
             )}
 
             <View style={{ marginTop: 18, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", backgroundColor: "#121217", overflow: "hidden" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34" }}>
+              <Pressable
+                onPress={() => setTranscriptOpen(!showTranscript)}
+                disabled={!hasTranscript}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showTranscript }}
+                accessibilityLabel={showTranscript ? "Hide the transcript" : "Show the transcript"}
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: showTranscript ? StyleSheet.hairlineWidth : 0, borderColor: "#2c2c34" }}
+              >
                 <View style={{ flex: 1 }}>{label(`Transcript${lines.length ? ` · ${lines.length}` : ""}`)}</View>
-                {hasTranscript && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, height: 32, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", backgroundColor: "#17171d", width: 170 }}>
+                {hasTranscript && <Ionicons name={showTranscript ? "chevron-up" : "chevron-down"} size={16} color="#9a9aa6" />}
+              </Pressable>
+              {showTranscript && hasTranscript && (
+                <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, height: 34, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", backgroundColor: "#17171d" }}>
                     <Ionicons name="search" size={13} color="#9a9aa6" />
                     <TextInput value={query} onChangeText={setQuery} placeholder="Search the transcript" placeholderTextColor="#6b6b78" accessibilityLabel="Search the transcript" autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={{ flex: 1, color: "#e5e5ec", fontFamily: fonts.body, fontSize: 12.5, paddingVertical: 0 }} />
                     {!!query && <Pressable onPress={() => setQuery("")} hitSlop={8} accessibilityLabel="Clear the search"><Ionicons name="close-circle" size={14} color="#6b6b78" /></Pressable>}
                   </View>
-                )}
-              </View>
+                </View>
+              )}
               {!hasTranscript ? (
-                <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 13, lineHeight: 19, textAlign: "center", paddingVertical: 22, paddingHorizontal: 18 }}>No transcript for this discussion.{"\n"}Transcripts are captured when speakers have live listening on.</Text>
-              ) : filtered.length === 0 ? (
+                <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 13, lineHeight: 19, textAlign: "center", paddingVertical: 22, paddingHorizontal: 18, borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34" }}>No transcript for this discussion.{"\n"}Transcripts are captured when speakers have live listening on.</Text>
+              ) : !showTranscript ? null : filtered.length === 0 ? (
                 <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 13, textAlign: "center", paddingVertical: 22 }}>Nothing matches “{query.trim()}”.</Text>
               ) : (
                 <ScrollView
