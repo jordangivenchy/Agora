@@ -28,7 +28,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Track } from "livekit-client";
 import { Icon } from "@/components/icons";
-import UserAvatar from "@/components/UserAvatar";
+import CameraOffFace, { type FaceSide } from "./CameraOffFace";
 import { planGrid, screenPlaces } from "./callGrid";
 import { planSlots, type SlotPerson } from "./gallerySlots";
 
@@ -47,6 +47,8 @@ export interface LayoutTile {
   /** For camera-off participants: avatar placeholder instead of video. */
   avatarUrl?: string | null;
   avatarSeed?: string;
+  /** The ring on their camera-off face: the stage's side colour, if any. */
+  side?: FaceSide;
   /** Host or co-host: the last to give up a gallery window. */
   host?: boolean;
 }
@@ -116,28 +118,26 @@ const CallTile = memo(function CallTile({
   small,
   pinned,
   onPin,
-  avatarSize,
 }: {
   tile: LayoutTile;
   speaking: boolean;
   small?: boolean;
   pinned?: boolean;
   onPin?: (key: string | null) => void;
-  /** The face on a camera-off window, sized to the window when the gallery knows it. */
-  avatarSize?: number;
 }) {
   const handlePin = onPin
     ? () => onPin(pinned ? null : tile.key)
     : undefined;
+  const off = !tile.track && !tile.mock;
   return (
     <div
       className={`ag-lt${small ? " ag-lt--small" : ""}${speaking ? " ag-lt--speaking" : ""}${
         tile.source === "screen" ? " ag-lt--screen" : ""
-      }`}
+      }${off ? " ag-lt--off" : ""}`}
       onDoubleClick={handlePin}
       title={tile.source === "screen" ? `${tile.username} — screen` : tile.username}
     >
-      {tile.track || tile.mock ? (
+      {!off ? (
         <TileVideo
           track={tile.track}
           mock={tile.mock}
@@ -145,14 +145,10 @@ const CallTile = memo(function CallTile({
           mirror={tile.local}
         />
       ) : (
-        /* Camera off: same plate the stage shows — avatar centered. */
+        /* Camera off: the stage's own pane — the scene through the glass,
+           the same face in the middle (CameraOffFace). */
         <span className="ag-lt-video ag-lt-video--off">
-          <UserAvatar
-            size={avatarSize ?? (small ? 44 : 72)}
-            username={tile.handle ?? tile.username}
-            avatarUrl={tile.avatarUrl ?? null}
-            seed={tile.avatarSeed ?? tile.identity}
-          />
+          <CameraOffFace name={tile.username} avatarUrl={tile.avatarUrl ?? null} side={tile.side ?? null} />
         </span>
       )}
       <span className="ag-lt-tag">
@@ -266,7 +262,6 @@ export function CallGallery({
               <CallTile
                 tile={t}
                 speaking={t.source === "camera" && speaking.has(t.identity)}
-                avatarSize={Math.round(Math.max(28, Math.min(72, cell.h * 0.42)))}
                 pinned={pinned}
                 onPin={
                   onPin || onKeepInView
@@ -369,7 +364,7 @@ function MoreTile({ people, speaking, height, open, onToggle }: { people: Layout
       <span className="ag-lt-more-faces">
         {people.slice(0, 3).map((t, i) => (
           <span key={t.key} className={`ag-lt-more-face${speaking.has(t.identity) ? " is-speaking" : ""}`} style={{ zIndex: 3 - i, marginLeft: i ? -Math.round(face * 0.3) : 0 }}>
-            <UserAvatar size={face} username={t.handle ?? t.username} avatarUrl={t.avatarUrl ?? null} seed={t.avatarSeed ?? t.identity} />
+            <CameraOffFace name={t.username} avatarUrl={t.avatarUrl ?? null} side={t.side ?? null} size={face} />
           </span>
         ))}
       </span>
@@ -419,7 +414,7 @@ function MoreMenu({
         const talking = speaking.has(t.identity);
         return (
           <button key={t.key} type="button" role="menuitem" className="ag-lgal-menu-item" onClick={() => onPick(t.key)}>
-            <UserAvatar size={26} username={t.handle ?? t.username} avatarUrl={t.avatarUrl ?? null} seed={t.avatarSeed ?? t.identity} />
+            <CameraOffFace name={t.username} avatarUrl={t.avatarUrl ?? null} side={t.side ?? null} size={26} />
             <span className="ag-lgal-menu-name">{t.local ? "You" : t.username}</span>
             {(talking || t.track || t.mock) && (
               <span className={`ag-lgal-menu-state${talking ? " is-speaking" : ""}`} aria-label={talking ? "Talking" : "Camera on"}>

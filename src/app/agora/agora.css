@@ -1225,8 +1225,17 @@
   place-items: center;
 }
 
+/* The face in any window — a stage pane or thumb, a gallery or
+   multi-speaker window (CameraOffFace.tsx): a quarter of the window's
+   width, 64–132px, and never taller than about half a small window. */
+.ag-pane-fill,
+.ag-lt-video--off { container-type: size; }
+.ag-pane-fill > .ag-pane-avatar,
+.ag-lt-video--off > .ag-pane-avatar { width: min(clamp(64px, 26cqw, 132px), 46cqh); }
+
 .ag-pane-avatar {
   width: clamp(64px, 26%, 132px);
+  flex-shrink: 0;
   aspect-ratio: 1;
   border-radius: 50%;
   object-fit: cover;
@@ -1238,13 +1247,22 @@
    debate colour, so who argues what survives the move to DOM. */
 .ag-pane-avatar--pro { border: 3px solid #a78bfa; }
 .ag-pane-avatar--con { border: 3px solid #7ab8ff; }
+/* Someone with no side (the gallery's third host, say): the same ring, quiet. */
+.ag-pane-avatar--none { border: 3px solid #6f7482; }
 
+/* The same face in every layout (CameraOffFace.tsx), so the letter scales
+   with the disc rather than the viewport. */
 .ag-pane-initial {
   background: rgba(255, 255, 255, 0.08);
   color: #e7e9ee;
   font-family: "Space Grotesk", "DM Sans", sans-serif;
-  font-size: clamp(28px, 4vw, 52px);
   font-weight: 700;
+  container-type: inline-size;
+}
+
+.ag-pane-glyph {
+  font-size: 41cqi;
+  line-height: 1;
 }
 
 /* Unclaimed side — same dashed ring and "?" the rail's open-seat chip
@@ -2962,6 +2980,14 @@
 
 .ag-lt-more-face.is-speaking { box-shadow: 0 0 0 2px #e2b96b, 0 0 0 4px #0a0a10; }
 
+/* The faces behind "+N" and in its list: the windows' face (CameraOffFace)
+   at a small size, on an opaque disc so overlapping faces don't show
+   through each other. */
+.ag-lt-more-face .ag-pane-avatar,
+.ag-lgal-menu-item .ag-pane-avatar { border-width: 2px; }
+.ag-lt-more-face .ag-pane-initial,
+.ag-lgal-menu-item .ag-pane-initial { background: #1c1c22; }
+
 .ag-lt-more-count {
   font-family: "Space Grotesk", "DM Sans", sans-serif;
   font-weight: 700;
@@ -3101,12 +3127,45 @@
   color: #fff;
 }
 
-/* Camera-off layout tile: avatar centered on the tile plate. */
+/* Camera off: the stage's own pane (.ag-cast-pane) — the scene through
+   the glass, the same face in the middle — so a speaker without a camera
+   looks the same in stage, gallery and multi-speaker. */
+.ag-lt--off {
+  background: transparent;
+  backdrop-filter: brightness(1.35) contrast(1.04) saturate(120%);
+}
+
 .ag-lt-video--off {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(80% 90% at 50% 30%, rgba(124,110,247,0.10), transparent 70%), #0a0a10;
+  display: grid;
+  place-items: center;
+}
+
+.ag-lt--small .ag-pane-avatar { border-width: 2px; }
+
+/* On a desktop the gallery's and multi-speaker's windows are the stage's
+   panes rearranged: the same corners and the same name tag (.ag-cast-pane,
+   .ag-cast-tag), so switching layouts never changes how someone looks.
+   Phones and the filmstrip keep the compact tag. */
+@media (min-width: 640px) {
+  .ag-lgal-cell > .ag-lt,
+  .ag-lmulti-featured .ag-lt { border-radius: 18px; }
+  .ag-lgal .ag-lt-tag,
+  .ag-lmulti-featured .ag-lt-tag {
+    left: 12px;
+    bottom: 12px;
+    max-width: calc(100% - 24px);
+    gap: 8px;
+    padding: 7px 12px;
+    background: linear-gradient(160deg, rgba(16, 18, 26, 0.82), rgba(3, 4, 9, 0.86));
+    backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--ag-glass-rim-inlay);
+    color: #e7e9ee;
+    font-size: 12.5px;
+  }
+  .ag-lgal .ag-lt-muted,
+  .ag-lmulti-featured .ag-lt-muted { margin-left: 5px; color: #e05a5a; }
+  .ag-lgal .ag-lt-muted svg,
+  .ag-lmulti-featured .ag-lt-muted svg { width: 11px; height: 11px; }
 }
 
 /* The flat-layout region is click-transparent: only its tiles and

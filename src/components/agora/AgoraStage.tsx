@@ -32,6 +32,7 @@ import { Icon } from "@/components/icons";
 import type { VideoTile } from "./useAgoraCall";
 import { tileKey } from "./useAgoraCall";
 import { useUserMenu } from "../userMenuContext";
+import CameraOffFace from "./CameraOffFace";
 
 export interface StagePane {
   id: string;
@@ -106,39 +107,16 @@ function Surface({ tile }: { tile: VideoTile }) {
   return <div ref={hostRef} className="ag-cast-surface" />;
 }
 
-/** Camera-off body: the holder's profile card, or the open seat. The ring
-    colour is the side's debate colour — the one piece of the old panels
-    worth keeping. */
+/** Camera-off body: the holder's face (CameraOffFace, the same in every
+    call layout), or the open seat. The ring colour is the side's debate
+    colour — the one piece of the old panels worth keeping. */
 function PaneFill({ pane, side }: { pane: StagePane | null; side: "pro" | "con" | null }) {
-  /* A photo that fails to load (rate-limited storage, dead URL) falls
-     back to the initial glyph rather than the browser's broken-image
-     icon sitting inside the ring. Keyed on the URL so a later, working
-     avatar gets its chance. */
-  const [broken, setBroken] = useState<string | null>(null);
-  const showImg = !!pane?.avatarUrl && broken !== pane.avatarUrl;
-  const sideClass = side ? ` ag-pane-avatar--${side}` : "";
-
-  if (!pane) {
-    return (
-      <div className="ag-pane-fill">
-        <div className="ag-pane-empty" aria-label="Open seat">?</div>
-      </div>
-    );
-  }
   return (
     <div className="ag-pane-fill">
-      {showImg ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className={`ag-pane-avatar${sideClass}`}
-          src={pane.avatarUrl!}
-          alt=""
-          onError={() => setBroken(pane.avatarUrl)}
-        />
+      {pane ? (
+        <CameraOffFace name={pane.username} avatarUrl={pane.avatarUrl} side={side} />
       ) : (
-        <div className={`ag-pane-avatar${sideClass} ag-pane-initial`}>
-          {pane.username.slice(0, 1).toUpperCase()}
-        </div>
+        <div className="ag-pane-empty" aria-label="Open seat">?</div>
       )}
     </div>
   );

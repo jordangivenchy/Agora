@@ -692,50 +692,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      fresh object per token answer, so keying on it would loop. */
   const prevQueuePosRef = useRef<number | null>(null);
 
-  /* Tiles dressed for the flat layouts: display names and mute state
-     from the seated rows; the local mute state from the call itself. */
-  /* Every on-stage participant gets a tile — live camera when they have
-     one, avatar placeholder otherwise — matching what the stage/dock show.
-     Screen shares ride along as extra tiles. */
-  const layoutTiles = useMemo<LayoutTile[]>(() => {
-    const tiles: LayoutTile[] = call.videoTiles.map((t) => {
-      const p = participants.find((pp) => pp.user_id === t.identity);
-      return {
-        key: tileKey(t),
-        identity: t.identity,
-        username: (p?.user ? displayName(p.user) : "") || t.username,
-        handle: p?.user?.username,
-        local: t.local,
-        source: t.source,
-        track: t.track,
-        micMuted: t.local ? !call.micOn : !!p?.mic_muted,
-        avatarUrl: p?.user?.avatar_url ?? null,
-        host: !!p && !!room && isHostRole(deriveStageRole(p, room)),
-      };
-    });
-    const haveCamera = new Set(
-      tiles.filter((t) => t.source === "camera").map((t) => t.identity)
-    );
-    for (const p of participants) {
-      if (!room || !onStage(deriveStageRole(p, room))) continue;
-      if (p.left_at || haveCamera.has(p.user_id)) continue;
-      tiles.push({
-        key: `${p.user_id}:off`,
-        identity: p.user_id,
-        username: (p.user ? displayName(p.user) : "") || p.user?.username || "Speaker",
-        handle: p.user?.username,
-        local: p.user_id === userId,
-        source: "camera",
-        track: null,
-        micMuted: p.user_id === userId ? !call.micOn : !!p.mic_muted,
-        avatarUrl: p.user?.avatar_url ?? null,
-        avatarSeed: p.user_id,
-        host: isHostRole(deriveStageRole(p, room)),
-      });
-    }
-    return tiles;
-  }, [call.videoTiles, call.micOn, participants, room, userId]);
-
   useEffect(() => {
     if (!avDebugOn) return;
     const t = setInterval(() => setAvDebug(call.debugSnapshot()), 1000);
@@ -947,6 +903,61 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       paneStrip: overflow,
     };
   }, [call.videoTiles, proSpeakers, conSpeakers, stageStrip, currentUser]);
+
+  /* Tiles dressed for the flat layouts: display names and mute state
+     from the seated rows; the local mute state from the call itself. */
+  /* Every on-stage participant gets a tile — live camera when they have
+     one, avatar placeholder otherwise — matching what the stage/dock show.
+     Screen shares ride along as extra tiles. A camera-off face wears the
+     stage's ring: the two pane holders their pane's colour, any other
+     debater their stance's — so switching layouts never changes a face. */
+  const layoutTiles = useMemo<LayoutTile[]>(() => {
+    const sideOf = (id: string): LayoutTile["side"] => {
+      if (stagePanes.pro?.id === id) return "pro";
+      if (stagePanes.con?.id === id) return "con";
+      const p = participants.find((pp) => pp.user_id === id);
+      if (p?.role !== "debater") return null;
+      return p.stance === "PRO" ? "pro" : p.stance === "CON" ? "con" : null;
+    };
+    const tiles: LayoutTile[] = call.videoTiles.map((t) => {
+      const p = participants.find((pp) => pp.user_id === t.identity);
+      return {
+        key: tileKey(t),
+        identity: t.identity,
+        username: (p?.user ? displayName(p.user) : "") || t.username,
+        handle: p?.user?.username,
+        local: t.local,
+        source: t.source,
+        track: t.track,
+        micMuted: t.local ? !call.micOn : !!p?.mic_muted,
+        avatarUrl: p?.user?.avatar_url ?? null,
+        side: sideOf(t.identity),
+        host: !!p && !!room && isHostRole(deriveStageRole(p, room)),
+      };
+    });
+    const haveCamera = new Set(
+      tiles.filter((t) => t.source === "camera").map((t) => t.identity)
+    );
+    for (const p of participants) {
+      if (!room || !onStage(deriveStageRole(p, room))) continue;
+      if (p.left_at || haveCamera.has(p.user_id)) continue;
+      tiles.push({
+        key: `${p.user_id}:off`,
+        identity: p.user_id,
+        username: (p.user ? displayName(p.user) : "") || p.user?.username || "Speaker",
+        handle: p.user?.username,
+        local: p.user_id === userId,
+        source: "camera",
+        track: null,
+        micMuted: p.user_id === userId ? !call.micOn : !!p.mic_muted,
+        avatarUrl: p.user?.avatar_url ?? null,
+        avatarSeed: p.user_id,
+        side: sideOf(p.user_id),
+        host: isHostRole(deriveStageRole(p, room)),
+      });
+    }
+    return tiles;
+  }, [call.videoTiles, call.micOn, participants, room, userId, stagePanes]);
 
   /* The dock keeps only what the stage doesn't already show at size.
      The stage shows in audience view (anchored fixture) and in settled
