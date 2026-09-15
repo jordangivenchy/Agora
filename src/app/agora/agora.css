@@ -3947,3 +3947,122 @@
     max-height: 40vh;
   }
 }
+
+/* ── Solid controls ──
+   Every button in the room speaks the call toolbar's language (Jordan,
+   2026-09-15: "make sure all the other buttons look like this"): a solid
+   near-black body with a hairline, a lifted hover, brighter hairline for
+   a standing state (following, about open), yellow for what you raised or
+   opened and for the one primary action, soft red for what's destructive.
+   No glass. Colours only here — sizes stay with each control's own rule,
+   and this block sits last so it wins without extra weight. */
+.ag-root {
+  --ag-solid: #0e0e11;
+  --ag-solid-2: #141418;
+  --ag-solid-hover: #1b1b21;
+  --ag-solid-line: #2a2a33;
+  --ag-solid-line-hi: #4a4a56;
+}
+.ag-follow,
+.ag-more,
+.ag-switch-view,
+.ag-cast-more,
+.ag-rail-restore,
+.ag-host-chip,
+.ag-about,
+.ag-lt-pin,
+.ag-host .ag-ctl--host {
+  background: var(--ag-solid);
+  border-color: var(--ag-solid-line);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  backdrop-filter: none;
+  color: #e7e9ee;
+}
+.ag-follow:hover,
+.ag-more:hover,
+.ag-switch-view:hover,
+.ag-cast-more:hover,
+.ag-rail-restore:hover,
+.ag-host-chip:hover,
+.ag-about:hover,
+.ag-lt-pin:hover,
+.ag-host .ag-ctl--host:hover:not(:disabled) {
+  background: var(--ag-solid-hover);
+  border-color: var(--ag-solid-line-hi);
+  color: #fff;
+}
+.ag-follow.on,
+.ag-follow.on:hover,
+.ag-about.on {
+  background: var(--ag-solid);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+.ag-host .ag-ctl--host { color: #e2b96b; }
+.ag-host .ag-ctl--host.open,
+.ag-host .ag-ctl--host.open:hover:not(:disabled) {
+  background: #ffb700;
+  border-color: #ffb700;
+  color: #1a0e00;
+}
+.ag-lt-pin.is-pinned { color: #ffb700; border-color: rgba(255, 183, 0, 0.5); }
+
+/* Menus, trays and the host panel: solid panels. */
+.ag-more-menu,
+.ag-react-picker,
+.ag-host-panel {
+  background: var(--ag-solid);
+  border: 1px solid var(--ag-solid-line);
+  backdrop-filter: none;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+.ag-tool,
+.ag-more-item,
+.ag-set-testbtn,
+.ag-host-act {
+  background: var(--ag-solid-2);
+  border-color: #1f1f26;
+  color: #e7e9ee;
+}
+.ag-tool:hover:not(:disabled),
+.ag-more-item:hover,
+.ag-set-testbtn:hover:not(:disabled),
+.ag-host-act:hover:not(:disabled) {
+  background: var(--ag-solid-hover);
+  color: #fff;
+}
+.ag-tool:disabled { background: #111114; color: #6b6b74; }
+.ag-tool-soon { background: none; color: #f4d47c; }
+.ag-cam-item:hover:not(:disabled),
+.ag-set-close:hover,
+.ag-set-rowbtn:hover,
+.ag-set-device:hover,
+.ag-react-emoji:hover { background: var(--ag-solid-hover); }
+.ag-set-select { background-color: var(--ag-solid); border-color: var(--ag-solid-line); }
+.ag-layout-switch,
+.ag-more-layout .ag-layout-switch {
+  background: var(--ag-solid-2);
+  border-color: var(--ag-solid-line);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.ag-layout-seg:hover { background: var(--ag-solid-hover); color: #fff; }
+.ag-layout-seg.is-active { background: #26262e; color: #fff; }
+
+/* The one primary action in a group: brand yellow. Destructive: soft red. */
+.ag-host-act.primary,
+.ag-chat-join {
+  background: #ffb700;
+  border-color: #ffb700;
+  color: #1a0e00;
+}
+.ag-host-act.primary:hover:not(:disabled),
+.ag-chat-join:hover { background: #ffc22e; color: #1a0e00; }
+.ag-host-act.danger { color: #e0655a; }
+.ag-host-act.danger:hover:not(:disabled) { background: var(--ag-solid-hover); color: #f08a80; }
+
+/* The queue pill: a status, in the same body. */
+.ag-queue-pill { background: var(--ag-solid); border-color: var(--ag-solid-line); color: #e7e9ee; }
+.ag-queue-pill.is-next { color: #ffb700; box-shadow: none; }
+.ag-queue-pill.is-mic { color: #6fd3a0; }

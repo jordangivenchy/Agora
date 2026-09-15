@@ -1404,8 +1404,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                 style={{
                   width: 130,
                   padding: "9px 10px",
-                  background: "rgba(255,255,255,0.05)",
-                  border: `1px solid ${gateCodeErr ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.14)"}`,
+                  background: "#0e0e11",
+                  border: `1px solid ${gateCodeErr ? "#e0655a" : "#2a2a33"}`,
                   borderRadius: 10,
                   color: "#f5f5f0",
                   fontFamily: "'DM Mono', monospace",
@@ -1508,7 +1508,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         <button
           onClick={() => router.push("/")}
           className="cursor-pointer text-[12px] px-4 py-2 rounded-lg mt-5"
-          style={{ background: "rgba(255,255,255,0.07)", border: "0.5px solid #3a3a42", color: "#e0e0e6", fontFamily: "inherit" }}
+          style={{ background: "#0e0e11", border: "1px solid #2a2a33", color: "#e7e9ee", fontFamily: "inherit" }}
         >
           ← Back to home
         </button>
