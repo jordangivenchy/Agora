@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { logRoomEvent, noteRoomAction } from "@/lib/roomDiag";
 import {
   ConnectionState,
+  createLocalAudioTrack,
   DisconnectReason,
   RemoteTrack,
   RemoteTrackPublication,
@@ -530,24 +531,57 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     return `Could not start the ${kind}: ${msg || "unknown error"}`;
   };
 
+  /* The mic works like Discord's: once you can speak, it's captured and
+     published muted, so the button is an instant mute/unmute rather than
+     a second of starting the microphone on every first press. The browser
+     asks for the mic when you come on stage. A capture that fails here
+     (permission, no device) leaves the first press to try again and say
+     why. */
+  useEffect(() => {
+    const room = roomRef.current;
+    if (!room || !connected || !canPublish || external) return;
+    if (room.localParticipant.getTrackPublication(Track.Source.Microphone)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const track = await createLocalAudioTrack(room.options.audioCaptureDefaults);
+        if (cancelled || room.state !== ConnectionState.Connected || room.localParticipant.getTrackPublication(Track.Source.Microphone)) {
+          track.stop();
+          return;
+        }
+        await track.mute();
+        await room.localParticipant.publishTrack(track, { source: Track.Source.Microphone });
+      } catch (e) {
+        console.warn("mic warm-up failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [connected, canPublish, external]);
+
+  /* Mute and unmute answer at once; the track follows. Its own lock, so
+     a camera still starting never holds the mic. */
+  const micBusyRef = useRef(false);
   const toggleMic = useCallback(async () => {
     const room = roomRef.current;
-    if (!room || mediaBusy) return;
-    setMediaBusy(true);
+    if (!room || micBusyRef.current) return;
+    micBusyRef.current = true;
     setMediaError(null);
+    const next = !micOn;
+    setMicOn(next);
     try {
-      const next = !micOn;
       noteRoomAction(roomId, next ? "mic_on" : "mic_off");
       await room.localParticipant.setMicrophoneEnabled(next);
-      setMicOn(next);
       logRoomEvent(roomId, next ? "mic_on" : "mic_off");
     } catch (e) {
       console.warn("mic toggle failed", e);
+      setMicOn(!next);
       setMediaError(explainMediaError("microphone", e));
     } finally {
-      setMediaBusy(false);
+      micBusyRef.current = false;
     }
-  }, [micOn, mediaBusy]);
+  }, [micOn, roomId]);
 
   /* Screen share rides the same publish path as the camera, so it obeys
      the same canPublish grant — a spectator cannot start one. Browsers

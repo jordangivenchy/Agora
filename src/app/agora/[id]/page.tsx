@@ -2109,7 +2109,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       ? "Mute your mic"
                       : "Unmute your mic"
               }
-              disabled={!onStage(myRole) || !call.connected || call.mediaBusy}
+              disabled={!onStage(myRole) || !call.connected}
               onClick={call.toggleMic}
             >
               <span className="ag-ctl-ico">{call.micOn ? <Icon name="mic" size={19} /> : <Icon name="mic-off" size={19} />}</span>

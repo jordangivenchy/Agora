@@ -57,6 +57,8 @@ export function RoomControls(p: ControlsProps) {
   const { call } = p;
   const hlsAudience = !!call.hls;
   const publishOff = !p.onStage || !call.connected || call.mediaBusy || !call.live;
+  /* The mic is a mute switch once it's warmed up: a camera starting never holds it. */
+  const micOff = !p.onStage || !call.connected || !call.live;
   const bottom = 8 + insets.bottom;
   return (
     <>
@@ -74,7 +76,7 @@ export function RoomControls(p: ControlsProps) {
       <View style={{ position: "absolute", left: 10, right: 10, bottom, height: CONTROLS_H, borderRadius: 999, paddingHorizontal: 7, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }}>
         {!hlsAudience && (
           <>
-            <Ctl icon={call.micOn ? "mic" : "mic-off"} label={!p.onStage ? "Mic — speakers only" : call.micOn ? "Mute your mic" : "Unmute your mic"} on={call.micOn} onTint="#1f9d55" disabled={publishOff} onPress={call.toggleMic} />
+            <Ctl icon={call.micOn ? "mic" : "mic-off"} label={!p.onStage ? "Mic — speakers only" : call.micOn ? "Mute your mic" : "Unmute your mic"} on={call.micOn} onTint="#1f9d55" disabled={micOff} onPress={call.toggleMic} />
             <Ctl icon={call.camOn ? "videocam" : "videocam-off"} label={!p.onStage ? "Camera — speakers only" : call.camOn ? "Turn camera off" : "Turn camera on"} on={call.camOn} onTint="#1f9d55" disabled={publishOff} onPress={call.toggleCam} />
           </>
         )}

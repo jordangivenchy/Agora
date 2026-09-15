@@ -6,7 +6,7 @@
    (Expo Go) or without a call (the broadcast) the inert call stands. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Linking } from "react-native";
-import { ConnectionState, Room, RoomEvent, Track, type LocalAudioTrack, type LocalVideoTrack, type RemoteAudioTrack } from "livekit-client";
+import { ConnectionState, Room, RoomEvent, Track, createLocalAudioTrack, type LocalAudioTrack, type LocalVideoTrack, type RemoteAudioTrack } from "livekit-client";
 import { loadLiveKit, type LiveKit } from "./livekit";
 import { noteDisconnectReason, useCall } from "./callSession";
 import type { HlsMode } from "./token";
@@ -93,18 +93,48 @@ function LkCall({ lk, username, hls, children }: { lk: LiveKit; username: string
     }
   }, [room]);
 
+  /* The mic works like Discord's (and the site's): once you can speak it's
+     captured and published muted, so the button is an instant mute and
+     unmute rather than starting the microphone on the first press. A
+     capture that fails here leaves the first press to try again and say
+     why. */
+  const connected = state === ConnectionState.Connected;
+  useEffect(() => {
+    if (!connected || !canPublish) return;
+    if (localParticipant.getTrackPublication(Track.Source.Microphone)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const track = await createLocalAudioTrack();
+        if (cancelled || room.state !== ConnectionState.Connected || localParticipant.getTrackPublication(Track.Source.Microphone)) {
+          track.stop();
+          return;
+        }
+        await track.mute();
+        await localParticipant.publishTrack(track, { source: Track.Source.Microphone });
+      } catch {
+        /* the first press tries again and explains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [connected, canPublish, localParticipant, room]);
+
+  /* Its own lock, so a camera still starting never holds the mic. */
+  const micBusy = useRef(false);
   const toggleMic = useCallback(async () => {
-    if (mediaBusy) return;
-    setMediaBusy(true);
+    if (micBusy.current) return;
+    micBusy.current = true;
     setMediaError(null);
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (e) {
       setMediaError(explain("microphone", e));
     } finally {
-      setMediaBusy(false);
+      micBusy.current = false;
     }
-  }, [localParticipant, isMicrophoneEnabled, mediaBusy]);
+  }, [localParticipant, isMicrophoneEnabled]);
 
   const toggleCam = useCallback(async () => {
     if (mediaBusy) return;
