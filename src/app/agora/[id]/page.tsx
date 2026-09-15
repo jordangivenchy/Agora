@@ -736,6 +736,26 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     })();
   }, [broadcast, room, currentUser, call.connected]);
 
+  /* While a recorded call runs, the host's page checks on the recorder
+     every 20 s: LiveKit's machines can let it go ("CPU exhausted" in
+     production), and word of it never reached the webhook when tested —
+     the check closes that part and starts the next (/api/egress
+     check_recording, lib/recordingEgress). */
+  const hostRecording =
+    !broadcast && !!room && room.status === "live" && !!room.hls_url && !!currentUser && currentUser.id === room.host_id && call.connected;
+  const recordingRoomId = room?.id ?? null;
+  useEffect(() => {
+    if (!hostRecording || !recordingRoomId) return;
+    const every = setInterval(() => {
+      void fetch("/api/egress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: recordingRoomId, action: "check_recording" }),
+      }).catch(() => {});
+    }, 20_000);
+    return () => clearInterval(every);
+  }, [hostRecording, recordingRoomId]);
+
   const recordingSignaledRef = useRef(false);
   useEffect(() => {
     if (!broadcast || recordingSignaledRef.current) return;

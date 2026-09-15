@@ -1,6 +1,7 @@
 /* Starting and ending a room's recording parts against LiveKit — the I/O
    around lib/recordingParts. Used by /api/egress (the host's start and
-   stop) and the LiveKit webhook (a recorder that stopped on its own).
+   stop, and the host page's check on a running recording) and the
+   LiveKit webhook (a recorder that stopped on its own).
    Bookkeeping goes through the claim_/finish_recording_part functions
    (20260915_recording_parts.sql) with the service role, so two starts
    can never film the same room at once. */
@@ -11,10 +12,11 @@ import {
   S3Upload,
   SegmentedFileOutput,
   SegmentedFileProtocol,
+  WebhookConfig,
   type EgressInfo,
 } from "livekit-server-sdk";
 import type { createAdminClient } from "@/lib/supabase-admin";
-import { partFiles, readParts, recordingUrlFor, replayKey, stitchPlaylists } from "@/lib/recordingParts";
+import { partFiles, readParts, recordingUrlFor, replayKey, shouldRestart, stitchPlaylists } from "@/lib/recordingParts";
 import { signS3Request } from "@/lib/s3Sign";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -104,6 +106,11 @@ export async function startRecordingPart(opts: {
         layout: "speaker",
         customBaseUrl: `${origin}/agora/${roomId}`,
         encodingOptions: RECORDING_ENCODING(),
+        /* The project webhook didn't bring this recorder's end in
+           production; LiveKit sends a request's own webhooks too. */
+        webhooks: process.env.LIVEKIT_API_KEY
+          ? [new WebhookConfig({ url: `${origin}/api/webhook/livekit`, signingKey: process.env.LIVEKIT_API_KEY })]
+          : [],
       }
     );
   } catch (e) {
@@ -203,4 +210,75 @@ export function isRecording(e: EgressInfo): boolean {
   if (e.request?.case !== "roomComposite") return false;
   const req = e.request.value;
   return req.segmentOutputs.length > 0 || req.output?.case === "segments";
+}
+
+type RoomState = { status: string | null; hls_url: string | null; parts: number };
+
+/** Close a part with what LiveKit reported (idempotent). */
+async function closePart(admin: Admin, roomId: string, egressId: string, endedAt: string, duration: number, bytes: number): Promise<RoomState | null> {
+  const { data, error } = await admin.rpc("finish_recording_part", {
+    p_room: roomId,
+    p_egress: egressId,
+    p_ended_at: endedAt,
+    p_duration: duration,
+    p_bytes: bytes,
+  });
+  if (error) throw new Error(`finish_recording_part: ${error.message}`);
+  return (data as RoomState | null) ?? null;
+}
+
+/* After a part closes: stitch a recording in parts again (final once the
+   room has ended), and start the next part if the room is still live and
+   still wants recording — every deliberate stop clears hls_url first.
+   Viewers on the broadcast fall back to the call while it restarts. */
+async function carryOn(opts: { admin: Admin; egress: EgressClient; hls: HlsEnv; roomId: string; origin: string; endedEgressId: string; room: RoomState; why: string }) {
+  const { admin, egress, hls, roomId, origin, room } = opts;
+  if (room.parts >= 2) {
+    await writeReplayPlaylist(admin, hls, roomId).catch((e) => console.error(`[recording] ${roomId}: replay playlist`, e));
+  }
+  if (room.status !== "live" || !room.hls_url) return "finished" as const;
+  const active = await egress.listEgress({ roomName: roomId, active: true });
+  const otherRecorder = active.some((e) => e.egressId !== opts.endedEgressId && isRecording(e));
+  if (!shouldRestart(room, otherRecorder)) return "finished" as const;
+  console.warn(`[recording] ${roomId}: part ended while live (${opts.why}), starting the next`);
+  await admin.from("debate_rooms").update({ hls_url: null }).eq("id", roomId).eq("status", "live");
+  const started = await startRecordingPart({ admin, egress, hls, roomId, origin, closeOpen: false });
+  return started ? ("restarted" as const) : ("claimed" as const);
+}
+
+const nsToIso = (ns: bigint) => (ns ? new Date(Number(ns / BigInt(1_000_000))).toISOString() : new Date().toISOString());
+
+/** LiveKit's egress_ended for one of our recorders. */
+export async function recorderEnded(admin: Admin, egress: EgressClient, hls: HlsEnv, info: EgressInfo, origin: string) {
+  const result = segmentsResult(info);
+  if (!result) return "not_recording" as const; // restreams carry no segments
+  const room = await closePart(admin, info.roomName, info.egressId, nsToIso(info.endedAt), result.duration, result.bytes);
+  if (!room) return "finished" as const;
+  return carryOn({ admin, egress, hls, roomId: info.roomName, origin, endedEgressId: info.egressId, room, why: info.details || info.error || "no reason given" });
+}
+
+/** The host's page, every little while during a recorded call: is the
+    recorder still running? If LiveKit has let it go and word never came
+    (the webhook), close its part from LiveKit's own record and carry on. */
+export async function checkRecording(admin: Admin, egress: EgressClient, hls: HlsEnv, roomId: string, origin: string) {
+  const { data: row } = await admin
+    .from("debate_rooms")
+    .select("status, hls_url, recording_url, recording_parts")
+    .eq("id", roomId)
+    .maybeSingle();
+  if (!row || row.status !== "live" || !row.hls_url || !row.recording_url) return "idle" as const;
+  const active = await egress.listEgress({ roomName: roomId, active: true });
+  if (active.some(isRecording)) return "recording" as const;
+  const parts = readParts(row.recording_parts, row.recording_url as string);
+  const open = [...parts].reverse().find((p) => !p.ended_at && p.egress_id);
+  if (!open?.egress_id) {
+    /* Nothing running and nothing on record to close: start after whatever there is. */
+    const started = await startRecordingPart({ admin, egress, hls, roomId, origin, closeOpen: true });
+    return started ? ("restarted" as const) : ("claimed" as const);
+  }
+  const [info] = await egress.listEgress({ egressId: open.egress_id }).catch(() => [] as EgressInfo[]);
+  const result = info ? segmentsResult(info) : null;
+  const room = await closePart(admin, roomId, open.egress_id, info ? nsToIso(info.endedAt) : new Date().toISOString(), result?.duration ?? 0, result?.bytes ?? 0);
+  if (!room) return "idle" as const;
+  return carryOn({ admin, egress, hls, roomId, origin, endedEgressId: open.egress_id, room, why: info?.details || "no longer running" });
 }

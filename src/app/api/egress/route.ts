@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { EncodingOptions, StreamOutput, StreamProtocol } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
-import { egressClient, isRecording, readHlsEnv, startRecordingPart } from "@/lib/recordingEgress";
+import { checkRecording, egressClient, isRecording, readHlsEnv, startRecordingPart } from "@/lib/recordingEgress";
 
 /* The live playlist dies with the stream; the recording (recording_url)
    stays so the ended room can be replayed. recording_ended_at only lands
@@ -35,7 +35,7 @@ async function markStreamStopped(
 export async function POST(request: NextRequest) {
   try {
     const { roomId, action, rtmpUrl, egressId, portrait } = await request.json();
-    if (!roomId || !["start", "start_hls", "stop", "stop_all", "status"].includes(action)) {
+    if (!roomId || !["start", "start_hls", "stop", "stop_all", "status", "check_recording"].includes(action)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -64,6 +64,15 @@ export async function POST(request: NextRequest) {
     if (action === "status") {
       const active = await egress.listEgress({ roomName: roomId, active: true });
       return NextResponse.json({ egressId: active[0]?.egressId ?? null, hlsConfigured });
+    }
+
+    /* The host's page asks every little while during a recorded call: a
+       recorder LiveKit has let go of is closed and the next part starts
+       (lib/recordingEgress), whether or not the webhook said so. */
+    if (action === "check_recording") {
+      if (!hlsEnv || !hasAdminCredentials()) return NextResponse.json({ state: "idle" });
+      const state = await checkRecording(createAdminClient(), egress, hlsEnv, roomId, request.nextUrl.origin);
+      return NextResponse.json({ state });
     }
 
     if (action === "start_hls") {
