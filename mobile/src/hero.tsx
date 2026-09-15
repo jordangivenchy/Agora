@@ -42,6 +42,9 @@ const TOPIC_CHIP: Record<string, { label: string; accent: string }> = {
 
 /* Solid grounds for a picture that is missing or failed. */
 const GROUNDS = ["#0d1b3e", "#1a1000", "#0d2b1a", "#001a2e", "#2d0a1a", "#0d0a2e"];
+/* A notice stands on the same near-black as the app's cards, as the
+   site's does: the words need a surface, not the sky through them. */
+const NOTICE_GROUND = colors.surface;
 
 type Slide =
   | { kind: "room"; key: string; room: HeroRoom; ground: string }
@@ -268,15 +271,15 @@ function PostSlide({ post, onMeasure }: { post: FeaturedPost; onMeasure: (h: num
   if (post.imageUrl) {
     return (
       <Pressable onPress={open} style={{ flex: 1 }}>
-        <Picture uri={post.imageUrl} ground={GROUNDS[0]} />
-        <View onLayout={(e) => onMeasure(e.nativeEvent.layout.height + MIN_PICTURE)} style={{ backgroundColor: colors.bg, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 }}>
+        <Picture uri={post.imageUrl} ground={NOTICE_GROUND} />
+        <View onLayout={(e) => onMeasure(e.nativeEvent.layout.height + MIN_PICTURE)} style={{ backgroundColor: NOTICE_GROUND, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 }}>
           {words}
         </View>
       </Pressable>
     );
   }
   return (
-    <Pressable onPress={open} style={{ flex: 1, justifyContent: "center" }}>
+    <Pressable onPress={open} style={{ flex: 1, justifyContent: "center", backgroundColor: NOTICE_GROUND }}>
       <View onLayout={(e) => onMeasure(e.nativeEvent.layout.height)} style={{ paddingHorizontal: 20, paddingVertical: 14 }}>
         {words}
       </View>
