@@ -3651,6 +3651,9 @@
 .ag-frame-sec {
   padding: 12px 14px;
   display: grid;
+  /* One column that can shrink: the editor's toolbar scrolls inside it
+     instead of pushing Save off a phone's edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 

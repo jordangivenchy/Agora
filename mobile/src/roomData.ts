@@ -1,6 +1,6 @@
 /* A room as the amphitheater page reads it (app/agora/[id]/page.tsx):
    the row with its host, the gate that says why it can't be read, the
-   speaker queue, the stage invites, the frame, and the site's API for
+   speaker queue, the stage invites, what it's about, and the site's API for
    the recording. Everything writes the same rows the website writes. */
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { apiFetch, SITE, type ApiAuth } from "./api";
@@ -219,9 +219,8 @@ export const endDiscussion = (supabase: SupabaseClient, roomId: string) => supab
 export const setSeatMuted = (supabase: SupabaseClient, seatId: string, muted: boolean) => supabase.from("debate_participants").update({ mic_muted: muted }).eq("id", seatId);
 export const removeFromRoom = (supabase: SupabaseClient, seatId: string) => supabase.from("debate_participants").update({ left_at: new Date().toISOString() }).eq("id", seatId);
 
-/* ── The frame: what is being argued, and where people stand ─────── */
+/* ── About the room: what the call is about, written by the host ── */
 export const ABOUT_MAX = 1200;
-export const STANCE_MAX = 200;
 export const FRAME_MAX_LINES = 16;
 export function frameLength(md: string): number {
   return md.replace(/\r/g, "").replace(/\n{2,}/g, "\n").length;
@@ -230,12 +229,9 @@ export function frameLines(md: string): number {
   const t = md.replace(/\r/g, "").trim();
   return t ? t.split("\n").length : 0;
 }
+/** Changes whenever the host rewrites it (for the unread dot). */
 export function frameNewsKey(f: RoomFraming | null | undefined): string {
-  const stanceTimes = Object.values(f?.stances ?? {}).map((s) => s.at).sort().join(",");
-  return `${f?.about_at ?? ""}|${stanceTimes}`;
-}
-export function frameIsEmpty(f: RoomFraming | null | undefined): boolean {
-  return !f?.about?.trim() && Object.keys(f?.stances ?? {}).length === 0;
+  return f?.about_at ?? "";
 }
 async function frameCall(supabase: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<{ framing?: RoomFraming; error?: string }> {
   const { data, error } = await supabase.rpc(fn, args);
@@ -243,8 +239,6 @@ async function frameCall(supabase: SupabaseClient, fn: string, args: Record<stri
   return { framing: (data && typeof data === "object" ? data : {}) as RoomFraming };
 }
 export const setRoomFrame = (supabase: SupabaseClient, roomId: string, about: string) => frameCall(supabase, "set_room_frame", { p_room: roomId, p_about: about });
-export const setRoomStance = (supabase: SupabaseClient, roomId: string, text: string) => frameCall(supabase, "set_room_stance", { p_room: roomId, p_text: text });
-export const clearRoomStance = (supabase: SupabaseClient, roomId: string, userId: string) => frameCall(supabase, "clear_room_stance", { p_room: roomId, p_user: userId });
 
 /* ── Reports and notes ───────────────────────────────────────────── */
 export async function requestCommunityNote(supabase: SupabaseClient, room: RoomDetail, text: string): Promise<string | null> {

@@ -1,33 +1,30 @@
 "use client";
 
-/* About this debate. The frame, what is being argued and on what terms,
-   and one line per person on the stage saying where they stand.
+/* About this room: what the call is about, written by the host.
 
-   Two faces. A docked card under the top bar's actions keeps the frame
-   on screen the whole time: the text, then the lines, compact, read-only.
-   The full panel opens on the About button, or on the card, for editing
-   (the host writes the frame with the communities' editor; people on
-   the stage write their line) and for reading everything. The card can
-   be hidden with its ×, remembered per device; phones start hidden. A
-   dot on the button says the frame moved while nothing was showing.
+   Two faces. A docked card under the top bar's actions keeps it on
+   screen the whole time, compact and read-only. The full panel opens on
+   the About button, or on the card, for writing it (the host, with the
+   communities' editor) and for reading all of it. The card can be hidden
+   with its ×, remembered per device; phones start hidden. A dot on the
+   button says it changed while nothing was showing.
 
-   Changes ride on the room row, so the room's realtime subscription
-   brings them to everyone in the room. */
+   Changes ride on the room row (framing.about, set_room_frame), so the
+   room's realtime subscription brings them to everyone in the room. */
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import UserAvatar from "@/components/UserAvatar";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
 import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import { Icon } from "@/components/icons";
 import { useMediaQuery } from "@/lib/media";
+import { displayName } from "@/lib/names";
 import type { RoomFraming } from "@/types/database";
-import { ROLE_LABEL, type StageParticipant, type StageRole, isHostRole, onStage } from "./stage";
-import { FRAME_MAX_LINES, frameIsEmpty, frameLength, frameLines, frameNewsKey, framePeople } from "./frameModel";
+import { type StageParticipant, type StageRole, isHostRole } from "./stage";
+import { FRAME_MAX_LINES, frameIsEmpty, frameLength, frameLines, frameNewsKey } from "./frameModel";
 
 const ABOUT_MAX = 1200;
-const STANCE_MAX = 200;
 
 /* "Keep it on screen": one flag per device. */
 const DOCK_KEY = "agora:frame-docked";
@@ -75,12 +72,11 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const key = frameNewsKey(framing);
 
   const [open, setOpen] = useState(false);
-  /* What I last looked at; the dot shows when the frame moved on since. */
+  /* What I last looked at; the dot shows when the description changed since. */
   const [seenKey, setSeenKey] = useState(key);
-  /* Drafts are null while I'm not editing, so what arrives shows through. */
+  /* The draft is null while I'm not editing, so what arrives shows through. */
   const [aboutDraft, setAboutDraft] = useState<string | null>(null);
-  const [lineDraft, setLineDraft] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"about" | "line" | "clear" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -88,11 +84,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const storedDock = useSyncExternalStore(subscribeDock, readDock, noDock);
   const docked = storedDock === null ? !phone : storedDock === "1";
 
-  const canFrame = isHostRole(myRole);
-  const canSpeak = !!currentUserId && onStage(myRole);
-  const me = useMemo(() => (currentUserId ? { id: currentUserId, role: myRole } : null), [currentUserId, myRole]);
-  const people = useMemo(() => framePeople(participants, room, me), [participants, room, me]);
-
+  const canWrite = isHostRole(myRole);
   const serverAbout = framing?.about ?? "";
   const about = aboutDraft ?? serverAbout;
   const aboutDirty = about.trim() !== serverAbout.trim();
@@ -101,13 +93,11 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
   const aboutTooLong = aboutLen > ABOUT_MAX;
   const aboutTooTall = aboutLines > FRAME_MAX_LINES;
   const aboutOver = aboutTooLong || aboutTooTall;
-  const myStance = currentUserId ? (framing?.stances?.[currentUserId]?.text ?? "") : "";
-  const line = lineDraft ?? myStance;
   const empty = frameIsEmpty(framing);
 
-  /* The card shows while something is on screen to read, or the host
-     still has to write it. Nothing showing → the button carries the dot. */
-  const showCard = docked && !open && (canFrame || !empty);
+  /* The card shows while there's something to read, or the host still has
+     to write it. Nothing showing → the button carries the dot. */
+  const showCard = docked && !open && (canWrite || !empty);
   const hasNews = !open && !showCard && key !== seenKey;
   const openPanel = () => {
     setSeenKey(key);
@@ -130,48 +120,27 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, key]);
 
-  const call = useCallback(
-    async (fn: string, args: Record<string, unknown>, kind: "about" | "line" | "clear") => {
-      setBusy(kind);
-      setError(null);
-      const { data, error: err } = await supabase.rpc(fn, args);
-      setBusy(null);
-      if (err) {
-        setError(err.message.replace(/^.*?:\s*/, ""));
-        return false;
-      }
-      if (data && typeof data === "object") onChange(data as RoomFraming);
-      return true;
-    },
-    [supabase, onChange]
-  );
-
-  const saveAbout = async () => {
+  const saveAbout = useCallback(async () => {
     if (aboutOver) return;
     const issue = cleanTextError(about, BODY_MIN);
     if (issue) {
       setError(issue);
       return;
     }
-    if (await call("set_room_frame", { p_room: room.id, p_about: about.trim() }, "about")) setAboutDraft(null);
-  };
-  const saveLine = async () => {
-    if (lineDraft === null) return;
-    if (lineDraft.trim() === myStance.trim()) {
-      setLineDraft(null);
+    setBusy(true);
+    setError(null);
+    const { data, error: err } = await supabase.rpc("set_room_frame", { p_room: room.id, p_about: about.trim() });
+    setBusy(false);
+    if (err) {
+      setError(err.message.replace(/^.*?:\s*/, ""));
       return;
     }
-    const issue = cleanTextError(lineDraft, BODY_MIN);
-    if (issue) {
-      setError(issue);
-      return;
-    }
-    if (await call("set_room_stance", { p_room: room.id, p_text: lineDraft.trim() }, "line")) setLineDraft(null);
-  };
-  const clearLine = (userId: string) => call("clear_room_stance", { p_room: room.id, p_user: userId }, "clear");
+    if (data && typeof data === "object") onChange(data as RoomFraming);
+    setAboutDraft(null);
+  }, [about, aboutOver, supabase, room.id, onChange]);
 
-  const setter = framing?.about_by ? people.find((p) => p.id === framing.about_by) : null;
-  const said = people.filter((p) => p.stance);
+  const writer = framing?.about_by ? participants.find((p) => p.user_id === framing.about_by) : null;
+  const writerName = writer ? displayName(writer.user) || writer.user?.username || "the host" : "the host";
 
   return (
     <div className="ag-frame-wrap" ref={wrapRef}>
@@ -181,11 +150,11 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
         onClick={toggle}
         aria-expanded={open}
         aria-haspopup="dialog"
-        title="What this room is about, and where people stand"
+        title="What this room is about"
       >
         <Icon name="info" size={14} />
         About
-        {hasNews && <span className="ag-about-dot" aria-label="The frame changed" />}
+        {hasNews && <span className="ag-about-dot" aria-label="Updated" />}
       </button>
 
       {showCard && (
@@ -193,8 +162,8 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
           <div className="ag-frame-dock-head">
             <span className="ag-frame-label">About this room</span>
             <span className="ag-frame-dock-tools">
-              <button type="button" className="ag-frame-mini" onClick={openPanel} title={canFrame ? "Edit" : "Read it all"} aria-label={canFrame ? "Edit the frame" : "Open the whole frame"}>
-                <Icon name={canFrame ? "pencil" : "maximize"} size={12} />
+              <button type="button" className="ag-frame-mini" onClick={openPanel} title={canWrite ? "Edit" : "Read it all"} aria-label={canWrite ? "Edit" : "Read it all"}>
+                <Icon name={canWrite ? "pencil" : "maximize"} size={12} />
               </button>
               <button type="button" className="ag-frame-mini" onClick={() => writeDock(false)} title="Hide. The About button brings it back." aria-label="Hide the card">
                 ×
@@ -202,24 +171,13 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
             </span>
           </div>
           {serverAbout.trim() ? (
-            <button type="button" className="ag-frame-dock-body" onClick={openPanel} title="Open the whole frame">
+            <button type="button" className="ag-frame-dock-body" onClick={openPanel} title="Read it all">
               <RichText text={serverAbout} />
             </button>
           ) : (
             <button type="button" className="ag-frame-dock-empty" onClick={openPanel}>
-              Set the frame, so people know what is being argued and on what terms.
+              Say what this room is about.
             </button>
-          )}
-          {said.length > 0 && (
-            <ul className="ag-frame-dock-people">
-              {said.map((p) => (
-                <li key={p.id} className="ag-frame-dock-person" title={`${p.name}: ${p.stance?.text ?? ""}`}>
-                  <UserAvatar size={16} username={p.username || p.name} avatarUrl={p.avatarUrl} seed={p.id} />
-                  <span className="ag-frame-dock-name">{p.name}</span>
-                  <span className="ag-frame-dock-line">{p.stance?.text}</span>
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       )}
@@ -235,7 +193,7 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
                 onClick={() => writeDock(!docked)}
                 title={docked ? "Kept on screen. Click to hide it when this closes." : "Keep it on screen when this closes"}
                 aria-pressed={docked}
-                aria-label="Keep the frame on screen"
+                aria-label="Keep it on screen"
               >
                 <Icon name={docked ? "pin" : "pin-off"} size={12} />
               </button>
@@ -246,15 +204,14 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
           </div>
 
           <section className="ag-frame-sec">
-            <div className="ag-frame-label">The frame</div>
-            {canFrame ? (
+            {canWrite ? (
               <>
                 <div className="ag-frame-editor">
                   <RichEditor
                     compact
                     value={about}
                     onChange={setAboutDraft}
-                    placeholder="What are we arguing? Set the question, the terms, and what's out of bounds."
+                    placeholder="What's this room about?"
                     onSubmit={() => void saveAbout()}
                     mentions={!!currentUserId}
                   />
@@ -262,10 +219,10 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
                 <div className="ag-frame-row">
                   <span className={`ag-frame-hint ${aboutOver ? "over" : ""}`}>
                     {aboutLen}/{ABOUT_MAX} · {aboutLines}/{FRAME_MAX_LINES} lines
-                    {aboutTooLong ? " · too long" : aboutTooTall ? " · too many lines" : framing?.about_at ? ` · set ${timeAgo(framing.about_at)}` : ""}
+                    {aboutTooLong ? " · too long" : aboutTooTall ? " · too many lines" : framing?.about_at ? ` · updated ${timeAgo(framing.about_at)}` : ""}
                   </span>
-                  <button type="button" className="ag-frame-save" onClick={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy === "about"}>
-                    {busy === "about" ? "Saving…" : "Save"}
+                  <button type="button" className="ag-frame-save" onClick={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy}>
+                    {busy ? "Saving…" : "Save"}
                   </button>
                 </div>
               </>
@@ -275,68 +232,13 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
                   <RichText text={serverAbout} />
                 </div>
                 <div className="ag-frame-meta">
-                  Set by {setter?.name ?? "the host"}
+                  Written by {writerName}
                   {framing?.about_at ? ` · ${timeAgo(framing.about_at)}` : ""}
                 </div>
               </>
             ) : (
-              <p className="ag-frame-empty">The host hasn&rsquo;t set the frame yet.</p>
+              <p className="ag-frame-empty">The host hasn&rsquo;t written anything yet.</p>
             )}
-          </section>
-
-          <section className="ag-frame-sec">
-            <div className="ag-frame-label">Where people stand</div>
-            {people.length ? (
-              <ul className="ag-frame-people">
-                {people.map((p) => {
-                  const mine = p.id === currentUserId;
-                  return (
-                    <li key={p.id} className="ag-frame-person">
-                      <UserAvatar size={22} username={p.username || p.name} avatarUrl={p.avatarUrl} seed={p.id} />
-                      <div>
-                        <span className="ag-frame-name">
-                          {p.name}
-                          <span className="ag-frame-role">{ROLE_LABEL[p.role]}</span>
-                        </span>
-                        {mine && canSpeak ? (
-                          <input
-                            className="ag-frame-input"
-                            value={line}
-                            onChange={(e) => setLineDraft(e.target.value.slice(0, STANCE_MAX))}
-                            onBlur={() => void saveLine()}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                            }}
-                            placeholder="Your position, in a line"
-                            maxLength={STANCE_MAX}
-                            disabled={busy === "line"}
-                          />
-                        ) : (
-                          <span className={`ag-frame-stance ${p.stance ? "" : "none"}`}>{p.stance?.text ?? "Hasn’t said yet"}</span>
-                        )}
-                      </div>
-                      {p.stance && !mine && canFrame ? (
-                        <button
-                          type="button"
-                          className="ag-frame-clear"
-                          onClick={() => void clearLine(p.id)}
-                          disabled={busy === "clear"}
-                          title="Clear this line"
-                          aria-label={`Clear ${p.name}'s line`}
-                        >
-                          ×
-                        </button>
-                      ) : (
-                        <span />
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="ag-frame-empty">Nobody is on the stage yet.</p>
-            )}
-            {!canSpeak && empty && <p className="ag-frame-empty">Once the host sets the frame and speakers take a side, it shows here.</p>}
           </section>
 
           {error && (
