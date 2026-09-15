@@ -25,13 +25,18 @@ function clock(sec: number): string {
   return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-export function ReplayControls({ player, viewRef, currentTime, onSeek }: {
+export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscreen, fullscreen }: {
   player: VideoPlayer;
   viewRef: RefObject<VideoView | null>;
   /** Seconds, from the screen's own timeUpdate listener. */
   currentTime: number;
   /** A seek from these controls (the transcript follows again). */
   onSeek?: () => void;
+  /** Full screen: the screen shows the same player and these controls
+      over a black screen of its own. */
+  onFullscreen: () => void;
+  /** These are the full-screen ones: the button comes back out of it. */
+  fullscreen?: boolean;
 }) {
   const { isPlaying } = useEvent(player, "playingChange", { isPlaying: player.playing });
   const { status } = useEvent(player, "statusChange", { status: player.status });
@@ -138,8 +143,8 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek }: {
               <Pressable onPress={() => { void viewRef.current?.startPictureInPicture().catch(() => undefined); }} hitSlop={6} accessibilityLabel="Picture in picture" style={round(32)}>
                 <Ionicons name="albums-outline" size={18} color="#fff" />
               </Pressable>
-              <Pressable onPress={() => { void viewRef.current?.enterFullscreen().catch(() => undefined); }} hitSlop={6} accessibilityLabel="Full screen" style={round(32)}>
-                <Ionicons name="expand" size={19} color="#fff" />
+              <Pressable onPress={onFullscreen} hitSlop={6} accessibilityLabel={fullscreen ? "Leave full screen" : "Full screen"} style={round(32)}>
+                <Ionicons name={fullscreen ? "contract" : "expand"} size={19} color="#fff" />
               </Pressable>
             </View>
           </View>

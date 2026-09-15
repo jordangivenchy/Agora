@@ -10,7 +10,7 @@
    recorded still opens: its transcript and its discussion. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvent, useEventListener } from "expo";
-import { Animated, Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Image, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -78,6 +78,11 @@ export default function ReplayScreen() {
   const [query, setQuery] = useState("");
   const [transcriptOpen, setTranscriptOpen] = useState<boolean | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  /* Full screen is ours, not the system player's: over there the only
+     controls are AVKit's own, which this page turns off, so the video
+     filled the screen with nothing to press and no way out but a drag
+     down. The same player and the same controls, on a black screen. */
+  const [fullscreen, setFullscreen] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
   const [more, setMore] = useState<MoreReplay[]>([]);
   const [clips, setClips] = useState<ClipTileData[]>([]);
@@ -104,6 +109,7 @@ export default function ReplayScreen() {
   const recorded = !!recordingUrl;
   const player = useVideoPlayer(recordingUrl, (p) => { p.loop = false; p.timeUpdateEventInterval = 0.5; });
   const viewRef = useRef<VideoView>(null);
+  const fsRef = useRef<VideoView>(null);
   useEffect(() => { if (recordingUrl) player.play(); }, [recordingUrl, player]);
   /* A jump in the time is a seek from the player's own controls: the
      transcript follows again, as the site's onSeeking resets it. */
@@ -244,8 +250,14 @@ export default function ReplayScreen() {
         <View style={{ paddingTop: insets.top, backgroundColor: "#000" }}>
           {recorded ? (
             <View>
-              <VideoView ref={viewRef} player={player} style={{ width, height: videoH }} nativeControls={false} fullscreenOptions={{ enable: true }} allowsPictureInPicture contentFit="contain" />
-              {!playerError && <ReplayControls player={player} viewRef={viewRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} />}
+              {fullscreen ? (
+                <View style={{ width, height: videoH, backgroundColor: "#000" }} />
+              ) : (
+                <VideoView ref={viewRef} player={player} style={{ width, height: videoH }} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture contentFit="contain" />
+              )}
+              {!playerError && !fullscreen && (
+                <ReplayControls player={player} viewRef={viewRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} onFullscreen={() => setFullscreen(true)} />
+              )}
               {playerError && (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: "#050507", alignItems: "center", justifyContent: "center", padding: 20 }]}>
                   <Text style={{ color: "#c9c9d4", fontFamily: fonts.body, fontSize: 13, textAlign: "center", lineHeight: 19 }}>This recording couldn't be loaded. It may still be finalizing — try again in a minute.</Text>
@@ -491,6 +503,14 @@ export default function ReplayScreen() {
           }
         }}
       />
+      <Modal visible={fullscreen} animationType="fade" statusBarTranslucent supportedOrientations={["portrait", "landscape"]} onRequestClose={() => setFullscreen(false)}>
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <VideoView ref={fsRef} player={player} style={{ flex: 1 }} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture contentFit="contain" />
+          <View style={{ position: "absolute", left: 0, right: 0, top: insets.top, bottom: insets.bottom }}>
+            <ReplayControls player={player} viewRef={fsRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} onFullscreen={() => setFullscreen(false)} fullscreen />
+          </View>
+        </View>
+      </Modal>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top - 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : colors.bg, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border })}>
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
