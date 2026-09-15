@@ -1530,7 +1530,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   );
 
   return (
-    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}`}>
+    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
       {entering !== "gone" && (
         <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
           <LoadingScreen label="Entering the Agora" />
@@ -1678,9 +1678,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         {/* ── Amphitheater ── */}
+        {/* The recorder films this page in a browser on LiveKit's machines,
+            with no graphics card: the 3D scene drawn in software ran them
+            out of CPU ~20 s into every camera room (the replay kept only
+            those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
           performanceMode={broadcast}
-          flat={phone}
+          flat={phone || broadcast}
           roomId={roomId}
           /* Flat layouts (gallery / multi) carry every picture themselves —
              the scene's 3D speaker panels and mic medallion would peek

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { getAppConfig } from "@/lib/appConfig";
 import { parseVodPlaylist, chunkSegments, tsToAdts, type HlsSegment } from "@/lib/replayTranscribe";
+import { parseTimeline, recordingOffset } from "@/lib/hlsTimeline";
 
 /* Post-run replay transcription. Fired by the replay-transcripts cron
    (pg_net POST) for ended rooms whose recording has finalized: pulls the
@@ -225,7 +226,8 @@ export async function POST(request: NextRequest) {
 
     const plRes = await fetch(room.recording_url);
     if (!plRes.ok) throw new Error(`playlist_fetch_${plRes.status}`);
-    const playlist = parseVodPlaylist(await plRes.text(), room.recording_url);
+    const playlistText = await plRes.text();
+    const playlist = parseVodPlaylist(playlistText, room.recording_url);
     if (playlist.segments.length === 0) throw new Error("empty_playlist");
     if (playlist.totalDuration > MAX_VOD_SECONDS) {
       await admin
@@ -236,15 +238,12 @@ export async function POST(request: NextRequest) {
     }
 
     /* Live utterances give speaker attribution. Their offsets are from
-       recording_started_at (the egress REQUEST); the playlist's
-       PROGRAM-DATE-TIME is the true first frame — same correction the
-       replay page applies (syncDelta). */
+       recording_started_at (the recorder REQUEST); the playlist's
+       PROGRAM-DATE-TIME tags place every segment on the wall clock — the
+       same timeline the replay page maps through (lib/hlsTimeline), gaps
+       between recording parts included. */
     const started = room.recording_started_at ? Date.parse(room.recording_started_at) : NaN;
-    let syncDelta = 0;
-    if (playlist.programDateTime && Number.isFinite(started)) {
-      const d = (playlist.programDateTime - started) / 1000;
-      if (d > 0 && d < 120) syncDelta = d;
-    }
+    const timeline = parseTimeline(playlistText);
     const utterances: UtteranceRef[] = [];
     if (Number.isFinite(started)) {
       const { data: uts } = await admin
@@ -280,9 +279,9 @@ export async function POST(request: NextRequest) {
       for (const l of raw) {
         const videoT = chunkOffset + l.t;
         /* Store offsets in the recording_started_at frame — the same one
-           live utterances use — so the replay page's syncDelta math
-           applies identically to both transcript sources. */
-        const frameT = videoT + syncDelta;
+           live utterances use — so the replay page's timeline applies
+           identically to both transcript sources. */
+        const frameT = recordingOffset(timeline, started, videoT);
         let speaker: UtteranceRef | null = null;
         let best = ATTRIBUTION_WINDOW_S + 1;
         for (const u of utterances) {

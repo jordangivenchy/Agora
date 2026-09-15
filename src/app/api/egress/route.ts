@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  EgressClient,
-  EncodingOptions,
-  S3Upload,
-  SegmentedFileOutput,
-  SegmentedFileProtocol,
-  StreamOutput,
-  StreamProtocol,
-} from "livekit-server-sdk";
+import { EncodingOptions, StreamOutput, StreamProtocol } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
+import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
+import { egressClient, isRecording, readHlsEnv, startRecordingPart } from "@/lib/recordingEgress";
 
 /* The live playlist dies with the stream; the recording (recording_url)
    stays so the ended room can be replayed. recording_ended_at only lands
-   for rooms that were actually recording. */
+   for rooms that were actually recording. Runs BEFORE the recorder is
+   stopped: a cleared hls_url is how the LiveKit webhook tells a
+   deliberate stop from a recorder that died (lib/recordingParts). */
 async function markStreamStopped(
   supabase: Awaited<ReturnType<typeof createClient>>,
   roomId: string
@@ -58,28 +54,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Host only" }, { status: 403 });
     }
 
-    const lkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    if (!lkUrl || !apiKey || !apiSecret) {
+    const egress = egressClient();
+    if (!egress) {
       return NextResponse.json({ error: "LiveKit not configured" }, { status: 500 });
     }
-    const egress = new EgressClient(lkUrl.replace(/^wss?:\/\//, "https://"), apiKey, apiSecret);
-
-    /* HLS needs an S3-compatible bucket for segments (Supabase Storage's
-       S3 endpoint works). Configure in Vercel:
-         HLS_S3_ENDPOINT, HLS_S3_REGION, HLS_S3_BUCKET,
-         HLS_S3_ACCESS_KEY, HLS_S3_SECRET, HLS_PUBLIC_BASE_URL
-       Until then start_hls returns hls_not_configured and the UI hides. */
-    const hlsEnv = {
-      endpoint: process.env.HLS_S3_ENDPOINT,
-      region: process.env.HLS_S3_REGION,
-      bucket: process.env.HLS_S3_BUCKET,
-      accessKey: process.env.HLS_S3_ACCESS_KEY,
-      secret: process.env.HLS_S3_SECRET,
-      publicBase: process.env.HLS_PUBLIC_BASE_URL,
-    };
-    const hlsConfigured = Object.values(hlsEnv).every(Boolean);
+    const hlsEnv = readHlsEnv();
+    const hlsConfigured = !!hlsEnv && hasAdminCredentials();
 
     if (action === "status") {
       const active = await egress.listEgress({ roomName: roomId, active: true });
@@ -91,12 +71,12 @@ export async function POST(request: NextRequest) {
          the auto-start on the host's client can fire safely on reconnects. */
       {
         const active = await egress.listEgress({ roomName: roomId, active: true });
-        const existing = active.find((e) => e.request?.case === "roomComposite");
+        const existing = active.find(isRecording);
         if (existing) {
           return NextResponse.json({ egressId: existing.egressId, reused: true });
         }
       }
-      if (!hlsConfigured) {
+      if (!hlsConfigured || !hlsEnv) {
         return NextResponse.json({ error: "hls_not_configured" }, { status: 400 });
       }
       if (room.status !== "live") {
@@ -125,64 +105,27 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "storage_full" }, { status: 409 });
         }
       }
-      const info = await egress.startRoomCompositeEgress(
+      /* Nothing is filming (checked above), so a part still marked open
+         ended without word from LiveKit; the next part starts after it —
+         a host who stops and starts again keeps the earlier part. */
+      const started = await startRecordingPart({
+        admin: createAdminClient(),
+        egress,
+        hls: hlsEnv,
         roomId,
-        {
-          segments: new SegmentedFileOutput({
-            filenamePrefix: `${roomId}/seg`,
-            playlistName: `${roomId}/index.m3u8`,
-            livePlaylistName: `${roomId}/live.m3u8`,
-            segmentDuration: 2, // shorter segments ≈ 7-10s glass-to-glass for broadcast viewers
-            protocol: SegmentedFileProtocol.HLS_PROTOCOL,
-            output: {
-              case: "s3",
-              value: new S3Upload({
-                endpoint: hlsEnv.endpoint!,
-                region: hlsEnv.region!,
-                bucket: hlsEnv.bucket!,
-                accessKey: hlsEnv.accessKey!,
-                secret: hlsEnv.secret!,
-                forcePathStyle: true,
-              }),
-            },
-          }),
-        },
-        {
-          layout: "speaker",
-          customBaseUrl: `${request.nextUrl.origin}/agora/${roomId}`,
-          encodingOptions: new EncodingOptions({
-            width: 1920,
-            height: 1080,
-            framerate: 30,
-            videoBitrate: 4500,
-            audioBitrate: 128,
-          }),
-        }
-      );
-      const base = hlsEnv.publicBase!.replace(/\/$/, "");
-      const hlsUrl = `${base}/${roomId}/live.m3u8`;
-      /* index.m3u8 is the VOD playlist LiveKit finalizes when egress stops —
-         it persists in the bucket, so it IS the replay. Record it now (the
-         row outlives the stream) alongside the start time the transcript
-         offsets are measured from. */
-      await supabase
-        .from("debate_rooms")
-        .update({
-          hls_url: hlsUrl,
-          recording_url: `${base}/${roomId}/index.m3u8`,
-          recording_started_at: new Date().toISOString(),
-          recording_ended_at: null,
-        })
-        .eq("id", roomId);
-      return NextResponse.json({ egressId: info.egressId, hlsUrl });
+        origin: request.nextUrl.origin,
+        closeOpen: true,
+      });
+      if (!started) return NextResponse.json({ error: "recording_starting" }, { status: 409 });
+      return NextResponse.json({ egressId: started.egressId, hlsUrl: started.hlsUrl, part: started.part });
     }
 
     /* Closing the stage stops every restream with it — an egress left
        running against an ended room films a black page and bills minutes. */
     if (action === "stop_all") {
+      await markStreamStopped(supabase, roomId);
       const active = await egress.listEgress({ roomName: roomId, active: true });
       await Promise.allSettled(active.map((e) => egress.stopEgress(e.egressId)));
-      await markStreamStopped(supabase, roomId);
       return NextResponse.json({ ok: true, stopped: active.length });
     }
 
@@ -197,21 +140,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
       }
       /* Custom template: the compositor films our own broadcast page —
-         the full amphitheater (crowd + stage + holo screens), not a bare
-         camera grid. Portrait preset frames it for TikTok. */
+         the stage over the flat backdrop (the 3D scene ran LiveKit's
+         recorders out of CPU), not a bare camera grid. Portrait preset
+         frames it for TikTok; 720p for the same reason as recordings. */
       const info = await egress.startRoomCompositeEgress(
         roomId,
         { stream: new StreamOutput({ protocol: StreamProtocol.RTMP, urls: [rtmpUrl.trim()] }) },
         {
           layout: "speaker",
           customBaseUrl: `${request.nextUrl.origin}/agora/${roomId}`,
-          /* Explicit 1080p @ 6 Mbps: the animated 3D scene (stars, torch
-             flicker, camera drift) smears badly at preset 720p bitrates. */
           encodingOptions: new EncodingOptions({
-            width: portrait ? 1080 : 1920,
-            height: portrait ? 1920 : 1080,
+            width: portrait ? 720 : 1280,
+            height: portrait ? 1280 : 720,
             framerate: 30,
-            videoBitrate: 6000,
+            videoBitrate: 3500,
             audioBitrate: 128,
           }),
         }
@@ -223,8 +165,18 @@ export async function POST(request: NextRequest) {
     if (typeof egressId !== "string" || !egressId) {
       return NextResponse.json({ error: "Missing egressId" }, { status: 400 });
     }
-    await egress.stopEgress(egressId);
+    /* Stopping the restream alone leaves the recording (and hls_url) be.
+       Stopping the recording stops whichever part is filming now — a
+       page can hold the id of a part that has since been replaced. */
+    const target = (await egress.listEgress({ egressId }).catch(() => [])).find((e) => e.egressId === egressId);
+    if (target && !isRecording(target)) {
+      await egress.stopEgress(egressId);
+      return NextResponse.json({ ok: true });
+    }
     await markStreamStopped(supabase, roomId);
+    const recorders = (await egress.listEgress({ roomName: roomId, active: true })).filter(isRecording);
+    const ids = new Set([...recorders.map((e) => e.egressId), ...(target ? [] : [egressId])]);
+    await Promise.allSettled([...ids].map((id) => egress.stopEgress(id)));
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("egress error", e);

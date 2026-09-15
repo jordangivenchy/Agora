@@ -19,7 +19,7 @@ import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { createComment, fetchAvatars, timeAgo, type CommentRow } from "../../src/communities";
 import {
-  bumpReplayView, ensureDiscussion, fetchDiscussion, fetchLikes, fetchMoreReplays, fetchReplay, fetchSyncDelta, fmtClock, fmtDurationLong, toggleLike,
+  bumpReplayView, ensureDiscussion, fetchDiscussion, fetchLikes, fetchMoreReplays, fetchReplay, fetchTimeline, fmtClock, fmtDurationLong, toggleLike,
   type MoreReplay, type ReplayRoom, type TranscriptLine,
 } from "../../src/replay";
 import { roomLink } from "../../src/roomData";
@@ -31,6 +31,7 @@ import { ComposerSheet } from "../../src/composer";
 import { ClipEditorSheet } from "../../src/clipEditor";
 import { ClipTile } from "../../src/clipTile";
 import { fetchClips, type ClipTileData } from "../../src/clips";
+import { videoTime, type TimelineSpan } from "../../../src/lib/hlsTimeline";
 import { showToast } from "../../src/toast";
 import { colors, fonts } from "../../src/theme";
 
@@ -72,7 +73,7 @@ export default function ReplayScreen() {
   const [likes, setLikes] = useState<{ count: number; liked: boolean } | null>(null);
   const [likeBusy, setLikeBusy] = useState(false);
   const [views, setViews] = useState<number | null>(null);
-  const [syncDelta, setSyncDelta] = useState(0);
+  const [timeline, setTimeline] = useState<TimelineSpan[]>([]);
   const [query, setQuery] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
   const [userScrolled, setUserScrolled] = useState(false);
@@ -128,9 +129,9 @@ export default function ReplayScreen() {
   }, [roomId, recorded, ended]);
   const startedAt = room?.recording_started_at ?? null;
   useEffect(() => {
-    if (!recordingUrl || !startedAt) { setSyncDelta(0); return; }
+    if (!recordingUrl || !startedAt) { setTimeline([]); return; }
     let live = true;
-    void fetchSyncDelta(recordingUrl, startedAt).then((d) => { if (live) setSyncDelta(d); });
+    void fetchTimeline(recordingUrl).then((t) => { if (live) setTimeline(t); });
     return () => { live = false; };
   }, [recordingUrl, startedAt]);
   const topicKey = room?.topic_key ?? null;
@@ -146,7 +147,8 @@ export default function ReplayScreen() {
   }, [id, editor]);
 
   /* ── The transcript, following playback ── */
-  const videoOffset = useCallback((sec: number) => Math.max(0, sec - syncDelta), [syncDelta]);
+  const startedAtMs = startedAt ? Date.parse(startedAt) : NaN;
+  const videoOffset = useCallback((sec: number) => videoTime(timeline, startedAtMs, sec), [timeline, startedAtMs]);
   const seekable = lines.some((l) => l.offset_seconds !== null);
   const currentId = useMemo(() => {
     if (!seekable || !recorded) return null;

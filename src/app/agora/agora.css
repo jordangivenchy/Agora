@@ -3498,6 +3498,18 @@
   pointer-events: none;
 }
 
+/* The page as LiveKit's recorder films it (?token&url — see /api/egress):
+   drawn in software, so nothing that makes the browser redraw what's
+   behind a surface every frame. No backdrop blur or brightening (the
+   glass panes read as clear over the flat backdrop), no tilted panes. */
+.ag-root--recording *,
+.ag-root--recording *::before,
+.ag-root--recording *::after {
+  backdrop-filter: none !important;
+}
+.ag-root--recording .ag-cast-duo { perspective: none; }
+.ag-root--recording .ag-cast-pane { --pane-rot: 0deg; }
+
 /* Phones: no backdrop blur anywhere in the room — every blurred layer
    over live video is another GPU surface Safari has to keep, and the
    house style is solid surfaces anyway. */

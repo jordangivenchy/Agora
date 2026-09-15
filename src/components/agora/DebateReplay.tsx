@@ -26,6 +26,7 @@ import { navigateTo } from "@/lib/progress";
 import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import { useCoarsePointer } from "@/lib/pointer";
 import { fmtDay, roomDuration } from "@/lib/duration";
+import { parseTimeline, videoTime, type TimelineSpan } from "@/lib/hlsTimeline";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
 
@@ -77,6 +78,9 @@ type Comment = {
   body: string;
   created_at: string;
 };
+
+/** No playlist timeline (yet): transcript offsets are video time. */
+const NO_SPANS: TimelineSpan[] = [];
 
 function fmtClock(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
@@ -286,7 +290,7 @@ export default function DebateReplay({
       /* The post-run Gemini transcript (full coverage, punctuation,
          speaker attribution aligned from the live utterances) replaces
          the patchy live Web-Speech lines whenever it exists. Offsets are
-         in the same recording_started_at frame, so the syncDelta math
+         in the same recording_started_at frame, so the timeline math
          below applies unchanged. */
       const polished = polishedRow as {
         status: string;
@@ -390,38 +394,32 @@ export default function DebateReplay({
     });
   }, [loaded, room, supabase]);
 
-  /* ── Transcript↔video sync correction ─────────────────────────────
+  /* ── Transcript↔video sync ─────────────────────────────────────────
      Line offsets are measured from recording_started_at, which is
-     stamped when the egress is REQUESTED — but the compositor's first
-     frame lands several seconds later, so raw offsets run ahead of the
-     audio. The playlist's EXT-X-PROGRAM-DATE-TIME carries the true
-     first-frame wall clock; the difference shifts every match, seek and
-     printed timestamp. Missing tag → delta 0 (old behavior). */
-  const [syncDelta, setSyncDelta] = useState(0);
+     stamped when the recorder is REQUESTED — but its first frame lands
+     several seconds later, and a recording in parts skips the gaps
+     between parts. Every segment's EXT-X-PROGRAM-DATE-TIME places it on
+     the wall clock (lib/hlsTimeline), which maps every match, seek and
+     printed timestamp. No tags → offsets are video time. */
+  const [loadedTimeline, setLoadedTimeline] = useState<{ url: string; spans: TimelineSpan[] } | null>(null);
+  const startedAt = room?.recording_started_at ?? null;
   useEffect(() => {
-    const startedAt = room?.recording_started_at;
-    if (!recordingUrl || !startedAt) { setSyncDelta(0); return; }
+    if (!recordingUrl || !startedAt) return;
     let alive = true;
     fetch(recordingUrl)
       .then((r) => (r.ok ? r.text() : null))
       .then((txt) => {
-        if (!alive || !txt) return;
-        const m = txt.match(/#EXT-X-PROGRAM-DATE-TIME:([^\r\n]+)/);
-        if (!m) return;
-        const trueStart = Date.parse(m[1]);
-        const stamped = Date.parse(startedAt);
-        if (Number.isFinite(trueStart) && Number.isFinite(stamped)) {
-          const d = (trueStart - stamped) / 1000;
-          if (d > 0 && d < 120) setSyncDelta(d);
-        }
+        if (alive && txt) setLoadedTimeline({ url: recordingUrl, spans: parseTimeline(txt) });
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [recordingUrl, room?.recording_started_at]);
+  }, [recordingUrl, startedAt]);
+  const timeline = loadedTimeline?.url === recordingUrl ? loadedTimeline.spans : NO_SPANS;
+  const startedAtMs = startedAt ? Date.parse(startedAt) : NaN;
   /** A line's position in the VIDEO's own timeline. */
   const videoOffset = useCallback(
-    (sec: number) => Math.max(0, sec - syncDelta),
-    [syncDelta]
+    (sec: number) => videoTime(timeline, startedAtMs, sec),
+    [timeline, startedAtMs]
   );
 
   /* Follow playback: the line whose offset most recently passed is current. */

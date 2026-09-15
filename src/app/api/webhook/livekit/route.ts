@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RoomServiceClient, WebhookReceiver } from "livekit-server-sdk";
+import { RoomServiceClient, WebhookReceiver, type EgressInfo } from "livekit-server-sdk";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
-import { planWebhook } from "@/lib/roomLifecycle";
+import { isRoomUuid, planWebhook } from "@/lib/roomLifecycle";
+import { egressClient, isRecording, readHlsEnv, segmentsResult, startRecordingPart } from "@/lib/recordingEgress";
+import { shouldRestart } from "@/lib/recordingParts";
+import { getAppConfig } from "@/lib/appConfig";
 
 /* LiveKit Cloud lifecycle webhook. This is how the server learns that a
    tab closed or a connection died — the browser never got to say
@@ -18,12 +21,49 @@ import { planWebhook } from "@/lib/roomLifecycle";
                         own job — the webhook never re-seats anyone.
    room_finished      → LiveKit closed an empty room past its timeout:
                         end the debate if it was still live.
+   egress_ended       → a recording part finished: store the size and
+                        length LiveKit reports; if the room is still
+                        live and nobody stopped it (lib/recordingParts),
+                        start the next part.
 
    Signature: WebhookReceiver verifies the raw body against the
    Authorization JWT minted with our LIVEKIT_API_KEY/SECRET — nobody
    else can forge events. Always answer 200 fast on verified events
    (LiveKit retries non-2xx); per-event DB errors are logged and
    swallowed. /api/webhook/* is beta-gate exempt (src/proxy.ts). */
+
+/* A recording part ended. Deliberate stops clear hls_url first and an
+   ended room is ended, so a live room still holding hls_url lost its
+   recorder — LiveKit's machines ran out of CPU filming the room page, or
+   anything else. The next part starts in its own folder; viewers on the
+   broadcast fall back to the call while it does (hls_url goes null). */
+async function recordingEnded(info: EgressInfo, origin: string) {
+  const roomId = info.roomName;
+  const result = segmentsResult(info);
+  if (!isRoomUuid(roomId) || !result) return; // restreams carry no segments
+  const admin = createAdminClient();
+  const endedAt = info.endedAt ? new Date(Number(info.endedAt / BigInt(1_000_000))).toISOString() : new Date().toISOString();
+  const { data, error } = await admin.rpc("finish_recording_part", {
+    p_room: roomId,
+    p_egress: info.egressId,
+    p_ended_at: endedAt,
+    p_duration: result.duration,
+    p_bytes: result.bytes,
+  });
+  if (error) throw new Error(`finish_recording_part: ${error.message}`);
+  const room = data as { status: string | null; hls_url: string | null; parts: number } | null;
+  const egress = egressClient();
+  const hls = readHlsEnv();
+  if (!room || !egress || !hls) return;
+  if (room.status !== "live" || !room.hls_url) return;
+  const active = await egress.listEgress({ roomName: roomId, active: true });
+  const otherRecorder = active.some((e) => e.egressId !== info.egressId && isRecording(e));
+  if (!shouldRestart(room, otherRecorder)) return;
+  console.warn(`[recording] ${roomId}: part ended while live (${info.details || info.error || "no reason given"}), starting the next`);
+  await admin.from("debate_rooms").update({ hls_url: null }).eq("id", roomId).eq("status", "live");
+  const started = await startRecordingPart({ admin, egress, hls, roomId, origin, closeOpen: false });
+  if (!started) console.warn(`[recording] ${roomId}: another start holds the claim`);
+}
 
 /* Is this identity still connected to the LiveKit room (another device or
    tab)? Unknown (API failure) reads as "no", so a real departure is never
@@ -57,6 +97,18 @@ export async function POST(request: NextRequest) {
     );
   } catch {
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
+  }
+
+  if (event.event === "egress_ended" && event.egressInfo) {
+    try {
+      /* LiveKit calls whichever address the webhook was registered with;
+         the recorder must film the public site. */
+      const origin = (await getAppConfig()).app_origin ?? "https://agorasphere.net";
+      await recordingEnded(event.egressInfo, origin);
+    } catch (e) {
+      console.error("livekit webhook egress_ended", event.egressInfo.egressId, e);
+    }
+    return NextResponse.json({ ok: true });
   }
 
   const plan = planWebhook(
