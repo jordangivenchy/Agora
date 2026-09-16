@@ -66,6 +66,12 @@ function openMention(name: string) {
   router.push({ pathname: "/u/[username]", params: { username: name } });
 }
 
+/** One line of markdown as pieces — for callers that own their own
+    <Text> (the home notice, which clamps its own lines). */
+export function inlineRich(text: string, key: string): ReactNode[] {
+  return inline(text, key);
+}
+
 function inline(text: string, key: string): ReactNode[] {
   const out: ReactNode[] = [];
   let last = 0;

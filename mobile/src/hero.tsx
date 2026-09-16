@@ -21,6 +21,7 @@ import { expandQueue, openQueue, useQueue } from "./queue";
 import { useReduceMotion } from "./motion";
 import { openUrl } from "./web";
 import { colors, fonts } from "./theme";
+import { inlineRich } from "./richText";
 
 /* The hero's least height; a slide with more to say makes it taller. */
 export const HERO_HEIGHT = 264;
@@ -240,7 +241,8 @@ function PostSlide({ post, onMeasure }: { post: FeaturedPost; onMeasure: (h: num
       </View>
       <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 22, lineHeight: 26, letterSpacing: -0.3, marginTop: 6 }}>{post.title}</Text>
       <View style={{ width: 36, height: 3, borderRadius: 2, backgroundColor: colors.yellow, marginTop: 8 }} />
-      <Text numberOfLines={list || post.imageUrl ? 2 : 3} style={{ color: colors.soft, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, marginTop: 8 }}>{post.excerpt}</Text>
+      {/* The notice keeps its links (src/home.ts): they are rendered, not printed. */}
+      <Text numberOfLines={list || post.imageUrl ? 2 : 3} style={{ color: colors.soft, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, marginTop: 8 }}>{inlineRich(post.excerpt, "ex")}</Text>
       {list && (
         <View style={{ marginTop: 12 }}>
           {!!list.heading && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.3 }}>{list.heading}</Text>}
@@ -248,8 +250,8 @@ function PostSlide({ post, onMeasure }: { post: FeaturedPost; onMeasure: (h: num
             <View key={i} style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
               <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.yellow, marginRight: 9 }} />
               <Text numberOfLines={1} style={{ flex: 1, color: "#a3a3ae", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
-                <Text style={{ color: colors.text, fontFamily: fonts.semi }}>{it.lead}</Text>
-                {it.detail ? ` — ${it.detail}` : ""}
+                <Text style={{ color: colors.text, fontFamily: fonts.semi }}>{inlineRich(it.lead, `l${i}`)}</Text>
+                {it.detail ? <>{" — "}{inlineRich(it.detail, `d${i}`)}</> : ""}
               </Text>
             </View>
           ))}

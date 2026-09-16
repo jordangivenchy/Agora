@@ -65,22 +65,48 @@ type PostRow = {
   comments: { count: number }[] | null;
 };
 
-/* Markdown as plain text: marks, images and bare links dropped. */
+/* Markdown as plain text — marks and images dropped, links kept: a link
+   is the one piece of markup a reader can use, and the card renders it
+   (src/lib/homeData.ts does the same on the site). Stripping runs
+   between the links, never over them: an emphasis pass across a URL
+   would eat its underscores. */
+const NOTICE_LINK = /\[[^\]\n]+\]\([^)\s]+\)|https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"]/g;
+
 function plain(md: string): string {
-  return md
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/https?:\/\/\S+/g, "")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/`+/g, "")
-    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
-    .replace(/[*_~]+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const strip = (t: string) =>
+    t
+      .replace(/`+/g, "")
+      .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
+      .replace(/[*_~]+/g, "");
+  const src = md.replace(/!\[[^\]]*\]\([^)]*\)/g, "");
+  let out = "";
+  let last = 0;
+  for (const m of src.matchAll(NOTICE_LINK)) {
+    out += strip(src.slice(last, m.index)) + m[0];
+    last = m.index + m[0].length;
+  }
+  out += strip(src.slice(last));
+  return out.replace(/\s+/g, " ").trim();
 }
+
+/** What the reader sees of a link: its label. Lengths are measured on this. */
+function shown(text: string): string {
+  return text.replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, "$1");
+}
+
+/* Cut on a word, counting what shows rather than what is written — and
+   never inside a link, since half of one is no longer a link. */
 function cutAtWord(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  return cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 40)).trimEnd() + "…";
+  if (shown(text).length <= max) return text;
+  let out = "";
+  let len = 0;
+  for (const tok of text.split(/(\s+)/)) {
+    const add = shown(tok).length;
+    if (len + add > max) break;
+    out += tok;
+    len += add;
+  }
+  return (out.trimEnd() || shown(text).slice(0, max).trimEnd()) + "…";
 }
 /* The notice's copy, as the site reads it (lib/homeData.ts noticeCopy):
    the opening paragraph (the first block that is neither a heading nor a

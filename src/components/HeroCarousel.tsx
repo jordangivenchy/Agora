@@ -36,6 +36,7 @@ import { topicFor } from "@/components/NewsPage";
 import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
+import RichText from "@/components/community/RichText";
 
 /** A live room as the page's data pass shapes it (the shell's keys). */
 export type HeroRoom = {
@@ -571,15 +572,15 @@ function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, o
           </div>
           <h3 className="notice-title">{p.title}</h3>
           <div className="notice-rule" aria-hidden="true" />
-          {p.excerpt && <p className="notice-body">{p.excerpt}</p>}
+          {p.excerpt && <p className="notice-body"><RichText text={p.excerpt} inline /></p>}
           {p.more && (
             <div className="notice-more">
               {p.more.heading && <div className="notice-more-head">{p.more.heading}</div>}
-              <p>{p.more.text}</p>
+              <p><RichText text={p.more.text} inline /></p>
             </div>
           )}
           {p.highlights && !image && (
-            <div className="notice-leads">{p.highlights.items.map((it) => it.lead).join(" · ")}</div>
+            <div className="notice-leads">{p.highlights.items.map((it) => it.lead).join(" · ").replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, "$1")}</div>
           )}
           <div className="notice-foot">
             <button type="button" className="notice-read" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
@@ -600,7 +601,7 @@ function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, o
             {p.highlights.heading && <div className="notice-highlights-head">{p.highlights.heading}</div>}
             <ul>
               {p.highlights.items.map((it) => (
-                <li key={it.lead}><b>{it.lead}</b>{it.detail && <span> — {it.detail}</span>}</li>
+                <li key={it.lead}><b><RichText text={it.lead} inline /></b>{it.detail && <span> — <RichText text={it.detail} inline /></span>}</li>
               ))}
             </ul>
           </div>
