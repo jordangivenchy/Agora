@@ -11,6 +11,7 @@ import { displayName, fetchGroups, fetchThreads, groupPreview, relTime, type Gro
 import { Avatar } from "../../src/avatar";
 import { GroupTile } from "../../src/groupTile";
 import { NewGroupSheet } from "../../src/newGroup";
+import { NewMessageSheet } from "../../src/newMessage";
 import { LoadingLine } from "../../src/sky";
 import { colors, fonts } from "../../src/theme";
 import { Button, Screen, Sub, Title } from "../../src/ui";
@@ -24,6 +25,7 @@ export default function Messages() {
   const [groups, setGroups] = useState<GroupRow[] | null>(null);
   const [search, setSearch] = useState("");
   const [newGroup, setNewGroup] = useState(false);
+  const [newMessage, setNewMessage] = useState(false);
 
   const load = useCallback(async () => {
     if (!me) return;
@@ -77,14 +79,13 @@ export default function Messages() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Bare, like Mark all read on the notifications screen: iOS draws
-          the capsule behind a bar button itself (that is what Back sits
-          in), so a button that brings its own reads as a pill inside a
-          pill. */}
+      {/* A plus, not a group: from here you start any conversation — the
+          sheet behind it searches people and offers a group as one of
+          its rows. Bare, because iOS draws the capsule behind a bar
+          button itself. */}
       <Stack.Screen options={{ title: "Messages", headerBackTitle: "Back", headerRight: () => (
-        <Pressable onPress={() => setNewGroup(true)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <Ionicons name="people-outline" size={15} color={colors.text} />
-          <Text style={{ color: colors.text, fontFamily: fonts.medium, fontSize: 12 }}>New group</Text>
+        <Pressable onPress={() => setNewMessage(true)} hitSlop={10} accessibilityLabel="New message" style={{ paddingHorizontal: 2 }}>
+          <Ionicons name="add" size={26} color={colors.text} />
         </Pressable>
       ) }} />
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 }}>
@@ -98,7 +99,7 @@ export default function Messages() {
           data={items}
           keyExtractor={(it) => (it.kind === "dm" ? `d-${it.t.peer_id}` : `g-${it.g.chat_id}`)}
           contentContainerStyle={{ paddingBottom: 40 }}
-          ListEmptyComponent={<Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, textAlign: "center", paddingVertical: 32, paddingHorizontal: 24 }}>{total === 0 ? "No conversations yet. Open a friend's profile and hit Message, or start a group with New group." : "No matches."}</Text>}
+          ListEmptyComponent={<Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, textAlign: "center", paddingVertical: 32, paddingHorizontal: 24 }}>{total === 0 ? "No conversations yet. Tap + to find someone you can message, or to start a group." : "No matches."}</Text>}
           renderItem={({ item: it }) => {
             const unread = it.kind === "dm" ? it.t.unread : it.g.unread;
             const title = it.kind === "dm" ? displayName({ display_name: it.t.peer_display_name, username: it.t.peer_username }) : it.g.name;
@@ -122,6 +123,14 @@ export default function Messages() {
           }}
         />
       )}
+      <NewMessageSheet
+        open={newMessage}
+        onClose={() => setNewMessage(false)}
+        meId={me}
+        onPick={(username) => { setNewMessage(false); router.push({ pathname: "/messages/[username]", params: { username } }); }}
+        onNewGroup={() => { setNewMessage(false); setNewGroup(true); }}
+        onOpenProfile={(username) => { setNewMessage(false); router.push({ pathname: "/u/[username]", params: { username } }); }}
+      />
       <NewGroupSheet open={newGroup} onClose={() => setNewGroup(false)} onCreated={(chatId) => { setNewGroup(false); void load(); router.push({ pathname: "/messages/g/[id]", params: { id: chatId } }); }} />
     </View>
   );
