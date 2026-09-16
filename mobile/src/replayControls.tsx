@@ -25,7 +25,7 @@ function clock(sec: number): string {
   return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscreen, fullscreen }: {
+export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscreen, fullscreen, safeArea }: {
   player: VideoPlayer;
   viewRef: RefObject<VideoView | null>;
   /** Seconds, from the screen's own timeUpdate listener. */
@@ -37,6 +37,9 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
   onFullscreen: () => void;
   /** These are the full-screen ones: the button comes back out of it. */
   fullscreen?: boolean;
+  /** Full screen only: the phone's own edges, to keep the bottom row and
+      the seek bar clear of them in either orientation. */
+  safeArea?: { top: number; bottom: number; left: number; right: number };
 }) {
   const { isPlaying } = useEvent(player, "playingChange", { isPlaying: player.playing });
   const { status } = useEvent(player, "statusChange", { status: player.status });
@@ -93,9 +96,10 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
   return (
     <Pressable onPress={() => (shown ? (player.playing ? setShown(false) : show(true)) : show())} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} accessibilityLabel={shown ? "Hide the controls" : "Show the controls"}>
       {shown && (
-        <Animated.View pointerEvents="box-none" style={{ flex: 1, opacity: fade, backgroundColor: "rgba(0,0,0,0.38)", justifyContent: "space-between" }}>
-          <View />
-          <View pointerEvents="box-none" style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 34 }}>
+        <Animated.View pointerEvents="box-none" style={{ flex: 1, opacity: fade, backgroundColor: "rgba(0,0,0,0.38)", justifyContent: "flex-end" }}>
+          {/* Back, play and forward sit on the middle of the picture, not
+              in what the bottom row leaves over. */}
+          <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 34 }}>
             <Pressable onPress={() => skip(-10)} hitSlop={10} accessibilityLabel="Back 10 seconds" style={round(44)}>
               <Ionicons name="play-back" size={24} color="#fff" />
               <Text style={{ position: "absolute", bottom: -4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
@@ -108,7 +112,7 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
               <Text style={{ position: "absolute", bottom: -4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
             </Pressable>
           </View>
-          <View style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
+          <View style={{ paddingLeft: 10 + (safeArea?.left ?? 0), paddingRight: 10 + (safeArea?.right ?? 0), paddingBottom: 6 + (safeArea?.bottom ?? 0) }}>
             <View
               onLayout={(e) => setBarW(Math.max(1, e.nativeEvent.layout.width))}
               onStartShouldSetResponder={() => true}

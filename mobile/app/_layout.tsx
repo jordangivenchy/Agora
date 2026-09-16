@@ -17,6 +17,7 @@ import { useCall } from "../src/callSession";
 import { supabase } from "../src/supabase";
 import { colors } from "../src/theme";
 import { useAppFonts } from "../src/fonts";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 /* The opening: the sky until the fonts and the session are in. Reduce
    motion applies from storage at once, then from the account. */
@@ -39,6 +40,9 @@ function Boot({ fontsReady, screenIn }: { fontsReady: boolean; screenIn: boolean
 
 export default function RootLayout() {
   const fontsReady = useAppFonts();
+  /* The app is a portrait app; only a replay's full screen turns, and it
+     puts this back when it closes (app/replay/[id].tsx). */
+  useEffect(() => { void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined); }, []);
   /* The navigator is laid out: the opening may show its sky (boot.tsx). */
   const [screenIn, setScreenIn] = useState(false);
   return (

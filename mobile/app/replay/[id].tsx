@@ -15,6 +15,7 @@ import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VideoView, useVideoPlayer } from "expo-video";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { createComment, fetchAvatars, timeAgo, type CommentRow } from "../../src/communities";
@@ -111,6 +112,13 @@ export default function ReplayScreen() {
   const viewRef = useRef<VideoView>(null);
   const fsRef = useRef<VideoView>(null);
   useEffect(() => { if (recordingUrl) player.play(); }, [recordingUrl, player]);
+  /* Full screen turns with the phone; everywhere else the app is portrait
+     (app/_layout.tsx), so closing it puts that back. */
+  useEffect(() => {
+    if (!fullscreen) return;
+    void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT).catch(() => undefined);
+    return () => { void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => undefined); };
+  }, [fullscreen]);
   /* A jump in the time is a seek from the player's own controls: the
      transcript follows again, as the site's onSeeking resets it. */
   const lastTime = useRef(0);
@@ -506,9 +514,7 @@ export default function ReplayScreen() {
       <Modal visible={fullscreen} animationType="fade" statusBarTranslucent supportedOrientations={["portrait", "landscape"]} onRequestClose={() => setFullscreen(false)}>
         <View style={{ flex: 1, backgroundColor: "#000" }}>
           <VideoView ref={fsRef} player={player} style={{ flex: 1 }} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture contentFit="contain" />
-          <View style={{ position: "absolute", left: 0, right: 0, top: insets.top, bottom: insets.bottom }}>
-            <ReplayControls player={player} viewRef={fsRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} onFullscreen={() => setFullscreen(false)} fullscreen />
-          </View>
+          <ReplayControls player={player} viewRef={fsRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} onFullscreen={() => setFullscreen(false)} fullscreen safeArea={insets} />
         </View>
       </Modal>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top - 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : colors.bg, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border })}>
