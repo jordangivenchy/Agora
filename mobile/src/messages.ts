@@ -179,3 +179,54 @@ export const renameGroup = (supabase: SupabaseClient, chatId: string, name: stri
 export const addGroupMembers = (supabase: SupabaseClient, chatId: string, members: string[]) => supabase.rpc("add_group_members", { p_chat: chatId, p_members: members });
 export const removeGroupMember = (supabase: SupabaseClient, chatId: string, userId: string) => supabase.rpc("remove_group_member", { p_chat: chatId, p_user: userId });
 export const leaveGroup = (supabase: SupabaseClient, chatId: string) => supabase.rpc("leave_group_chat", { p_chat: chatId });
+
+/* ── What's waiting for you, for the header ────────────────────────────
+   The same shape as the bell's count (notifications.ts): one store for
+   the whole app, kept fresh by realtime, so the icon can sit in the top
+   bar without every screen fetching for it. Counts conversations with
+   something unread rather than messages — "3" next to the icon means
+   three people are waiting, which is what you want to know. */
+import { useEffect, useState } from "react";
+import { supabase as dmClient } from "./supabase";
+
+let dmUnread = 0;
+const dmListeners = new Set<(n: number) => void>();
+let dmWatching: string | null = null;
+let dmChannel: ReturnType<typeof dmClient.channel> | null = null;
+
+async function refreshDmUnread() {
+  const [threads, groups] = await Promise.all([
+    fetchThreads(dmClient).catch(() => [] as Thread[]),
+    fetchGroups(dmClient).catch(() => [] as GroupRow[]),
+  ]);
+  dmUnread = threads.filter((t) => t.unread > 0).length + groups.filter((g) => g.unread > 0).length;
+  dmListeners.forEach((l) => l(dmUnread));
+}
+
+/** Follow my conversations while signed in; nil clears and unsubscribes. */
+export function watchDmUnread(uid: string | null) {
+  if (dmWatching === uid) return;
+  dmWatching = uid;
+  if (dmChannel) { void dmClient.removeChannel(dmChannel); dmChannel = null; }
+  if (!uid) { dmUnread = 0; dmListeners.forEach((l) => l(0)); return; }
+  void refreshDmUnread();
+  dmChannel = dmClient
+    .channel("dm-badge-app")
+    /* Arriving mail, and my own reading of it: both change the count. */
+    .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, () => void refreshDmUnread())
+    .on("postgres_changes", { event: "*", schema: "public", table: "group_messages" }, () => void refreshDmUnread())
+    .subscribe();
+}
+
+/** Reading a conversation doesn't always come back through realtime. */
+export function bumpDmUnread() { void refreshDmUnread(); }
+
+export function useDmUnread(): number {
+  const [n, setN] = useState(dmUnread);
+  useEffect(() => {
+    dmListeners.add(setN);
+    setN(dmUnread);
+    return () => { dmListeners.delete(setN); };
+  }, []);
+  return n;
+}

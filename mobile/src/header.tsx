@@ -9,6 +9,7 @@ import { useSession } from "./session";
 import { useMe } from "./me";
 import { Dropdown } from "./dropdown";
 import { useUnread, watchUnread } from "./notifications";
+import { useDmUnread, watchDmUnread } from "./messages";
 import { ProgressBar } from "./progress";
 import { colors, fonts } from "./theme";
 
@@ -20,7 +21,9 @@ export function HomeHeader() {
   const me = useMe();
   const [menu, setMenu] = useState(false);
   const unread = useUnread();
+  const dms = useDmUnread();
   useEffect(() => { watchUnread(session?.user.id ?? null); }, [session?.user.id]);
+  useEffect(() => { watchDmUnread(session?.user.id ?? null); }, [session?.user.id]);
   const initial = (me?.display_name || me?.username || "?").trim().charAt(0).toUpperCase();
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: colors.bg }}>
@@ -39,6 +42,26 @@ export function HomeHeader() {
         >
           <Ionicons name="search-outline" size={18} color={colors.text} />
         </Pressable>
+        {session && (
+          /* Messages live here, next to the bell, because that is where a
+             phone keeps them. They used to be three taps down: the
+             avatar, then your profile, then a row on it. */
+          <Pressable
+            onPress={() => router.push("/messages")}
+            accessibilityLabel={dms > 0 ? `Messages (${dms} waiting)` : "Messages"}
+            style={({ pressed }) => ({
+              width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
+              backgroundColor: pressed ? colors.surface2 : colors.surface, borderWidth: 1, borderColor: dms > 0 ? "#6b5a2a" : colors.border,
+            })}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={dms > 0 ? colors.gold : colors.text} />
+            {dms > 0 && (
+              <View style={{ position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: colors.yellow, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 10 }}>{dms > 9 ? "9+" : dms}</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
         {session && (
           <Pressable
             onPress={() => router.push("/notifications")}
@@ -87,6 +110,7 @@ export function HomeHeader() {
         sub={me?.username ? `@${me.username}` : undefined}
         items={[
           { label: "Profile", icon: "person-outline", onPress: () => router.push("/you") },
+          { label: "Messages", icon: "chatbubble-outline", onPress: () => router.push("/messages") },
           { label: "Settings", icon: "settings-outline", onPress: () => router.push("/settings") },
           { label: "Friends", icon: "people-outline", onPress: () => router.push("/friends") },
           { label: "Log out", icon: "log-out-outline", danger: true, dividerAbove: true, onPress: () => void signOut().then(() => router.replace("/sign-in")) },
