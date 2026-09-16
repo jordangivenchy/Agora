@@ -112,13 +112,18 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
           cost a phone forty points of width and left the score floating
           in the middle of a long post. */}
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <View style={{ alignItems: "center", gap: 4 }}>
+        <View style={{ alignItems: "center" }}>
           {communityArt && (
             <Pressable onPress={onOpenCommunity} disabled={!onOpenCommunity} style={{ marginTop: 2 }}>
               <CommunityTile name={communityArt.name} color={communityArt.color} avatarUrl={communityArt.avatarUrl} />
             </Pressable>
           )}
-          <VoteBox score={p.score} myVote={p.my_vote} onVote={onVote} />
+          {/* Under the picture, and down the middle of what is left: on a
+              long post the score sits beside the words it belongs to
+              rather than riding at the very top. */}
+          <View style={{ flex: 1, justifyContent: "center", paddingVertical: 4 }}>
+            <VoteBox score={p.score} myVote={p.my_vote} onVote={onVote} />
+          </View>
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
