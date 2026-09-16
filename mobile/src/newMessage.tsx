@@ -38,6 +38,10 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  /* One height, whatever the search turns up. Sizing to the rows meant
+     the sheet closed down on itself as you typed and the list got
+     shorter — the rows moved while you were reading them. */
+  const sheetH = Math.min(Math.round(height * 0.62), 520);
   const [q, setQ] = useState("");
   const [friends, setFriends] = useState<GroupMember[] | null>(null);
   const [others, setOthers] = useState<Friend[]>([]);
@@ -104,7 +108,7 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} accessibilityLabel="Close" />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={{ backgroundColor: "#000", borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderBottomWidth: 0, borderColor: "#2e2e38", paddingHorizontal: 20, paddingTop: 18, paddingBottom: insets.bottom + 12, maxHeight: Math.round(height * 0.86) }}>
+        <View style={{ height: sheetH, backgroundColor: "#000", borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderBottomWidth: 0, borderColor: "#2e2e38", paddingHorizontal: 20, paddingTop: 18, paddingBottom: insets.bottom + 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 18 }}>New message</Text>
             <Pressable onPress={onClose} hitSlop={8} style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38" }}>
@@ -137,13 +141,17 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
           <View style={{ height: 1, backgroundColor: "#16161c", marginVertical: 6 }} />
 
           {friends === null ? (
-            <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, paddingVertical: 14 }}>Looking…</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, paddingVertical: 14 }}>Looking…</Text>
+            </View>
           ) : (
             <FlatList
               data={rows}
               keyExtractor={(r) => `${r.kind}-${r.person.id}`}
               keyboardShouldPersistTaps="handled"
-              style={{ maxHeight: 360 }}
+              /* Fills what's left of the panel and scrolls inside it:
+                 the panel's height never follows the list's. */
+              style={{ flex: 1 }}
               renderItem={({ item }) => person(item)}
               ListEmptyComponent={
                 <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, paddingVertical: 16 }}>
