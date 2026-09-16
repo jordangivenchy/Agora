@@ -15,7 +15,7 @@ import { useCreate } from "../../src/create";
 import { HomeHeader } from "../../src/header";
 import { same, useFocusRefresh } from "../../src/refresh";
 import { openUrl } from "../../src/web";
-import { isQueuedFor, openQueue } from "../../src/queue";
+import { isQueuedForSource, openQueue } from "../../src/queue";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 
@@ -117,7 +117,9 @@ export default function News() {
                   <Outlets story={st} />
                   {st.url && <Btn kind="read" label={`Read at ${src?.name ?? "source"} ↗`} onPress={() => openUrl(st.url!)} />}
                   <Btn kind="discuss" label="Start a discussion" onPress={() => openRoom({ motion: st.headline, topic: topicFor(st.category) })} />
-                  <Btn kind="queue" label={isQueuedFor(st.headline) ? "In line" : "Queue a conversation"} onPress={() => openQueue({ id: null, question: st.headline, topicKey: topicFor(st.category), queueCount: 0, sourceUrl: st.url ?? null })} />
+                  {/* By the article: what you wait on is a question drawn
+                      from the story, not its headline. */}
+                  <Btn kind="queue" label={isQueuedForSource(st.url) ? "In line" : "Queue a conversation"} onPress={() => openQueue({ id: null, question: st.headline, topicKey: topicFor(st.category), queueCount: 0, sourceUrl: st.url ?? null, story: { headline: st.headline, summary: st.summary ?? null, category: st.category ?? null } })} />
                 </View>
               </View>
             );

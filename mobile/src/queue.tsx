@@ -11,12 +11,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "./supabase";
 import { setPresenceQueued } from "./presence";
 import { topicOf } from "./topics";
+import { QueueMotions } from "./queueMotions";
 import { colors, fonts } from "./theme";
 
 export type Stance = "PRO" | "CON";
 export type Opponent = "anyone" | "disagree";
-export type QueueTopic = { id: string | null; question: string; topicKey: string; queueCount: number; proCount?: number; conCount?: number; sourceUrl?: string | null };
-export type QueueEntry = { topicId: string; question: string; topicKey: string; stance: Stance; opponent: Opponent; since: number };
+/** The story a headline came from, for drafting the question to argue. */
+export type QueueStory = { headline: string; summary?: string | null; category?: string | null };
+/* A headline reports something; a motion is a claim someone can refuse.
+   When a story comes with the offer, the panel asks for the question
+   first and `question` is only the headline until then. */
+export type QueueTopic = { id: string | null; question: string; topicKey: string; queueCount: number; proCount?: number; conCount?: number; sourceUrl?: string | null; story?: QueueStory | null; framed?: boolean };
+/* Entries carry the article they came from, so a story can still show
+   that you are waiting on it — the question is no longer its headline. */
+export type QueueEntry = { topicId: string; question: string; topicKey: string; stance: Stance; opponent: Opponent; since: number; sourceUrl?: string | null };
 export type QueueState = { open: boolean; preview: QueueTopic | null; entries: QueueEntry[]; busy: boolean; error: string | null; matched: string | null };
 
 const EMPTY: QueueState = { open: false, preview: null, entries: [], busy: false, error: null, matched: null };
@@ -36,15 +44,31 @@ export function useQueue(): QueueState { return useSyncExternalStore(subscribe, 
 export function onQueueChanged(l: () => void): () => void { changeListeners.add(l); return () => { changeListeners.delete(l); }; }
 export function isQueued(topicId: string | null): boolean { return !!topicId && state.entries.some((e) => e.topicId === topicId); }
 export function isQueuedFor(question: string): boolean { return state.entries.some((e) => e.question === question); }
+/** Whether this account is waiting on something drawn from this article. */
+export function isQueuedForSource(url: string | null | undefined): boolean { return !!url && state.entries.some((e) => e.sourceUrl === url); }
+export function queuedTopicForSource(url: string | null | undefined): string | null { return (url && state.entries.find((e) => e.sourceUrl === url)?.topicId) || null; }
 const friendly = (m: string) => m.replace(/^[a-z_]+:\s*/, "");
 
 export function openQueue(topic: QueueTopic) { set({ open: true, preview: topic, error: null }); }
+/** The question chosen for a story: the offer becomes something to join. */
+export function pickMotion(question: string) {
+  const p = state.preview;
+  if (!p) return;
+  set({ preview: { ...p, question, framed: true }, error: null });
+}
+/** Back to the questions, to pick a different one. */
+export function unpickMotion() {
+  const p = state.preview;
+  if (!p?.story) return;
+  set({ preview: { ...p, question: p.story.headline, framed: false }, error: null });
+}
 export function expandQueue() { set({ open: true }); }
 export function collapseQueue() { set({ open: false, preview: null, error: null }); }
 
 export async function joinQueue(stance: Stance, opponent: Opponent = "anyone"): Promise<void> {
   const t = state.preview;
   if (!t || state.busy) return;
+  if (t.story && !t.framed) return;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { collapseQueue(); router.push("/sign-in"); return; }
   set({ busy: true, error: null });
@@ -57,7 +81,7 @@ export async function joinQueue(stance: Stance, opponent: Opponent = "anyone"): 
   if (res?.status === "matched" && res.room_id) { goToRoom(res.room_id); return; }
   const topicId = t.id ?? res?.topic_id ?? null;
   if (!topicId) { set({ busy: false, error: "Couldn't queue — try again." }); return; }
-  const entry: QueueEntry = { topicId, question: t.question, topicKey: t.topicKey, stance, opponent, since: Date.now() };
+  const entry: QueueEntry = { topicId, question: t.question, topicKey: t.topicKey, stance, opponent, since: Date.now(), sourceUrl: t.sourceUrl ?? null };
   set({ busy: false, preview: null, entries: [...state.entries.filter((e) => e.topicId !== topicId), entry] });
   setPresenceQueued(true);
 }
@@ -108,7 +132,11 @@ export async function restoreQueue(): Promise<void> {
   const mine = ((topics ?? []) as { id: string; question: string; topic_key: string; am_queued: boolean; my_stance: string | null }[])
     .filter((t) => t.am_queued && !state.entries.some((e) => e.topicId === t.id));
   if (!mine.length) return;
-  const entries: QueueEntry[] = mine.map((t) => ({ topicId: t.id, question: t.question, topicKey: t.topic_key, stance: t.my_stance === "CON" ? "CON" : "PRO", opponent: wish.get(t.id) ?? "anyone", since: since.get(t.id) ?? Date.now() }));
+  /* Which article each waiting question came from, so the story it was
+     drawn from still reads "in queue" after a relaunch. */
+  const { data: src } = await supabase.from("debate_topics").select("id, source_url").in("id", mine.map((t) => t.id));
+  const from = new Map(((src ?? []) as { id: string; source_url: string | null }[]).map((r) => [r.id, r.source_url]));
+  const entries: QueueEntry[] = mine.map((t) => ({ topicId: t.id, question: t.question, topicKey: t.topic_key, stance: t.my_stance === "CON" ? "CON" : "PRO", opponent: wish.get(t.id) ?? "anyone", since: since.get(t.id) ?? Date.now(), sourceUrl: from.get(t.id) ?? null }));
   set({ entries: [...state.entries, ...entries] });
   setPresenceQueued(true);
   for (const e of entries) {
@@ -168,10 +196,21 @@ export function QueueDock({ bottom }: { bottom: number }) {
       </View>
       <ScrollView bounces={false}>
         {q.matched && <Text style={{ color: colors.gold, fontFamily: fonts.semi, fontSize: 13, marginBottom: 8 }}>● Matched — opening your room…</Text>}
-        {p && !q.matched && (
+        {/* A headline is not something to take a side on: the question
+            comes first, then the side. */}
+        {p && !q.matched && p.story && !p.framed && (
+          <View style={{ marginBottom: n > 0 ? 12 : 0 }}><QueueMotions story={p.story} /></View>
+        )}
+        {p && !q.matched && !(p.story && !p.framed) && (
           <View style={{ gap: 10, marginBottom: n > 0 ? 12 : 0 }}>
             {pf && <Text style={{ color: pf.color, fontFamily: fonts.bold, fontSize: 10.5, letterSpacing: 0.5 }}>{pf.label.toUpperCase()}</Text>}
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15, lineHeight: 20 }}>{p.question}</Text>
+            {p.story && (
+              <Pressable onPress={unpickMotion} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="chevron-back" size={13} color={colors.muted} />
+                <Text style={{ color: colors.muted, fontFamily: fonts.semi, fontSize: 11.5 }}>Another question about this story</Text>
+              </Pressable>
+            )}
             <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>
               {p.queueCount > 0 ? `${p.queueCount} waiting to talk${typeof p.proCount === "number" && typeof p.conCount === "number" ? ` · ${p.proCount} for · ${p.conCount} against` : ""} — you'd be matched right away` : "No one waiting yet — you'd be first in line"}
             </Text>

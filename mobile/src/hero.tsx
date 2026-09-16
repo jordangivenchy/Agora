@@ -295,12 +295,17 @@ function PostSlide({ post, onMeasure }: { post: FeaturedPost; onMeasure: (h: num
    off the buttons opens the story on the News page, lit, as a tap on
    the site's phone hero does. */
 function NewsSlide({ story, ground, onMeasure }: { story: NewsStory; ground: string; onMeasure: (h: number) => void }) {
-  const inQueue = useQueue().entries.some((e) => e.question === story.headline);
+  /* By the article: the question you are waiting on was drawn from the
+     story, and is not its headline. */
+  const inQueue = useQueue().entries.some((e) => !!story.url && e.sourceUrl === story.url);
   const src = story.sources[0];
   const open = () => router.navigate({ pathname: "/news", params: { story: story.id } });
   const queue = () => {
     if (inQueue) expandQueue();
-    else openQueue({ id: null, question: story.headline, topicKey: topicFor(story.category), queueCount: 0, sourceUrl: story.url ?? null });
+    else openQueue({
+      id: null, question: story.headline, topicKey: topicFor(story.category), queueCount: 0, sourceUrl: story.url ?? null,
+      story: { headline: story.headline, summary: story.summary ?? null, category: story.category ?? null },
+    });
   };
   return (
     <Pressable onPress={open} style={{ flex: 1 }}>
