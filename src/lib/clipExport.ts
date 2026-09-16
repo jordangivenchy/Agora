@@ -217,28 +217,53 @@ export function assCaptions(lines: CaptionLine[], startSec: number, endSec: numb
   return [...head, ...events, ""].join("\n");
 }
 
+/** Where each card actually is.
+
+    cropdetect finds where the picture starts but not where it stops:
+    under the cards the page fades rather than cutting to black, and
+    that fade counts as picture, so the box runs a couple of hundred
+    pixels past the bottom of the cards. Stack two halves of that and
+    the dead strip from each meets in the middle — a band across the
+    waist of the clip.
+
+    The cards are 16:9, and the box begins at their top (above them is
+    true black), so the height follows from the width: a card is as tall
+    as nine sixteenths of its own width, and anything below that inside
+    the box is the fade. */
+export function tileRects(box: Box, layout: ClipLayout): Box[] {
+  if (layout !== "stack") {
+    const h = Math.min(box.h, Math.round((box.w * 9) / 16));
+    return [{ x: box.x, y: box.y, w: box.w, h }];
+  }
+  const w = Math.floor(box.w / 2);
+  const h = Math.min(box.h, Math.round((w * 9) / 16));
+  return [
+    { x: box.x, y: box.y, w, h },
+    { x: box.x + w, y: box.y, w, h },
+  ];
+}
+
 /** The picture, filling the frame.
 
-    Two beside each other: split the row and stack them, each half the
-    height of the screen, each filled and trimmed rather than fitted —
-    black bars read as a horizontal video someone couldn't be bothered
-    to reframe, and the crop pulls in closer on the faces, which is what
-    the format wants. One picture: the same, over the whole frame. */
+    Two beside each other: each card taken on its own and stacked, half
+    the height of the screen each, filled and trimmed rather than fitted
+    — black bars read as a horizontal video nobody bothered to reframe,
+    and the trim pulls in closer on the faces, which is what the format
+    wants. One card: the same, over the whole frame. */
 export function videoFilter(box: Box, layout: ClipLayout): string {
-  const crop = `crop=${box.w}:${box.h}:${box.x}:${box.y}`;
-  const half = Math.floor(box.w / 2);
-  const slotH = Math.floor(OUT_H / 2);
+  const rects = tileRects(box, layout);
+  const slotH = layout === "stack" ? Math.floor(OUT_H / 2) : OUT_H;
   const fill = (w: number, h: number) => `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`;
+  const cut = (r: Box) => `crop=${r.w}:${r.h}:${r.x}:${r.y},setsar=1,${fill(OUT_W, slotH)}`;
   if (layout === "stack") {
     return (
-      `[0:v]${crop},setsar=1[c];` +
-      `[c]split=2[l][r];` +
-      `[l]crop=${half}:${box.h}:0:0,${fill(OUT_W, slotH)}[top];` +
-      `[r]crop=${half}:${box.h}:${half}:0,${fill(OUT_W, slotH)}[bot];` +
+      `[0:v]split=2[a][b];` +
+      `[a]${cut(rects[0])}[top];` +
+      `[b]${cut(rects[1])}[bot];` +
       `[top][bot]vstack=inputs=2[framed]`
     );
   }
-  return `[0:v]${crop},setsar=1,${fill(OUT_W, OUT_H)}[framed]`;
+  return `[0:v]${cut(rects[0])}[framed]`;
 }
 
 export interface ExportSpec {

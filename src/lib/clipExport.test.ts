@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAPTION_CHARS, assCaptions, captionChunks, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
+import { CAPTION_CHARS, assCaptions, captionChunks, tileRects, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
 
 describe("finding the picture in the frame", () => {
   it("takes the box ffmpeg settled on, not the first guess", () => {
@@ -105,10 +105,23 @@ describe("the command", () => {
     expect(args).toContain("0:a?");
     expect(args).toContain("+faststart");
   });
+  it("takes each card on its own, trimming the fade beneath them", () => {
+    /* The real box from a real recording: a row of two cards plus the
+       page's fade under them. */
+    const real = { x: 78, y: 166, w: 1124, h: 468 };
+    const [left, right] = tileRects(real, "stack");
+    expect(left).toEqual({ x: 78, y: 166, w: 562, h: 316 }); // 16:9, not 468
+    expect(right.x).toBe(78 + 562);
+    expect(right.h).toBe(left.h);
+  });
+  it("never claims more than cropdetect found", () => {
+    const shallow = { x: 0, y: 0, w: 1200, h: 200 };
+    expect(tileRects(shallow, "stack")[0].h).toBe(200);
+  });
   it("stacks by splitting the row down the middle", () => {
     const f = videoFilter(box, "stack");
     expect(f).toContain("vstack=inputs=2");
-    expect(f).toContain("crop=561:315:561:0"); // the right half
+    expect(f).toContain("crop=561:315:639:165"); // the right card, on its own
     /* Each half exactly fills its slot: two of them and the bands above
        and below add up to the frame, so nothing grows over the title. */
     expect(f).toContain("scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960");
