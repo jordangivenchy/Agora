@@ -21,6 +21,7 @@ import { roomPath, replayPath } from "@/lib/urls";
 import { TOPICS } from "@/types/database";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { downloadClip } from "@/lib/clipDownload";
+import { exportClipVertical } from "@/lib/clipExportClient";
 import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import ClipTile, { formatClipDuration, formatViews, type ClipTileData } from "@/components/clips/ClipTile";
 import { sessionUser } from "@/lib/session";
@@ -74,6 +75,10 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   const [gone, setGone] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dlState, setDlState] = useState<"idle" | "busy" | "err">("idle");
+  /* The upright cut, rendered on the server: vertical, the words burned
+     on, the motion across the top — what the apps that only take
+     portrait want. Rendered once per clip and kept. */
+  const [vertState, setVertState] = useState<"idle" | "busy" | "err">("idle");
   const [dlPct, setDlPct] = useState(0);
   const [more, setMore] = useState<MoreRow[]>([]);
   const [viewerId, setViewerId] = useState<string | null>(null);
@@ -222,6 +227,19 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
   }, [clip, src, range, dlState]);
 
 
+  const forVertical = useCallback(async () => {
+    if (!clip || vertState === "busy") return;
+    setVertState("busy");
+    try {
+      await exportClipVertical(clip.id, clip.title);
+      setVertState("idle");
+    } catch (e) {
+      console.warn("vertical export failed", e);
+      setVertState("err");
+      setTimeout(() => setVertState("idle"), 4000);
+    }
+  }, [clip, vertState]);
+
   if (gone) {
     return (
       <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "#0a0a0e", color: "#c0c0c8", fontFamily: "'DM Sans', sans-serif" }}>
@@ -303,6 +321,10 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
             <button onClick={download} disabled={dlState === "busy" || !src} style={{ ...pill("#26262e", "#eeeef5"), opacity: dlState === "busy" ? 0.7 : 1 }}>
               <Icon name="download" size={13} style={{ marginRight: 6 }} />
               {dlState === "busy" ? `Preparing… ${Math.round(dlPct * 100)}%` : dlState === "err" ? "Download failed — retry" : "Download"}
+            </button>
+            <button onClick={forVertical} disabled={vertState === "busy" || !src} style={{ ...pill("#ffb700", "#1a0e00"), opacity: vertState === "busy" ? 0.7 : 1 }}>
+              <Icon name="crop" size={13} style={{ marginRight: 6 }} />
+              {vertState === "busy" ? "Rendering…" : vertState === "err" ? "Couldn't render — retry" : "For TikTok"}
             </button>
             <button
             onClick={() => clip && openPostComposer({ clip: { id: clip.id, title: clip.title || "Clip", duration: formatClipDuration(clip.duration_seconds) } })}

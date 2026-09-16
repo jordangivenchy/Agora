@@ -144,7 +144,7 @@ export async function startRecordingPart(opts: {
 }
 
 /** Put one small object into the recordings bucket (path-style, signed). */
-async function putObject(hls: HlsEnv, key: string, body: string, contentType: string) {
+export async function putObject(hls: HlsEnv, key: string, body: string | Uint8Array, contentType: string) {
   const endpoint = (/^https?:\/\//.test(hls.endpoint) ? hls.endpoint : `https://${hls.endpoint}`).replace(/\/$/, "");
   const url = `${endpoint}/${hls.bucket}/${key}`;
   const signed = signS3Request({
@@ -158,7 +158,7 @@ async function putObject(hls: HlsEnv, key: string, body: string, contentType: st
   });
   const { host: _host, ...headers } = signed;
   void _host;
-  const res = await fetch(url, { method: "PUT", headers, body });
+  const res = await fetch(url, { method: "PUT", headers, body: body as BodyInit });
   if (!res.ok) throw new Error(`put ${key}: ${res.status} ${(await res.text()).slice(0, 200)}`);
 }
 

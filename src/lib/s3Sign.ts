@@ -5,7 +5,7 @@
 
 import { createHash, createHmac } from "node:crypto";
 
-const sha256Hex = (data: string) => createHash("sha256").update(data).digest("hex");
+const sha256Hex = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 const hmac = (key: string | Buffer, data: string) => createHmac("sha256", key).update(data).digest();
 
 /** A path as S3 canonicalises it: every byte but the unreserved set
@@ -22,7 +22,8 @@ export function canonicalPath(path: string): string {
 export function signS3Request(opts: {
   method: string;
   url: string;
-  body: string;
+  /** The whole body: text for a playlist, bytes for a rendered clip. */
+  body: string | Uint8Array;
   headers?: Record<string, string>;
   accessKey: string;
   secret: string;

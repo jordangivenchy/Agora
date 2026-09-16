@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import { exportClipVertical } from "@/lib/clipExportClient";
 import { Icon } from "@/components/icons";
 import { sessionUser } from "@/lib/session";
 
@@ -55,6 +56,8 @@ export default function ClipEditor({
   const [err, setErr] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /* The upright cut, for the apps that only take portrait. */
+  const [vertBusy, setVertBusy] = useState(false);
   const stripRef = useRef<HTMLDivElement | null>(null);
   const selRef = useRef({ start: selStart, end: selEnd });
   selRef.current = { start: selStart, end: selEnd };
@@ -194,6 +197,23 @@ export default function ClipEditor({
           <a href={`/clips/${savedId}`} style={{ ...pillBtn("#d9a238", "#2b1a02"), textDecoration: "none" }}>
             View clip →
           </a>
+          <button
+            onClick={async () => {
+              if (!savedId || vertBusy) return;
+              setVertBusy(true);
+              try {
+                await exportClipVertical(savedId, title.trim() || "Clip");
+              } catch {
+                setErr("Couldn't make the file — try again from the clip page.");
+              } finally {
+                setVertBusy(false);
+              }
+            }}
+            disabled={vertBusy}
+            style={{ ...pillBtn("#ffb700", "#1a0e00"), opacity: vertBusy ? 0.7 : 1 }}
+          >
+            {vertBusy ? "Rendering…" : "For TikTok"}
+          </button>
           <button onClick={onClose} aria-label="Close" style={ghostBtn}>✕</button>
         </div>
       </div>

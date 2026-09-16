@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  /* The clip exporter shells out to ffmpeg. Next traces imports, not
+     binaries, so the binary has to be named or the route ships without
+     it and every export answers "no renderer". */
+  outputFileTracingIncludes: {
+    "/api/clips/[id]/export": ["./node_modules/ffmpeg-static/ffmpeg"],
+  },
   /* The phone app's web preview (mobile/, Metro on :8081) calls this
      server's API from another origin. Development only; phones have no
      origin and production answers agorasphere.net itself. */

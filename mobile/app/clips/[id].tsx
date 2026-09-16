@@ -4,7 +4,7 @@
    Post to community; the host's card with the friend button; more
    clips — this discussion's first, then the most watched. */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,7 +12,7 @@ import { useEvent } from "expo";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
-import { SITE } from "../../src/api";
+import { SITE, apiFetch } from "../../src/api";
 import { agoLong, bumpClipView, fetchClip, fetchClips, formatClipDuration, formatViews, type ClipRow, type ClipTileData } from "../../src/clips";
 import { ClipTile } from "../../src/clipTile";
 import { Avatar } from "../../src/avatar";
@@ -30,7 +30,7 @@ export default function ClipPage() {
   const clipId = typeof id === "string" ? id : "";
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { session } = useSession();
+  const { session, pass } = useSession();
   const viewerId = session?.user.id ?? null;
   const { openPost } = useCreate();
   const [clip, setClip] = useState<ClipRow | null | undefined>(undefined);
@@ -83,6 +83,26 @@ export default function ClipPage() {
   const replay = () => { if (range) player.currentTime = range.start; player.play(); };
 
   const share = () => void Share.share({ message: clip?.title || "Clip", url: `${SITE}/clips/${clipId}` }).catch(() => undefined);
+  /* The upright cut, for the apps that only take portrait. The file is
+     rendered once and kept, so this is a wait the first time and a link
+     every time after. Opening it hands the file to Safari, which saves
+     it to Files — TikTok picks it up from there. (Straight to Photos
+     wants expo-media-library, and another native build.) */
+  const [vertBusy, setVertBusy] = useState(false);
+  const forVertical = async () => {
+    if (!clip || vertBusy) return;
+    setVertBusy(true);
+    try {
+      const res = await apiFetch(`/api/clips/${clip.id}/export`, { token: session?.access_token, pass }, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !body.url) throw new Error(body.error || "no file");
+      await Linking.openURL(body.url);
+    } catch {
+      showToast("Couldn't make the file — try again.");
+    } finally {
+      setVertBusy(false);
+    }
+  };
   const toggleFollow = async () => {
     if (!host || followBusy) return;
     if (!viewerId) { router.push("/sign-in"); return; }
@@ -151,6 +171,7 @@ export default function ClipPage() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
             {fullVideo && pill(live ? "Join live" : "Watch full video", live ? "flash-outline" : "play-outline", () => router.push(fullVideo))}
             {pill("Share", "link-outline", share, true)}
+            {pill(vertBusy ? "Rendering…" : "For TikTok", "crop-outline", () => void forVertical())}
             {pill("Post to community", "chatbox-outline", () => openPost({ clip: { id: clip.id, title: clip.title || "Clip", duration: formatClipDuration(clip.duration_seconds) } }))}
           </View>
           {clip.room && host && (
