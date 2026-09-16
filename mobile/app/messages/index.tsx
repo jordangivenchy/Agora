@@ -77,10 +77,14 @@ export default function Messages() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Bare, like Mark all read on the notifications screen: iOS draws
+          the capsule behind a bar button itself (that is what Back sits
+          in), so a button that brings its own reads as a pill inside a
+          pill. */}
       <Stack.Screen options={{ title: "Messages", headerBackTitle: "Back", headerRight: () => (
-        <Pressable onPress={() => setNewGroup(true)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingHorizontal: 11, borderRadius: 999, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38" }}>
-          <Ionicons name="people-outline" size={13} color="#c9c9d2" />
-          <Text style={{ color: "#c9c9d2", fontFamily: fonts.bold, fontSize: 12 }}>New group</Text>
+        <Pressable onPress={() => setNewGroup(true)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <Ionicons name="people-outline" size={15} color={colors.text} />
+          <Text style={{ color: colors.text, fontFamily: fonts.medium, fontSize: 12 }}>New group</Text>
         </Pressable>
       ) }} />
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 }}>
