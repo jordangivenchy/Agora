@@ -16,7 +16,7 @@ import { colors, fonts } from "./theme";
 
 export type Stance = "PRO" | "CON";
 export type Opponent = "anyone" | "disagree";
-/** The story a headline came from, for drafting the question to argue. */
+/** The story a headline came from, for drafting the question to take sides on. */
 export type QueueStory = { headline: string; summary?: string | null; category?: string | null };
 /* A headline reports something; a motion is a claim someone can refuse.
    When a story comes with the offer, the panel asks for the question
@@ -215,7 +215,7 @@ export function QueueDock({ bottom }: { bottom: number }) {
               {p.queueCount > 0 ? `${p.queueCount} waiting to talk${typeof p.proCount === "number" && typeof p.conCount === "number" ? ` · ${p.proCount} for · ${p.conCount} against` : ""} — you'd be matched right away` : "No one waiting yet — you'd be first in line"}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>I'd argue</Text>
+              <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>My side</Text>
               {radio(stance === "PRO", "For", () => setStance("PRO"))}
               {radio(stance === "CON", "Against", () => setStance("CON"))}
             </View>

@@ -300,7 +300,7 @@ export default function PostComposer({
                   <input
                     value={t.question}
                     onChange={(e) => onTopic({ ...t, question: e.target.value.slice(0, 200) })}
-                    placeholder="The question to argue (5–200 characters)"
+                    placeholder="The question to take sides on (5–200 characters)"
                     maxLength={200}
                     aria-label="Conversation question"
                     style={{ ...fieldStyle, flex: "1 1 260px", minWidth: 0 }}

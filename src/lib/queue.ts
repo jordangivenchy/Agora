@@ -18,7 +18,7 @@ export type Stance = "PRO" | "CON";
 /** Who to be matched with: anyone, or only someone on the other side. */
 export type Opponent = "anyone" | "disagree";
 
-/** The story a headline came from, for drafting the question to argue. */
+/** The story a headline came from, for drafting the question to take sides on. */
 export type QueueStory = {
   headline: string;
   summary?: string | null;

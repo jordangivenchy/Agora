@@ -44,7 +44,7 @@ export function QueueMotions({ story }: { story: QueueStory }) {
         <Ionicons name="newspaper-outline" size={13} color={colors.muted} style={{ marginTop: 2 }} />
         <Text style={{ flex: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>{story.headline}</Text>
       </View>
-      <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>What do you want to argue about it?</Text>
+      <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>What do you want to take a side on?</Text>
 
       {motions === null && <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>Reading the story…</Text>}
 
@@ -52,7 +52,7 @@ export function QueueMotions({ story }: { story: QueueStory }) {
         <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 17 }}>
           {failed
             ? "Couldn't read that story — put it in your own words."
-            : "There isn’t a side to take on this one — nobody could argue the other way. Put it in your own words if you disagree."}
+            : "There isn’t a side to take on this one — everyone would say the same. Put it in your own words if you disagree."}
         </Text>
       )}
 

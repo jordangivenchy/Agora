@@ -53,13 +53,13 @@ export default function QueueMotions({ story }: { story: QueueStory }) {
       <p className="qd-story">
         <Icon name="newspaper" size={12} /> {story.headline}
       </p>
-      <p className="qd-motions-head">What do you want to argue about it?</p>
+      <p className="qd-motions-head">What do you want to take a side on?</p>
 
       {motions === null && <p className="qd-stats">Reading the story…</p>}
 
       {motions?.length === 0 && (
         <p className="qd-stats">
-          {error ?? "There isn’t a side to take on this one — nobody could argue the other way. Put it in your own words if you disagree."}
+          {error ?? "There isn’t a side to take on this one — everyone would say the same. Put it in your own words if you disagree."}
         </p>
       )}
 

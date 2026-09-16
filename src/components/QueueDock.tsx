@@ -2,7 +2,7 @@
 
 /* The queue panel: a pop-out at the bottom right (above the tab bar on
    phones) that any "Queue" button opens with its question — the field,
-   the question, who is waiting, a side to argue, and Join. Once in the
+   the question, who is waiting, a side to take, and Join. Once in the
    queue it folds to a pill that travels with the person wherever they
    browse, polling for a match the whole time, and expands to show what
    they are waiting on with Leave beside each. A match opens the room.
@@ -92,7 +92,7 @@ export default function QueueDock() {
               : "No one waiting yet — you’d be first in line"}
           </p>
           <div className="qd-stance" role="radiogroup" aria-label="Your side">
-            <span>I&rsquo;d argue</span>
+            <span>My side</span>
             <button type="button" role="radio" aria-checked={stance === "PRO"} className={stance === "PRO" ? "is-on" : undefined} onClick={() => setStance("PRO")}>For</button>
             <button type="button" role="radio" aria-checked={stance === "CON"} className={stance === "CON" ? "is-on" : undefined} onClick={() => setStance("CON")}>Against</button>
           </div>

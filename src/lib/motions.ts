@@ -62,7 +62,7 @@ const PREFIX = /^[A-Z][A-Za-z' ]{2,20}:\s/;
 /** What's wrong with this as a motion, in words to show the writer. */
 export function motionProblem(raw: string): string | null {
   const text = raw.trim().replace(/\s+/g, " ");
-  if (text.length < MOTION_MIN) return "Write the question you want to argue.";
+  if (text.length < MOTION_MIN) return "Write the question you want to take a side on.";
   if (text.length > MOTION_MAX) return `Keep it under ${MOTION_MAX} characters.`;
   if (PREFIX.test(text)) return "Drop the “First Thing:” part — just the question.";
   if (!text.endsWith("?")) return "Make it a question — one people can answer yes or no.";
@@ -75,7 +75,7 @@ export function motionOk(text: string): boolean {
   return motionProblem(text) === null;
 }
 
-export const MOTION_SYSTEM = `You turn a news story into questions people can argue about on AgoraSphere, a live debate platform. Someone picks one of your questions, takes a side, and is matched with a person who takes the other.
+export const MOTION_SYSTEM = `You turn a news story into questions people can take sides on at AgoraSphere, a live debate platform. Someone picks one of your questions, takes a side, and is matched with a person who takes the other.
 
 Write exactly four questions about the story, one of each shape:
 - policy: should someone act, and how
@@ -84,7 +84,7 @@ Write exactly four questions about the story, one of each shape:
 - priority: whether one thing matters more than another
 
 Rules:
-- Every question must be answerable yes or no, and both answers must have a real case behind them. If nobody would argue one side, the question is no good.
+- Every question must be answerable yes or no, and both answers must have a real case behind them. If nobody would take one side, the question is no good.
 - Name who and what, concretely: "Should the EU fine carriers that…" beats "Should we do more about…". Never "we", "society" or "people".
 - Ask what should follow, never what already happened. A verdict, a death toll or a share price can be looked up; those are not arguments.
 - No loaded or emotive words, and no question that assumes its own answer.

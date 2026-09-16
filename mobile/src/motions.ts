@@ -36,7 +36,7 @@ const PREFIX = /^[A-Z][A-Za-z' ]{2,20}:\s/;
 /** What's wrong with this as a motion, in words to show the writer. */
 export function motionProblem(raw: string): string | null {
   const text = raw.trim().replace(/\s+/g, " ");
-  if (text.length < MOTION_MIN) return "Write the question you want to argue.";
+  if (text.length < MOTION_MIN) return "Write the question you want to take a side on.";
   if (text.length > MOTION_MAX) return `Keep it under ${MOTION_MAX} characters.`;
   if (PREFIX.test(text)) return "Drop the “First Thing:” part — just the question.";
   if (!text.endsWith("?")) return "Make it a question — one people can answer yes or no.";
