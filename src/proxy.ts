@@ -2,29 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { BETA_COOKIE, verifyPass } from "@/lib/betaGate";
 
-/* The beta is closed to taking part, not to looking. Anything shared —
-   a past discussion, a thread, a clip, someone's profile — opens for
-   anyone who follows the link, so a link is a page and not a locked
-   door; the pass is what it takes to speak, post, host or hold an
-   account. Reading only: a GET, and the database's own rules (RLS) still
-   decide what a signed-out reader may see. */
-const PUBLIC_READ = [
-  "/", // the shop window: what's live, the day's topics, the news
-  "/agora", // a discussion, live or past — the thing people share
-  "/rooms", // its older spelling
-  "/replays",
-  "/clips",
-  "/posts",
-  "/communities",
-  "/users", // and /@name, which rewrites to it below
-  "/news",
-  "/explore",
-  "/trending",
-  "/api/news", // what those pages read
-  "/api/recordings",
-  "/robots.txt", // a crawler can't hold a pass, and asks for these first
-  "/sitemap.xml",
-];
+/* Everything asks for the pass while the beta is closed — reading
+   included. Opening a door for readers is src/lib/readingGate.ts away:
+   it holds the list of what would open and the check that uses it, and
+   the archive, sitemap and robots.txt it was written for are already
+   here, waiting for the day that's wanted. */
 
 /* Paths that must work without a beta pass: the gate itself, and endpoints
    hit by machines that carry their own auth (Apify webhook, Vercel cron)
@@ -51,13 +33,7 @@ export async function proxy(request: NextRequest) {
   if (betaCode && request.method !== "OPTIONS") {
     const { pathname } = request.nextUrl;
     const sp = request.nextUrl.searchParams;
-    const reading =
-      request.method === "GET" &&
-      (PUBLIC_READ.includes(pathname) ||
-        PUBLIC_READ.some((p) => p !== "/" && pathname.startsWith(p + "/")) ||
-        pathname.startsWith("/@"));
     const exempt =
-      reading ||
       BETA_EXEMPT.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
       /* LiveKit egress compositor filming a room for restream — it carries
          its own room token in the URL and can't hold a beta cookie. */
