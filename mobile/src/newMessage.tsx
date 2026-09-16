@@ -10,8 +10,8 @@
    database says so, not the app), so friends come first. Anyone else
    found by searching is shown honestly: you can open their profile and
    follow them, and message them once they follow back. */
-import { useEffect, useMemo, useState } from "react";
-import { FlatList, InteractionManager, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, FlatList, InteractionManager, Modal, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
@@ -38,10 +38,18 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  /* It falls from under the top bar, where the + is: a panel that rose
+     from the far edge of the screen had nothing to do with the button
+     that opened it. */
+  const drop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!open) { drop.setValue(0); return; }
+    Animated.timing(drop, { toValue: 1, duration: 190, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [open, drop]);
   /* One height, whatever the search turns up. Sizing to the rows meant
-     the sheet closed down on itself as you typed and the list got
-     shorter — the rows moved while you were reading them. */
-  const sheetH = Math.min(Math.round(height * 0.62), 520);
+     the panel closed up on itself as you typed and the list got shorter
+     — the row you were reaching for moved while you reached. */
+  const panelH = Math.min(Math.round(height * 0.62), 520);
   const [q, setQ] = useState("");
   const [friends, setFriends] = useState<GroupMember[] | null>(null);
   const [others, setOthers] = useState<Friend[]>([]);
@@ -105,10 +113,16 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
   );
 
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} accessibilityLabel="Close" />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={{ height: sheetH, backgroundColor: "#000", borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderBottomWidth: 0, borderColor: "#2e2e38", paddingHorizontal: 20, paddingTop: 18, paddingBottom: insets.bottom + 12 }}>
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)" }} accessibilityLabel="Close" />
+      <Animated.View
+        style={{
+          position: "absolute", left: 10, right: 10, top: insets.top + 6, height: panelH,
+          opacity: drop,
+          transform: [{ translateY: drop.interpolate({ inputRange: [0, 1], outputRange: [-26, 0] }) }],
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: "#000", borderRadius: 18, borderWidth: 1, borderColor: "#2e2e38", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, overflow: "hidden" }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 18 }}>New message</Text>
             <Pressable onPress={onClose} hitSlop={8} style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38" }}>
@@ -163,7 +177,7 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
             />
           )}
         </View>
-      </KeyboardAvoidingView>
+      </Animated.View>
     </Modal>
   );
 }
