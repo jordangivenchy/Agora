@@ -194,13 +194,23 @@ const dmListeners = new Set<(n: number) => void>();
 let dmWatching: string | null = null;
 let dmChannel: ReturnType<typeof dmClient.channel> | null = null;
 
+let dmTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* A burst of rows — a conversation being marked read is one row per
+   message — should cost one pair of queries, not one per row. */
 async function refreshDmUnread() {
-  const [threads, groups] = await Promise.all([
-    fetchThreads(dmClient).catch(() => [] as Thread[]),
-    fetchGroups(dmClient).catch(() => [] as GroupRow[]),
-  ]);
-  dmUnread = threads.filter((t) => t.unread > 0).length + groups.filter((g) => g.unread > 0).length;
-  dmListeners.forEach((l) => l(dmUnread));
+  if (dmTimer) clearTimeout(dmTimer);
+  dmTimer = setTimeout(async () => {
+    dmTimer = null;
+    const [threads, groups] = await Promise.all([
+      fetchThreads(dmClient).catch(() => [] as Thread[]),
+      fetchGroups(dmClient).catch(() => [] as GroupRow[]),
+    ]);
+    const next = threads.filter((t) => t.unread > 0).length + groups.filter((g) => g.unread > 0).length;
+    if (next === dmUnread) return; // nothing to re-render for
+    dmUnread = next;
+    dmListeners.forEach((l) => l(dmUnread));
+  }, 250);
 }
 
 /** Follow my conversations while signed in; nil clears and unsubscribes. */

@@ -1,7 +1,7 @@
 /* Start a group chat: a name and at least one friend (people who follow
    each other, as for DMs). The site's NewGroupModal as a sheet. */
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, InteractionManager, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
@@ -21,7 +21,9 @@ export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { op
   useEffect(() => {
     if (!open) return;
     setName(""); setQ(""); setError(null); setBusy(false); setPicked(new Set(initialMembers ?? [])); setFriends(null);
-    void fetchGroupCandidates(supabase).then(setFriends);
+    /* After the slide, as the new-message sheet does. */
+    const task = InteractionManager.runAfterInteractions(() => { void fetchGroupCandidates(supabase).then(setFriends); });
+    return () => task.cancel();
   }, [open, initialMembers]);
   const needle = q.trim().toLowerCase();
   const shown = useMemo(() => (friends ?? []).filter((f) => !needle || f.username.toLowerCase().includes(needle) || (f.display_name ?? "").toLowerCase().includes(needle)), [friends, needle]);

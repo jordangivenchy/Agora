@@ -21,7 +21,11 @@ export default function TabsLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Tabs
-        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}
+        /* A tab you've left stops rendering until you come back to it.
+           Every tab stays mounted, so without this a realtime row — a
+           message arriving, a room going live — re-renders all six, and
+           it lands in the middle of whatever transition is running. */
+        screenOptions={{ headerShown: false, freezeOnBlur: true, sceneStyle: { backgroundColor: colors.bg } }}
         tabBar={(props) => <AppTabBar state={props.state} navigation={props.navigation} onCreate={openMenu} />}
       >
         <Tabs.Screen name="index" />

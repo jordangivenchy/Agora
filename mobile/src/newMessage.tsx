@@ -11,7 +11,7 @@
    found by searching is shown honestly: you can open their profile and
    follow them, and message them once they follow back. */
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, InteractionManager, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
@@ -47,7 +47,13 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
     setQ("");
     setOthers([]);
     setFriends(null);
-    void fetchGroupCandidates(supabase).then(setFriends, () => setFriends([]));
+    /* After the sheet has finished sliding, not during it: the answer
+       lands as a render, and a render in the middle of an animation is
+       the stutter you see. */
+    const task = InteractionManager.runAfterInteractions(() => {
+      void fetchGroupCandidates(supabase).then(setFriends, () => setFriends([]));
+    });
+    return () => task.cancel();
   }, [open]);
 
   const needle = q.trim().toLowerCase();
