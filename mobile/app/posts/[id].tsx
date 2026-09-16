@@ -3,8 +3,8 @@
    (reply, share, the ⋯ sheet; press and hold opens it too), replies
    hanging off a rail — and the dock to take the floor. A link to one
    comment (#comment-id) opens the way to it and lights it. */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { Img } from "../../src/img";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,9 +45,10 @@ export default function ThreadScreen() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
-  const nodes = useRef(new Map<string, View>());
+  const listRef = useRef<FlatList<{ c: CommentRow; depth: number }>>(null);
+  /* The rows as they are now, for the jump to a linked comment: that
+     effect runs on the comments changing, not on the rows. */
+  const rowsRef = useRef<{ c: CommentRow; depth: number }[]>([]);
   const focused = useRef<string | null>(null);
 
   const opened = useScreenOpened();
@@ -77,6 +78,23 @@ export default function ThreadScreen() {
 
   const tree = useMemo(() => buildTree(comments, sort), [comments, sort]);
 
+  /* The tree, flattened into the rows actually on screen — a collapsed
+     comment's replies simply aren't there. The list mounts a screenful
+     at a time; nesting them meant every comment in the thread was drawn
+     before the thread appeared, and a long one cost that on the way in
+     and again on every vote. Depth rides along so the rails can be
+     redrawn per row. */
+  const rows = useMemo(() => {
+    const out: { c: CommentRow; depth: number }[] = [];
+    const walk = (c: CommentRow, depth: number) => {
+      out.push({ c, depth });
+      if (collapsed.has(c.id)) return;
+      for (const kid of tree.children.get(c.id) ?? []) walk(kid, depth + 1);
+    };
+    for (const root of tree.roots) walk(root, 0);
+    return out;
+  }, [tree, collapsed]);
+
   /* A link to one comment: open the replies above it, bring it into
      view, light it for a moment (the site's is-flash). */
   useEffect(() => {
@@ -91,9 +109,8 @@ export default function ThreadScreen() {
       return next;
     });
     setTimeout(() => {
-      const node = nodes.current.get(focusId);
-      const content = contentRef.current;
-      if (node && content) node.measureLayout(content, (_x, y) => scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true }), () => undefined);
+      const at = rowsRef.current.findIndex((r) => r.c.id === focusId);
+      if (at >= 0) listRef.current?.scrollToIndex({ index: at, viewPosition: 0.25, animated: true });
       setFlash(focusId);
       setTimeout(() => setFlash((f) => (f === focusId ? null : f)), 1800);
     }, 300);
@@ -129,13 +146,28 @@ export default function ThreadScreen() {
     });
   };
 
-  const renderNode = (c: CommentRow, depth: number): ReactNode => {
-    const kids = tree.children.get(c.id) ?? [];
+  /* A reply used to sit inside its parent's view, which drew the rail
+     down the side of the whole subtree. Flat rows draw their own: one
+     line per level of nesting, and the row's padding sits inside them,
+     so the lines still run unbroken from one row to the next. */
+  const railed = (depth: number, inner: ReactElement): ReactElement => {
+    let node = inner;
+    for (let level = Math.min(depth, 2); level > 0; level--) {
+      node = (
+        <View key={`rail-${level}`} style={{ marginLeft: 12, paddingLeft: 14, borderLeftWidth: 1.5, borderColor: "#2b2b34" }}>
+          {node}
+        </View>
+      );
+    }
+    return node;
+  };
+
+  const renderNode = (c: CommentRow, depth: number): ReactElement => {
     const isCollapsed = collapsed.has(c.id);
     const hidden = tree.subtreeSize(c.id);
     const isAuthor = !!post && !!c.author_id && c.author_id === post.author_id;
     return (
-      <View key={c.id} collapsable={false} ref={(el) => { if (el) nodes.current.set(c.id, el); else nodes.current.delete(c.id); }}>
+      <View style={{ paddingTop: 10 }}>
         <Pressable
           onPress={() => toggle(c.id)}
           onLongPress={() => { void Haptics.selectionAsync().catch(() => undefined); commentMenu(c, isCollapsed); }}
@@ -185,47 +217,61 @@ export default function ThreadScreen() {
             </>
           )}
         </Pressable>
-        {!isCollapsed && kids.length > 0 && (
-          <View style={depth < 2 ? { marginLeft: 12, paddingLeft: 14, marginTop: 10, gap: 10, borderLeftWidth: 1.5, borderColor: "#2b2b34" } : { marginTop: 10, gap: 10 }}>
-            {kids.map((k) => renderNode(k, depth + 1))}
-          </View>
-        )}
       </View>
     );
   };
+
+  rowsRef.current = rows;
 
   const n = comments.length;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack.Screen options={{ title: post?.community_name ?? "Thread" }} />
-      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 100 + insets.bottom }}>
-        <View ref={contentRef} collapsable={false}>
-        {post && (
-          <PostCard
-            post={post}
-            full
-            showCommunity
-            communityArt={{ name: post.community_name, color: art?.color, avatarUrl: art?.avatar_url ?? null }}
-            onVote={votePostHere}
-            onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: post.community_id } })}
-            onChanged={(patch) => setPost((cur) => (cur ? { ...cur, ...patch } : cur))}
-            onRemoved={() => router.back()}
-          />
-        )}
-        {error && <Note tone="error">{error}</Note>}
-        {n > 0 && (
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-            <Text style={{ color: META, fontFamily: fonts.semi, fontSize: 12 }}>{n} comment{n === 1 ? "" : "s"}</Text>
-            <View style={{ flex: 1 }} />
-            <SortChips quiet value={sort} options={SORTS} onChange={setSort} />
+      <FlatList
+        ref={listRef}
+        data={rows}
+        extraData={`${flash ?? ""}|${copied ?? ""}|${collapsed.size}`}
+        keyExtractor={(row) => row.c.id}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 + insets.bottom }}
+        keyboardShouldPersistTaps="handled"
+        /* A screenful to begin with, and a few screens kept around it. */
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        onScrollToIndexFailed={({ index }) => {
+          /* Off the rendered window: nudge towards it and try once more. */
+          listRef.current?.scrollToOffset({ offset: index * 120, animated: false });
+          setTimeout(() => listRef.current?.scrollToIndex({ index, viewPosition: 0.25, animated: true }), 120);
+        }}
+        ListHeaderComponent={
+          <View>
+            {post && (
+              <PostCard
+                post={post}
+                full
+                showCommunity
+                communityArt={{ name: post.community_name, color: art?.color, avatarUrl: art?.avatar_url ?? null }}
+                onVote={votePostHere}
+                onOpenCommunity={() => router.push({ pathname: "/c/[id]", params: { id: post.community_id } })}
+                onChanged={(patch) => setPost((cur) => (cur ? { ...cur, ...patch } : cur))}
+                onRemoved={() => router.back()}
+              />
+            )}
+            {error && <Note tone="error">{error}</Note>}
+            {n > 0 && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                <Text style={{ color: META, fontFamily: fonts.semi, fontSize: 12 }}>{n} comment{n === 1 ? "" : "s"}</Text>
+                <View style={{ flex: 1 }} />
+                <SortChips quiet value={sort} options={SORTS} onChange={setSort} />
+              </View>
+            )}
+            {!loading && n === 0 && (
+              <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 24 }}>No comments yet — start the discussion.</Text>
+            )}
           </View>
-        )}
-        {!loading && n === 0 && (
-          <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 24 }}>No comments yet — start the discussion.</Text>
-        )}
-        <View style={{ gap: 14 }}>{tree.roots.map((r) => renderNode(r, 0))}</View>
-        </View>
-      </ScrollView>
+        }
+        renderItem={({ item }) => railed(item.depth, renderNode(item.c, item.depth))}
+      />
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10 + insets.bottom, backgroundColor: "#0a0a0d", borderTopWidth: 1, borderColor: "#1b1b21" }}>
         <Pressable onPress={() => openReply(null)} style={({ pressed }) => ({ height: 44, borderRadius: 22, backgroundColor: pressed ? "#1f1f26" : "#17171c", borderWidth: 1, borderColor: "#26262e", flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: 9, paddingRight: 16 })}>
           <Avatar url={me?.avatar_url} name={me?.display_name || me?.username || "?"} size={26} />
