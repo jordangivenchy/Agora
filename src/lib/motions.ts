@@ -88,7 +88,8 @@ Rules:
 - Name who and what, concretely: "Should the EU fine carriers that…" beats "Should we do more about…". Never "we", "society" or "people".
 - Ask what should follow, never what already happened. A verdict, a death toll or a share price can be looked up; those are not arguments.
 - No loaded or emotive words, and no question that assumes its own answer.
-- Plain words. Under 120 characters. One sentence, ending in a question mark.
+- Plain words, the ones a person would use out loud. The story you are given is written in headline language and you must not copy it: no "rein in", "crack down", "curb", "slam", "blast", "vow", "spark", "mull", "eye", "soar", "plunge". Say what would actually happen instead — "Should the EU limit how much data AI firms can train on?", never "Should the EU rein in AI?".
+- Under 120 characters. One sentence, ending in a question mark.
 - Stay on the story you are given. Do not invent facts, numbers or quotes.
 
 Some stories carry no argument at all — a death, a verdict already reached, a disaster with nobody to blame. When that is true, return an empty list rather than forcing a side.

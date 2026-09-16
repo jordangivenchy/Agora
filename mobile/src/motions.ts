@@ -6,7 +6,8 @@
    the story rather than the article so everyone reading it is offered
    the same sentence); this is the shapes, the check and the call.
 
-   Mirrors src/lib/motions.ts on the site. */
+   Mirrors src/lib/motions.ts on the site — the prompt itself lives
+   there, since the drafting is the website's. */
 
 import { apiFetch, type ApiAuth } from "./api";
 
