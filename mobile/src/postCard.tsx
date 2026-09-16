@@ -70,7 +70,7 @@ export function ClipChip({ clipId, small }: { clipId: string | null; small?: boo
 
 export function VoteBox({ score, myVote, onVote, size = 13 }: { score: number; myVote: number; onVote: (v: number) => void; size?: number }) {
   return (
-    <View style={{ width: 34, alignItems: "center", alignSelf: "center" }}>
+    <View style={{ width: 34, alignItems: "center" }}>
       <Pressable onPress={() => onVote(myVote === 1 ? 0 : 1)} hitSlop={6} accessibilityLabel="Upvote">
         <Ionicons name="chevron-up" size={size + 7} color={myVote === 1 ? colors.gold : "rgba(238,238,245,0.32)"} />
       </Pressable>
@@ -107,13 +107,19 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
   const origBody = stripClipLink(p.orig_body);
   return (
     <Pressable onPress={onOpen} onLongPress={() => { void Haptics.selectionAsync().catch(() => undefined); menu(); }} delayLongPress={350} style={({ pressed }) => [CARD, { padding: 14, marginBottom: 12, opacity: pressed && onOpen ? 0.92 : 1 }]}>
-      <View style={{ flexDirection: "row", gap: 12 }}>
-        <VoteBox score={p.score} myVote={p.my_vote} onVote={onVote} />
-        {communityArt && (
-          <Pressable onPress={onOpenCommunity} disabled={!onOpenCommunity} style={{ marginTop: 2 }}>
-            <CommunityTile name={communityArt.name} color={communityArt.color} avatarUrl={communityArt.avatarUrl} />
-          </Pressable>
-        )}
+      {/* One rail, not two: the picture with the score under it. The
+          votes used to have a gutter of their own beside the tile, which
+          cost a phone forty points of width and left the score floating
+          in the middle of a long post. */}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ alignItems: "center", gap: 4 }}>
+          {communityArt && (
+            <Pressable onPress={onOpenCommunity} disabled={!onOpenCommunity} style={{ marginTop: 2 }}>
+              <CommunityTile name={communityArt.name} color={communityArt.color} avatarUrl={communityArt.avatarUrl} />
+            </Pressable>
+          )}
+          <VoteBox score={p.score} myVote={p.my_vote} onVote={onVote} />
+        </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
