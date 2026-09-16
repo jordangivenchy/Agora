@@ -1906,6 +1906,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   tiles={layoutTiles}
                   speaking={call.speakingIds}
                   pinnedKey={layoutPin}
+                  gap={broadcast ? 0 : undefined}
                   onKeepInView={setLayoutPin}
                   onPin={(key) => {
                     /* Duels stay in the two-pane gallery — EXCEPT a

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAPTION_CHARS, assCaptions, captionChunks, tileRects, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
+import { CAPTION_CHARS, assCaptions, captionChunks, parseFrameSize, tileRects, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
 
 describe("finding the picture in the frame", () => {
   it("takes the box ffmpeg settled on, not the first guess", () => {
@@ -8,6 +8,11 @@ describe("finding the picture in the frame", () => {
   });
   it("says nothing when ffmpeg found nothing", () => {
     expect(parseCropdetect("no crop here")).toBeNull();
+  });
+  it("falls back to the whole frame, for a room held with the cameras off", () => {
+    const line = "  Stream #0:0: Video: h264 (High), yuv420p(tv, bt709), 1280x720 [SAR 1:1 DAR 16:9], 30 fps";
+    expect(parseFrameSize(line)).toEqual({ x: 0, y: 0, w: 1280, h: 720 });
+    expect(parseFrameSize("no stream line")).toBeNull();
   });
   it("stacks a row of two, fits a single card", () => {
     expect(layoutFor({ x: 78, y: 165, w: 1123, h: 315 })).toBe("stack"); // the real one

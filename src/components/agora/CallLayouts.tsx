@@ -209,9 +209,13 @@ export function CallGallery({
   pinnedKey = null,
   onPin,
   onKeepInView,
+  gap = GAP,
 }: {
   tiles: LayoutTile[];
   speaking: ReadonlySet<string>;
+  /** Space between windows. Nil while filming: the recording is cut up
+      into vertical clips, and a gap becomes a black line across them. */
+  gap?: number;
   /** The viewer's pin: always in view. */
   pinnedKey?: string | null;
   /** A window's pin control — the page answers by switching to multi, featured. */
@@ -238,7 +242,7 @@ export function CallGallery({
   if (menuOpen && !hidden.length) setMenuOpen(false);
 
   const kinds = [...shown.map((t) => t.source), ...(hidden.length ? (["camera"] as const) : [])];
-  const plan = planGrid(kinds, box.w, box.h, GAP, RATIO);
+  const plan = planGrid(kinds, box.w, box.h, gap, RATIO);
   const moreCell = hidden.length ? plan.cells.find((c) => c.index === shown.length) ?? null : null;
 
   return (

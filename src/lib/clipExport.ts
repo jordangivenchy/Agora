@@ -64,6 +64,18 @@ export function parseCropdetect(stderr: string): Box | null {
   return w > 0 && h > 0 ? { x, y, w, h } : null;
 }
 
+/** The frame's own size, from the line ffmpeg prints about the stream.
+    The fallback when nothing is found to crop: a discussion held with
+    every camera off is very nearly black, and there is no box in it —
+    but there is still a clip to make. */
+export function parseFrameSize(stderr: string): Box | null {
+  const m = stderr.match(/Stream #\d+:\d+.*Video:.*?[,\s](\d{2,5})x(\d{2,5})[,\s]/);
+  if (!m) return null;
+  const w = Number(m[1]);
+  const h = Number(m[2]);
+  return w > 0 && h > 0 ? { x: 0, y: 0, w, h } : null;
+}
+
 /** Two people beside each other, or one picture to fit. A box wider than
     ~2.2:1 can only be a row of cards; a single card is about 16:9. */
 export function layoutFor(box: Box): ClipLayout {

@@ -19,7 +19,7 @@ import ffmpegPath from "ffmpeg-static";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { putObject, readHlsEnv } from "@/lib/recordingEgress";
-import { assCaptions, cropdetectArgs, exportArgs, exportKey, layoutFor, parseCropdetect, type Box } from "@/lib/clipExport";
+import { assCaptions, cropdetectArgs, exportArgs, exportKey, layoutFor, parseCropdetect, parseFrameSize, type Box } from "@/lib/clipExport";
 
 const run = promisify(execFile);
 
@@ -74,12 +74,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
        writes its findings to stderr and exits non-zero on the null
        muxer, so both paths are read the same way. */
     let box: Box | null = null;
+    let probed = "";
     try {
-      const probe = await run(ffmpegPath, cropdetectArgs(src, start + Math.min(2, (end - start) / 2)), { maxBuffer: 1 << 24 });
-      box = parseCropdetect(probe.stderr);
+      probed = (await run(ffmpegPath, cropdetectArgs(src, start + Math.min(2, (end - start) / 2)), { maxBuffer: 1 << 24 })).stderr;
     } catch (e) {
-      box = parseCropdetect(String((e as { stderr?: string }).stderr ?? ""));
+      probed = String((e as { stderr?: string }).stderr ?? "");
     }
+    /* A room where nobody turned a camera on is nearly black, and there
+       is nothing for cropdetect to find: take the whole frame. */
+    box = parseCropdetect(probed) ?? parseFrameSize(probed);
     if (!box) return NextResponse.json({ error: "Couldn't read that recording." }, { status: 502 });
 
     /* The words over this stretch, if the discussion has any. Offsets

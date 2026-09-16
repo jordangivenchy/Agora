@@ -3541,6 +3541,20 @@
 .ag-root--recording .ag-cast-duo { perspective: none; }
 .ag-root--recording .ag-cast-pane { --pane-rot: 0deg; }
 
+/* Nothing drawn around a panel. In the room a tile is a card — a rim,
+   a rounded corner, a drop shadow — which is right on a page you look
+   at. The recording isn't looked at: it is filmed, cut up and stacked,
+   and then two rims meet in the middle of a vertical clip and read as a
+   seam across someone's waist. Filmed, the panels are just picture, and
+   they touch. */
+.ag-root--recording .ag-lt,
+.ag-root--recording .ag-lt--speaking {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ag-root--recording .ag-lt::after { display: none; }
+
 /* Phones: no backdrop blur anywhere in the room — every blurred layer
    over live video is another GPU surface Safari has to keep, and the
    house style is solid surfaces anyway. */
