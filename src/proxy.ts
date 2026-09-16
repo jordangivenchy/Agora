@@ -22,6 +22,8 @@ const PUBLIC_READ = [
   "/trending",
   "/api/news", // what those pages read
   "/api/recordings",
+  "/robots.txt", // a crawler can't hold a pass, and asks for these first
+  "/sitemap.xml",
 ];
 
 /* Paths that must work without a beta pass: the gate itself, and endpoints

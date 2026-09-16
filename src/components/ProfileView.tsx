@@ -22,7 +22,8 @@ import { fetchDebates, fetchProfile, type DebateRow, type Profile, type ProfileI
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { fmtDay, roomDuration, useRoomTimes } from "@/lib/duration";
+import { fmtDay, roomDuration } from "@/lib/duration";
+import { useRoomTimes } from "@/lib/useRoomTimes";
 import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import { Icon, type IconName } from "@/components/icons";
 import FollowListModal from "@/components/FollowListModal";

@@ -3342,3 +3342,88 @@ html.reduce-motion .nav-sparkle {
 .dm-list {
   mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), rgba(0,0,0,0.94) calc(100% - 26px), rgba(0,0,0,0.78) calc(100% - 20px), rgba(0,0,0,0.5) calc(100% - 14px), rgba(0,0,0,0.22) calc(100% - 8px), rgba(0,0,0,0.06) calc(100% - 3px), transparent 100%);
 }
+
+/* ═══ /replays — the archive, as a page someone can land on ═══
+   Server-rendered and public: solid surfaces, hairline edges, and links
+   that read as links, since a stranger arriving from a shared clip has
+   no idea what any of this is yet. Two columns on a phone, as the rest
+   of the phone layout does. */
+/* Beside the rail, like every other page under the chrome (the rail is
+   fixed and exists at every width). */
+.rp-index {
+  max-width: 1400px;
+  margin-inline: calc(var(--sidebar-width, 220px) + 12px) 24px;
+  padding: 22px 0 64px;
+}
+.rp-index-head h1 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.rp-index-head p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: #9a9aa6; max-width: 62ch; }
+
+.rp-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 20px; }
+.rp-field {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 999px;
+  background: #0e0e11; border: 1px solid #26262e;
+  color: #c9c9d4; font-size: 12.5px; text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.rp-field:hover { border-color: #3a3a44; color: var(--text-primary); }
+.rp-field.on { background: #15151b; color: var(--text-primary); border-color: #ffb700; }
+.rp-field-dot { width: 6px; height: 6px; border-radius: 3px; }
+
+.rp-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: 18px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.rp-card-link { display: block; text-decoration: none; color: inherit; }
+.rp-thumb {
+  position: relative; display: block; aspect-ratio: 16 / 9;
+  border-radius: 10px; overflow: hidden;
+  background: #101014; border: 1px solid #26262e;
+}
+.rp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rp-thumb-empty { position: absolute; inset: 0; background: linear-gradient(140deg, #14141a, #0d0d11); }
+.rp-length {
+  position: absolute; right: 6px; bottom: 6px;
+  padding: 2px 6px; border-radius: 5px;
+  background: #000; color: #f2f2f5; font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.rp-card-link:hover .rp-thumb { border-color: #3a3a44; }
+.rp-motion {
+  display: block; margin-top: 9px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; line-height: 1.32;
+  color: var(--text-primary);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.rp-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 5px; font-size: 11.5px; color: #8b8b94; }
+.rp-host { color: #c9c9d4; }
+
+.rp-empty { margin: 26px 0; font-size: 13.5px; color: #9a9aa6; }
+.rp-empty a { color: #ffb700; }
+
+.rp-pages { display: flex; align-items: center; gap: 16px; margin-top: 30px; font-size: 13px; color: #8b8b94; }
+.rp-pages a { color: #ffb700; text-decoration: none; }
+.rp-pages a:hover { text-decoration: underline; }
+
+@media (max-width: 639px) {
+  /* Clear of the tab bar, which floats over the bottom of the page. */
+  .rp-index { margin-inline: 0; padding: 16px 14px calc(96px + env(safe-area-inset-bottom)); }
+  .rp-index-head h1 { font-size: 21px; }
+  .rp-index-head p { font-size: 12.5px; }
+  .rp-grid { grid-template-columns: 1fr 1fr; gap: 14px 10px; }
+  .rp-motion { font-size: 12.5px; margin-top: 7px; }
+  .rp-meta { font-size: 10.5px; gap: 3px 8px; }
+}
+
+/* No still from the room: the host's own picture fills the tile instead,
+   dimmed a little so the duration and the title stay legible over it. A
+   wall of empty rectangles tells a newcomer nothing. */
+.rp-thumb-face { position: absolute; inset: 0; background: linear-gradient(140deg, #14141a, #0d0d11); }
+.rp-thumb-face img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }

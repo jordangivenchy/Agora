@@ -2,7 +2,7 @@
    the pass. Mirrors the lists in src/proxy.ts. */
 import { describe, expect, it } from "vitest";
 
-const PUBLIC_READ = ["/", "/agora", "/rooms", "/replays", "/clips", "/posts", "/communities", "/users", "/news", "/explore", "/trending", "/api/news", "/api/recordings"];
+const PUBLIC_READ = ["/", "/agora", "/rooms", "/replays", "/clips", "/posts", "/communities", "/users", "/news", "/explore", "/trending", "/api/news", "/api/recordings", "/robots.txt", "/sitemap.xml"];
 
 function reading(method: string, pathname: string): boolean {
   return (
@@ -29,6 +29,10 @@ describe("a stranger following a link", () => {
       expect(reading(m, "/agora/abc"), m).toBe(false);
       expect(reading(m, "/api/news"), m).toBe(false);
     }
+  });
+  it("lets a crawler read the files it asks for first", () => {
+    expect(reading("GET", "/robots.txt")).toBe(true);
+    expect(reading("GET", "/sitemap.xml")).toBe(true);
   });
   it("doesn't let a prefix match a different word", () => {
     expect(reading("GET", "/newsletter-admin")).toBe(false);

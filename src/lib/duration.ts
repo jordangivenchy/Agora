@@ -1,9 +1,8 @@
 /* How long a discussion ran, and the day it happened — for the lists
-   of past discussions (feed, profile, trending, the "more" strip) and
-   the page itself. */
-
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase-browser";
+   of past discussions (feed, profile, trending, the "more" strip), the
+   page itself, and the archive at /replays. Pure on purpose: the
+   archive renders on the server, so nothing here may reach for React or
+   the browser's Supabase client (useRoomTimes.ts holds the hook). */
 
 /** "3 min", "1 h 12 min", "45 s". */
 export function fmtDuration(ms: number): string {
@@ -33,27 +32,3 @@ export function fmtDay(iso: string | null | undefined): string {
 }
 
 export type RoomTimes = { started_at: string | null; ended_at: string | null };
-
-/* The start and end stamps of some rooms, for lists whose rows don't
-   carry them. Fetched once per set of ids. */
-export function useRoomTimes(ids: string[]): Record<string, RoomTimes> {
-  const [times, setTimes] = useState<Record<string, RoomTimes>>({});
-  const key = ids.slice().sort().join(",");
-  useEffect(() => {
-    if (!key) return;
-    let alive = true;
-    const want = key.split(",");
-    createClient()
-      .from("debate_rooms")
-      .select("id, started_at, ended_at")
-      .in("id", want)
-      .then(({ data }) => {
-        if (!alive || !data) return;
-        const next: Record<string, RoomTimes> = {};
-        for (const r of data as ({ id: string } & RoomTimes)[]) next[r.id] = { started_at: r.started_at, ended_at: r.ended_at };
-        setTimes((prev) => ({ ...prev, ...next }));
-      });
-    return () => { alive = false; };
-  }, [key]);
-  return times;
-}
