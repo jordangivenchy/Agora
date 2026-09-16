@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assCaptions, captionChunks, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, parseCropdetect, titleLines, videoFilter } from "./clipExport";
+import { assCaptions, captionChunks, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
 
 describe("finding the picture in the frame", () => {
   it("takes the box ffmpeg settled on, not the first guess", () => {
@@ -40,7 +40,21 @@ describe("the words, burned on", () => {
   it("counts time from the clip's start, not the recording's", () => {
     const ass = assCaptions(lines, 30, 40);
     expect(ass).toContain("Dialogue: 0,0:00:00.00,0:00:03.00");
-    expect(ass).toContain("That isn");
+    expect(ass).toContain("That");
+  });
+  it("highlights a word at a time, sharing the line's span by word length", () => {
+    const ass = assCaptions([{ offset_seconds: 0, content: "short enormously long" }], 0, 3);
+    const ks = [...ass.matchAll(/\\k(\d+)/g)].map((m) => Number(m[1]));
+    expect(ks).toHaveLength(3);
+    expect(ks.reduce((a, b) => a + b, 0)).toBeCloseTo(300, -1); // the whole three seconds
+    expect(ks[1]).toBeGreaterThan(ks[0]); // "enormously" holds longer than "short"
+  });
+  it("sits clear of what the apps draw over the bottom", () => {
+    const ass = assCaptions(lines, 30, 40);
+    /* The style's vertical margin is measured from the bottom: the words
+       land in the lower middle, above the username and the scrubber. */
+    expect(ass).toContain(",600,1"); // CAPTION_BASELINE
+    expect(ass).toContain("Style: Caption,Arial,74");
   });
   it("leaves out what happens after the clip ends", () => {
     expect(assCaptions(lines, 30, 40)).not.toContain("Much later");
@@ -71,7 +85,9 @@ describe("the command", () => {
   });
   it("asks for an upright file, and keeps the audio if there is any", () => {
     const args = exportArgs({ src: "s", startSeconds: 0, endSeconds: 10, box, layout: "fit", motion: "T", assPath: null, outPath: "/tmp/o.mp4" });
-    expect(args.join(" ")).toContain("scale=1080:1280:force_original_aspect_ratio=decrease");
+    /* Full bleed: the picture covers the frame and is trimmed, never
+       fitted inside bars. */
+    expect(args.join(" ")).toContain("scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920");
     expect(args).toContain("0:a?");
     expect(args).toContain("+faststart");
   });
@@ -81,13 +97,20 @@ describe("the command", () => {
     expect(f).toContain("crop=561:315:561:0"); // the right half
     /* Each half exactly fills its slot: two of them and the bands above
        and below add up to the frame, so nothing grows over the title. */
-    expect(f).toContain("scale=1080:640:force_original_aspect_ratio=increase,crop=1080:640");
+    expect(f).toContain("scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960");
+    expect(f).not.toContain("gblur"); // no blurred filler: the picture fills it
   });
   it("looks for the box a few seconds in, and writes no file", () => {
     const args = cropdetectArgs("https://r2/x.m3u8", 12);
     expect(args.join(" ")).toContain("cropdetect=limit=24:round=2:reset=0");
     expect(args.join(" ")).toContain("crop=iw:ih*0.88:0:0"); // our own mark, out of the way
     expect(args.slice(-3)).toEqual(["-f", "null", "-"]);
+  });
+  it("shows the question for a moment, then gets out of the way", () => {
+    const f = overlayFilter("Should college be free?", null);
+    expect(f).toContain("enable='lt(t,2.6)'");
+    expect(f).toContain("boxcolor=black@0.55"); // legible over any picture
+    expect(f).not.toContain("y=72"); // not up under the app's own tabs
   });
   it("gives a clip one home, so it renders once", () => {
     expect(exportKey("abc-123")).toBe("clips/abc-123.mp4");

@@ -20,9 +20,22 @@
 /** What the finished file is: the size every vertical app wants. */
 export const OUT_W = 1080;
 export const OUT_H = 1920;
-/** Room across the top for the motion, and along the bottom for words. */
-export const TITLE_H = 210;
-export const CAPTION_H = 430;
+
+/* ── Where things may go ───────────────────────────────────────────────
+   The apps draw their own furniture over the video: the top ~140px
+   carries their tabs and the phone's notch, the bottom ~400 the
+   username, the caption, the sound and the scrubber, and the right
+   ~150 the like and share column. Anything put there is covered on the
+   only screen that matters. So the picture runs the whole frame — no
+   bands, no bars, full bleed — and the words sit in the lower middle,
+   which is clear of all of it and is where a reader's eye already is. */
+export const SAFE_TOP = 150;
+export const SAFE_BOTTOM = 420;
+export const SAFE_SIDE = 150;
+/** The words' block, measured from the bottom of the frame. */
+export const CAPTION_BASELINE = 600;
+/** The question, long enough to say what this is and then gone. */
+export const HOOK_SECONDS = 2.6;
 
 export interface Box {
   x: number;
@@ -110,9 +123,33 @@ export function captionChunks(text: string, perChunk = 24): string[] {
   return out;
 }
 
+/** Word by word, because that is what holds a muted viewer.
+
+    The transcript stamps a line, not a word, so each line's span is
+    shared out across its words by length — a long word holds the
+    highlight longer than a short one. Approximate, and far better than
+    a paragraph appearing all at once: the eye follows the moving word.
+    ASS counts karaoke in hundredths of a second. */
+export function karaokeLine(text: string, seconds: number): string {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "";
+  const weight = words.map((w) => Math.max(2, w.length));
+  const total = weight.reduce((a, b) => a + b, 0);
+  const cs = Math.max(1, Math.round(seconds * 100));
+  let spent = 0;
+  return words
+    .map((w, i) => {
+      const share = i === words.length - 1 ? cs - spent : Math.max(8, Math.round((weight[i] / total) * cs));
+      spent += share;
+      return `{\\k${Math.max(1, share)}}${w}`;
+    })
+    .join(" ");
+}
+
 /** The transcript over this stretch, as a subtitle file: times counted
     from the clip's own start, a line held until the next one arrives (or
-    four seconds, whichever is sooner). */
+    four seconds, whichever is sooner), sitting in the lower middle where
+    nothing the app draws can cover it. */
 export function assCaptions(lines: CaptionLine[], startSec: number, endSec: number): string {
   const within = lines
     .filter((l) => l.offset_seconds >= startSec - 1.5 && l.offset_seconds < endSec)
@@ -125,10 +162,13 @@ export function assCaptions(lines: CaptionLine[], startSec: number, endSec: numb
     "WrapStyle: 0",
     "",
     "[V4+ Styles]",
-    "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    /* White, heavy, with a hard black edge: legible over anything, the
-       way every caption on a phone is. Alignment 2 = bottom centre. */
-    `Style: Caption,Arial,64,&H00FFFFFF,&H00000000,&H00000000,-1,1,5,0,2,60,60,${Math.round(CAPTION_H / 3)},1`,
+    "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+    /* Primary is the word being said — the brand's yellow, which is
+       also the colour these captions are usually best in; secondary is
+       the rest of the line, white. Both on a dark plate with a hard
+       edge, which beats a stroke alone over a bright picture.
+       (&HAABBGGRR: yellow is 00b7ff, the plate black at two-thirds.) */
+    `Style: Caption,Arial,74,&H0000B7FF,&H00FFFFFF,&H00000000,&H55000000,-1,3,3,0,2,${SAFE_SIDE},${SAFE_SIDE},${CAPTION_BASELINE},1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -141,40 +181,37 @@ export function assCaptions(lines: CaptionLine[], startSec: number, endSec: numb
       endSec - startSec,
     );
     if (until <= from) return [];
-    const text = captionChunks(l.content).join("\\N");
-    return [`Dialogue: 0,${assTime(from)},${assTime(until)},Caption,,0,0,0,,${text.replace(/\{/g, "(").replace(/\}/g, ")")}`];
+    const safe = l.content.replace(/\{/g, "(").replace(/\}/g, ")");
+    const text = captionChunks(safe)
+      .map((chunk, n, all) => karaokeLine(chunk, (until - from) / all.length))
+      .join("\\N");
+    return [`Dialogue: 0,${assTime(from)},${assTime(until)},Caption,,0,0,0,,${text}`];
   });
   return [...head, ...events, ""].join("\n");
 }
 
-/** The picture: crop away the dead black, lay it out for an upright
-    screen, and set it on a blurred blow-up of itself so the bands above
-    and below aren't flat black. */
+/** The picture, filling the frame.
+
+    Two beside each other: split the row and stack them, each half the
+    height of the screen, each filled and trimmed rather than fitted —
+    black bars read as a horizontal video someone couldn't be bothered
+    to reframe, and the crop pulls in closer on the faces, which is what
+    the format wants. One picture: the same, over the whole frame. */
 export function videoFilter(box: Box, layout: ClipLayout): string {
-  const innerH = OUT_H - TITLE_H - CAPTION_H;
   const crop = `crop=${box.w}:${box.h}:${box.x}:${box.y}`;
   const half = Math.floor(box.w / 2);
-  /* Each half fills its own slot exactly — scaled up until it covers,
-     then trimmed — so the pair always lands inside the band between the
-     motion and the words instead of growing over them. */
-  const slotH = Math.floor(innerH / 2);
+  const slotH = Math.floor(OUT_H / 2);
   const fill = (w: number, h: number) => `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`;
-  const stage =
-    layout === "stack"
-      ? `[c]split=2[l][r];` +
-        `[l]crop=${half}:${box.h}:0:0,${fill(OUT_W, slotH)}[top];` +
-        `[r]crop=${half}:${box.h}:${half}:0,${fill(OUT_W, slotH)}[bot];` +
-        `[top][bot]vstack=inputs=2[stage];`
-      : /* One picture: as wide as the screen, and never taller than the band. */
-        `[c]scale=${OUT_W}:${innerH}:force_original_aspect_ratio=decrease[stage];`;
-  return (
-    `[0:v]${crop},setsar=1[c];` +
-    stage +
-    /* The ground: the same picture, blown up and blurred. */
-    `[stage]split=2[sharp][bg];` +
-    `[bg]scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=increase,crop=${OUT_W}:${OUT_H},gblur=sigma=28,eq=brightness=-0.22[ground];` +
-    `[ground][sharp]overlay=x=0:y=${TITLE_H}+(${innerH}-h)/2[framed]`
-  );
+  if (layout === "stack") {
+    return (
+      `[0:v]${crop},setsar=1[c];` +
+      `[c]split=2[l][r];` +
+      `[l]crop=${half}:${box.h}:0:0,${fill(OUT_W, slotH)}[top];` +
+      `[r]crop=${half}:${box.h}:${half}:0,${fill(OUT_W, slotH)}[bot];` +
+      `[top][bot]vstack=inputs=2[framed]`
+    );
+  }
+  return `[0:v]${crop},setsar=1,${fill(OUT_W, OUT_H)}[framed]`;
 }
 
 export interface ExportSpec {
@@ -191,17 +228,25 @@ export interface ExportSpec {
   outPath: string;
 }
 
-/** Everything after the picture: the motion up top, then the words. */
+/** The question, and then out of the way.
+
+    A band across the top for the whole clip is dead screen and sits
+    under the app's own tabs anyway. The motion shows for a couple of
+    seconds instead — long enough to say what the argument is, gone
+    before it costs anything — clear of the top furniture, on a plate so
+    it reads over any picture. */
 export function overlayFilter(motion: string, assPath: string | null): string {
   const lines = titleLines(motion);
-  const title = lines
+  const hook = lines
     .map((line, i) =>
-      `drawtext=text='${escapeDrawtext(line)}':fontcolor=white:fontsize=58:box=0:` +
-      `x=(w-text_w)/2:y=${72 + i * 68}:line_spacing=8`,
+      `drawtext=text='${escapeDrawtext(line)}':fontcolor=white:fontsize=62:` +
+      `box=1:boxcolor=black@0.55:boxborderw=22:` +
+      `x=(w-text_w)/2:y=${SAFE_TOP + 70 + i * 92}:` +
+      `enable='lt(t,${HOOK_SECONDS})'`,
     )
     .join(",");
-  const subs = assPath ? `,ass='${assPath.replace(/'/g, "'\\\\''")}'` : "";
-  return `[framed]${title || "null"}${subs}[v]`;
+  const subs = assPath ? `,ass='${assPath.replace(/'/g, "'\\''")}'` : "";
+  return `[framed]${hook || "null"}${subs}[v]`;
 }
 
 export function exportArgs(spec: ExportSpec): string[] {
