@@ -41,7 +41,7 @@ function BetaGateForm() {
     <AuthShell width={380} brandHref={null} footer={<a href="/discord" className="auth-link">No key? Get one on our Discord</a>}>
       <form onSubmit={submit} className="auth-form">
         <h1 className="auth-title">Closed beta</h1>
-        <p className="auth-sub" style={{ marginBottom: 6 }}>AgoraSphere is invite-only right now. Enter your beta key to come in.</p>
+        <p className="auth-sub" style={{ marginBottom: 6 }}>Taking part is invite-only right now — speaking, posting and holding an account. Reading isn&rsquo;t: past discussions, threads and profiles are open to anyone with the link.</p>
         <input
           type="text"
           value={code}
