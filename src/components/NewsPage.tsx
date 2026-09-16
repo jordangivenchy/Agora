@@ -159,8 +159,13 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
      room on a match. */
   /* The queue panel (lib/queue.ts) owns queueing; a story's button opens it. */
   const queue = useQueue();
-  const queuedTopicFor = (st: Story) => queue.entries.find((e) => e.question === st.headline)?.topicId ?? null;
-  const queueUp = (st: Story) => openQueue({ id: null, question: st.headline, topicKey: topicFor(st.category), queueCount: 0, sourceUrl: st.url });
+  /* By the article, not by the question: what you are waiting on is a
+     question drawn from the story, not the headline itself. */
+  const queuedTopicFor = (st: Story) => queue.entries.find((e) => !!st.url && e.sourceUrl === st.url)?.topicId ?? null;
+  const queueUp = (st: Story) => openQueue({
+    id: null, question: st.headline, topicKey: topicFor(st.category), queueCount: 0, sourceUrl: st.url,
+    story: { headline: st.headline, summary: st.summary ?? null, category: st.category ?? null },
+  });
   const leaveQueue = (st: Story) => { const id = queuedTopicFor(st); if (id) void leaveTopicQueue(id); };
 
   /* Friends lists show "In queue" while we wait — clear it on unmount. */

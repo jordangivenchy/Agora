@@ -11,7 +11,8 @@
 import { useEffect, useReducer, useState } from "react";
 import { Icon } from "@/components/icons";
 import { TOPICS } from "@/types/database";
-import { collapseQueue, expandQueue, isQueued, joinQueue, leaveQueue, pollQueue, restoreQueue, useQueue, type Opponent, type Stance } from "@/lib/queue";
+import QueueMotions from "@/components/QueueMotions";
+import { collapseQueue, expandQueue, isQueued, joinQueue, leaveQueue, pollQueue, restoreQueue, unpickMotion, useQueue, type Opponent, type Stance } from "@/lib/queue";
 
 const field = (key: string) => TOPICS.find((t) => t.key === key) ?? null;
 const mmss = (ms: number) => {
@@ -72,10 +73,19 @@ export default function QueueDock() {
         <p className="qd-match"><span className="qd-dot" aria-hidden="true" /> Matched — opening your room…</p>
       )}
 
-      {p && !q.matched && (
+      {/* A headline is not something to take a side on: the question
+          comes first, then the side. */}
+      {p && !q.matched && p.story && !p.framed && <QueueMotions story={p.story} />}
+
+      {p && !q.matched && !(p.story && !p.framed) && (
         <div className="qd-offer">
           {pf && <span className="qd-field" style={{ color: pf.color }}>{pf.label}</span>}
           <p className="qd-question">{p.question}</p>
+          {p.story && (
+            <button type="button" className="qd-reframe" onClick={unpickMotion}>
+              <Icon name="chevron-left" size={12} /> Another question about this story
+            </button>
+          )}
           <p className="qd-stats">
             {p.queueCount > 0
               ? <>{p.queueCount} waiting to talk{typeof p.proCount === "number" && typeof p.conCount === "number" ? ` · ${p.proCount} for · ${p.conCount} against` : ""} — you&rsquo;d be matched right away</>

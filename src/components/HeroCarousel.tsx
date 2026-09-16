@@ -628,7 +628,9 @@ function NewsSlide({ story: c, gradient, i, total, phone, image, onImageBroken, 
   const hasUrl = !!(c.url && /^https:\/\//.test(c.url));
   /* The queue panel (lib/queue.ts) owns the queue: this button opens
      it with the headline, or brings it back up once in line. */
-  const inQueue = useQueue().entries.some((e) => e.question === c.headline);
+  /* By the article: the question you are waiting on was drawn from the
+     story, and is not its headline. */
+  const inQueue = useQueue().entries.some((e) => !!c.url && e.sourceUrl === c.url);
   const queueLabel = inQueue ? "In queue — open the panel" : "Queue a discussion";
   return (
     <div
@@ -682,7 +684,13 @@ function NewsSlide({ story: c, gradient, i, total, phone, image, onImageBroken, 
           onClick={(e) => {
             e.stopPropagation();
             if (inQueue) expandQueue();
-            else openQueue({ id: null, question: c.headline, topicKey: topicFor(c.category || null), queueCount: 0, sourceUrl: c.url || null });
+            /* The headline is what the story says; the question is what
+               there is to argue. The panel asks for that first. */
+            else openQueue({
+              id: null, question: c.headline, topicKey: topicFor(c.category || null), queueCount: 0,
+              sourceUrl: c.url || null,
+              story: { headline: c.headline, summary: c.summary ?? null, category: c.category ?? null },
+            });
           }}
         >
           {queueLabel}
