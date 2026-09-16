@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assCaptions, captionChunks, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
+import { CAPTION_CHARS, assCaptions, captionChunks, cropdetectArgs, escapeDrawtext, exportArgs, exportKey, layoutFor, overlayFilter, parseCropdetect, titleLines, videoFilter } from "./clipExport";
 
 describe("finding the picture in the frame", () => {
   it("takes the box ffmpeg settled on, not the first guess", () => {
@@ -53,8 +53,8 @@ describe("the words, burned on", () => {
     const ass = assCaptions(lines, 30, 40);
     /* The style's vertical margin is measured from the bottom: the words
        land in the lower middle, above the username and the scrubber. */
-    expect(ass).toContain(",600,1"); // CAPTION_BASELINE
-    expect(ass).toContain("Style: Caption,Arial,74");
+    expect(ass).toContain(",560,1"); // CAPTION_BASELINE
+    expect(ass).toContain("Style: Caption,Arial,60");
   });
   it("leaves out what happens after the clip ends", () => {
     expect(assCaptions(lines, 30, 40)).not.toContain("Much later");
@@ -64,11 +64,25 @@ describe("the words, burned on", () => {
     const ends = [...ass.matchAll(/,(\d:\d\d:\d\d\.\d\d),Caption/g)].map((m) => m[1]);
     expect(ends.every((t) => t <= "0:00:04.00")).toBe(true);
   });
-  it("breaks a long line into readable pieces", () => {
-    const chunks = captionChunks("one two three four five six seven eight nine ten eleven twelve", 20);
-    expect(captionChunks("a line that is plenty long enough to need breaking up").every((c) => c.length <= 24)).toBe(true);
-    expect(chunks.every((c) => c.length <= 20)).toBe(true);
-    expect(chunks.join(" ").split(/\s+/)).toHaveLength(12);
+  it("balances the lines instead of leaving a long one over a short one", () => {
+    const chunks = captionChunks("That is not what the numbers actually say about any of this");
+    expect(chunks.length).toBeGreaterThan(1);
+    const lengths = chunks.map((c) => c.length);
+    /* No line more than half again the shortest: the block reads square. */
+    expect(Math.max(...lengths)).toBeLessThanOrEqual(Math.min(...lengths) * 1.5 + 6);
+  });
+  it("wraps to what fits the frame, so the renderer doesn't wrap again", () => {
+    /* The renderer breaks at the margins whatever we do; if our own
+       lines are wider than that, the balance we worked out is thrown
+       away and the block goes ragged again. */
+    const lines = captionChunks("And the other one disagrees, at length, with feeling.");
+    expect(Math.max(...lines.map((l) => l.length))).toBeLessThanOrEqual(CAPTION_CHARS);
+  });
+  it("keeps every word, in order, however it breaks", () => {
+    const text = "one two three four five six seven eight nine ten eleven twelve";
+    const chunks = captionChunks(text, 20);
+    expect(chunks.join(" ")).toBe(text);
+    expect(Math.max(...chunks.map((c) => c.length))).toBeLessThanOrEqual(28);
   });
   it("can't be broken out of by braces in the transcript", () => {
     const ass = assCaptions([{ offset_seconds: 0, content: "he said {\\an8}hello" }], 0, 5);
@@ -109,7 +123,7 @@ describe("the command", () => {
   it("shows the question for a moment, then gets out of the way", () => {
     const f = overlayFilter("Should college be free?", null);
     expect(f).toContain("enable='lt(t,2.6)'");
-    expect(f).toContain("boxcolor=black@0.55"); // legible over any picture
+    expect(f).toContain("boxcolor=black@0.5"); // legible over any picture
     expect(f).not.toContain("y=72"); // not up under the app's own tabs
   });
   it("gives a clip one home, so it renders once", () => {

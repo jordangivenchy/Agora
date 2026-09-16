@@ -32,8 +32,16 @@ export const OUT_H = 1920;
 export const SAFE_TOP = 150;
 export const SAFE_BOTTOM = 420;
 export const SAFE_SIDE = 150;
+/** The words' own margins: wide enough to read, clear of the right-hand
+    column of buttons. */
+export const CAPTION_SIDE = 120;
+export const CAPTION_FONT = 60;
+/** Arial bold runs about half the point size per character; the wrap has
+    to think in pixels, or the subtitle renderer wraps again where it
+    likes and the balance is lost. */
+export const CAPTION_CHARS = Math.floor((OUT_W - CAPTION_SIDE * 2) / (CAPTION_FONT * 0.52));
 /** The words' block, measured from the bottom of the frame. */
-export const CAPTION_BASELINE = 600;
+export const CAPTION_BASELINE = 560;
 /** The question, long enough to say what this is and then gone. */
 export const HOOK_SECONDS = 2.6;
 
@@ -68,7 +76,7 @@ export function escapeDrawtext(text: string): string {
 }
 
 /** Two lines at most of the motion, so a long one doesn't fill the screen. */
-export function titleLines(motion: string, perLine = 30, maxLines = 2): string[] {
+export function titleLines(motion: string, perLine = 34, maxLines = 2): string[] {
   const words = motion.trim().split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = "";
@@ -105,15 +113,20 @@ function assTime(sec: number): string {
   return `${h}:${String(m).padStart(2, "0")}:${rest.toFixed(2).padStart(5, "0")}`;
 }
 
-/** Break a line into caption-sized pieces: two short lines on screen at a
-    time is what reads at arm's length. */
-export function captionChunks(text: string, perChunk = 24): string[] {
-  const words = text.trim().split(/\s+/).filter(Boolean);
+/** Break a line into caption-sized pieces, balanced.
+
+    Filling each line to the brim and spilling the rest leaves a long
+    line over a short one — ragged, and on a plate the ragged edge is
+    the first thing you see. So: work out how many lines the text needs,
+    then find the narrowest width that still fits in that many. Greedy
+    wrapping at that width comes out even, which is what a caption block
+    under a face should look like. */
+function wrapAt(words: string[], width: number): string[] {
   const out: string[] = [];
   let line = "";
   for (const w of words) {
     if (!line) line = w;
-    else if ((line + " " + w).length <= perChunk) line += " " + w;
+    else if (line.length + 1 + w.length <= width) line += " " + w;
     else {
       out.push(line);
       line = w;
@@ -121,6 +134,20 @@ export function captionChunks(text: string, perChunk = 24): string[] {
   }
   if (line) out.push(line);
   return out;
+}
+
+export function captionChunks(text: string, perChunk = CAPTION_CHARS): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lineCount = Math.max(1, Math.ceil(text.trim().length / perChunk));
+  let lo = Math.max(...words.map((w) => w.length));
+  let hi = text.trim().length;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (wrapAt(words, mid).length <= lineCount) hi = mid;
+    else lo = mid + 1;
+  }
+  return wrapAt(words, lo);
 }
 
 /** Word by word, because that is what holds a muted viewer.
@@ -168,7 +195,7 @@ export function assCaptions(lines: CaptionLine[], startSec: number, endSec: numb
        the rest of the line, white. Both on a dark plate with a hard
        edge, which beats a stroke alone over a bright picture.
        (&HAABBGGRR: yellow is 00b7ff, the plate black at two-thirds.) */
-    `Style: Caption,Arial,74,&H0000B7FF,&H00FFFFFF,&H00000000,&H55000000,-1,3,3,0,2,${SAFE_SIDE},${SAFE_SIDE},${CAPTION_BASELINE},1`,
+    `Style: Caption,Arial,${CAPTION_FONT},&H0000B7FF,&H00FFFFFF,&H00000000,&H55000000,-1,3,4,0,2,${CAPTION_SIDE},${CAPTION_SIDE},${CAPTION_BASELINE},1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -239,9 +266,9 @@ export function overlayFilter(motion: string, assPath: string | null): string {
   const lines = titleLines(motion);
   const hook = lines
     .map((line, i) =>
-      `drawtext=text='${escapeDrawtext(line)}':fontcolor=white:fontsize=62:` +
-      `box=1:boxcolor=black@0.55:boxborderw=22:` +
-      `x=(w-text_w)/2:y=${SAFE_TOP + 70 + i * 92}:` +
+      `drawtext=text='${escapeDrawtext(line)}':fontcolor=white:fontsize=52:` +
+      `box=1:boxcolor=black@0.5:boxborderw=18:` +
+      `x=(w-text_w)/2:y=${SAFE_TOP + 60 + i * 78}:` +
       `enable='lt(t,${HOOK_SECONDS})'`,
     )
     .join(",");
