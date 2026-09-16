@@ -40,11 +40,27 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
   const { height } = useWindowDimensions();
   /* It falls from under the top bar, where the + is: a panel that rose
      from the far edge of the screen had nothing to do with the button
-     that opened it. */
+     that opened it.
+
+     One animation runs the whole thing — the scrim and the panel, on
+     the native driver. The Modal's own fade used to run at the same
+     time and over a different span, so two opacities crossed each
+     other; and the search field grabbed focus on mount, which raised
+     the keyboard while the panel was still moving. Both of those read
+     as jitter. The field is focused when the drop lands. */
   const drop = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(open);
+  const field = useRef<TextInput>(null);
   useEffect(() => {
-    if (!open) { drop.setValue(0); return; }
-    Animated.timing(drop, { toValue: 1, duration: 190, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    if (open) {
+      setMounted(true);
+      drop.setValue(0);
+      Animated.timing(drop, { toValue: 1, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+        .start(({ finished }) => { if (finished) field.current?.focus(); });
+      return;
+    }
+    Animated.timing(drop, { toValue: 0, duration: 140, easing: Easing.in(Easing.quad), useNativeDriver: true })
+      .start(({ finished }) => { if (finished) setMounted(false); });
   }, [open, drop]);
   /* One height, whatever the search turns up. Sizing to the rows meant
      the panel closed up on itself as you typed and the list got shorter
@@ -113,8 +129,10 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
   );
 
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)" }} accessibilityLabel="Close" />
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, opacity: drop }}>
+        <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} accessibilityLabel="Close" />
+      </Animated.View>
       <Animated.View
         style={{
           position: "absolute", left: 10, right: 10, top: insets.top + 6, height: panelH,
@@ -135,9 +153,9 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
             onChangeText={setQ}
             placeholder="Search people"
             placeholderTextColor={colors.faint}
+            ref={field}
             autoCapitalize="none"
             autoCorrect={false}
-            autoFocus
             style={{ height: 38, borderRadius: 10, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#0b0b0d", color: "#fff", fontFamily: fonts.body, fontSize: 13.5, paddingHorizontal: 12 }}
           />
 
