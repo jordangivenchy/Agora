@@ -151,6 +151,11 @@ body {
   from { opacity: 0; transform: translateX(-18px); }
   to   { opacity: 1; transform: none; }
 }
+/* The new-message panel falls from the + it hangs under. */
+@keyframes msg-new-drop {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
 
 /* Utility: hide scrollbar */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -1867,8 +1872,10 @@ html.reduce-motion .nav-sparkle {
 }
 .rich-editor .ProseMirror pre code, .rich-text pre code { background: none; border: 0; padding: 0; font-size: inherit; }
 .rich-editor .ProseMirror hr, .rich-text hr { border: 0; border-top: 0.5px solid rgba(255, 255, 255, 0.14); margin: 0.7em 0; }
-.rich-editor .ProseMirror a, .rich-text a { color: #4a9eff; text-decoration: underline; text-underline-offset: 2px; }
-.rich-editor .ProseMirror .rt-mention, .rich-text .rt-mention { color: #4a9eff; font-weight: 600; text-decoration: none; }
+/* Inline rich text (titles, notices, previews) is the same text in a
+   span rather than a div, and its links are links too. */
+.rich-editor .ProseMirror a, .rich-text a, .rich-text-inline a { color: #4a9eff; text-decoration: underline; text-underline-offset: 2px; }
+.rich-editor .ProseMirror .rt-mention, .rich-text .rt-mention, .rich-text-inline .rt-mention { color: #4a9eff; font-weight: 600; text-decoration: none; }
 .rich-editor .ProseMirror .rt-spoiler {
   background: rgba(238, 238, 245, 0.14); border: 0.5px dashed rgba(238, 238, 245, 0.4);
   border-radius: 3px; padding: 0 3px;

@@ -27,6 +27,7 @@ import DmThread, {
 import GroupThread from "./GroupThread";
 import GroupTile from "./GroupTile";
 import NewGroupModal from "./NewGroupModal";
+import NewMessageMenu from "./NewMessageMenu";
 import { groupPreview, type GroupRow } from "./groups";
 import type { MessagesInitial } from "@/lib/messagesData";
 import { sessionUser } from "@/lib/session";
@@ -55,6 +56,8 @@ export default function MessagesPage({
   const [peer, setPeer] = useState<Peer | null>(null);
   const [group, setGroup] = useState<GroupRow | null>(null);
   const [newGroup, setNewGroup] = useState(false);
+  /* The + on the rail: people, searchable, and a group inside it. */
+  const [newMessage, setNewMessage] = useState(false);
   const [groupSeed, setGroupSeed] = useState<string[] | undefined>(undefined);
   const peerRef = useRef<Peer | null>(null);
   peerRef.current = peer;
@@ -383,7 +386,7 @@ export default function MessagesPage({
       }}
     >
       <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 10px" }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 10px" }}>
           <h1
             style={{
               margin: 0,
@@ -397,27 +400,33 @@ export default function MessagesPage({
           </h1>
           <button
             type="button"
-            onClick={() => setNewGroup(true)}
-            aria-label="New group chat"
-            title="New group"
+            onClick={() => setNewMessage((v) => !v)}
+            data-new-message
+            aria-label="New message"
+            aria-expanded={newMessage}
+            title="New message"
             className="cursor-pointer"
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
+              justifyContent: "center",
+              width: 30,
               height: 30,
-              padding: "0 11px",
               borderRadius: 999,
-              background: "#0b0b0d",
+              background: newMessage ? "#15151b" : "#0b0b0d",
               border: "1px solid rgba(255,255,255,0.14)",
-              color: "#c9c9d2",
-              fontSize: 12,
-              fontWeight: 700,
+              color: "#e6e6ee",
               fontFamily: "inherit",
             }}
           >
-            <Icon name="users" size={13} /> New group
+            <Icon name="plus" size={16} />
           </button>
+          {newMessage && <NewMessageMenu
+            onClose={() => setNewMessage(false)}
+            meId={me ?? null}
+            onPick={(peer) => { setNewMessage(false); selectPeer(peer); }}
+            onNewGroup={() => { setNewMessage(false); setNewGroup(true); }}
+          />}
         </div>
         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
           <span
