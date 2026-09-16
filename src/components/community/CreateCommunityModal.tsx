@@ -21,6 +21,7 @@ import { uploadPostImage, uploadSquareImage } from "@/lib/postImages";
 import InviteFriends from "./InviteFriends";
 import { sessionUser } from "@/lib/session";
 import { BODY_MIN as CLEAN_BODY, NAME_MIN as CLEAN_NAME, cleanTextError } from "@/lib/cleanText";
+import { DISCORD_INVITE } from "@/lib/urls";
 
 export const COMMUNITY_KINDS: { key: string; label: string; icon: IconName; hint: string }[] = [
   { key: "topic-circle", label: "Topic circle", icon: "users-round", hint: "People around an interest" },
@@ -358,7 +359,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               </p>
               <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5, color: "rgba(238,238,245,0.55)", maxWidth: 340 }}>
                 {gate.reason === "email_unverified" && <>We sent a link to <span style={{ color: "rgba(238,238,245,0.85)" }}>{userEmail ?? "your inbox"}</span>. Open it, then come back — communities need a verified address.</>}
-                {gate.reason === "not_verified" && "During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in the Discord if you\u2019d like to run one."}
+                {gate.reason === "not_verified" && <>During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in <a href={DISCORD_INVITE} target="_blank" rel="noreferrer" style={{ color: "rgba(238,238,245,0.85)", textDecoration: "underline" }}>the Discord</a> if you\u2019d like to run one.</>}
                 {gate.reason === "account_too_new" && `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few communities and post in the meantime.`}
                 {gate.reason === "community_limit" && `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more communities are coming; for now, grow the ones you have.`}
                 {gate.reason === "signed_out" && "Communities are created from an account."}

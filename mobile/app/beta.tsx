@@ -1,9 +1,11 @@
 /* The closed-beta door, same words as the website's. */
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Linking, Platform, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSession } from "../src/session";
 import { Button, Field, Note, Screen, Sub, Title } from "../src/ui";
+import { DISCORD_INVITE } from "../src/links";
+import { colors } from "../src/theme";
 
 export default function Beta() {
   const { redeemKey } = useSession();
@@ -40,7 +42,10 @@ export default function Beta() {
           {error && <Note tone="error">{error}</Note>}
           <View style={{ height: 8 }} />
           <Button onPress={submit} disabled={!code.trim()} busy={busy}>Enter</Button>
-          <Note>Keys are handed out on our Discord.</Note>
+          <Note>
+            Keys are handed out on{" "}
+            <Text onPress={() => void Linking.openURL(DISCORD_INVITE)} style={{ color: colors.yellow, textDecorationLine: "underline" }}>our Discord</Text>.
+          </Note>
         </View>
       </KeyboardAvoidingView>
     </Screen>

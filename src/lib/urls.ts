@@ -44,3 +44,8 @@ export function parseRoomParam(param: string): { uuid?: string; prefix?: string 
 export function userPath(username: string): string {
   return `/@${encodeURIComponent(username)}`;
 }
+
+/* The AgoraSphere Discord. Beta keys are handed out there and the team
+   reads it, so anywhere the site names the server it should be a way in,
+   not a place-name the reader has to go looking for. */
+export const DISCORD_INVITE = "https://discord.gg/WqA9XyHTGc";

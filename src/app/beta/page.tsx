@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthShell from "@/components/auth/AuthShell";
+import { DISCORD_INVITE } from "@/lib/urls";
 
 /* Closed-beta door: enter the invite code once, get a 30-day pass cookie
    (issued by /api/beta), and continue to wherever you were headed. */
@@ -38,7 +39,7 @@ function BetaGateForm() {
   }
 
   return (
-    <AuthShell width={380} brandHref={null} footer={<a href="/discord" className="auth-link">No key? Get one on our Discord</a>}>
+    <AuthShell width={380} brandHref={null} footer={<a href={DISCORD_INVITE} target="_blank" rel="noreferrer" className="auth-link">No key? Get one on our Discord</a>}>
       <form onSubmit={submit} className="auth-form">
         <h1 className="auth-title">Closed beta</h1>
         <p className="auth-sub" style={{ marginBottom: 6 }}>AgoraSphere is invite-only right now. Enter your beta key to come in.</p>

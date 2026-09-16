@@ -10,7 +10,7 @@
    shown instead of the form when it would refuse. The card lives in
    create.tsx's modal, trading places with the discussion card. */
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Easing, Image, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Image, KeyboardAvoidingView, LayoutAnimation, Linking, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +21,7 @@ import { InviteFriends } from "./inviteFriends";
 import { cleanTextError, BODY_MIN, NAME_MIN } from "./cleanText";
 import { useReduceMotion } from "./motion";
 import { useRevealField } from "./revealField";
+import { DISCORD_INVITE } from "./links";
 import { colors, fonts } from "./theme";
 
 export const COMMUNITY_KINDS: { key: string; label: string; icon: React.ComponentProps<typeof Ionicons>["name"]; hint: string }[] = [
@@ -232,7 +233,7 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
                 </Text>
                 <Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 13, lineHeight: 19.5, textAlign: "center", marginTop: 6, maxWidth: 340 }}>
                   {gate.reason === "email_unverified" ? `We sent a link to ${email ?? "your inbox"}. Open it, then come back — communities need a verified address.`
-                    : gate.reason === "not_verified" ? "During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in the Discord if you'd like to run one."
+                    : gate.reason === "not_verified" ? <>During the beta, only verified accounts can create a community. Join the ones that exist, post, and ask the team in <Text onPress={() => void Linking.openURL(DISCORD_INVITE)} style={{ color: colors.yellow, textDecorationLine: "underline" }}>the Discord</Text> if you&apos;d like to run one.</>
                     : gate.reason === "account_too_new" ? `Communities open up after your first day (${Math.max(0, 24 - (gate.account_age_hours ?? 0))}h to go). Join a few communities and post in the meantime.`
                     : gate.reason === "community_limit" ? `You've created ${gate.count} of ${gate.cap ?? 3}. Owner upgrades with more communities are coming; for now, grow the ones you have.`
                     : "Communities are created from an account."}

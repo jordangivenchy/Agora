@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AuthShell from "@/components/auth/AuthShell";
 import { gateConfigured, gateGuilds, gateLabel } from "@/lib/discordGate";
+import { DISCORD_INVITE } from "@/lib/urls";
 
 /* The door to the Discord server. Visitors arrive here from the partner
    server's post with no beta pass; the page says who may come in and
@@ -19,7 +20,7 @@ export default async function DiscordDoorPage({ searchParams }: { searchParams: 
   const live = gateConfigured();
   const r = typeof raw === "string" ? raw : live ? "" : "off";
   const guild = process.env.DISCORD_GUILD_ID;
-  const openDiscord: Link = { href: guild ? `https://discord.com/channels/${guild}` : "https://discord.com/app", label: "Open Discord" };
+  const openDiscord: Link = { href: guild ? `https://discord.com/channels/${guild}` : DISCORD_INVITE, label: "Open Discord" };
   const signIn: Link = { href: "/api/discord/join", label: "Continue with Discord" };
   const haveKey: Link = { href: "/beta", label: "Have a key? Enter it" };
   const partner = gates.find((g) => g.invite) ?? null;
@@ -46,7 +47,7 @@ export default async function DiscordDoorPage({ searchParams }: { searchParams: 
       view = {
         title: `Join ${label} first`,
         sub: `The AgoraSphere server is open to members of ${label}. Join ${label} with the same Discord account, then come back here.`,
-        primary: partner ? { href: partner.invite!, label: `Open ${partner.label}` } : null,
+        primary: partner ? { href: partner.invite!, label: `Open ${partner.label}` } : { href: DISCORD_INVITE, label: "Join the Discord" },
         secondary: { href: signIn.href, label: "Try again" },
       };
       break;
@@ -60,8 +61,8 @@ export default async function DiscordDoorPage({ searchParams }: { searchParams: 
     case "off":
       view = {
         title: "The door isn't open yet",
-        sub: `Membership through ${label} is still being switched on. Check back soon.`,
-        primary: null,
+        sub: `Membership through ${label} is still being switched on, but the server itself is open — the invite takes you in.`,
+        primary: { href: DISCORD_INVITE, label: "Join the Discord" },
       };
       break;
     case "state":
@@ -75,8 +76,9 @@ export default async function DiscordDoorPage({ searchParams }: { searchParams: 
     default:
       view = {
         title: "The AgoraSphere Discord",
-        sub: `The beta server is open to members of ${label}. Sign in with Discord so we can see you're one, and the bot brings you in. There are no invite links.`,
+        sub: `The beta server is open to members of ${label}. Sign in with Discord so we can see you're one, and the bot brings you in — or take the invite and join it yourself.`,
         primary: signIn,
+        secondary: { href: DISCORD_INVITE, label: "Join with the invite" },
         fine: "We see your username and which servers you're in, nothing more. Nothing is posted for you.",
       };
   }
