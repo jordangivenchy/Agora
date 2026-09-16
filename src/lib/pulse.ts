@@ -10,7 +10,7 @@ export async function pulseCounts(sinceIso: string): Promise<PulseCounts> {
   const [users, rooms, posts, comments, matches] = await Promise.all([
     admin.from("users").select("id", { count: "exact", head: true }).gte("created_at", sinceIso),
     admin.from("debate_rooms").select("started_at, ended_at").eq("status", "ended").gte("started_at", sinceIso),
-    admin.from("community_posts").select("id", { count: "exact", head: true }).gte("created_at", sinceIso),
+    admin.from("community_posts").select("id", { count: "exact", head: true }).eq("listed", true).gte("created_at", sinceIso),
     admin.from("community_comments").select("id", { count: "exact", head: true }).gte("created_at", sinceIso),
     admin.from("debate_rooms").select("id", { count: "exact", head: true }).eq("pro_size", 1).eq("con_size", 1).gte("created_at", sinceIso),
   ]);

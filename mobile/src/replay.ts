@@ -31,6 +31,10 @@ export interface ReplayRoom {
   recording_ended_at: string | null;
   discussion_post_id: string | null;
   discussion_comment_count: number;
+  /** The comments are also a thread in a community — someone made one. */
+  discussion_listed: boolean;
+  /** That community's name, for the line that points at it. */
+  discussion_community: string | null;
   transcript_count: number;
 }
 
@@ -114,6 +118,8 @@ async function loadFallback(supabase: SupabaseClient, roomId: string): Promise<{
       recording_ended_at: (r.recording_ended_at as string | null) ?? null,
       discussion_post_id: (r.discussion_post_id as string | null) ?? null,
       discussion_comment_count: 0,
+      discussion_listed: false,
+      discussion_community: null,
       transcript_count: lines.length,
     },
     lines,
@@ -163,6 +169,25 @@ export async function fetchDiscussion(supabase: SupabaseClient, postId: string):
 export async function ensureDiscussion(supabase: SupabaseClient, roomId: string): Promise<string> {
   const { data, error } = await supabase.rpc("ensure_debate_discussion", { p_room: roomId });
   if (error || !data) throw new Error(error?.message.includes("suspended") ? "Your account is suspended." : "Couldn't open the discussion — try again in a moment.");
+  return data as string;
+}
+
+/** Is the comment thread also a post in a community, and which? */
+export async function fetchDiscussionPlacement(supabase: SupabaseClient, postId: string): Promise<{ listed: boolean; community: string | null }> {
+  const { data } = await supabase
+    .from("community_posts")
+    .select("listed, community:communities!community_id(name)")
+    .eq("id", postId)
+    .maybeSingle();
+  const row = data as { listed?: boolean; community?: { name?: string } | { name?: string }[] | null } | null;
+  const c = Array.isArray(row?.community) ? row?.community[0] : row?.community;
+  return { listed: !!row?.listed, community: c?.name ?? null };
+}
+
+/** The host turns the comments into a thread in one of their communities. */
+export async function publishDiscussion(supabase: SupabaseClient, roomId: string, communityId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("publish_debate_discussion", { p_room: roomId, p_community: communityId });
+  if (error || !data) throw new Error(error?.message.replace(/^.*?:\s*/, "") || "Couldn't make the thread — try again.");
   return data as string;
 }
 

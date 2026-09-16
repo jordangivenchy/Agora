@@ -1,6 +1,7 @@
 /* One clip in a grid (components/clips/ClipTile.tsx): the picture or
    the clip's colours, the duration, the title, who clipped it, views. */
 import { Image, Pressable, Text, View } from "react-native";
+import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./avatar";
 import { clipColors, formatClipDuration, formatViews, type ClipTileData } from "./clips";
@@ -13,7 +14,7 @@ export function ClipTile({ clip, width, onPress }: { clip: ClipTileData; width: 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ width, opacity: pressed ? 0.88 : 1 })}>
       <View style={{ width, height: Math.round((width * 9) / 16), borderRadius: 10, overflow: "hidden", backgroundColor: c0 }}>
-        {clip.thumbnail_url ? <Image source={{ uri: clip.thumbnail_url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" /> : <View style={{ position: "absolute", right: -20, bottom: -20, width: width * 0.8, height: width * 0.8, borderRadius: width, backgroundColor: c1, opacity: 0.8 }} />}
+        {clip.thumbnail_url ? <Img uri={clip.thumbnail_url} style={{ width: "100%", height: "100%" }} recyclingKey={clip.id} /> : <View style={{ position: "absolute", right: -20, bottom: -20, width: width * 0.8, height: width * 0.8, borderRadius: width, backgroundColor: c1, opacity: 0.8 }} />}
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
           <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#000", borderWidth: 1, borderColor: "rgba(255,255,255,0.35)", alignItems: "center", justifyContent: "center" }}><Ionicons name="play" size={13} color="#fff" style={{ marginLeft: 2 }} /></View>
         </View>

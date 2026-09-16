@@ -14,23 +14,27 @@ const AFTER_TRANSITION_MS = 360;
 /** Coming straight back (tab hopping) doesn't fetch again. */
 const FRESH_MS = 5_000;
 
-/** Loads on the first focus at once, then on each later focus once the transition is done. */
+/** Loads on the first focus at once, then on each later focus once the transition is done.
+    The yellow bar belongs to the first load, the one with an empty screen
+    behind it: coming back to a tab that already has its list is a refresh
+    under something you can read, and a bar there says "wait" when there is
+    nothing to wait for. */
 export function useFocusRefresh(load: () => Promise<unknown>, { progress = true }: { progress?: boolean } = {}) {
   const last = useRef(0);
   useFocusEffect(
     useCallback(() => {
-      const run = () => {
+      const run = (first: boolean) => {
         last.current = Date.now();
         const p = load();
-        if (progress) void withProgress(p);
+        if (progress && first) void withProgress(p);
         else void p;
       };
       if (!last.current) {
-        run();
+        run(true);
         return;
       }
       if (Date.now() - last.current < FRESH_MS) return;
-      const timer = setTimeout(run, AFTER_TRANSITION_MS);
+      const timer = setTimeout(() => run(false), AFTER_TRANSITION_MS);
       return () => clearTimeout(timer);
     }, [load, progress]),
   );

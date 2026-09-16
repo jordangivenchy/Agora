@@ -4,6 +4,7 @@
    here. A guest gets the way in. */
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Img } from "../../src/img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
@@ -132,7 +133,7 @@ export default function Feed() {
         {reason}
         <Pressable onPress={() => (replay ? router.push({ pathname: "/replay/[id]", params: { id: r.id } }) : router.push({ pathname: "/room/[id]", params: { id: r.id } }))} style={[card, { padding: 12, flexDirection: "row", gap: 12, alignItems: "center" }]}>
           <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface2 }}>
-            {(r.thumbnail_url || r.host?.avatar_url) && <Image source={{ uri: (r.thumbnail_url || r.host?.avatar_url)! }} style={{ width: 64, height: 64 }} />}
+            {(r.thumbnail_url || r.host?.avatar_url) && <Img uri={r.thumbnail_url || r.host?.avatar_url} style={{ width: 64, height: 64 }} recyclingKey={r.id} />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: replay ? "#c0c0c8" : colors.purple, fontFamily: fonts.extra, fontSize: 10, letterSpacing: 0.6 }}>{replay ? "REPLAY" : whenLabel(r.scheduled_start).toUpperCase()}</Text>

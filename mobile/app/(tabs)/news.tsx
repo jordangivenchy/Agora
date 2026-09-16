@@ -5,6 +5,7 @@
    into view and wears a yellow ring for a moment (NewsPage.tsx). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Img } from "../../src/img";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
@@ -108,7 +109,7 @@ export default function News() {
               <View style={[CARD, { overflow: "hidden", marginBottom: 16 }]}>
                 {hit === st.id && <Ring />}
                 <View style={{ aspectRatio: 16 / 9, backgroundColor: "#0d1b3e" }}>
-                  {st.imageUrl && <Image source={{ uri: st.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />}
+                  {st.imageUrl && <Img uri={st.imageUrl} style={StyleSheet.absoluteFill} recyclingKey={st.id} />}
                 </View>
                 <View style={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, gap: 10 }}>
                   <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17, lineHeight: 22 }}>{st.headline}</Text>
@@ -126,7 +127,7 @@ export default function News() {
               {hit === st.id && <Ring />}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                 {st.imageUrl ? (
-                  <Image source={{ uri: st.imageUrl }} style={{ width: 76, height: 76, borderRadius: 10 }} resizeMode="cover" />
+                  <Img uri={st.imageUrl} style={{ width: 76, height: 76, borderRadius: 10 }} recyclingKey={st.id} />
                 ) : (
                   <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: colors.blueText }} />
                 )}
@@ -179,7 +180,7 @@ function Outlets({ story, max = 3 }: { story: NewsStory; max?: number }) {
     <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
       {story.sources.slice(0, max).map((s) => (
         <View key={s.name} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          {!!s.domain && <Image source={{ uri: outletIcon(s.domain) }} style={{ width: 12, height: 12, borderRadius: 3, opacity: 0.85 }} />}
+          {!!s.domain && <Img uri={outletIcon(s.domain)} style={{ width: 12, height: 12, borderRadius: 3, opacity: 0.85 }} />}
           <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 10.5 }}>{s.name}</Text>
         </View>
       ))}

@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvent, useEventListener } from "expo";
 import { Animated, Image, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Img } from "../../src/img";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,9 +19,9 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
-import { createComment, fetchAvatars, timeAgo, type CommentRow } from "../../src/communities";
+import { createComment, fetchAvatars, fetchCommunities, timeAgo, type CommentRow, type Community } from "../../src/communities";
 import {
-  bumpReplayView, ensureDiscussion, fetchDiscussion, fetchLikes, fetchMoreReplays, fetchReplay, fetchTimeline, fmtClock, fmtDurationLong, toggleLike,
+  bumpReplayView, ensureDiscussion, fetchDiscussion, fetchDiscussionPlacement, fetchLikes, fetchMoreReplays, fetchReplay, fetchTimeline, fmtClock, fmtDurationLong, publishDiscussion, toggleLike,
   type MoreReplay, type ReplayRoom, type TranscriptLine,
 } from "../../src/replay";
 import { roomLink } from "../../src/roomData";
@@ -90,6 +91,10 @@ export default function ReplayScreen() {
   const [editor, setEditor] = useState<{ at: number } | null>(null);
   const [composing, setComposing] = useState(false);
   const [discussBusy, setDiscussBusy] = useState(false);
+  /* A thread is something someone makes, not what commenting does: the
+     picker opens on the host's own line under the comments. */
+  const [threadPick, setThreadPick] = useState(false);
+  const [myCommunities, setMyCommunities] = useState<Community[]>([]);
 
   const loadComments = useCallback(async (postId: string | null) => {
     if (!postId) { setComments([]); return; }
@@ -101,7 +106,12 @@ export default function ReplayScreen() {
     const r = await fetchReplay(supabase, id).catch(() => ({ room: null, lines: [] as TranscriptLine[] }));
     setRoom(r.room);
     setLines(r.lines);
-    await loadComments(r.room?.discussion_post_id ?? null);
+    const postId = r.room?.discussion_post_id ?? null;
+    await loadComments(postId);
+    if (postId) {
+      const where = await fetchDiscussionPlacement(supabase, postId).catch(() => null);
+      if (where) setRoom((cur) => (cur ? { ...cur, discussion_listed: where.listed, discussion_community: where.community } : cur));
+    }
   }, [id, loadComments]);
   /* Back from the full thread, the discussion shows what was added there. */
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -210,17 +220,26 @@ export default function ReplayScreen() {
     const url = roomLink(room);
     void Share.share(Platform.OS === "ios" ? { url } : { message: url }).catch(() => undefined);
   };
-  const openDiscussion = async () => {
-    if (!room) return;
-    if (room.discussion_post_id) { router.push({ pathname: "/posts/[id]", params: { id: room.discussion_post_id } }); return; }
+  /* The thread, once there is one. */
+  const openThread = () => {
+    if (room?.discussion_post_id) router.push({ pathname: "/posts/[id]", params: { id: room.discussion_post_id } });
+  };
+  const openThreadPicker = () => {
     if (!uid) { router.push("/sign-in"); return; }
+    setThreadPick(true);
+    void fetchCommunities(supabase, uid).then((list) => setMyCommunities(list.filter((c) => c.joined && c.kind !== "profile")), () => undefined);
+  };
+  const makeThread = async (communityId: string) => {
+    if (!room) return;
     setDiscussBusy(true);
     try {
-      const postId = await ensureDiscussion(supabase, room.id);
-      setRoom((r) => (r ? { ...r, discussion_post_id: postId } : r));
-      router.push({ pathname: "/posts/[id]", params: { id: postId } });
+      const postId = await publishDiscussion(supabase, room.id, communityId);
+      const name = myCommunities.find((c) => c.id === communityId)?.name ?? null;
+      setRoom((r) => (r ? { ...r, discussion_post_id: postId, discussion_listed: true, discussion_community: name } : r));
+      setThreadPick(false);
+      showToast(name ? `It's a thread in ${name} now.` : "It's a thread now.");
     } catch (e) {
-      showToast(e instanceof Error ? e.message : "Couldn't open the discussion.");
+      showToast(e instanceof Error ? e.message : "Couldn't make the thread.");
     } finally {
       setDiscussBusy(false);
     }
@@ -242,6 +261,7 @@ export default function ReplayScreen() {
   const showTranscript = transcriptOpen ?? (!recorded && hasTranscript);
   const people = room ? (room.speakers.length ? room.speakers : host ? [{ ...host, role: "host" as const, side: null }] : []) : [];
   const count = room?.discussion_comment_count ?? 0;
+  const canHost = !!uid && !!room && room.host?.id === uid;
   const boxMax = Math.min(Math.round(screenH * 0.5), 460);
   const label = (t: string) => <Text style={{ color: "#9a9aa6", fontFamily: fonts.semi, fontSize: 12, letterSpacing: 1.2 }}>{t.toUpperCase()}</Text>;
   const metaText = { color: "#9a9aa6", fontFamily: fonts.body, fontSize: 12.5 } as const;
@@ -321,14 +341,8 @@ export default function ReplayScreen() {
               {!!room.viewer_count && <Text style={metaText}>{room.viewer_count} watched live</Text>}
             </View>
 
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
-              {likes && <Btn icon={likes.liked ? "thumbs-up" : "thumbs-up-outline"} label={likes.count > 0 ? String(likes.count) : "Like"} on={likes.liked} disabled={likeBusy} onPress={() => void like()} />}
-              <Btn icon="share-outline" label="Share" onPress={share} />
-              {recorded && <Btn icon="cut-outline" label="Clip this moment" onPress={() => { player.pause(); setEditor({ at: player.currentTime }); }} />}
-            </View>
-
             {people.length > 0 && (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                 {people.map((p) => {
                   const side = p.side ? p.side.toLowerCase() : null;
                   const role = p.role === "host" ? "Host" : p.role === "cohost" ? "Co-host" : side ? side.toUpperCase() : "Speaker";
@@ -342,6 +356,14 @@ export default function ReplayScreen() {
                 })}
               </View>
             )}
+
+            {/* What you can do with it, under who was in it: the meta
+                reads as one block, these are the buttons. */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#26262e" }}>
+              {likes && <Btn icon={likes.liked ? "thumbs-up" : "thumbs-up-outline"} label={likes.count > 0 ? String(likes.count) : "Like"} on={likes.liked} disabled={likeBusy} onPress={() => void like()} />}
+              <Btn icon="share-outline" label="Share" onPress={share} />
+              {recorded && <Btn icon="cut-outline" label="Clip this moment" onPress={() => { player.pause(); setEditor({ at: player.currentTime }); }} />}
+            </View>
 
             <View style={{ marginTop: 18, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", backgroundColor: "#121217", overflow: "hidden" }}>
               <Pressable
@@ -418,7 +440,7 @@ export default function ReplayScreen() {
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17 }}>Discussion</Text>
+                    <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17 }}>Comments</Text>
                     {count > 0 && (
                       <View style={{ paddingHorizontal: 8, paddingVertical: 1, borderRadius: 999, backgroundColor: "#2a2a32" }}>
                         <Text style={{ color: "#e5e5ec", fontFamily: fonts.semi, fontSize: 12 }}>{count}</Text>
@@ -427,7 +449,6 @@ export default function ReplayScreen() {
                   </View>
                   {count === 0 && <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 12.5, marginTop: 3 }}>Nobody has weighed in yet — be the first.</Text>}
                 </View>
-                <Btn icon="megaphone-outline" label={discussBusy ? "Opening…" : "Open full thread"} disabled={discussBusy} onPress={() => void openDiscussion()} />
               </View>
               <Pressable onPress={() => (uid ? setComposing(true) : router.push("/sign-in"))} style={({ pressed }) => ({ marginTop: 12, height: 44, borderRadius: 22, backgroundColor: pressed ? "#1f1f26" : "#17171c", borderWidth: 1, borderColor: "#26262e", flexDirection: "row", alignItems: "center", paddingHorizontal: 16 })}>
                 <Text style={{ flex: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 14 }}>{uid ? "Add a comment…" : "Sign in to comment"}</Text>
@@ -447,11 +468,27 @@ export default function ReplayScreen() {
                       <View style={{ marginTop: 3 }}>
                         <RichText text={c.body} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 20 }} />
                       </View>
-                      {c.image_url && <Image source={{ uri: c.image_url }} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 200 }} resizeMode="cover" />}
+                      {c.image_url && <Img uri={c.image_url} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 200 }} recyclingKey={c.id} />}
                     </View>
                   ))}
                 </View>
               )}
+
+              {/* Where it lives besides here: a thread if the host made
+                  one, and the host's way to make one if not. */}
+              {room.discussion_listed && room.discussion_post_id ? (
+                <Pressable onPress={openThread} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 16, opacity: pressed ? 0.7 : 1 })}>
+                  <Ionicons name="chatbubbles-outline" size={14} color="#8b8b94" />
+                  <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 12.5 }}>
+                    Also a thread in <Text style={{ color: colors.text, fontFamily: fonts.semi }}>{room.discussion_community ?? "a community"}</Text>
+                  </Text>
+                </Pressable>
+              ) : canHost ? (
+                <Pressable onPress={openThreadPicker} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 16, opacity: pressed ? 0.7 : 1 })}>
+                  <Ionicons name="add-circle-outline" size={14} color="#8b8b94" />
+                  <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 12.5 }}>Make this a thread in a community</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             {more.length > 0 && (
@@ -466,7 +503,7 @@ export default function ReplayScreen() {
                     return (
                       <Pressable key={m.id} onPress={() => router.push({ pathname: "/replay/[id]", params: { id: m.id } })} style={({ pressed }) => ({ width: w, opacity: pressed ? 0.85 : 1 })}>
                         <View style={{ width: w, height: Math.round((w * 9) / 16), borderRadius: 10, overflow: "hidden", backgroundColor: "#15151c", borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", alignItems: "center", justifyContent: "center" }}>
-                          {img ? <Image source={{ uri: img }} style={{ width: "100%", height: "100%" }} resizeMode="cover" /> : <Ionicons name="play" size={18} color="#4a4a54" />}
+                          {img ? <Img uri={img} style={{ width: "100%", height: "100%" }} recyclingKey={m.id} /> : <Ionicons name="play" size={18} color="#4a4a54" />}
                         </View>
                         <Text numberOfLines={2} style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17, marginTop: 8 }}>{m.motion}</Text>
                         <Text numberOfLines={1} style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 11, marginTop: 2 }}>
@@ -486,6 +523,35 @@ export default function ReplayScreen() {
       <Animated.View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: BAR, paddingTop: insets.top, backgroundColor: colors.bg, opacity: barOpacity, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
         <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17, paddingHorizontal: 60 }}>{room?.motion ?? ""}</Text>
       </Animated.View>
+      {/* Which community it goes to: the ones the host is in. */}
+      <Modal visible={threadPick} transparent animationType="slide" onRequestClose={() => setThreadPick(false)}>
+        <Pressable onPress={() => setThreadPick(false)} style={{ flex: 1 }} accessibilityLabel="Close" />
+        <View style={{ maxHeight: "70%", backgroundColor: "#0b0b0d", borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: "#26262e", paddingBottom: insets.bottom + 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 }}>
+            <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>Make this a thread</Text>
+            <View style={{ flex: 1 }} />
+            <Pressable onPress={() => setThreadPick(false)} hitSlop={8} accessibilityLabel="Close" style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="close" size={20} color={colors.muted} />
+            </Pressable>
+          </View>
+          <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 12.5, paddingHorizontal: 16, paddingBottom: 10 }}>
+            The comments stay here either way — a thread puts the discussion in a community too.
+          </Text>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+            {myCommunities.length === 0 ? (
+              <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 13, padding: 14 }}>You aren&apos;t in a community yet.</Text>
+            ) : myCommunities.map((c) => (
+              <Pressable key={c.id} onPress={() => void makeThread(c.id)} disabled={discussBusy} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, backgroundColor: pressed ? "#17171c" : "transparent", opacity: discussBusy ? 0.5 : 1 })}>
+                <View style={{ width: 30, height: 30, borderRadius: 8, overflow: "hidden", backgroundColor: c.color, alignItems: "center", justifyContent: "center" }}>
+                  {c.avatar_url ? <Img uri={c.avatar_url} style={{ width: 30, height: 30 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 14 }}>{c.name.charAt(0).toUpperCase()}</Text>}
+                </View>
+                <Text style={{ flex: 1, color: colors.text, fontFamily: fonts.body, fontSize: 14 }}>{c.name}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
       {room && recorded && <ClipEditorSheet open={!!editor} player={player} duration={player.duration || 0} captureAt={editor?.at ?? 0} roomId={room.id} uid={uid} onClose={() => setEditor(null)} />}
       <ComposerSheet
         open={composing}

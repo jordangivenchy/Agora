@@ -8,6 +8,7 @@
    its menu. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -159,7 +160,7 @@ export function ChatThread(p: ChatThreadProps) {
             )}
             {m.image_url && (
               <Pressable onPress={() => openImage(m.image_url!)}>
-                <Image source={{ uri: m.image_url }} style={{ width: 240, height: 240, borderRadius: 9, backgroundColor: "#0f0f12" }} resizeMode="cover" />
+                <Img uri={m.image_url} style={{ width: 240, height: 240, borderRadius: 9, backgroundColor: "#0f0f12" }} recyclingKey={m.id} />
               </Pressable>
             )}
             {m.community_id ? (

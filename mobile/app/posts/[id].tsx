@@ -5,6 +5,7 @@
    comment (#comment-id) opens the way to it and lights it. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Img } from "../../src/img";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -157,7 +158,7 @@ export default function ThreadScreen() {
               <View style={{ marginTop: 3 }}>
                 <RichText text={c.body} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 20 }} />
               </View>
-              {c.image_url && <Pressable onPress={() => openImage(c.image_url!)}><Image source={{ uri: c.image_url }} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 200 }} resizeMode="cover" /></Pressable>}
+              {c.image_url && <Pressable onPress={() => openImage(c.image_url!)}><Img uri={c.image_url} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 200 }} recyclingKey={c.id} /></Pressable>}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginTop: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
                   <Pressable onPress={() => voteHere(c, c.my_vote === 1 ? 0 : 1)} hitSlop={6} style={{ paddingVertical: 6 }}>

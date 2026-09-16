@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
       .select("id, title, community_id, community:communities(name, is_private)")
       .gt("created_at", weekAgo)
       .eq("is_repost", false)
+      .eq("listed", true)
       .limit(2000);
     type PostRow = { id: string; title: string | null; community_id: string; community: { name: string; is_private: boolean } | null };
     const posts = (postRows ?? []) as unknown as PostRow[];

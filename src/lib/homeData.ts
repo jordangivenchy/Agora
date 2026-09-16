@@ -227,6 +227,7 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[
     .from("community_posts")
     .select("id, title, body, image_url, created_at, author:users!author_id(username, display_name, avatar_url), community:communities!community_id(name, color), comments:community_comments(count)")
     .not("featured_at", "is", null)
+    .eq("listed", true)
     .gte("featured_at", since)
     .or("is_repost.is.null,is_repost.eq.false")
     .order("featured_at", { ascending: false })

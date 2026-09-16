@@ -1,4 +1,5 @@
 import { Image, Text, View } from "react-native";
+import { Img } from "./img";
 import { colors } from "./theme";
 
 /** A face: the photo, or the initial on the site's dark surface. `ring` lights it up. */
@@ -13,7 +14,7 @@ export function Avatar({ url, name, size, ring, dim }: { url: string | null | un
       }}
     >
       {url ? (
-        <Image source={{ uri: url }} style={{ width: size - border * 2, height: size - border * 2, borderRadius: size / 2 }} />
+        <Img uri={url} style={{ width: size - border * 2, height: size - border * 2, borderRadius: size / 2 }} />
       ) : (
         <Text style={{ color: colors.text, fontWeight: "800", fontSize: Math.round(size * 0.38) }}>{initial}</Text>
       )}

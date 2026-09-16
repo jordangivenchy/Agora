@@ -6,6 +6,7 @@
    phone's width has room for it (press and hold opens it too, as on the
    site's phones). The thread view uses it whole. */
 import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -25,7 +26,7 @@ export function CommunityTile({ name, color, avatarUrl, size = 30 }: { name: str
   return (
     <View style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), overflow: "hidden", backgroundColor: color || colors.blue, alignItems: "center", justifyContent: "center" }}>
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={{ width: size, height: size }} />
+        <Img uri={avatarUrl} style={{ width: size, height: size }} />
       ) : (
         <Text style={{ color: "#fff", fontFamily: fonts.title, fontSize: Math.round(size * 0.45) }}>{name.trim().charAt(0).toUpperCase()}</Text>
       )}
@@ -137,7 +138,7 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
           <ClipChip clipId={clipIdInBody(p.body)} small={!full} />
           {p.image_url && (
             <Pressable onPress={() => openImage(p.image_url!)} accessibilityLabel="Open image">
-              <Image source={{ uri: p.image_url }} style={{ marginTop: 8, borderRadius: 8, width: "100%", height: full ? 260 : 180 }} resizeMode="cover" />
+              <Img uri={p.image_url} style={{ marginTop: 8, borderRadius: 8, width: "100%", height: full ? 260 : 180 }} recyclingKey={p.id} />
             </Pressable>
           )}
           <PostTopicQueue postId={p.id} compact={!full} />

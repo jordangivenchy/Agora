@@ -2,6 +2,7 @@
    the rooms as wide tiles — live first, then open, then replays. */
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Img } from "../../src/img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
@@ -79,7 +80,7 @@ export default function Trending() {
           return (
             <Pressable onPress={() => open(r)} style={({ pressed }) => ({ marginBottom: 18, opacity: pressed ? 0.9 : 1 })}>
               <View style={{ aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", backgroundColor: GRADIENT_STANDINS[index % GRADIENT_STANDINS.length], borderWidth: StyleSheet.hairlineWidth, borderColor: "#3a3a44" }}>
-                {img && <Image source={{ uri: img }} style={StyleSheet.absoluteFill} resizeMode="cover" />}
+                {img && <Img uri={img} style={StyleSheet.absoluteFill} />}
                 <View style={{ position: "absolute", top: 8, left: 8, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: live ? "#e24b4a" : r.status === "created" ? "#33291a" : colors.bg, borderWidth: r.status === "created" ? StyleSheet.hairlineWidth : 0, borderColor: colors.gold }}>
                   {live && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" }} />}
                   <Text style={{ color: live ? "#fcebeb" : r.status === "created" ? colors.gold : "#c0c0c8", fontFamily: fonts.medium, fontSize: 10 }}>{live ? "LIVE" : r.status === "created" ? "OPEN — JOIN" : "ENDED"}</Text>

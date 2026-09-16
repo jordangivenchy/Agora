@@ -5,6 +5,7 @@
    past discussions, scheduled, posts, reposts, comments, communities. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Image, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -150,7 +151,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
     body = communities.length === 0 ? empty(isSelf ? "Not in any communities yet." : `${first} hasn't joined a community.`) : communities.map((c) => (
       <Pressable key={c.id} onPress={() => router.push({ pathname: "/c/[id]", params: { id: c.id } })} style={[card, { padding: 12, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 10 }]}>
         <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: c.color ?? colors.blueText, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-          {c.avatar_url ? <Image source={{ uri: c.avatar_url }} style={{ width: 28, height: 28 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 13 }}>{c.name.charAt(0).toUpperCase()}</Text>}
+          {c.avatar_url ? <Img uri={c.avatar_url} style={{ width: 28, height: 28 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 13 }}>{c.name.charAt(0).toUpperCase()}</Text>}
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -185,14 +186,14 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
       >
         {profile?.banner_url ? (
-          <Image source={{ uri: profile.banner_url }} style={{ width: "100%", height: BANNER }} resizeMode="cover" />
+          <Img uri={profile.banner_url} style={{ width: "100%", height: BANNER }} priority="high" />
         ) : (
           <View style={{ height: BANNER, backgroundColor: colors.surface2 }} />
         )}
         <View style={{ paddingHorizontal: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
             <View style={{ width: 96, height: 96, borderRadius: 48, marginTop: -48, borderWidth: 3, borderColor: colors.bg, backgroundColor: colors.surface2, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-              {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: 90, height: 90 }} /> : <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 36 }}>{(profile?.display_name || profile?.username || "?").charAt(0).toUpperCase()}</Text>}
+              {profile?.avatar_url ? <Img uri={profile.avatar_url} style={{ width: 90, height: 90 }} /> : <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 36 }}>{(profile?.display_name || profile?.username || "?").charAt(0).toUpperCase()}</Text>}
             </View>
             <View style={{ flex: 1 }} />
             {profile && (
@@ -289,7 +290,7 @@ function DebateCard({ d, fallback }: { d: DebateRow; /** The page's own avatar, 
   return (
     <Pressable onPress={() => router.push({ pathname: "/replay/[id]", params: { id: d.id } })} style={({ pressed }) => [card, { overflow: "hidden", marginBottom: 12, opacity: pressed ? 0.9 : 1 }]}>
       <View style={{ aspectRatio: 16 / 9, backgroundColor: "#0d1b3e" }}>
-        {img && <Image source={{ uri: img }} style={StyleSheet.absoluteFill} resizeMode="cover" />}
+        {img && <Img uri={img} style={StyleSheet.absoluteFill} />}
         <View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.bg, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 }}>
           <Ionicons name="play" size={11} color={colors.text} />
           <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12 }}>Watch</Text>

@@ -12,6 +12,7 @@
    grows to its fullest slide. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Img } from "./img";
 import { router, useIsFocused } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { dateLabel, personName, type FeaturedPost, type HeroRoom, type NewsStory } from "./home";
@@ -207,7 +208,7 @@ function Picture({ uri, ground, children }: { uri: string | null; ground: string
   const [broken, setBroken] = useState(false);
   return (
     <View style={{ flex: 1, backgroundColor: ground, overflow: "hidden" }}>
-      {!!uri && !broken && <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setBroken(true)} />}
+      {!!uri && !broken && <Img uri={uri} style={StyleSheet.absoluteFill} priority="high" onError={() => setBroken(true)} />}
       {children}
     </View>
   );
@@ -308,7 +309,7 @@ function NewsSlide({ story, ground, onMeasure }: { story: NewsStory; ground: str
             {story.sources.slice(0, 4).map((s) => (
               <View key={s.name} style={{ flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 }}>
                 {s.domain ? (
-                  <Image source={{ uri: outletIcon(s.domain) }} style={{ width: 14, height: 14, borderRadius: 3 }} />
+                  <Img uri={outletIcon(s.domain)} style={{ width: 14, height: 14, borderRadius: 3 }} />
                 ) : (
                   <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 8 }}>{s.name.charAt(0)}</Text>

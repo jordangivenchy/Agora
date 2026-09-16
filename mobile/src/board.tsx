@@ -4,6 +4,7 @@
    daily topics. */
 import { useEffect, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TOPICS, darkInkOn, type IconName, type Topic } from "./topics";
@@ -147,7 +148,7 @@ function RoomTile({ room, reminder, onReminder, reminderBusy }: { room: BoardRoo
       style={({ pressed }) => ({ width: 168, height: 168, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surface2, opacity: pressed ? 0.88 : 1 })}
     >
       {img ? (
-        <Image source={{ uri: img }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Img uri={img} style={StyleSheet.absoluteFill} />
       ) : (
         <View style={[StyleSheet.absoluteFill, { alignItems: "center", justifyContent: "center" }]}>
           <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 52 }}>{initial}</Text>

@@ -9,6 +9,7 @@
    on the banner; a solid title bar takes over once the banner scrolls away. */
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { Alert, Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Img } from "../../src/img";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -207,7 +208,7 @@ export default function CommunityScreen() {
       {c ? (
         <View style={{ marginBottom: 4 }}>
           {c.banner_url ? (
-            <Image source={{ uri: c.banner_url }} style={{ width: "100%", height: BANNER }} resizeMode="cover" />
+            <Img uri={c.banner_url} style={{ width: "100%", height: BANNER }} priority="high" />
           ) : (
             <View style={{ height: BANNER, backgroundColor: c.color }} />
           )}
@@ -216,7 +217,7 @@ export default function CommunityScreen() {
                 tile's bottom edge, hanging below it. */}
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
               <View style={{ width: 76, height: 76, borderRadius: 20, marginTop: -41, borderWidth: 3, borderColor: colors.bg, backgroundColor: c.color, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                {c.avatar_url ? <Image source={{ uri: c.avatar_url }} style={{ width: 70, height: 70 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.title, fontSize: 30 }}>{c.name.charAt(0).toUpperCase()}</Text>}
+                {c.avatar_url ? <Img uri={c.avatar_url} style={{ width: 70, height: 70 }} /> : <Text style={{ color: "#fff", fontFamily: fonts.title, fontSize: 30 }}>{c.name.charAt(0).toUpperCase()}</Text>}
               </View>
               <View style={{ flex: 1 }} />
               <Pressable onPress={() => setMenuOpen(true)} accessibilityLabel="Community options" style={({ pressed }) => ({ width: 36, height: 36, marginBottom: -18, borderRadius: 18, backgroundColor: pressed ? "#22222a" : colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: "center", justifyContent: "center" })}>

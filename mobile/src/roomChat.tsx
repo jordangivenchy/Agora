@@ -5,6 +5,7 @@
    person. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Img } from "./img";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -136,7 +137,7 @@ export function RoomChatSheet({ open, onClose, roomId, meId, messages }: { open:
                     <View style={{ flexDirection: "row", gap: 8, paddingVertical: 5 }}>
                       <Pressable onPress={() => person(m)} style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: userColor(m.user_id), overflow: "hidden", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
                         {u?.avatar_url ? (
-                          <Image source={{ uri: u.avatar_url }} style={{ width: 26, height: 26 }} />
+                          <Img uri={u.avatar_url} style={{ width: 26, height: 26 }} />
                         ) : (
                           <Text style={{ color: "#fff", fontFamily: fonts.bold, fontSize: 12 }}>{name.charAt(0).toUpperCase()}</Text>
                         )}
