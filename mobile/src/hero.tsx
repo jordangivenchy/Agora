@@ -15,19 +15,17 @@ import { FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions
 import { Img } from "./img";
 import { router, useIsFocused } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { dateLabel, personName, type FeaturedPost, type HeroRoom, type NewsStory } from "./home";
+import { personName, type HeroRoom, type NewsStory } from "./home";
 import { outletIcon, topicFor } from "./discover";
 import { expandQueue, openQueue, useQueue } from "./queue";
 import { useReduceMotion } from "./motion";
 import { openUrl } from "./web";
 import { colors, fonts } from "./theme";
-import { inlineRich } from "./richText";
 
 /* The hero's least height; a slide with more to say makes it taller. */
 export const HERO_HEIGHT = 264;
 const MIN_PICTURE = 150; // the least a room's or a story's picture keeps
 const SLIDE_MS = 9000;
-const NOTICE_MS = 15000;
 
 /* The site's topic chips: labels and accents by the database's keys. */
 const TOPIC_CHIP: Record<string, { label: string; accent: string }> = {
@@ -44,13 +42,8 @@ const TOPIC_CHIP: Record<string, { label: string; accent: string }> = {
 
 /* Solid grounds for a picture that is missing or failed. */
 const GROUNDS = ["#0d1b3e", "#1a1000", "#0d2b1a", "#001a2e", "#2d0a1a", "#0d0a2e"];
-/* A notice stands on the same near-black as the app's cards, as the
-   site's does: the words need a surface, not the sky through them. */
-const NOTICE_GROUND = colors.surface;
-
 type Slide =
   | { kind: "room"; key: string; room: HeroRoom; ground: string }
-  | { kind: "post"; key: string; post: FeaturedPost }
   | { kind: "news"; key: string; story: NewsStory; ground: string };
 
 /* "now", "for 12m", "for 2h 5m" — after "Live". */
@@ -62,19 +55,18 @@ function liveFor(iso: string | null): string {
   return `for ${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
-export function HeroCarousel({ rooms, posts, news, onSettled }: { rooms: HeroRoom[]; posts: FeaturedPost[]; news: NewsStory[]; onSettled?: () => void }) {
+export function HeroCarousel({ rooms, news, onSettled }: { rooms: HeroRoom[]; news: NewsStory[]; onSettled?: () => void }) {
   const { width } = useWindowDimensions();
   const reduce = useReduceMotion();
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
-    const n = Math.max(rooms.length, posts.length, news.length);
+    const n = Math.max(rooms.length, news.length);
     for (let i = 0; i < n; i++) {
       if (rooms[i]) out.push({ kind: "room", key: `r:${rooms[i].id}`, room: rooms[i], ground: GROUNDS[(i * 2) % GROUNDS.length] });
-      if (posts[i]) out.push({ kind: "post", key: `p:${posts[i].id}`, post: posts[i] });
       if (news[i]) out.push({ kind: "news", key: `n:${news[i].id}`, story: news[i], ground: GROUNDS[(i * 2 + 1) % GROUNDS.length] });
     }
     return out;
-  }, [rooms, posts, news]);
+  }, [rooms, news]);
   const n = slides.length;
   const slidesRef = useRef(slides);
   slidesRef.current = slides;
@@ -123,7 +115,7 @@ export function HeroCarousel({ rooms, posts, news, onSettled }: { rooms: HeroRoo
   const focused = useIsFocused();
   useEffect(() => {
     if (n < 2 || reduce || !focused) return;
-    const dwell = slidesRef.current[cur]?.kind === "post" ? NOTICE_MS : SLIDE_MS;
+    const dwell = SLIDE_MS;
     const t = setTimeout(() => {
       if (Date.now() - touchedAt.current < dwell) { setWait((w) => w + 1); return; }
       list.current?.scrollToOffset({ offset: at(curRef.current + 1), animated: true });
@@ -178,8 +170,7 @@ export function HeroCarousel({ rooms, posts, news, onSettled }: { rooms: HeroRoo
           const report = (h: number) => measure(s.key, h);
           return (
             <View style={{ width, height }}>
-              {s.kind === "post" ? <PostSlide post={s.post} onMeasure={report} />
-                : s.kind === "news" ? <NewsSlide story={s.story} ground={s.ground} onMeasure={report} />
+              {s.kind === "news" ? <NewsSlide story={s.story} ground={s.ground} onMeasure={report} />
                 : <RoomSlide room={s.room} ground={s.ground} onMeasure={report} />}
             </View>
           );
@@ -222,71 +213,6 @@ function Chip({ label, accent }: { label: string; accent?: string }) {
       {!!accent && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />}
       <Text numberOfLines={1} style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 11 }}>{label}</Text>
     </View>
-  );
-}
-
-/* "From the team": a post a moderator featured on the home page — the
-   title, its opening, and the list it goes on to, each item's lead with
-   the start of its detail (the site's desktop notice, stacked for a
-   phone); a post with a picture shows the picture instead of the list.
-   A tap anywhere opens the thread. */
-function PostSlide({ post, onMeasure }: { post: FeaturedPost; onMeasure: (h: number) => void }) {
-  const open = () => router.push({ pathname: "/posts/[id]", params: { id: post.id } });
-  const list = post.imageUrl ? null : post.highlights;
-  const words = (
-    <>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={{ color: colors.yellow, fontFamily: fonts.title, fontSize: 12.5 }}>From the team</Text>
-        <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12 }}>·  {dateLabel(post.createdAt)}</Text>
-      </View>
-      <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 22, lineHeight: 26, letterSpacing: -0.3, marginTop: 6 }}>{post.title}</Text>
-      <View style={{ width: 36, height: 3, borderRadius: 2, backgroundColor: colors.yellow, marginTop: 8 }} />
-      {/* The notice keeps its links (src/home.ts): they are rendered, not printed. */}
-      <Text numberOfLines={list || post.imageUrl ? 2 : 3} style={{ color: colors.soft, fontFamily: fonts.body, fontSize: 14, lineHeight: 20, marginTop: 8 }}>{inlineRich(post.excerpt, "ex")}</Text>
-      {list && (
-        <View style={{ marginTop: 12 }}>
-          {!!list.heading && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.3 }}>{list.heading}</Text>}
-          {list.items.map((it, i) => (
-            <View key={i} style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
-              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.yellow, marginRight: 9 }} />
-              <Text numberOfLines={1} style={{ flex: 1, color: "#a3a3ae", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>
-                <Text style={{ color: colors.text, fontFamily: fonts.semi }}>{inlineRich(it.lead, `l${i}`)}</Text>
-                {it.detail ? <>{" — "}{inlineRich(it.detail, `d${i}`)}</> : ""}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 }}>
-        <Pressable
-          onPress={open}
-          style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#ffc22e" : colors.yellow })}
-        >
-          <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 }}>Read more</Text>
-        </Pressable>
-        <Text style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }} numberOfLines={1}>
-          <Text style={{ fontFamily: fonts.bold, color: colors.soft }}>{post.comments}</Text> comment{post.comments === 1 ? "" : "s"}
-          {post.community ? <Text> · <Text style={{ fontFamily: fonts.bold, color: colors.soft }}>{post.community.name}</Text></Text> : null}
-        </Text>
-      </View>
-    </>
-  );
-  if (post.imageUrl) {
-    return (
-      <Pressable onPress={open} style={{ flex: 1 }}>
-        <Picture uri={post.imageUrl} ground={NOTICE_GROUND} />
-        <View onLayout={(e) => onMeasure(e.nativeEvent.layout.height + MIN_PICTURE)} style={{ backgroundColor: NOTICE_GROUND, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 }}>
-          {words}
-        </View>
-      </Pressable>
-    );
-  }
-  return (
-    <Pressable onPress={open} style={{ flex: 1, justifyContent: "center", backgroundColor: NOTICE_GROUND }}>
-      <View onLayout={(e) => onMeasure(e.nativeEvent.layout.height)} style={{ paddingHorizontal: 20, paddingVertical: 14 }}>
-        {words}
-      </View>
-    </Pressable>
   );
 }
 

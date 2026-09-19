@@ -326,7 +326,3 @@ export function fmtRotate(ms: number): string {
   const m = Math.floor(ms / 60000);
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
 }
-
-export function dateLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
-}

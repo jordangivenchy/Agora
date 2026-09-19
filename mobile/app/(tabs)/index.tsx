@@ -10,6 +10,7 @@ import { HomeHeader } from "../../src/header";
 import { same, useFocusRefresh } from "../../src/refresh";
 import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
+import { TeamNote } from "../../src/teamNote";
 import { TopicBoard } from "../../src/board";
 import { Starfield } from "../../src/starfield";
 import { holdBoot } from "../../src/boot";
@@ -51,11 +52,11 @@ export default function Home() {
   }, []);
   useEffect(() => {
     if (!firstLoad) return;
-    /* The hero measures its posts after they mount; wait for its final height too. */
-    if (!heroSettled && (heroRooms.length || posts.length || news.length)) return;
+    /* The hero measures its slides after they mount; wait for its final height too. */
+    if (!heroSettled && (heroRooms.length || news.length)) return;
     bootHold.current?.();
     bootHold.current = null;
-  }, [firstLoad, heroSettled, heroRooms.length, posts.length, news.length]);
+  }, [firstLoad, heroSettled, heroRooms.length, news.length]);
 
   const load = useCallback(async () => {
     try {
@@ -106,8 +107,10 @@ export default function Home() {
       <HomeHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}>
         <Starfield width={width} height={1100} />
-        <HeroCarousel rooms={heroRooms} posts={posts} news={heroNews} onSettled={onHeroSettled} />
+        <HeroCarousel rooms={heroRooms} news={heroNews} onSettled={onHeroSettled} />
         <NewsTicker stories={tickerIn ? tickerNews : []} />
+        {/* The team's note is a strip, not a slide: the hero is for rooms and the news. */}
+        <TeamNote posts={posts} />
         <TopicBoard topics={topics} rooms={rooms} onQueue={(t) => (t.am_queued || isQueued(t.id) ? void leaveQueue(t.id) : openQueue({ id: t.id, question: t.question, topicKey: t.topic_key, queueCount: t.queue_count, proCount: t.pro_count, conCount: t.con_count }))} />
       </ScrollView>
     </View>
