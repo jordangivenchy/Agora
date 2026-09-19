@@ -18,6 +18,7 @@ import { fetchFeatured, fetchHeroRooms, fetchNavUser, type HomeInitial } from "@
 import LoadingScreen from "@/components/LoadingScreen";
 import TopicsHome from "@/components/TopicsHome";
 import HeroCarousel, { type HeroPost, type HeroRoom } from "@/components/HeroCarousel";
+import TeamNote from "@/components/TeamNote";
 import ShootingStars from "@/components/ShootingStars";
 import KeyboardGuard from "@/components/KeyboardGuard";
 import { requestCreate } from "@/components/GlobalActions";
@@ -156,6 +157,9 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
       <main className="main" style={{ marginTop: 0 }}>
         <div id="homeFeed">
           <div id="carouselHost" ref={setCarouselHost} />
+          {/* The team's note is a strip, not a slide: the hero is for
+              rooms and the news (components/TeamNote.tsx). */}
+          <TeamNote posts={featured} />
           <section id="fieldsSection" ref={setFieldsHost} />
         </div>
       </main>
@@ -182,7 +186,7 @@ export default function HomePage({ initial }: { initial: HomeInitial }) {
           project to be running.
         </div>
       )}
-      <HeroCarousel container={carouselHost} rooms={heroRooms} posts={featured} />
+      <HeroCarousel container={carouselHost} rooms={heroRooms} />
       <TopicsHome
         container={fieldsHost}
         onCreateLobby={(topic, schedule) => requestCreate({ motion: "", topic, schedule })}

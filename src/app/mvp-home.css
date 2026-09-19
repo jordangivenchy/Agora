@@ -697,6 +697,25 @@ body {
 /* ─── CAROUSEL ─── */
 .carousel-section { margin-bottom: 18px; }
 
+/* A note from the team, under the hero (components/TeamNote.tsx): one
+   quiet row — who, two sentences, a link — in none of the product's
+   yellow. */
+.team-note { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 26px; padding: 14px 16px 14px 16px; border-radius: 12px; background: #0b0b0d; border: 1px solid #1f1f26; font-family: 'DM Sans', sans-serif; }
+.team-note-face { flex-shrink: 0; display: block; width: 36px; height: 36px; border-radius: 50%; margin-top: 1px; }
+.team-note-body { flex: 1 1 auto; min-width: 0; }
+.team-note-from { font-size: 12px; color: #8c8c98; margin-bottom: 3px; }
+.team-note-from b { color: #f5f5f0; font-weight: 600; }
+.team-note-text { margin: 0; font-size: 14px; line-height: 1.5; color: #c9c9d2; }
+.team-note-text .rich-text-inline a { color: #e6e6ee; }
+.team-note-read { display: inline-flex; align-items: center; gap: 3px; margin-top: 6px; font-size: 13px; color: #f5f5f0; font-weight: 600; text-decoration: none; border-bottom: 1px solid #3a3a45; }
+.team-note-read:hover { border-bottom-color: #f5f5f0; }
+.team-note-close { flex-shrink: 0; width: 28px; height: 28px; margin: -4px -6px 0 0; border-radius: 8px; border: 1px solid transparent; background: none; color: #8c8c98; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.team-note-close:hover { color: #f5f5f0; border-color: #2b2b34; background: #111114; }
+@media (max-width: 639px) {
+  .team-note { gap: 12px; padding: 12px 12px 12px 14px; margin-bottom: 20px; }
+  .team-note-text { font-size: 13.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
 /* News ticker row (NewsTicker.tsx portals into #newsTickerHost) */
 .hide-scrollbar { scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
