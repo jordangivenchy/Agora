@@ -6,15 +6,29 @@
    functions. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { HeroPost, HeroRoom } from "@/components/HeroCarousel";
+import type { HeroRoom } from "@/components/HeroCarousel";
 import { displayName } from "@/lib/names";
 
 export type HomeNavUser = { id: string; name: string; username: string | null; avatarUrl: string | null };
 
 export type HomeInitial = {
   heroRooms: HeroRoom[];
-  featured: HeroPost[];
+  featured: FeaturedNote[];
   navUser: HomeNavUser | null;
+};
+
+/* A post a moderator featured on the home page, as the team's note
+   under the hero (components/TeamNote.tsx): who wrote it and its
+   opening, links kept. */
+export type FeaturedNote = {
+  id: string;
+  title: string;
+  /** The opening paragraph, plain but for its links. */
+  excerpt: string;
+  createdAt: string;
+  author: string;
+  authorName: string;
+  authorAvatar: string | null;
 };
 
 /* The featured posts: the ones a site moderator put on the home page
@@ -184,75 +198,32 @@ function cutAtWord(text: string, max: number): string {
   return (out.trimEnd() || shown(text).slice(0, max).trimEnd()) + "…";
 }
 
-/* The notice's copy from a post: its opening paragraph (the first block
-   that is neither a heading nor a list); when the post goes on to a
-   list, that list's heading and each item's lead with the rest of the
-   item as its detail; and the paragraph after the list with its heading,
-   if there is one. Lists written with a blank line between items count
-   as one list. */
-export type NoticeItem = { lead: string; detail: string };
-export type NoticeHighlights = { heading: string | null; items: NoticeItem[] };
-export type NoticeMore = { heading: string | null; text: string };
-function noticeCopy(md: string): { excerpt: string; highlights: NoticeHighlights | null; more: NoticeMore | null } {
+/* The note's opening: the first block that is neither a heading nor a
+   list, plain but for its links, cut on a word. */
+function noteExcerpt(md: string): string {
   const blocks = md.replace(/\r/g, "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
   const isItem = (line: string) => /^([-*+]|\d+\.)\s+/.test(line);
   const isList = (b: string) => b.split("\n").map((l) => l.trim()).filter(Boolean).every(isItem);
   const isHeading = (b: string) => /^#{1,6}\s/.test(b) || (!b.includes("\n") && b.length <= 60 && !/[.!?]$/.test(b));
   const opening = blocks.find((b) => !isList(b) && !isHeading(b)) ?? blocks[0] ?? "";
-  const raw: string[] = [];
-  let heading: string | null = null;
-  let after = -1;
-  for (let i = 0; i < blocks.length; i++) {
-    if (isList(blocks[i])) {
-      if (!raw.length && i > 0 && isHeading(blocks[i - 1])) heading = plain(blocks[i - 1]);
-      for (const line of blocks[i].split("\n")) {
-        const t = line.trim();
-        if (isItem(t)) raw.push(t.replace(/^([-*+]|\d+\.)\s+/, ""));
-      }
-      after = i + 1;
-    } else if (raw.length) break;
-  }
-  const items = raw
-    .map((t): NoticeItem => {
-      const text = plain(t);
-      const m = /[.!?:]\s|\s[—–-]\s/.exec(text);
-      const lead = (m ? text.slice(0, m.index) : text).replace(/[.:!?]+$/, "").trim();
-      const detail = m ? text.slice(m.index + m[0].length).trim() : "";
-      return { lead: lead.length > 40 ? lead.slice(0, 39).trimEnd() + "…" : lead, detail: cutAtWord(detail, 110) };
-    })
-    .filter((it) => it.lead)
-    .slice(0, 5);
-  let more: NoticeMore | null = null;
-  if (after > 0) {
-    for (let i = after; i < blocks.length; i++) {
-      if (isList(blocks[i]) || isHeading(blocks[i])) continue;
-      const h = i > after && isHeading(blocks[i - 1]) ? plain(blocks[i - 1]) : null;
-      more = { heading: h, text: cutAtWord(plain(blocks[i]), 220) };
-      break;
-    }
-  }
-  return { excerpt: cutAtWord(plain(opening), 320), highlights: items.length >= 2 ? { heading, items } : null, more };
+  return cutAtWord(plain(opening), 320);
 }
 
 type Person = { username: string | null; display_name: string | null; avatar_url: string | null };
-type Board = { name: string; color: string | null };
 type DevPostRow = {
   id: string;
   title: string;
   body: string | null;
-  image_url: string | null;
   created_at: string;
   author: Person | Person[] | null;
-  community: Board | Board[] | null;
-  comments: { count: number }[] | null;
 };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
-export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[]> {
+export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedNote[]> {
   const since = new Date(Date.now() - FEATURED_DAYS * 86400000).toISOString();
   const { data } = await supabase
     .from("community_posts")
-    .select("id, title, body, image_url, created_at, author:users!author_id(username, display_name, avatar_url), community:communities!community_id(name, color), comments:community_comments(count)")
+    .select("id, title, body, created_at, author:users!author_id(username, display_name, avatar_url)")
     .not("featured_at", "is", null)
     .eq("listed", true)
     .gte("featured_at", since)
@@ -261,22 +232,14 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<HeroPost[
     .limit(HERO_POSTS);
   return ((data ?? []) as unknown as DevPostRow[]).map((p) => {
     const a = one(p.author);
-    const b = one(p.community);
-    const copy = noticeCopy(p.body ?? "");
     return {
       id: p.id,
       title: p.title,
-      excerpt: copy.excerpt,
-      highlights: copy.highlights,
-      more: copy.more,
-      imageUrl: typeof p.image_url === "string" && /^https:\/\//.test(p.image_url) ? p.image_url : null,
+      excerpt: noteExcerpt(p.body ?? ""),
       createdAt: p.created_at,
       author: a?.username ?? "agorasphere",
       authorName: a ? displayName(a) : "AgoraSphere",
       authorAvatar: typeof a?.avatar_url === "string" && /^https:\/\//.test(a.avatar_url) ? a.avatar_url : null,
-      board: b?.name ?? "Agora",
-      boardColor: safeColor(b?.color),
-      commentCount: p.comments?.[0]?.count ?? 0,
     };
   });
 }

@@ -27,16 +27,12 @@ import {
   type CSSProperties, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import { navigateTo } from "@/lib/progress";
-import { pathFor } from "@/lib/routes";
 import { outletIcon } from "@/lib/outlets";
 import { expandQueue, openQueue, useQueue } from "@/lib/queue";
 import { topicFor } from "@/components/NewsPage";
 import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
-import RichText from "@/components/community/RichText";
 
 /** A live room as the page's data pass shapes it (the shell's keys). */
 export type HeroRoom = {
@@ -68,31 +64,9 @@ type NewsStory = TickerStory & {
   major?: boolean;
 };
 
-/* A featured post: one a site moderator put on the home page (lib/homeData.ts), shown as a notice from the team. */
-export type HeroPost = {
-  id: string;
-  title: string;
-  /** The opening paragraph, as plain text. */
-  excerpt: string;
-  /** The post's first list — its heading, each item's lead and detail — for the notice's side column. */
-  highlights: { heading: string | null; items: { lead: string; detail: string }[] } | null;
-  /** The paragraph after that list, with its heading. */
-  more: { heading: string | null; text: string } | null;
-  imageUrl: string | null;
-  createdAt: string;
-  author: string;
-  authorName: string;
-  authorAvatar: string | null;
-  board: string;
-  boardColor: string | null;
-  commentCount: number;
-};
-
 type Slide =
   | { kind: "room"; key: string; room: HeroRoom }
-  | { kind: "post"; key: string; post: HeroPost }
   | { kind: "news"; key: string; story: NewsStory; gradient: string };
-
 
 /* The shell's topic chips: its keys (the page maps the database's
    `ethics` to `politics-ethics`) with its labels and accents. */
@@ -129,12 +103,6 @@ function liveFor(iso: string | null): string {
   return ` for ${h}h ${m % 60}m`;
 }
 
-/* "Sep 10" — the day a notice went up. */
-function noticeDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 /* A full page load with the loading screen up first (the adapter's
    go(): the sky paints, then the navigation starts). */
 function leaveTo(url: string) {
@@ -142,13 +110,10 @@ function leaveTo(url: string) {
   requestAnimationFrame(() => { window.location.href = url; });
 }
 
-export default function HeroCarousel({ container, rooms, posts = [] }: {
+export default function HeroCarousel({ container, rooms }: {
   container: HTMLElement | null;
   rooms: HeroRoom[];
-  /** The featured posts (lib/homeData.ts fetchFeatured), as slides between the rooms and the stories. */
-  posts?: HeroPost[];
 }) {
-  const router = useRouter();
   const [news, setNews] = useState<NewsStory[]>([]);
   const [ticker, setTicker] = useState<TickerStory[]>([]);
   const [broken, setBroken] = useState<Record<string, true>>({});
@@ -193,17 +158,16 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
 
   /* The page answers a queue request with the button's state. */
 
-  /* Rooms, featured posts and stories take turns: room, post, story… */
+  /* Rooms and stories take turns: room, story, room, story… */
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
-    const n = Math.max(rooms.length, posts.length, news.length);
+    const n = Math.max(rooms.length, news.length);
     for (let i = 0; i < n; i++) {
       if (rooms[i]) out.push({ kind: "room", key: `r:${rooms[i].roomId}`, room: rooms[i] });
-      if (posts[i]) out.push({ kind: "post", key: `p:${posts[i].id}`, post: posts[i] });
       if (news[i]) out.push({ kind: "news", key: `n:${news[i].id}`, story: news[i], gradient: NEWS_GRADIENTS[i % NEWS_GRADIENTS.length] });
     }
     return out;
-  }, [rooms, posts, news]);
+  }, [rooms, news]);
   const N = slides.length;
   const nRef = useRef(N);
   useLayoutEffect(() => { nRef.current = N; }, [N]);
@@ -252,12 +216,9 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
     }
   }, [place, snap]);
 
-  /* Autoplay dwells on each slide for as long as it takes to read: a
-     story's summary in nine seconds, a notice from the team in fifteen. */
-  const SLIDE_MS = 9000, NOTICE_MS = 15000;
-  const slidesRef = useRef(slides);
-  useLayoutEffect(() => { slidesRef.current = slides; }, [slides]);
-  const dwell = useCallback(() => (slidesRef.current[curRef.current]?.kind === "post" ? NOTICE_MS : SLIDE_MS), []);
+  /* Autoplay dwells on each slide for as long as a story's summary takes to read. */
+  const SLIDE_MS = 9000;
+  const dwell = useCallback(() => SLIDE_MS, []);
   const stopAuto = useCallback(() => { window.clearTimeout(autoTimer.current); autoTimer.current = 0; }, []);
   const startAuto = useCallback(() => {
     stopAuto();
@@ -365,14 +326,6 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
     if (Date.now() - swipedAt.current < 500) return; // the tap that ended a swipe
     leaveTo(id ? `/news?story=${encodeURIComponent(id)}` : "/news");
   };
-  /* A post opens in place — the boards page lives under the chrome. */
-  const openPost = (id: string) => navigateTo(router, pathFor.post(id));
-  const tapPost = (id: string) => (e: ReactMouseEvent) => {
-    const t = e.target as HTMLElement | null;
-    if (t?.closest?.("button, a")) return;
-    if (Date.now() - swipedAt.current < 500) return;
-    openPost(id);
-  };
 
   if (!container) return null;
 
@@ -397,22 +350,6 @@ export default function HeroCarousel({ container, rooms, posts = [] }: {
           thumb={c.thumbnailUrl && !broken[`thumb:${c.roomId}`] ? c.thumbnailUrl : null}
           onThumbBroken={() => markBroken(`thumb:${c.roomId}`)}
           onWatch={() => leaveTo(roomPath({ id: c.roomId, motion: c.motion }))}
-        />
-      );
-    }
-    if (slide.kind === "post") {
-      const p = slide.post;
-      return (
-        <NoticeSlide
-          key={key}
-          post={p}
-          i={i}
-          total={N}
-          phone={phone}
-          image={p.imageUrl && !broken[`post:${p.id}`] ? p.imageUrl : null}
-          onImageBroken={() => markBroken(`post:${p.id}`)}
-          onOpen={() => openPost(p.id)}
-          onTap={tapPost(p.id)}
         />
       );
     }
@@ -533,79 +470,6 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
         <button type="button" className="carousel-watch-btn room-panel-watch" onClick={(e) => { e.stopPropagation(); onWatch(); }}>
           <Icon name="play" size={11} style={{ fill: "currentColor" }} /> Watch Live
         </button>
-      </div>
-    </div>
-  );
-}
-
-/* A featured post as a notice from the site, "From the team" with the
-   date: the title, a yellow rule, the post's opening paragraph, the
-   paragraph after its list under that paragraph's heading, and "Read
-   more" with the post's facts. At the right on wide screens: the
-   post's picture framed, or, when the post carries a list, that list —
-   heading, each item's lead and its detail. Phones show the opening
-   and the leads in a line, and open the post on tap. */
-function NoticeSlide({ post: p, i, total, phone, image, onImageBroken, onOpen, onTap }: {
-  post: HeroPost;
-  i: number;
-  total: number;
-  phone: boolean;
-  image: string | null;
-  onImageBroken: () => void;
-  onOpen: () => void;
-  onTap: (e: ReactMouseEvent) => void;
-}) {
-  return (
-    <div
-      className="carousel-item notice"
-      role="group"
-      aria-label={`Slide ${i + 1} of ${total}`}
-      style={phone ? { cursor: "pointer" } : undefined}
-      onClick={phone ? onTap : undefined}
-    >
-      <div className="carousel-bg" />
-      <div className="notice-wrap">
-        <div className="notice-text">
-          <div className="notice-kicker">
-            <span>From the team</span>
-            <span className="notice-date">{noticeDate(p.createdAt)}</span>
-          </div>
-          <h3 className="notice-title">{p.title}</h3>
-          <div className="notice-rule" aria-hidden="true" />
-          {p.excerpt && <p className="notice-body"><RichText text={p.excerpt} inline /></p>}
-          {p.more && (
-            <div className="notice-more">
-              {p.more.heading && <div className="notice-more-head">{p.more.heading}</div>}
-              <p><RichText text={p.more.text} inline /></p>
-            </div>
-          )}
-          {p.highlights && !image && (
-            <div className="notice-leads">{p.highlights.items.map((it) => it.lead).join(" · ").replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, "$1")}</div>
-          )}
-          <div className="notice-foot">
-            <button type="button" className="notice-read" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
-              Read more
-            </button>
-            <span className="notice-meta">
-              <b>{p.commentCount}</b> comment{p.commentCount === 1 ? "" : "s"} · <b>{p.board}</b>
-            </span>
-          </div>
-        </div>
-        {image ? (
-          <div className="notice-photo">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt="" loading="eager" decoding="async" onError={onImageBroken} />
-          </div>
-        ) : p.highlights && (
-          <div className="notice-highlights">
-            {p.highlights.heading && <div className="notice-highlights-head">{p.highlights.heading}</div>}
-            <ul>
-              {p.highlights.items.map((it) => (
-                <li key={it.lead}><b><RichText text={it.lead} inline /></b>{it.detail && <span> — <RichText text={it.detail} inline /></span>}</li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </div>
   );

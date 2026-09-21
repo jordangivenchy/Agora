@@ -39,30 +39,21 @@ export function personName(p: Person | null): string {
 const FEATURED_DAYS = 14;
 const HERO_POSTS = 3;
 
-export type NoticeItem = { lead: string; detail: string };
-export type NoticeHighlights = { heading: string | null; items: NoticeItem[] };
-
+/* A post a moderator featured on the home page, as the team's note under
+   the hero (src/teamNote.tsx): its opening, links kept. */
 export interface FeaturedPost {
   id: string;
   title: string;
+  /** The opening paragraph, plain but for its links. */
   excerpt: string;
-  /* The post's first list — its heading, each item's lead and detail
-     ("Live rooms" — "Start one from the + button…") — when it has two or more. */
-  highlights: NoticeHighlights | null;
   createdAt: string;
-  community: { name: string; color: string | null } | null;
-  comments: number;
-  imageUrl: string | null;
 }
 
 type PostRow = {
   id: string;
   title: string;
   body: string | null;
-  image_url: string | null;
   created_at: string;
-  community: { name: string; color: string | null } | { name: string; color: string | null }[] | null;
-  comments: { count: number }[] | null;
 };
 
 /* Markdown as plain text — marks and images dropped, links kept: a link
@@ -108,46 +99,22 @@ function cutAtWord(text: string, max: number): string {
   }
   return (out.trimEnd() || shown(text).slice(0, max).trimEnd()) + "…";
 }
-/* The notice's copy, as the site reads it (lib/homeData.ts noticeCopy):
-   the opening paragraph (the first block that is neither a heading nor a
-   list), and when the post goes on to a list, that list's heading and
-   each item's lead with the rest of the item as its detail. Items written
-   with a blank line between them count as one list. */
-function postCopy(md: string): { excerpt: string; highlights: NoticeHighlights | null } {
+/* The note's opening: the first block that is neither a heading nor a
+   list, plain but for its links, cut on a word. */
+function noteExcerpt(md: string): string {
   const blocks = md.replace(/\r/g, "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
   const isItem = (line: string) => /^([-*+]|\d+\.)\s+/.test(line);
   const isList = (b: string) => b.split("\n").map((l) => l.trim()).filter(Boolean).every(isItem);
   const isHeading = (b: string) => /^#{1,6}\s/.test(b) || (!b.includes("\n") && b.length <= 60 && !/[.!?]$/.test(b));
   const opening = blocks.find((b) => !isList(b) && !isHeading(b)) ?? blocks[0] ?? "";
-  const raw: string[] = [];
-  let heading: string | null = null;
-  for (let i = 0; i < blocks.length; i++) {
-    if (isList(blocks[i])) {
-      if (!raw.length && i > 0 && isHeading(blocks[i - 1])) heading = plain(blocks[i - 1]);
-      for (const line of blocks[i].split("\n")) {
-        const t = line.trim();
-        if (isItem(t)) raw.push(t.replace(/^([-*+]|\d+\.)\s+/, ""));
-      }
-    } else if (raw.length) break;
-  }
-  const items = raw
-    .map((t): NoticeItem => {
-      const text = plain(t);
-      const m = /[.!?:]\s|\s[—–-]\s/.exec(text);
-      const lead = (m ? text.slice(0, m.index) : text).replace(/[.:!?]+$/, "").trim();
-      const detail = m ? text.slice(m.index + m[0].length).trim() : "";
-      return { lead: lead.length > 40 ? lead.slice(0, 39).trimEnd() + "…" : lead, detail: cutAtWord(detail, 110) };
-    })
-    .filter((it) => it.lead)
-    .slice(0, 5);
-  return { excerpt: cutAtWord(plain(opening), 320), highlights: items.length >= 2 ? { heading, items } : null };
+  return cutAtWord(plain(opening), 320);
 }
 
 export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedPost[]> {
   const since = new Date(Date.now() - FEATURED_DAYS * 86400000).toISOString();
   const { data } = await supabase
     .from("community_posts")
-    .select("id, title, body, image_url, created_at, community:communities!community_id(name, color), comments:community_comments(count)")
+    .select("id, title, body, created_at")
     .not("featured_at", "is", null)
     .eq("listed", true)
     .gte("featured_at", since)
@@ -155,17 +122,7 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedP
     .order("featured_at", { ascending: false })
     .limit(HERO_POSTS);
   return ((data ?? []) as unknown as PostRow[]).map((p) => {
-    const copy = postCopy(p.body ?? "");
-    return {
-      id: p.id,
-      title: p.title,
-      excerpt: copy.excerpt,
-      highlights: copy.highlights,
-      createdAt: p.created_at,
-      community: one(p.community),
-      comments: p.comments?.[0]?.count ?? 0,
-      imageUrl: p.image_url && /^https:\/\//.test(p.image_url) ? p.image_url : null,
-    };
+    return { id: p.id, title: p.title, excerpt: noteExcerpt(p.body ?? ""), createdAt: p.created_at };
   });
 }
 

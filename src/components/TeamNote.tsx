@@ -16,7 +16,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
 import RichText from "@/components/community/RichText";
 import { pathFor } from "@/lib/routes";
-import type { HeroPost } from "@/components/HeroCarousel";
+import type { FeaturedNote } from "@/lib/homeData";
 
 const KEY = "agora-team-note-read";
 const listeners = new Set<() => void>();
@@ -47,7 +47,7 @@ export function noteLead(excerpt: string, max = 2): string {
   return lead.replace(/…$/, "") || excerpt;
 }
 
-export default function TeamNote({ posts }: { posts: HeroPost[] }) {
+export default function TeamNote({ posts }: { posts: FeaturedNote[] }) {
   const note = posts[0] ?? null;
   /* Read from storage on the client only: the server can't know, and
      showing the note while hydrating and correcting it after is the
