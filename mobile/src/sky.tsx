@@ -10,7 +10,7 @@
    A build without react-native-svg, or reduce motion, shows the still
    sky with the mark at once. */
 import { memo, useCallback, useEffect, useMemo, useRef, type ComponentType } from "react";
-import { Animated, Easing, Image, StyleSheet, Text, TurboModuleRegistry, UIManager, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Image, Platform, StyleSheet, Text, TurboModuleRegistry, UIManager, View, useWindowDimensions } from "react-native";
 import Reanimated, { Easing as REasing, useAnimatedProps, useAnimatedStyle, useFrameCallback, useSharedValue, withDelay, withTiming, type FrameInfo, type SharedValue } from "react-native-reanimated";
 import { useReduceMotion } from "./motion";
 
@@ -83,7 +83,11 @@ let svgMod: SvgModule | null | undefined;
 function loadSvg(): SvgModule | null {
   if (svgMod !== undefined) return svgMod;
   try {
-    const native = TurboModuleRegistry.get("RNSVGSvgViewModule") != null || !!UIManager.hasViewManagerConfig?.("RNSVGSvgView");
+    /* On the web there is no native module to find: react-native-svg
+       draws with the DOM there, so the probe below would say "no svg"
+       and leave the web build with the still sky — a different opening
+       from the site's and the phone's. */
+    const native = Platform.OS === "web" || TurboModuleRegistry.get("RNSVGSvgViewModule") != null || !!UIManager.hasViewManagerConfig?.("RNSVGSvgView");
     if (!native) throw new Error("no native svg");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     svgMod = require("react-native-svg") as SvgModule;
