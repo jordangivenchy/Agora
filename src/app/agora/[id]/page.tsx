@@ -194,12 +194,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     }
   }, []);
   useEffect(() => {
-    if (!phone) return;
+    if (!phone && !simpleStage.on) return;
     /* The tiles only exist in speaker view (audience view is the open
-       amphitheater, which phones don't render) — so phones live there. */
+       amphitheater, which phones don't render) — so phones live there,
+       and so does anyone on the simple stage: with no scene, the
+       audience view is an empty backdrop and the vantage toggle that
+       would leave it is hidden with the scene. */
     setView("speaker");
     setLayout((l) => (l === "stage" ? "gallery" : l));
-  }, [phone]);
+  }, [phone, simpleStage.on]);
   const pickLayout = useCallback((l: "stage" | "gallery" | "multi") => {
     setLayout(l);
     try {
