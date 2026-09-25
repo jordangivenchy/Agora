@@ -22,6 +22,7 @@ import { useCreate } from "../../src/create";
 import { LoadingScreen } from "../../src/sky";
 import { showToast } from "../../src/toast";
 import { colors, fonts } from "../../src/theme";
+import { FloatingBack } from "../../src/floatingBack";
 
 type HostCard = { is_following: boolean; is_followed_by: boolean; last: { status: string; at: string } | null };
 
@@ -205,9 +206,7 @@ export default function ClipPage() {
           )}
         </View>
       </ScrollView>
-      <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top + 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : "#16161c", alignItems: "center", justifyContent: "center" })}>
-        <Ionicons name="chevron-back" size={22} color={colors.text} />
-      </Pressable>
+      <FloatingBack top={insets.top + 8} fallback={"#16161c"} />
     </View>
   );
 }

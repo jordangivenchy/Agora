@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { IconName } from "./topics";
 import { colors } from "./theme";
+import { Glass } from "./glass";
 
 export const TAB_BAR_HEIGHT = 58;
 
@@ -29,7 +30,9 @@ export function AppTabBar({ state, navigation, onCreate }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const current = state.routes[state.index]?.name;
   return (
-    <View style={{ flexDirection: "row", height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom, paddingHorizontal: 10, backgroundColor: colors.bg }}>
+    /* Over the content, not under it: every tab pads its bottom past the
+       bar, so the last row scrolls up from beneath the glass. */
+    <Glass fallback={colors.bg} style={{ position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom, paddingHorizontal: 10 }}>
       {SLOTS.map((slot) =>
         "create" in slot ? (
           <Pressable key="create" onPress={onCreate} accessibilityLabel="Create" style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -59,6 +62,6 @@ export function AppTabBar({ state, navigation, onCreate }: TabBarProps) {
           </Pressable>
         ),
       )}
-    </View>
+    </Glass>
   );
 }

@@ -9,9 +9,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { REACTION_EMOJI, type CallApi } from "./roomCall";
+import { diag } from "./diag"; // TEMP-DIAG
 import type { Layout } from "./roomTiles";
 import { showToast } from "./toast";
 import { colors, fonts } from "./theme";
+import { Glass } from "./glass";
 
 type Icon = React.ComponentProps<typeof Ionicons>["name"];
 export const CONTROLS_H = 54;
@@ -59,6 +61,7 @@ export function RoomControls(p: ControlsProps) {
   const publishOff = !p.onStage || !call.connected || call.mediaBusy || !call.live;
   /* The mic is a mute switch once it's warmed up: a camera starting never holds it. */
   const micOff = !p.onStage || !call.connected || !call.live;
+  useEffect(() => { diag("controls", { onStage: p.onStage, connected: call.connected, reconnecting: call.reconnecting, mediaBusy: call.mediaBusy, live: call.live, hls: !!call.hls, micOn: call.micOn, camOn: call.camOn, canPublish: call.canPublish, mediaError: call.mediaError }); }, [p.onStage, call.connected, call.reconnecting, call.mediaBusy, call.live, call.hls, call.micOn, call.camOn, call.canPublish, call.mediaError]); // TEMP-DIAG
   const bottom = 8 + insets.bottom;
   return (
     <>
@@ -73,7 +76,7 @@ export function RoomControls(p: ControlsProps) {
           </View>
         </Pressable>
       )}
-      <View style={{ position: "absolute", left: 10, right: 10, bottom, height: CONTROLS_H, borderRadius: 999, paddingHorizontal: 7, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }}>
+      <Glass fallback="#0e0e11" fallbackStyle={{ borderWidth: 1, borderColor: "#2a2a33" }} style={{ overflow: "hidden", position: "absolute", left: 10, right: 10, bottom, height: CONTROLS_H, borderRadius: 999, paddingHorizontal: 7, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         {!hlsAudience && (
           <>
             <Ctl icon={call.micOn ? "mic" : "mic-off"} label={!p.onStage ? "Mic — speakers only" : call.micOn ? "Mute your mic" : "Unmute your mic"} on={call.micOn} onTint="#1f9d55" disabled={micOff} onPress={call.toggleMic} />
@@ -89,7 +92,7 @@ export function RoomControls(p: ControlsProps) {
         <Ctl icon="chatbubble-ellipses-outline" label="Chat" onPress={p.onChat} badge={p.chatBadge} />
         <Ctl icon="ellipsis-vertical" label="More options" on={moreOpen} onPress={() => { setReactOpen(false); setMoreOpen((v) => !v); }} />
         <Ctl icon="call" label="Leave the room" on onTint={colors.red} onPress={p.onLeave} />
-      </View>
+      </Glass>
       <MoreDrawer open={moreOpen} onClose={() => setMoreOpen(false)} bottom={bottom} hlsAudience={hlsAudience} duel={p.duel} layout={p.layout} onLayout={p.onLayout} onSettings={p.onSettings} onCopyLink={p.onCopyLink} />
     </>
   );

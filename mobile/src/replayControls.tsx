@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEvent } from "expo";
 import { VideoAirPlayButton, type VideoPlayer, type VideoView } from "expo-video";
 import { colors, fonts } from "./theme";
+import { Glass } from "./glass";
 
 /* A tap on speed steps through these, from normal up and round again. */
 const RATES = [1, 1.25, 1.5, 1.75, 2, 0.5, 0.75];
@@ -101,15 +102,21 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
               in what the bottom row leaves over. */}
           <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 34 }}>
             <Pressable onPress={() => skip(-10)} hitSlop={10} accessibilityLabel="Back 10 seconds" style={round(44)}>
-              <Ionicons name="play-back" size={24} color="#fff" />
-              <Text style={{ position: "absolute", bottom: -4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+              <Glass fallback="transparent" clear interactive style={[round(44), { overflow: "hidden" }]}>
+                <Ionicons name="play-back" size={24} color="#fff" />
+                <Text style={{ position: "absolute", bottom: 4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+              </Glass>
             </Pressable>
-            <Pressable onPress={toggle} accessibilityLabel={isPlaying ? "Pause" : "Play"} style={[round(58), { backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }]}>
-              <Ionicons name={isPlaying ? "pause" : "play"} size={26} color="#fff" style={{ marginLeft: isPlaying ? 0 : 3 }} />
+            <Pressable onPress={toggle} accessibilityLabel={isPlaying ? "Pause" : "Play"} style={round(58)}>
+              <Glass fallback="#0e0e11" fallbackStyle={{ borderWidth: 1, borderColor: "#2a2a33" }} clear interactive style={[round(58), { overflow: "hidden" }]}>
+                <Ionicons name={isPlaying ? "pause" : "play"} size={26} color="#fff" style={{ marginLeft: isPlaying ? 0 : 3 }} />
+              </Glass>
             </Pressable>
             <Pressable onPress={() => skip(10)} hitSlop={10} accessibilityLabel="Forward 10 seconds" style={round(44)}>
-              <Ionicons name="play-forward" size={24} color="#fff" />
-              <Text style={{ position: "absolute", bottom: -4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+              <Glass fallback="transparent" clear interactive style={[round(44), { overflow: "hidden" }]}>
+                <Ionicons name="play-forward" size={24} color="#fff" />
+                <Text style={{ position: "absolute", bottom: 4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+              </Glass>
             </Pressable>
           </View>
           <View style={{ paddingLeft: 10 + (safeArea?.left ?? 0), paddingRight: 10 + (safeArea?.right ?? 0), paddingBottom: 6 + (safeArea?.bottom ?? 0) }}>

@@ -16,6 +16,7 @@
     "expo": "~57.0.22",
     "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.18",
+    "expo-glass-effect": "~57.0.4",
     "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
     "expo-image-manipulator": "~57.0.17",

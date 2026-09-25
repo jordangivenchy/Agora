@@ -24,6 +24,7 @@ import { SITE } from "./api";
 import { ReminderBell, useReminders } from "./reminders";
 import { colors, fonts } from "./theme";
 import { Note } from "./ui";
+import { FloatingBack } from "./floatingBack";
 
 type Tab = "debates" | "scheduled" | "posts" | "reposts" | "comments" | "communities";
 const TABS: { key: Tab; label: string }[] = [
@@ -272,9 +273,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
         <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17, paddingHorizontal: 60 }}>{profile?.display_name || profile?.username || ""}</Text>
       </Animated.View>
       {back && (
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top - 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : colors.bg, alignItems: "center", justifyContent: "center" })}>
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </Pressable>
+        <FloatingBack top={insets.top - 8} />
       )}
       <ActionSheet open={menuOpen} title={profile?.display_name || profile?.username || ""} onClose={() => setMenuOpen(false)} actions={menuActions} />
     </View>

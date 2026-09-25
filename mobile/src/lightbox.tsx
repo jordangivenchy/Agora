@@ -6,6 +6,7 @@ import { Image, Modal, Pressable, ScrollView, View, useWindowDimensions } from "
 import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Glass } from "./glass";
 
 let show: ((url: string) => void) | null = null;
 export function openImage(url: string) { show?.(url); }
@@ -21,8 +22,10 @@ export function LightboxHost() {
         <ScrollView maximumZoomScale={4} minimumZoomScale={1} centerContent contentContainerStyle={{ width, height, alignItems: "center", justifyContent: "center" }} bouncesZoom>
           {url && <Img uri={url} style={{ width, height: height - 80 }} contentFit="contain" priority="high" />}
         </ScrollView>
-        <Pressable onPress={() => setUrl(null)} accessibilityLabel="Close" hitSlop={8} style={{ position: "absolute", top: insets.top + 8, right: 14, width: 36, height: 36, borderRadius: 18, backgroundColor: "#16161c", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="close" size={20} color="#fff" />
+        <Pressable onPress={() => setUrl(null)} accessibilityLabel="Close" hitSlop={8} style={{ position: "absolute", top: insets.top + 8, right: 14, width: 36, height: 36 }}>
+          <Glass fallback="#16161c" interactive style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            <Ionicons name="close" size={20} color="#fff" />
+          </Glass>
         </Pressable>
       </View>
     </Modal>

@@ -36,6 +36,7 @@ import { communityLink, openLink } from "../../src/siteLinks";
 import { Avatar } from "../../src/avatar";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
+import { FloatingBack } from "../../src/floatingBack";
 
 const SORTS: { key: PostSort; label: string }[] = [{ key: "best", label: "Best" }, { key: "new", label: "New" }, { key: "top", label: "Top" }];
 const GOLD = "#e2b96b";
@@ -379,9 +380,7 @@ export default function CommunityScreen() {
       <Animated.View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: BAR, paddingTop: insets.top, backgroundColor: colors.bg, opacity: barOpacity, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
         <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17, paddingHorizontal: 60 }}>{c?.name ?? ""}</Text>
       </Animated.View>
-      <Pressable onPress={() => router.back()} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top - 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : colors.bg, alignItems: "center", justifyContent: "center" })}>
-        <Ionicons name="chevron-back" size={22} color={colors.text} />
-      </Pressable>
+      <FloatingBack top={insets.top - 8} />
       <ComposerSheet
         open={composing}
         kind="post"

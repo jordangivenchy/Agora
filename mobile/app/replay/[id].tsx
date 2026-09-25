@@ -37,6 +37,7 @@ import { fetchClips, type ClipTileData } from "../../src/clips";
 import { videoTime, type TimelineSpan } from "../../../src/components/agora/hlsTimeline";
 import { showToast } from "../../src/toast";
 import { colors, fonts } from "../../src/theme";
+import { FloatingBack } from "../../src/floatingBack";
 
 const nameOf = (p: { display_name?: string | null; username: string }) => p.display_name?.trim() || p.username;
 
@@ -583,9 +584,7 @@ export default function ReplayScreen() {
           <ReplayControls player={player} viewRef={fsRef} currentTime={currentTime} onSeek={() => setUserScrolled(false)} onFullscreen={() => setFullscreen(false)} fullscreen safeArea={insets} />
         </View>
       </Modal>
-      <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} accessibilityLabel="Back" hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: insets.top - 8, left: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? colors.surface2 : colors.bg, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border })}>
-        <Ionicons name="chevron-back" size={22} color={colors.text} />
-      </Pressable>
+      <FloatingBack top={insets.top - 8} />
     </View>
   );
 }

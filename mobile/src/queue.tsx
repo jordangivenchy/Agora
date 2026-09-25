@@ -13,6 +13,7 @@ import { setPresenceQueued } from "./presence";
 import { topicOf } from "./topics";
 import { QueueMotions } from "./queueMotions";
 import { colors, fonts } from "./theme";
+import { Glass } from "./glass";
 
 export type Stance = "PRO" | "CON";
 export type Opponent = "anyone" | "disagree";
@@ -172,10 +173,12 @@ export function QueueDock({ bottom }: { bottom: number }) {
   const oldest = n ? Math.min(...q.entries.map((e) => e.since)) : 0;
   if (!q.open) {
     return (
-      <Pressable onPress={expandQueue} style={{ position: "absolute", right: 12, bottom: bottom + 10, flexDirection: "row", alignItems: "center", gap: 8, height: 36, paddingHorizontal: 14, borderRadius: 999, backgroundColor: "#111114", borderWidth: 1, borderColor: "#2e2e38" }}>
+      <Pressable onPress={expandQueue} style={{ position: "absolute", right: 12, bottom: bottom + 10 }}>
+        <Glass fallback="#111114" fallbackStyle={{ borderWidth: 1, borderColor: "#2e2e38" }} interactive style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 36, paddingHorizontal: 14, borderRadius: 999, overflow: "hidden" }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold }} />
         <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>In queue · {n} question{n === 1 ? "" : "s"} · {mmss(now - oldest)}</Text>
         <Ionicons name="chevron-up" size={14} color={colors.muted} />
+        </Glass>
       </Pressable>
     );
   }
