@@ -2458,7 +2458,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   outputVolume: call.outputVolume,
                   onOutputVolume: call.setOutputVolume,
                   getMicStreamTrack: call.getMicStreamTrack,
-                  simpleStage: simpleStage.chosen,
+                  simpleStage: simpleStage.on,
                   simpleStageForced: simpleStage.forced,
                   onSimpleStage: setSimpleStage,
                   onClose: () => setSettingsOpen(false),

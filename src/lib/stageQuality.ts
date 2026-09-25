@@ -38,11 +38,15 @@ export function softwareWebGL(): boolean {
 }
 
 const listeners = new Set<() => void>();
-const readChoice = (): boolean => {
+/* "1": asked for the simple stage. "0": asked for the 3D stage even on a
+   machine that reported no GPU. Nothing: let the machine decide. */
+type Choice = "1" | "0" | null;
+const readChoice = (): Choice => {
   try {
-    return window.localStorage.getItem(KEY) === "1";
+    const v = window.localStorage.getItem(KEY);
+    return v === "1" || v === "0" ? v : null;
   } catch {
-    return false;
+    return null;
   }
 };
 const subscribe = (l: () => void) => {
@@ -55,11 +59,11 @@ const subscribe = (l: () => void) => {
 };
 const noSubscribe = () => () => {};
 
-/** The person's own choice, kept across rooms and reloads. */
+/** The person's own choice, kept across rooms and reloads. Turning it
+    off is a choice too: it overrules a machine that said no GPU. */
 export function setSimpleStage(on: boolean): void {
   try {
-    if (on) window.localStorage.setItem(KEY, "1");
-    else window.localStorage.removeItem(KEY);
+    window.localStorage.setItem(KEY, on ? "1" : "0");
   } catch {
     /* private mode: the choice lasts as long as the page */
   }
@@ -67,17 +71,20 @@ export function setSimpleStage(on: boolean): void {
 }
 
 export interface SimpleStage {
-  /** Skip the 3D stage: chosen, or decided by the machine. */
+  /** Skip the 3D stage: chosen, or the machine's default. */
   on: boolean;
-  /** The person asked for it. */
+  /** The person asked for it themselves. */
   chosen: boolean;
-  /** Why it is on regardless of the choice, when it is. */
+  /** What the machine says, when it says anything: a software renderer. */
   forced: "software" | null;
 }
 
 export function useSimpleStage(): SimpleStage {
-  const chosen = useSyncExternalStore(subscribe, readChoice, () => false);
+  const choice = useSyncExternalStore(subscribe, readChoice, () => null);
   const noGpu = useSyncExternalStore(noSubscribe, softwareWebGL, () => false);
   const forced = noGpu ? "software" : null;
-  return { on: chosen || forced !== null, chosen, forced };
+  /* The machine's verdict is a default, never a lock: a person who turns
+     the 3D stage back on gets it, slow or not. */
+  const on = choice === "1" || (choice === null && forced !== null);
+  return { on, chosen: choice === "1", forced };
 }

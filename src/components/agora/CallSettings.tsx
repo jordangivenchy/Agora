@@ -16,8 +16,8 @@ export interface CallSettingsProps {
   outputVolume: number;
   onOutputVolume: (v: number) => void;
   getMicStreamTrack: () => MediaStreamTrack | null;
-  /** "Simple stage": no 3D amphitheatre. The choice, and whether the
-      machine made it already (a browser drawing WebGL in software). */
+  /** "Simple stage": no 3D amphitheatre — whether it is on, and whether
+      the machine chose it (a browser drawing WebGL in software). */
   simpleStage?: boolean;
   simpleStageForced?: "software" | null;
   onSimpleStage?: (on: boolean) => void;
@@ -327,14 +327,14 @@ export default function CallSettings({
               </span>
               <input
                 type="checkbox"
-                checked={simpleStage || simpleStageForced === "software"}
-                disabled={simpleStageForced === "software"}
+                checked={simpleStage}
                 onChange={(e) => onSimpleStage?.(e.target.checked)}
               />
             </label>
             {simpleStageForced === "software" && (
               <div className="ag-set-text">
-                This browser is drawing without a graphics card, so the 3D stage stays off here.
+                This browser is drawing without a graphics card, so the 3D stage is off here unless you
+                turn it on — it will be slow.
               </div>
             )}
             <div className="ag-set-text">
