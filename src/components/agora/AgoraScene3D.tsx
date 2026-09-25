@@ -50,6 +50,9 @@ interface Props {
   micHolder?: SeatedPerson | null;
   /** True while the mic holder is actually speaking (drives the mic glow). */
   micLive?: boolean;
+  /** A flat layout's tiles are over the scene: it is a backdrop now, and
+      draws at a quarter of the rate — the bowl barely moves. */
+  background?: boolean;
 }
 
 /* ── Deterministic PRNG ── */
@@ -1055,6 +1058,7 @@ export default function AgoraScene3D({
   micLive,
   performanceMode = false,
   onViewSettled,
+  background = false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   /* The view lives in a ref so switching cameras never rebuilds the
@@ -1182,6 +1186,8 @@ export default function AgoraScene3D({
   const crowdRef = useRef<THREE.Group | null>(null);
   const audienceRef = useRef(audience);
   audienceRef.current = audience;
+  const backgroundRef = useRef(background);
+  backgroundRef.current = background;
   const viewerCountRef = useRef(viewerCount);
   viewerCountRef.current = viewerCount;
 
@@ -1391,6 +1397,12 @@ export default function AgoraScene3D({
     let quality = performanceMode ? 0 : 3;
     let frameAcc = 0;
     let frameN = 0;
+    /* The floor under the floor: a machine that can't hold 24 fps with
+       the buffer at 1× and the shadows off (a browser drawing WebGL in
+       software) draws four frames a second from then on. The bowl barely
+       moves; the CPU goes back to the call. */
+    let still = false;
+    let lastDraw = 0;
     const stepDown = () => {
       quality -= 1;
       /* The first rung used to kill the holo panels' transmission; the
@@ -1398,6 +1410,8 @@ export default function AgoraScene3D({
          ladder starts at the pixel-ratio drop. */
       if (quality === 2) {
         renderer.setPixelRatio(1);
+      } else if (quality < 0) {
+        still = true;
       } else {
         renderer.shadowMap.enabled = false;
         scene.traverse((o) => {
@@ -1414,15 +1428,22 @@ export default function AgoraScene3D({
       const dt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
       lastFrame = now;
       const t = (now - t0) / 1000;
-      if (quality > 0) {
+      if (quality >= 0) {
         frameAcc += dt;
         frameN += 1;
         if (frameAcc >= 3) {
-          if (frameN / frameAcc < 45) stepDown();
+          const fps = frameN / frameAcc;
+          if (quality > 0 ? fps < 45 : fps < 24) stepDown();
           frameAcc = 0;
           frameN = 0;
         }
       }
+      /* Frames nobody needs: under a flat layout the scene is a backdrop
+         (15 fps); on a machine that has stepped all the way down, 4 fps.
+         The glide's own clock still runs on real time (dt above). */
+      const budget = still ? 250 : backgroundRef.current ? 66 : 0;
+      if (budget && now - lastDraw < budget) return;
+      lastDraw = now;
       if (!stillMotion) {
         /* A slow breath in the warm pool, an order of magnitude calmer
            than the old torch flicker (0.9s vs 9s harmonics). */

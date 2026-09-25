@@ -21,6 +21,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import RouteLoading from "@/components/RouteLoading";
 import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
+import { setSimpleStage, useSimpleStage } from "@/lib/stageQuality";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
 import AgoraAssistant from "@/components/AgoraAssistant";
 import { AGORA_AI } from "@/lib/features";
@@ -171,6 +172,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      and "multi" are flat overlays above the scene. Local-only — nothing
      changes on the wire — and remembered across visits. */
   const [layout, setLayout] = useState<"stage" | "gallery" | "multi">("stage");
+  /* "Simple stage": no 3D scene — chosen in the call's settings, or
+     decided for a browser drawing WebGL in software (lib/stageQuality). */
+  const simpleStage = useSimpleStage();
   /* Phones run the room flat: no 3D scene, and the stage layout (which
      is the scene) isn't offered — gallery stands in for it. */
   const [phone, setPhone] = useState(false);
@@ -1704,7 +1708,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
           performanceMode={broadcast}
-          flat={phone || broadcast}
+          flat={phone || broadcast || simpleStage.on}
+          background={layout !== "stage"}
           roomId={roomId}
           /* Flat layouts (gallery / multi) carry every picture themselves —
              the scene's 3D speaker panels and mic medallion would peek
@@ -2450,6 +2455,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   outputVolume: call.outputVolume,
                   onOutputVolume: call.setOutputVolume,
                   getMicStreamTrack: call.getMicStreamTrack,
+                  simpleStage: simpleStage.chosen,
+                  simpleStageForced: simpleStage.forced,
+                  onSimpleStage: setSimpleStage,
                   onClose: () => setSettingsOpen(false),
                 }
               : null

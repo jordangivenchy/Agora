@@ -54,6 +54,8 @@ interface Props {
   micHolder?: SeatedPerson | null;
   /** Mic holder is actually speaking right now. */
   micLive?: boolean;
+  /** A flat layout's tiles are over the scene: draw it as a backdrop. */
+  background?: boolean;
 }
 
 function hashString(s: string): number {
@@ -130,6 +132,7 @@ export default function Amphitheater({
   performanceMode = false,
   onViewSettled,
   flat = false,
+  background = false,
 }: Props) {
   const inSpeaker = view === "speaker";
   /* Flat: no 3D scene at all (phones — a full Three.js bowl with shadow
@@ -157,6 +160,7 @@ export default function Amphitheater({
           queue={speakerQueue}
           micHolder={micHolder}
           micLive={micLive}
+          background={background}
         />
       )}
 

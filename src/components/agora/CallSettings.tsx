@@ -16,6 +16,11 @@ export interface CallSettingsProps {
   outputVolume: number;
   onOutputVolume: (v: number) => void;
   getMicStreamTrack: () => MediaStreamTrack | null;
+  /** "Simple stage": no 3D amphitheatre. The choice, and whether the
+      machine made it already (a browser drawing WebGL in software). */
+  simpleStage?: boolean;
+  simpleStageForced?: "software" | null;
+  onSimpleStage?: (on: boolean) => void;
   onClose: () => void;
 }
 
@@ -218,6 +223,9 @@ export default function CallSettings({
   outputVolume,
   onOutputVolume,
   getMicStreamTrack,
+  simpleStage = false,
+  simpleStageForced = null,
+  onSimpleStage,
   onClose,
 }: CallSettingsProps) {
   const [open, setOpen] = useState<Section | null>("video");
@@ -311,10 +319,29 @@ export default function CallSettings({
         );
       case "display":
         return (
-          <div className="ag-set-text">
-            Switch between the amphitheater and the speaker vantage with the toggle above the controls.
-            Collapse the chat with its corner button to run the stage full width.
-          </div>
+          <>
+            <label className="ag-set-row ag-set-row--switch">
+              <span>
+                Simple stage
+                <small>No 3D amphitheatre — much lighter on a slower computer.</small>
+              </span>
+              <input
+                type="checkbox"
+                checked={simpleStage || simpleStageForced === "software"}
+                disabled={simpleStageForced === "software"}
+                onChange={(e) => onSimpleStage?.(e.target.checked)}
+              />
+            </label>
+            {simpleStageForced === "software" && (
+              <div className="ag-set-text">
+                This browser is drawing without a graphics card, so the 3D stage stays off here.
+              </div>
+            )}
+            <div className="ag-set-text">
+              Switch between the amphitheater and the speaker vantage with the toggle above the controls.
+              Collapse the chat with its corner button to run the stage full width.
+            </div>
+          </>
         );
       case "share":
         return (
