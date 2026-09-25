@@ -8,6 +8,10 @@ import { colors } from "./theme";
 import { Glass } from "./glass";
 
 export const TAB_BAR_HEIGHT = 58;
+/** The gap under the floating capsule, above the home indicator — and the
+    room the mini-player and the queue leave for it. */
+export const TAB_BAR_FLOAT = 8;
+const TAB_BAR_INSET = 14;
 
 export interface TabBarProps {
   state: { index: number; routes: { key: string; name: string }[] };
@@ -30,9 +34,15 @@ export function AppTabBar({ state, navigation, onCreate }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const current = state.routes[state.index]?.name;
   return (
-    /* Over the content, not under it: every tab pads its bottom past the
-       bar, so the last row scrolls up from beneath the glass. */
-    <Glass fallback={colors.bg} style={{ position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom, paddingHorizontal: 10 }}>
+    /* A capsule floating above the home indicator, the way iOS 26's own
+       bar sits, with the content passing under it: every tab pads its
+       bottom past the bar, so the last row scrolls up from beneath the
+       glass. Where there is no glass, a solid pill with a hairline. */
+    <Glass
+      fallback="#0e0e11"
+      fallbackStyle={{ borderWidth: 1, borderColor: "#23232b" }}
+      style={{ position: "absolute", left: TAB_BAR_INSET, right: TAB_BAR_INSET, bottom: insets.bottom + TAB_BAR_FLOAT, height: TAB_BAR_HEIGHT, borderRadius: TAB_BAR_HEIGHT / 2, overflow: "hidden", flexDirection: "row", paddingHorizontal: 6 }}
+    >
       {SLOTS.map((slot) =>
         "create" in slot ? (
           <Pressable key="create" onPress={onCreate} accessibilityLabel="Create" style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/session";
 import { MiniPlayer } from "../../src/miniPlayer";
 import { QueueDock } from "../../src/queue";
-import { AppTabBar, TAB_BAR_HEIGHT } from "../../src/tabBar";
+import { AppTabBar, TAB_BAR_FLOAT, TAB_BAR_HEIGHT } from "../../src/tabBar";
 import { useCreate } from "../../src/create";
 import { colors } from "../../src/theme";
 import { Spinner } from "../../src/ui";
@@ -35,10 +35,10 @@ export default function TabsLayout() {
         <Tabs.Screen name="trending" />
         <Tabs.Screen name="news" />
       </Tabs>
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: TAB_BAR_HEIGHT + insets.bottom }}>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: TAB_BAR_HEIGHT + TAB_BAR_FLOAT + insets.bottom }}>
         <MiniPlayer />
       </View>
-      <QueueDock bottom={TAB_BAR_HEIGHT + insets.bottom} />
+      <QueueDock bottom={TAB_BAR_HEIGHT + TAB_BAR_FLOAT + insets.bottom} />
     </View>
   );
 }
