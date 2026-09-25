@@ -3220,6 +3220,17 @@
 .ag-more-layout { display: none; }
 .ag-audio-prompt { border-color: #f4d47c; bottom: 140px; }
 
+/* No graphics card (GpuNotice.tsx): one line under the top bar, above the
+   stage — the same solid near-black as every card, yellow at its edge. */
+.ag-gpu-notice { position: relative; z-index: 6; display: flex; align-items: flex-start; gap: 10px; margin: 8px 16px 0; padding: 10px 12px; border-radius: 12px; background: #0b0b0d; border: 1px solid #23232b; border-left: 3px solid #ffb700; color: #d6d6de; font-size: 12.5px; line-height: 1.5; }
+.ag-gpu-notice > svg { flex-shrink: 0; margin-top: 2px; color: #ffb700; }
+.ag-gpu-notice p { margin: 0; flex: 1 1 auto; min-width: 0; }
+.ag-gpu-notice b { color: #f5f5f0; font-weight: 600; }
+.ag-gpu-notice code { font-family: 'DM Mono', ui-monospace, monospace; font-size: 12px; color: #f5f5f0; background: #15151b; padding: 1px 5px; border-radius: 5px; }
+.ag-gpu-notice button { flex-shrink: 0; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #2b2b34; background: #0b0b0d; color: #f5f5f0; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.ag-gpu-notice button:hover { border-color: #3a3a45; }
+@media (max-width: 639px) { .ag-gpu-notice { margin: 8px 10px 0; flex-wrap: wrap; } }
+
 /* ── Control row: one pill ──
    The app's row, everywhere (Jordan, 2026-09-15: "i like the call tool bar
    on mobile more"): one solid bar with round icon buttons riding inside

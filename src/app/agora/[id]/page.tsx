@@ -22,6 +22,7 @@ import RouteLoading from "@/components/RouteLoading";
 import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import { setSimpleStage, useSimpleStage } from "@/lib/stageQuality";
+import GpuNotice from "@/components/agora/GpuNotice";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
 import AgoraAssistant from "@/components/AgoraAssistant";
 import { AGORA_AI } from "@/lib/features";
@@ -1703,6 +1704,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           </div>
         </header>
         )}
+
+        {/* A browser drawing without its graphics card: say so, and how to
+            fix it — the room has already fallen back to the simple stage. */}
+        <GpuNotice />
 
         {/* ── Amphitheater ── */}
         {/* The recorder films this page in a browser on LiveKit's machines,
