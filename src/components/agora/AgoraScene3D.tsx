@@ -760,6 +760,12 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
   }
 
   /* ── Fringe: grass tufts and scattered rocks, one draw each ────── */
+  /* Only where there is ground. The ring runs all the way round the
+     tablet, but in front of it the orchestra's stone floor covers the
+     grass (buildOrchestra) — a tuft there grew up through the stone and a
+     rock sank into it. Those spots are skipped. Each skipped one still
+     makes all its random draws, so every other tuft and rock keeps the
+     place it always had. */
   {
     const tuftGeo = new THREE.ConeGeometry(0.07, 0.26, 5);
     const tufts = new THREE.InstancedMesh(
@@ -769,18 +775,22 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
     );
     const dummy = new THREE.Object3D();
     let n = 0;
+    let grown = 0;
     while (n < 130) {
       const a = rng() * Math.PI * 2;
       const r = STONE.stepRadius + 0.2 + rng() * 1.8;
       const x = cx + r * Math.cos(a);
       const z = cz + r * Math.sin(a);
       if (Math.abs(x) < 1.0 && z < -3.2) continue; // the queue corridor
+      n++;
       dummy.position.set(x, 0.1, z);
       dummy.rotation.set((rng() - 0.5) * 0.35, rng() * Math.PI, (rng() - 0.5) * 0.35);
       dummy.scale.setScalar(0.7 + rng() * 0.8);
+      if (onOrchestraFloor(x, z, FRINGE_CLEARANCE)) continue;
       dummy.updateMatrix();
-      tufts.setMatrixAt(n++, dummy.matrix);
+      tufts.setMatrixAt(grown++, dummy.matrix);
     }
+    tufts.count = grown;
     scene.add(tufts);
 
     const rockGeo = new THREE.DodecahedronGeometry(0.14, 0);
@@ -790,18 +800,22 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
       36
     );
     let m = 0;
+    let laid = 0;
     while (m < 36) {
       const a = rng() * Math.PI * 2;
       const r = STONE.stepRadius + 0.35 + rng() * 1.6;
       const x = cx + r * Math.cos(a);
       const z = cz + r * Math.sin(a);
       if (Math.abs(x) < 1.0 && z < -3.2) continue;
+      m++;
       dummy.position.set(x, 0.05, z);
       dummy.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
       dummy.scale.set(0.5 + rng(), 0.35 + rng() * 0.5, 0.5 + rng());
+      if (onOrchestraFloor(x, z, FRINGE_CLEARANCE)) continue;
       dummy.updateMatrix();
-      rocks.setMatrixAt(m++, dummy.matrix);
+      rocks.setMatrixAt(laid++, dummy.matrix);
     }
+    rocks.count = laid;
     rocks.receiveShadow = true;
     scene.add(rocks);
   }
@@ -809,11 +823,29 @@ function buildClassicStone(scene: THREE.Scene): THREE.PointLight[] {
   return lights;
 }
 
-function buildOrchestra(scene: THREE.Scene) {
+/* Whether a point stands on the orchestra's stone floor — the half-disc
+   buildOrchestra lays in front of the tablet: radius INNER_R about the
+   origin, on the z ≥ 0 side. `margin` widens it by an object's own reach,
+   so nothing near the edge overhangs the stone either. */
+export function onOrchestraFloor(x: number, z: number, margin = 0): boolean {
+  return z > -margin && Math.hypot(x, z) < INNER_R + margin;
+}
+/* The widest reach of a tuft or rock from its centre: a rock at its
+   largest is 0.21 across its middle, a leaning tuft a little less. */
+const FRINGE_CLEARANCE = 0.25;
+
+/* The floor's shape, on its own so the fringe's check can be tested
+   against the very geometry it describes. */
+export function orchestraFloorGeometry(): THREE.BufferGeometry {
   // Semicircular floor between the stage and the first row.
   const geo = new THREE.CircleGeometry(INNER_R, 48, 0, Math.PI);
   geo.rotateX(-Math.PI / 2);
   geo.rotateY(Math.PI); // open side toward the stage (+z)
+  return geo;
+}
+
+function buildOrchestra(scene: THREE.Scene) {
+  const geo = orchestraFloorGeometry();
   /* Darkened well below its old 0x756b5d: the orchestra still reads as
      stone under the bowl, but it no longer competes with the speakers as
      a big pale disc in the speaker vantage (brief §12). */
