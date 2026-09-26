@@ -29,15 +29,6 @@
      .ag-theater::after — raise it if the control row ever loses legibility
      against a bright stage. */
   --ag-veil-peak: 0.22;
-  /* The other half of matching the rail. Once the veil is this light, what
-     still separates the two sides is not darkness on the left — it is that
-     .ag-card lifts its own underside with
-     `inset 0 -70px 52px -46px rgba(255,255,255,0.07)` and the ground had
-     no equivalent. This is that same lift along the bottom of the screen,
-     so the card's glow reads as an accent on a lit ground rather than the
-     only lit thing on the page. Matched to the card's alpha on purpose;
-     they should be changed together. */
-  --ag-veil-lift: 0.07;
   /* Two widths, deliberately: --ag-rail-w is the *layout* width and
      animates to 0 on collapse, which is what gives the stage its space
      back. --ag-rail-open-w is constant, and the card is sized from it so
@@ -446,27 +437,20 @@
   right: 0;
   bottom: 0;
   height: clamp(150px, 26vh, 280px);
-  /* Two layers over one continuous ground: a wash that sinks the scene,
-     and a light rising off the very bottom.
+  /* One dark wash that sinks the scene under the buttons. Its peak is a
+     token on .ag-root, down from its original 0.75 — affordable because
+     the lit buttons carry solid fills and the idle ones a bright rim, so
+     they hold against a lighter ground.
 
-     Both peaks are tokens on .ag-root. The wash is down from its original
-     0.75 — affordable in a way it wasn't when this was written, because
-     the buttons then were translucent glass leaning on a dark ground for
-     contrast, whereas the lit ones now carry solid fills and the idle ones
-     a bright rim, so they hold against a lighter ground. */
-  background:
-    /* light rising off the ground, over the wash — mirrors the chat card's
-       lower inset so the two lower edges read as the same surface */
-    linear-gradient(
-      to top,
-      rgba(255, 255, 255, var(--ag-veil-lift)),
-      rgba(255, 255, 255, 0) 90px
-    ),
-    linear-gradient(
-      to top,
-      rgba(5, 7, 15, var(--ag-veil-peak)),
-      rgba(5, 7, 15, 0)
-    );
+     There used to be a second layer: a faint white light rising off the
+     very bottom edge, matched to one along the chat card's underside.
+     Over the night scene it read as a grey haze across the bottom of the
+     screen, so both are gone. */
+  background: linear-gradient(
+    to top,
+    rgba(5, 7, 15, var(--ag-veil-peak)),
+    rgba(5, 7, 15, 0)
+  );
   pointer-events: none;
   /* Above the canvas, below the rail — the veil sits between the
      environment and the product UI, which is exactly the layer order the
@@ -2202,8 +2186,9 @@
    The panel's substance comes from inset shadows rather than a fill —
    the technique in the reference card, inverted for a dark UI. A dark
    wash falls from the top (which is what keeps chat text legible without
-   a fill behind it), a faint light rises from the bottom, and a 1px
-   specular line rides the top edge. Take those away and the element is
+   a fill behind it) and a 1px specular line rides the top edge. (The
+   faint light that rose from the bottom is gone — it read as a grey
+   haze, and so did its twin along the bottom of the stage.) Take those away and the element is
    literally transparent.
 
    The blur is deliberately light. At the 40px it used to run, anything
@@ -2223,9 +2208,6 @@
     /* dark wash from the top — this is the "background", and the only
        thing standing between the chat text and whatever moves behind it */
     inset 0 58px 46px -38px rgba(5, 7, 15, 0.34),
-    /* light rising from the bottom, the reference card's inverted lower
-       inset: enough to imply thickness, not enough to hide the sky */
-    inset 0 -70px 52px -46px rgba(255, 255, 255, 0.07),
     /* specular rim along the top edge, and a whisper along the bottom */
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05),
