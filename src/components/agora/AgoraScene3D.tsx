@@ -86,6 +86,14 @@ const AISLE_HALF = 5; // degrees
 const EDGE = 13; // degrees
 const OUTER_R = INNER_R + ROWS * ROW_STEP;
 const SEAT_ARC_SPACING = 1.45;
+/* How much a row can thicken: the front two rows never, where named
+   spectators sit with faces that have to read; the rest to four seats
+   where one stood, where perspective has already made a chair small. */
+export const ROW_MAX_DENSITY = [1, 1, 4, 4, 4, 4, 4, 4];
+/* Past every seat at its thickest, the top of the bowl becomes a standing
+   crowd — a field of figures with the number written above it. */
+const CROWD_FIELD_MAX = 3000;
+const CROWD_STEP_MS = 600;
 
 const DEG = Math.PI / 180;
 
@@ -96,12 +104,19 @@ interface Seat3D {
   yaw: number;
   side: "pro" | "con";
   row: number;
+  /** Chair size against the front row's: 1, 1/2, 1/4 as the row thickens. */
+  scale: number;
+  /** Degrees off the centre line — the order seats fill within a row. */
+  center: number;
 }
 
-function generateSeats(): Seat3D[] {
+export function generateSeats(densities: number[] = ROW_MAX_DENSITY.map(() => 1)): Seat3D[] {
   const seats: Seat3D[] = [];
   for (let row = 0; row < ROWS; row++) {
     const r = INNER_R + (row + 0.5) * ROW_STEP;
+    const density = densities[row] ?? 1;
+    const spacing = SEAT_ARC_SPACING / density;
+    const scale = 1 / density;
     const y = BASE_H + row * STEP_H; // top surface of this terrace
     /* Rows 0–1 keep a wider margin so their innermost seats sit clear of
        the tunnel hood (roof edge at |x| = 1.25); each wedge re-spaces its
@@ -123,7 +138,7 @@ function generateSeats(): Seat3D[] {
     for (const w of wedges) {
       const arcLen = (w.to - w.from) * DEG * r;
       if (w.interior) {
-        const count = Math.max(0, Math.floor(arcLen / SEAT_ARC_SPACING) - 1);
+        const count = Math.max(0, Math.floor(arcLen / spacing) - 1);
         for (let i = 0; i < count; i++) {
           const a = (w.from + ((i + 1) / (count + 1)) * (w.to - w.from)) * DEG;
           seats.push({
@@ -133,11 +148,13 @@ function generateSeats(): Seat3D[] {
             yaw: a - Math.PI / 2,
             side: a <= Math.PI / 2 ? "con" : "pro", // match the flanking halves
             row,
+            scale,
+            center: Math.abs(a / DEG - 90),
           });
         }
         continue;
       }
-      const count = Math.max(1, Math.floor(arcLen / SEAT_ARC_SPACING));
+      const count = Math.max(1, Math.floor(arcLen / spacing));
       for (let i = 0; i < count; i++) {
         const t = count === 1 ? 0.5 : i / (count - 1);
         const a = (w.from + t * (w.to - w.from)) * DEG;
@@ -148,11 +165,40 @@ function generateSeats(): Seat3D[] {
           yaw: a - Math.PI / 2, // backrest faces radially outward
           side: w.side,
           row,
+          scale,
+          center: Math.abs(a / DEG - 90),
         });
       }
     }
   }
   return seats;
+}
+
+/* Rows thicken from the back until the crowd fits, or every row is at
+   its most: the row with the fewest seats per unit of arc doubles first,
+   the back-most among equals — so the whole bowl goes to two before any
+   row goes to four, and the front stays as it was. The bowl's stone
+   never changes; only how many sit on it. */
+export function densitiesFor(count: number): number[] {
+  const d = ROW_MAX_DENSITY.map(() => 1);
+  let capacity = generateSeats(d).length;
+  while (capacity < count) {
+    let pick = -1;
+    for (let row = d.length - 1; row >= 0; row--) {
+      if (d[row] < ROW_MAX_DENSITY[row] && (pick < 0 || d[row] < d[pick])) pick = row;
+    }
+    if (pick < 0) break;
+    d[pick] *= 2;
+    capacity = generateSeats(d).length;
+  }
+  return d;
+}
+
+/* Front and centre first: the order seats fill in. Thirty people read as
+   a full front rather than thirty sprinkled over two hundred and fifty
+   chairs, and a viewer keeps their chair as others arrive behind them. */
+export function fillOrder(seats: Seat3D[]): number[] {
+  return seats.map((_, i) => i).sort((a, b) => seats[a].row - seats[b].row || seats[a].center - seats[b].center || a - b);
 }
 
 const AVATAR_COLORS = [
@@ -665,8 +711,11 @@ function buildOrchestra(scene: THREE.Scene) {
 function buildChairsAndCrowd(
   scene: THREE.Object3D, // a Group in practice — lets the crowd rebuild without touching the scene
   seats: Seat3D[],
-  occupancy: Map<number, SeatedPerson | null>
-) {
+  occupancy: Map<number, SeatedPerson | null>,
+  /** Each row's chair size before this rebuild: a row that thickened
+      eases from it to its new size rather than popping. */
+  from: number[]
+): ((now: number) => boolean) | null {
   const n = seats.length;
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
@@ -691,17 +740,6 @@ function buildChairsAndCrowd(
   heads.count = torsos.count = occupiedIdx.length;
 
   seats.forEach((seat, i) => {
-    dummy.position.set(seat.x, seat.y + 0.16, seat.z);
-    dummy.rotation.set(0, seat.yaw, 0);
-    dummy.updateMatrix();
-    cushions.setMatrixAt(i, dummy.matrix);
-
-    // Backrest sits radially outward from the cushion.
-    const out = new THREE.Vector3(seat.x, 0, seat.z).normalize();
-    dummy.position.set(seat.x + out.x * 0.45, seat.y + 0.45, seat.z + out.z * 0.45);
-    dummy.updateMatrix();
-    backs.setMatrixAt(i, dummy.matrix);
-
     const occupied = occupancy.has(i);
     const proSide = seat.side === "pro";
     /* Empty seats sit far darker than they used to (0x2f2456 / 0x1d2f56):
@@ -715,18 +753,9 @@ function buildChairsAndCrowd(
     cushions.setColorAt(i, color);
     backs.setColorAt(i, color.clone().multiplyScalar(0.8));
   });
-
   occupiedIdx.forEach((seatIdx, j) => {
     const seat = seats[seatIdx];
     const person = occupancy.get(seatIdx);
-    dummy.rotation.set(0, seat.yaw, 0);
-    dummy.position.set(seat.x, seat.y + 0.62, seat.z);
-    dummy.updateMatrix();
-    torsos.setMatrixAt(j, dummy.matrix);
-    dummy.position.set(seat.x, seat.y + 1.12, seat.z);
-    dummy.updateMatrix();
-    heads.setMatrixAt(j, dummy.matrix);
-
     if (person) {
       color.setHex(AVATAR_COLORS[hashString(person.id) % AVATAR_COLORS.length]);
     } else {
@@ -736,7 +765,115 @@ function buildChairsAndCrowd(
     heads.setColorAt(j, color.clone().multiplyScalar(1.15));
   });
 
+  /* Every position at a size between the row's old and new: a chair
+     scaled about its seat, the figure scaled with it. Called once for
+     rows that didn't change, and every frame for half a second for rows
+     that did. */
+  const place = (k: number) => {
+    seats.forEach((seat, i) => {
+      const s0 = from[seat.row] ?? seat.scale;
+      const sc = s0 + (seat.scale - s0) * k;
+      dummy.scale.set(sc, sc, sc);
+      dummy.rotation.set(0, seat.yaw, 0);
+      dummy.position.set(seat.x, seat.y + 0.16 * sc, seat.z);
+      dummy.updateMatrix();
+      cushions.setMatrixAt(i, dummy.matrix);
+      // Backrest sits radially outward from the cushion.
+      const out = new THREE.Vector3(seat.x, 0, seat.z).normalize();
+      dummy.position.set(seat.x + out.x * 0.45 * sc, seat.y + 0.45 * sc, seat.z + out.z * 0.45 * sc);
+      dummy.updateMatrix();
+      backs.setMatrixAt(i, dummy.matrix);
+    });
+    occupiedIdx.forEach((seatIdx, j) => {
+      const seat = seats[seatIdx];
+      const s0 = from[seat.row] ?? seat.scale;
+      const sc = s0 + (seat.scale - s0) * k;
+      dummy.scale.set(sc, sc, sc);
+      dummy.rotation.set(0, seat.yaw, 0);
+      dummy.position.set(seat.x, seat.y + 0.62 * sc, seat.z);
+      dummy.updateMatrix();
+      torsos.setMatrixAt(j, dummy.matrix);
+      dummy.position.set(seat.x, seat.y + 1.12 * sc, seat.z);
+      dummy.updateMatrix();
+      heads.setMatrixAt(j, dummy.matrix);
+    });
+    cushions.instanceMatrix.needsUpdate = true;
+    backs.instanceMatrix.needsUpdate = true;
+    torsos.instanceMatrix.needsUpdate = true;
+    heads.instanceMatrix.needsUpdate = true;
+  };
+
   scene.add(cushions, backs, heads, torsos);
+
+  const changed = seats.some((seat) => (from[seat.row] ?? seat.scale) !== seat.scale);
+  if (!changed) {
+    place(1);
+    return null;
+  }
+  place(0);
+  const start = performance.now();
+  return (now: number) => {
+    const k = Math.min(1, (now - start) / CROWD_STEP_MS);
+    place(1 - Math.pow(1 - k, 3));
+    return k >= 1;
+  };
+}
+
+/* The standing crowd: whoever there is no chair for, as figures over the
+   top of the bowl — the upper terraces and the rim — seeded so the same
+   room draws the same crowd. Past CROWD_FIELD_MAX the number carries the
+   rest. */
+function buildCrowdField(scene: THREE.Object3D, extra: number, seed: number) {
+  const n = Math.min(extra, CROWD_FIELD_MAX);
+  if (n <= 0) return;
+  const rng = mulberry32(seed ^ 0x5eed);
+  const geo = new THREE.SphereGeometry(0.17, 6, 5);
+  const mat = new THREE.MeshStandardMaterial({ flatShading: true });
+  const dots = new THREE.InstancedMesh(geo, mat, n);
+  const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    const row = 4 + Math.floor(rng() * (ROWS - 4 + 1)); // rows 4–7, and the rim past them
+    const r = row < ROWS ? INNER_R + (row + 0.15 + rng() * 0.7) * ROW_STEP : OUTER_R + 0.15 + rng() * 0.6;
+    const y = row < ROWS ? BASE_H + row * STEP_H + 0.2 : BASE_H + ROWS * STEP_H + 0.9;
+    const a = (EDGE + 2 + rng() * (180 - 2 * (EDGE + 2))) * DEG;
+    dummy.position.set(r * Math.cos(a), y, -r * Math.sin(a));
+    dummy.updateMatrix();
+    dots.setMatrixAt(i, dummy.matrix);
+    color.setHex(a <= Math.PI / 2 ? 0x3a6cc2 : 0x6d4ab8).multiplyScalar(0.55 + rng() * 0.35);
+    dots.setColorAt(i, color);
+  }
+  scene.add(dots);
+}
+
+/* The number above the bowl, for the crowd there is no chair for. */
+function buildCountLabel(scene: THREE.Object3D, extra: number) {
+  const cnv = document.createElement("canvas");
+  cnv.width = 640;
+  cnv.height = 128;
+  const ctx = cnv.getContext("2d");
+  if (!ctx) return;
+  const text = `+${extra.toLocaleString("en-US")} watching`;
+  ctx.font = "600 54px system-ui, -apple-system, 'DM Sans', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const w = Math.min(620, ctx.measureText(text).width + 64);
+  ctx.fillStyle = "#0b0b0d";
+  ctx.beginPath();
+  ctx.roundRect((640 - w) / 2, 16, w, 96, 48);
+  ctx.fill();
+  ctx.strokeStyle = "#3a3a45";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = "#f5f5f0";
+  ctx.fillText(text, 320, 66);
+  const tex = new THREE.CanvasTexture(cnv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.position.set(0, BASE_H + ROWS * STEP_H + 3.4, -(OUTER_R + 0.5));
+  sprite.scale.set(13, 2.6, 1);
+  sprite.renderOrder = 5;
+  scene.add(sprite);
 }
 
 function buildTrees(scene: THREE.Scene) {
@@ -1184,6 +1321,9 @@ export default function AgoraScene3D({
      which is what used to hitch the animation every refresh. */
   const sceneRef = useRef<THREE.Scene | null>(null);
   const crowdRef = useRef<THREE.Group | null>(null);
+  /* A row that thickened eases to its new size over the next frames. */
+  const crowdTickRef = useRef<((now: number) => boolean) | null>(null);
+  const crowdScalesRef = useRef<number[] | null>(null);
   const audienceRef = useRef(audience);
   audienceRef.current = audience;
   const backgroundRef = useRef(background);
@@ -1444,6 +1584,7 @@ export default function AgoraScene3D({
       const budget = still ? 250 : backgroundRef.current ? 66 : 0;
       if (budget && now - lastDraw < budget) return;
       lastDraw = now;
+      if (crowdTickRef.current?.(now)) crowdTickRef.current = null;
       if (!stillMotion) {
         /* A slow breath in the warm pool, an order of magnitude calmer
            than the old torch flicker (0.9s vs 9s harmonics). */
@@ -1559,24 +1700,22 @@ export default function AgoraScene3D({
         obj.geometry.dispose();
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
         mats.forEach((m) => m.dispose());
+      } else if (obj instanceof THREE.Sprite) {
+        obj.material.map?.dispose();
+        obj.material.dispose();
       }
     });
     crowd.clear();
+    crowdTickRef.current = null;
 
-    /* Occupancy (same seeded logic as before). */
+    /* Occupancy: the bowl thickens from the back until everyone fits,
+       and fills front and centre first. */
     const people = audienceRef.current;
-    const count = viewerCountRef.current;
-    const seats = generateSeats();
-    const rng = mulberry32(hashString(roomId));
+    const count = Math.max(viewerCountRef.current, people.length);
+    const densities = densitiesFor(count);
+    const seats = generateSeats(densities);
     const bySide: Record<"pro" | "con", number[]> = { pro: [], con: [] };
-    seats.forEach((s, i) => bySide[s.side].push(i));
-    (["pro", "con"] as const).forEach((side) => {
-      const arr = bySide[side];
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-    });
+    fillOrder(seats).forEach((i) => bySide[seats[i].side].push(i));
     const occupancy = new Map<number, SeatedPerson | null>();
     people.forEach((person, i) => {
       const side = i % 2 === 0 ? "pro" : "con";
@@ -1591,7 +1730,15 @@ export default function AgoraScene3D({
       occupancy.set(idx, null);
     }
 
-    buildChairsAndCrowd(crowd, seats, occupancy);
+    const scales = densities.map((d) => 1 / d);
+    crowdTickRef.current = buildChairsAndCrowd(crowd, seats, occupancy, crowdScalesRef.current ?? scales);
+    crowdScalesRef.current = scales;
+    /* Nobody is dropped at the door: past every seat, the rest stand. */
+    const extra = count - seats.length;
+    if (extra > 0) {
+      buildCrowdField(crowd, extra, hashString(roomId));
+      buildCountLabel(crowd, extra);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crowdKey]);
 
