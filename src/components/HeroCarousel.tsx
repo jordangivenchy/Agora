@@ -32,6 +32,7 @@ import { expandQueue, openQueue, useQueue } from "@/lib/queue";
 import { topicFor } from "@/components/NewsPage";
 import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
+import { enterRoom } from "@/lib/enterRoom";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
 
 /** A live room as the page's data pass shapes it (the shell's keys). */
@@ -349,7 +350,7 @@ export default function HeroCarousel({ container, rooms }: {
           total={N}
           thumb={c.thumbnailUrl && !broken[`thumb:${c.roomId}`] ? c.thumbnailUrl : null}
           onThumbBroken={() => markBroken(`thumb:${c.roomId}`)}
-          onWatch={() => leaveTo(roomPath({ id: c.roomId, motion: c.motion }))}
+          onWatch={() => enterRoom(roomPath({ id: c.roomId, motion: c.motion }))}
         />
       );
     }

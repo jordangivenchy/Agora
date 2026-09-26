@@ -13,13 +13,13 @@
       created ('created'/'scheduled') — and a button to open your own. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { openRoom } from "@/lib/enterRoom";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import { TOPICS } from "@/types/database";
 import TopicIcon from "./topicIcons";
 import { useUserMenu } from "./userMenuContext";
-import { roomPath } from "@/lib/urls";
 import { displayName } from "@/lib/names";
 import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
 import UserAvatar from "./UserAvatar";
@@ -523,8 +523,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                 key={r.id}
                 role="link"
                 tabIndex={0}
-                onClick={() => { window.location.href = roomPath(r); }}
-                onKeyDown={(e) => { if (e.key === "Enter") window.location.href = roomPath(r); }}
+                onClick={() => openRoom(r)}
+                onKeyDown={(e) => { if (e.key === "Enter") openRoom(r); }}
                 className="cursor-pointer shrink-0"
                 style={{ ...rowCard, width: 168, height: 168, borderRadius: 16, overflow: "hidden", position: "relative" }}
               >
@@ -640,8 +640,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                   key={r.id}
                   role="link"
                   tabIndex={0}
-                  onClick={() => { window.location.href = roomPath(r); }}
-                  onKeyDown={(e) => { if (e.key === "Enter") window.location.href = roomPath(r); }}
+                  onClick={() => openRoom(r)}
+                  onKeyDown={(e) => { if (e.key === "Enter") openRoom(r); }}
                   className="cursor-pointer shrink-0"
                   style={{ ...rowCard, width: 168, height: 168, borderRadius: 16, overflow: "hidden", position: "relative" }}
                 >

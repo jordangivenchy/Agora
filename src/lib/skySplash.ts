@@ -34,6 +34,16 @@
    (components/Starfield.tsx), which draws the same stars in the same
    places while the splash and its trails fade over them.
 
+   Entering a live room is one exposure from the click to the stage:
+   window.__agoraEnter(url) brings a sky up over the page you are on,
+   and when it is on screen writes the sky's seed and wall-clock start
+   to sessionStorage (window.__agoraSkyCarry) and loads the room. The
+   room's first paint is a screen whose parse-time starter asks for a
+   carried sky ({ carry: true, only: true }): the same stars, at the
+   angle they have reached, still turning — and, if there is nothing to
+   carry and nothing live, it stays out of sight, so a past discussion
+   opened from a link never sees a sky.
+
    The sky is the site's opening: the boot splash shows it on the
    first document of a browser session and hides itself at parse time on
    every later one (components/BootSplash.tsx). A full page load inside
@@ -89,11 +99,11 @@ window.__agoraSky = function (trails, heads, center, o) {
   if (!trails || !heads || trails.dataset.live) return none;
   var ctx = trails.getContext('2d'), hctx = heads.getContext('2d');
   if (!ctx || !hctx) return none;
-  trails.dataset.live = '1';
 
-  // 1.5x is plenty for thin trails, and a third fewer pixels to clear
-  // and stroke each frame than the full 2x.
-  var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+  // At the screen's own resolution: the trails are hairlines, and at
+  // anything less they go soft on a phone or a retina display. Capped at
+  // 3x, which is every screen made.
+  var dpr = Math.min(3, window.devicePixelRatio || 1);
   var w = window.innerWidth, h = window.innerHeight;
   var now0 = performance.now();
   var S = window.__agoraSkySession;
@@ -102,8 +112,19 @@ window.__agoraSky = function (trails, heads, center, o) {
   // or within a beat of the last one stopping; a settled session is
   // over, and anything after it is a fresh sky.
   var handoff = S && S.frozen == null && S.w === w && S.h === h && (S.live > 0 || (S.lastStop && now0 - S.lastStop <= 400));
+  // A sky carried over from the page before (window.__agoraEnter).
+  var carried = !handoff && o.carry && window.__agoraSkyTakeCarry ? window.__agoraSkyTakeCarry() : null;
+  // Only continuing: with nothing live and nothing carried, no sky at all.
+  if (!handoff && !carried && o.only) return { stop: function () {}, elapsed: 0, idle: true };
+  trails.dataset.live = '1';
   if (!handoff) {
-    S = window.__agoraSkySession = {
+    S = window.__agoraSkySession = carried ? {
+      // The same stars — scattered for the size they were made for, about
+      // this screen's centre — on the same clock, already turning.
+      seed: carried.seed, start: now0 - Math.max(0, Date.now() - carried.wall), w: w, h: h, lastStop: 0, live: 0,
+      speed: carried.speed, ramp: carried.ramp, stars: window.__agoraSkyScatter(carried.seed, carried.w, carried.h),
+      frozen: null, reduced: false, leaving: 0,
+    } : {
       seed: (Math.random() * 4294967296) >>> 0, start: null, w: w, h: h, lastStop: 0, live: 0,
       speed: o.speed || 1.3, ramp: o.ramp || 0.2, stars: null, frozen: null, reduced: false, leaving: 0,
     };
@@ -218,6 +239,55 @@ window.__agoraSky = function (trails, heads, center, o) {
   return { stop: stop, elapsed: elapsed0 };
 };
 
+/* Carrying the sky into the next document: the seed it was scattered
+   from (and the size it was scattered for), its speed, and the wall-
+   clock moment its clock started — performance.now() does not survive a
+   page load, Date.now() does. Taken once, by the next page's first sky,
+   and only within twenty seconds. */
+window.__agoraSkyCarry = function () {
+  var S = window.__agoraSkySession;
+  if (!S || S.frozen != null) return;
+  var wall = S.start == null ? Date.now() : Date.now() - (performance.now() - S.start);
+  try {
+    sessionStorage.setItem('ag-sky-carry', JSON.stringify({ seed: S.seed, w: S.w, h: S.h, speed: S.speed, ramp: S.ramp, wall: wall, at: Date.now() }));
+  } catch (e) {}
+};
+window.__agoraSkyTakeCarry = function () {
+  var c = null;
+  try {
+    c = JSON.parse(sessionStorage.getItem('ag-sky-carry') || 'null');
+    sessionStorage.removeItem('ag-sky-carry');
+  } catch (e) { return null; }
+  if (!c || typeof c.seed !== 'number' || !(Date.now() - c.at < 20000)) return null;
+  return c;
+};
+
+/* Into a live room: the sky comes up over the page you are on — no mark,
+   no words, no bar, just the stars turning — and once it is on screen
+   the room loads and carries on with it (see the note at the top). */
+window.__agoraEnter = function (url) {
+  var go = function () {
+    if (window.__agoraSkyCarry) window.__agoraSkyCarry();
+    window.location.href = url;
+  };
+  if (!window.__agoraSky || document.querySelector('.ld-enter')) { go(); return; }
+  var el = document.createElement('div');
+  el.className = 'ld-screen ld-enter';
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-label', 'Entering the room');
+  var a = document.createElement('canvas'), b = document.createElement('canvas');
+  a.className = 'ld-sky';
+  b.className = 'ld-sky';
+  el.appendChild(a);
+  el.appendChild(b);
+  document.body.appendChild(el);
+  window.__agoraSky(a, b, null);
+  // Two frames: the first starts the sky's clock, the second is on screen.
+  requestAnimationFrame(function () { requestAnimationFrame(go); });
+  // Back to this page from the cache: nothing is being entered any more.
+  window.addEventListener('pageshow', function (e) { if (e.persisted && el.isConnected) el.remove(); }, { once: true });
+};
+
 /* The end of a session's sky: freeze it where it stands and hand the
    stars to the page's starfield (agora:sky-settle, and
    window.__agoraSkySettled for a starfield that mounts a moment later).
@@ -292,8 +362,14 @@ declare global {
       trails: HTMLCanvasElement,
       heads: HTMLCanvasElement,
       center: HTMLElement | null,
-      options?: { speed?: number; ramp?: number; markAt?: number },
-    ) => { stop: () => void; elapsed: number };
+      options?: {
+        speed?: number; ramp?: number; markAt?: number;
+        /** Continue a sky carried from the page before (window.__agoraEnter). */
+        carry?: boolean;
+        /** Only continue — a live sky or a carried one — never start a fresh one. */
+        only?: boolean;
+      },
+    ) => { stop: () => void; elapsed: number; idle?: boolean };
     __agoraSkySession?: {
       seed: number; start: number | null; w: number; h: number; lastStop: number; live: number;
       speed: number; ramp: number; stars: SkyStar[] | null; frozen: number | null; reduced: boolean; leaving: number;
@@ -310,5 +386,11 @@ declare global {
     __agoraSkyLiveCount?: number;
     /** The thin bar at the top for a full page load inside a session (see skySplash.ts). */
     __agoraLeave?: () => void;
+    /** Into a live room through the sky, carried across the page load (see skySplash.ts). */
+    __agoraEnter?: (url: string) => void;
+    /** Write the session's sky to sessionStorage for the next document. */
+    __agoraSkyCarry?: () => void;
+    /** Read and clear a carried sky, if one is fresh. */
+    __agoraSkyTakeCarry?: () => { seed: number; w: number; h: number; speed: number; ramp: number; wall: number; at: number } | null;
   }
 }

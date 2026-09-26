@@ -101,11 +101,27 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
     return () => { stale = true; };
   }, [parsed, router, supabase]);
 
-  /* The bar while the room is looked up: the sky is for a call, and a
-     past discussion never sees it. Once the room is known to be live,
-     the entering overlay below brings the sky up until the call is. */
-  if (!resolvedId) return <RouteLoading />;
+  /* While the room is looked up: the sky that brought us here, if it
+     did — see RoomWait. */
+  if (!resolvedId) return <RoomWait />;
   return <AgoraRoom roomId={resolvedId} />;
+}
+
+/* The waits before a room is known: its address looked up, its data
+   loaded. Entering a live room from a card or Watch Live is one exposure
+   from the click to the stage — the sky came up over the page left
+   behind and carries on here, the same stars still turning
+   (lib/skySplash.ts), until the entering overlay takes it over and ends
+   on the stage. With no sky to carry (a link opened cold, a past
+   discussion) the screen stays out of sight and the bar does the
+   waiting: the sky is for a call, and a past discussion never sees it. */
+function RoomWait() {
+  return (
+    <>
+      <RouteLoading />
+      <LoadingScreen carry />
+    </>
+  );
 }
 
 function AgoraRoom({ roomId }: { roomId: string }) {
@@ -662,7 +678,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      The loading screen that brought us here stays over the stage until
      the call is up (or the broadcast view is): its sky continues the
      entry screen's, so arriving in a room is one unbroken exposure that
-     ends on the stage. At least a beat, so it never flashes; at most
+     ends on the stage. Just the stars — no mark, no words, no bar. At least a beat, so it never flashes; at most
      twelve seconds, so a stalled connection can't trap anyone behind
      it — the stage's own "Connecting…" and retry take over then. */
   const callUp = call.connected || hlsAudience;
@@ -1468,7 +1484,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     );
   }
 
-  if (!loaded || !room) return <RouteLoading />;
+  if (!loaded || !room) return <RoomWait />;
 
   if ((arrivedEnded || showReplay) && !broadcast) {
     // Ended rooms get the shared chrome (navbar + sidebar) like the
@@ -1561,7 +1577,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
       {entering !== "gone" && (
         <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
-          <LoadingScreen label="Entering the Agora" />
+          <LoadingScreen plain />
         </div>
       )}
       <div className="ag-main">

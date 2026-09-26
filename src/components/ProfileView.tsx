@@ -35,6 +35,7 @@ import { displayName } from "@/lib/names";
 import { TagChip } from "@/components/community/PostCard";
 import { sessionUser } from "@/lib/session";
 import { navigateTo, progressOnClick } from "@/lib/progress";
+import { enterRoomOnClick } from "@/lib/enterRoom";
 
 /* Profile and DebateRow: lib/profileData.ts. */
 
@@ -740,6 +741,7 @@ export default function ProfileView({
               {profile.live_room_id && (
                 <a
                   href={roomPath({ id: profile.live_room_id, motion: profile.live_room_motion ?? null })}
+                  onClick={enterRoomOnClick}
                   className="no-underline inline-flex items-center gap-2"
                   style={{ minWidth: 0, maxWidth: 320, color: "#c9c9d2", fontSize: 13, fontWeight: 500 }}
                   title={profile.live_room_motion ?? "Live now"}

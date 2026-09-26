@@ -30,13 +30,26 @@ export function LoadingLine({ label = "Loading" }: { label?: string }) {
 }
 
 const STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode;if(!el||!window.__agoraSky||(el.closest&&el.closest('#ag-boot')))return;var c=el.querySelectorAll('canvas');window.__agoraSky(c[0],c[1],el.querySelector('.ld-center'));})();`;
+/* The same, for a screen that only continues a sky: the one carried in
+   from the page before, or one already live. With neither it marks the
+   screen idle, and the screen stays out of sight. */
+const CARRY_STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode;if(!el||!window.__agoraSky)return;var c=el.querySelectorAll('canvas');var r=window.__agoraSky(c[0],c[1],null,{carry:true,only:true});if(r&&r.idle)el.setAttribute('data-idle','');})();`;
 
-export default function LoadingScreen({ label }: { label?: string }) {
+export default function LoadingScreen({ label, plain = false, carry = false }: {
+  label?: string;
+  /** Just the stars turning: no mark, no words, no bar — entering a room. */
+  plain?: boolean;
+  /** Only continue a sky (carried in from the last page, or live now) —
+      never start one; with none, the screen isn't shown. Implies plain. */
+  carry?: boolean;
+}) {
+  const bare = plain || carry;
   /* The parse-time starter belongs to the server's HTML only: it is
      rendered on the server and through hydration (so the trees match),
      then dropped; a screen mounted in the browser never creates it —
      scripts created by React don't run, and React says so. */
   const client = useIsClient();
+  const screenRef = useRef<HTMLDivElement>(null);
   const trailsRef = useRef<HTMLCanvasElement>(null);
   const headsRef = useRef<HTMLCanvasElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
@@ -49,17 +62,20 @@ export default function LoadingScreen({ label }: { label?: string }) {
      room handing to its call, a fallback to a page's own wait) never
      shows a black frame between two skies. */
   useLayoutEffect(() => {
-    const trails = trailsRef.current, heads = headsRef.current;
+    const trails = trailsRef.current, heads = headsRef.current, screen = screenRef.current;
     if (!trails || !heads || trails.dataset.live || !window.__agoraSky) return;
-    const sky = window.__agoraSky(trails, heads, centerRef.current);
+    const sky = window.__agoraSky(trails, heads, centerRef.current, carry ? { carry: true, only: true } : undefined);
+    if (sky.idle) { screen?.setAttribute("data-idle", ""); return; }
+    screen?.removeAttribute("data-idle");
     // Continuing an earlier sky: the bar picks up where it was too.
     if (sky.elapsed > 0 && barRef.current) barRef.current.style.animationDelay = `-${Math.round(sky.elapsed)}ms`;
     return () => sky.stop();
-  }, []);
+  }, [carry]);
 
   return (
-    <div className="ld-screen" role="status" aria-label={label || "Loading"}>
-      <div ref={barRef} className="sk-progress" aria-hidden="true" />
+    /* data-idle may be set by the parse-time starter, before hydration. */
+    <div ref={screenRef} className="ld-screen" role="status" aria-label={label || "Loading"} suppressHydrationWarning>
+      {!bare && <div ref={barRef} className="sk-progress" aria-hidden="true" />}
       {/* The boot splash's starter sizes the canvases and marks the
           centre before hydration; those attributes are meant to differ. */}
       <canvas ref={trailsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
@@ -68,8 +84,8 @@ export default function LoadingScreen({ label }: { label?: string }) {
           server-rendered screen (a room's entry) is never a black frame
           waiting for hydration. The effect above then leaves it be. The
           boot splash's own starter handles the boot node. */}
-      {!client && <script dangerouslySetInnerHTML={{ __html: STARTER }} />}
-      <div ref={centerRef} className="ld-center" suppressHydrationWarning>
+      {!client && <script dangerouslySetInnerHTML={{ __html: carry ? CARRY_STARTER : STARTER }} />}
+      {!bare && <div ref={centerRef} className="ld-center" suppressHydrationWarning>
         {/* The A and the S, cut from the wordmark (public/as-mark.png). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/as-mark.png" alt="AgoraSphere" className="ld-mark" width={426} height={202} />
@@ -79,7 +95,7 @@ export default function LoadingScreen({ label }: { label?: string }) {
             <span className="ld-ellipsis" aria-hidden="true"><i /><i /><i /></span>
           </p>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -5,7 +5,7 @@
    so Explore and the home feed render the same thing. */
 
 import { TOPICS } from "@/types/database";
-import { roomPath } from "@/lib/urls";
+import { openRoom } from "@/lib/enterRoom";
 import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
 import { useUserMenu } from "./userMenuContext";
@@ -62,8 +62,8 @@ export default function RoomCard({ room: r, size = 168 }: { room: RoomCardRoom; 
     <div
       role="link"
       tabIndex={0}
-      onClick={() => { window.location.href = roomPath(r); }}
-      onKeyDown={(e) => { if (e.key === "Enter") window.location.href = roomPath(r); }}
+      onClick={() => openRoom(r)}
+      onKeyDown={(e) => { if (e.key === "Enter") openRoom(r); }}
       className="cursor-pointer shrink-0"
       style={{ ...card, width: size, height: size, borderRadius: 16, overflow: "hidden", position: "relative" }}
     >

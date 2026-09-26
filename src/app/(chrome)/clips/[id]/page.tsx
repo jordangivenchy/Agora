@@ -18,6 +18,7 @@ import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
 import { Icon } from "@/components/icons";
 import { roomPath, replayPath } from "@/lib/urls";
+import { enterRoomOnClick } from "@/lib/enterRoom";
 import { TOPICS } from "@/types/database";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { downloadClip } from "@/lib/clipDownload";
@@ -309,7 +310,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
           </div>
           <div className="clip-actions">
             {fullVideo && (
-              <a href={fullVideo} style={{ ...pill("#26262e", "#eeeef5"), textDecoration: "none" }}>
+              <a href={fullVideo} onClick={live ? enterRoomOnClick : undefined} style={{ ...pill("#26262e", "#eeeef5"), textDecoration: "none" }}>
                 <Icon name={live ? "zap" : "monitor-play"} size={13} style={{ marginRight: 6 }} />
                 {live ? "Join live" : "Watch full video"}
               </a>
@@ -363,7 +364,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
                   <span>Last live {agoLong(hostCard.last.at)}</span>
                 ) : null}
                 {hostCard?.last && <span style={{ color: "#3a3a42" }}>·</span>}
-                <a href={fullVideo ?? roomPath(clip.room)} style={{ color: "#c9c9d2", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 420 }}>
+                <a href={fullVideo ?? roomPath(clip.room)} onClick={live ? enterRoomOnClick : undefined} style={{ color: "#c9c9d2", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 420 }}>
                   from “{clip.room.motion}”
                 </a>
               </p>
