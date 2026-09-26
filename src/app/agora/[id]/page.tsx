@@ -1597,7 +1597,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             <h1 className="ag-motion">{room.motion}</h1>
             <div className="ag-topbar-meta">
               <span title="Elapsed"><Icon name="clock" size={13} /> {elapsed} elapsed</span>
-              <span title="Audience"><Icon name="users" size={13} /> {audienceCount} in audience</span>
+              <span title="Audience"><Icon name="users" size={13} /> {audienceCount.toLocaleString("en-US")} in audience</span>
               {topic && (
                 <span title="Topic">
                   {topic.emoji} {topic.label}

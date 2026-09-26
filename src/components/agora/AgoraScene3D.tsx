@@ -79,17 +79,22 @@ function mulberry32(seed: number) {
 /* ── Layout constants (world units ≈ meters) ── */
 const ROWS = 8;
 const INNER_R = 10;
-const ROW_STEP = 2.3;
+export const ROW_STEP = 2.3;
 const STEP_H = 0.55;
 const BASE_H = 0.5;
 const AISLE_HALF = 5; // degrees
 const EDGE = 13; // degrees
 const OUTER_R = INNER_R + ROWS * ROW_STEP;
 const SEAT_ARC_SPACING = 1.45;
-/* How small a chair may get against the front row's at rest: a quarter,
-   four seats where one stood. Past that the top of the bowl becomes a
-   standing crowd — a field of figures with the number written above it. */
-export const MIN_SEAT_SCALE = 0.25;
+/* The room a chair wants front to back at rest — cushion, backrest,
+   knees. One row of them fits a step; as chairs shrink, more rows fit
+   on the same stone. */
+export const SEAT_DEPTH = 1.25;
+/* How small a chair may get against the front row's at rest: a fifth.
+   With every step carrying as many rows as its chairs allow, that is
+   the whole bowl packed — past it the rest stand on the rim and the
+   ground outside, with the number written above the bowl. */
+export const MIN_SEAT_SCALE = 0.2;
 const CROWD_FIELD_MAX = 3000;
 const CROWD_STEP_MS = 600;
 
@@ -101,7 +106,10 @@ interface Seat3D {
   y: number;
   yaw: number;
   side: "pro" | "con";
+  /** The terrace step, front to back. */
   row: number;
+  /** Which row of chairs on that step, front to back. */
+  sub: number;
   /** Chair size against the front row's at rest, as the bowl tightens. */
   scale: number;
   /** Degrees off the centre line — the order seats fill within a row. */
@@ -111,99 +119,172 @@ interface Seat3D {
   radius: number;
 }
 
-/* Every row at one size: `scale` is the chair against the front row's at
-   rest, and the seats along an arc go as 1/scale. The whole bowl tightens
-   together, so it is always one auditorium — never a tight back behind a
-   loose front. */
-export function generateSeats(scale = 1): Seat3D[] {
-  const seats: Seat3D[] = [];
-  const spacing = SEAT_ARC_SPACING * scale;
+/* How the bowl is laid out for a crowd: one size of chair everywhere,
+   the same number of rows on every step, one spacing along every arc.
+   The whole bowl tightens together, so it is always one auditorium —
+   never a tight back behind a loose front. */
+export interface BowlLayout {
+  /** Chair size against the front row's at rest. */
+  scale: number;
+  /** Rows of chairs on each step. */
+  subRows: number;
+  /** Room along the arc per chair, against the rest spacing. Never below
+      `scale` — chairs never overlap — and above it while a new row is
+      filling in. */
+  spacing: number;
+}
+export const REST_LAYOUT: BowlLayout = { scale: 1, subRows: 1, spacing: 1 };
+
+/** Rows of chairs of this size that fit front to back on one step. */
+export function subRowsFor(scale: number): number {
+  return Math.max(1, Math.floor(ROW_STEP / (SEAT_DEPTH * scale) + 1e-9));
+}
+
+/* The arcs of one step: a wedge each side of the tunnel margin, and on
+   rows 2+ the strip between them. Rows 0–1 keep a wider margin so their
+   innermost seats sit clear of the tunnel hood (roof edge at |x| =
+   1.25). The center aisle no longer needs to be walkable — queue entry
+   is teleport-based and the tunnel dives below grade just past the
+   portal — so rows 2+ reclaim the gap as one continuous strip, placed
+   interior-only so it can't collide with the seats already sitting on
+   its endpoints. */
+interface Arc {
+  side: "pro" | "con" | "mid";
+  from: number; // degrees
+  to: number;
+  interior: boolean;
+}
+function arcsOf(row: number): Arc[] {
+  const margin = row < 2 ? AISLE_HALF + 7 : AISLE_HALF + 1.5;
+  const arcs: Arc[] = [
+    { side: "con", from: EDGE + 2, to: 90 - margin, interior: false },
+    { side: "pro", from: 90 + margin, to: 180 - EDGE - 2, interior: false },
+  ];
+  if (row >= 2) arcs.push({ side: "mid", from: 90 - AISLE_HALF - 1.5, to: 90 + AISLE_HALF + 1.5, interior: true });
+  return arcs;
+}
+/* How many chairs an arc holds and where they sit along it, as
+   fractions of it — evenly, so every gap in a block is the same however
+   many chairs it holds. Every other row on a step is staggered: its
+   chairs sit at the midpoints of the row in front, brick-wise, so a new
+   row slots into the gaps of the one before it rather than lining up
+   behind. Every row on a step counts its chairs off the step's front
+   row (`r` is that row's radius), so the pattern is exact; the rows
+   behind, on longer arcs, just breathe a little more. */
+function arcCount(arc: Arc, r: number, spacing: number, staggered: boolean): number {
+  const n = Math.floor(((arc.to - arc.from) * DEG * r) / spacing);
+  if (arc.interior) return Math.max(0, n - 1) + (staggered ? 1 : 0);
+  return staggered ? Math.max(1, n - 1) : Math.max(1, n);
+}
+function arcStop(arc: Arc, count: number, i: number, staggered: boolean): number {
+  if (staggered) return (i + 0.5) / count;
+  if (arc.interior) return (i + 1) / (count + 1);
+  return count === 1 ? 0.5 : i / (count - 1);
+}
+/* Rows share a step's depth evenly; one row sits at its middle. */
+function subRadius(row: number, sub: number, subRows: number): number {
+  return INNER_R + row * ROW_STEP + ((sub + 0.5) * ROW_STEP) / subRows;
+}
+/* A bare number is a chair size: as many rows as fit at that size,
+   chairs touching as at rest. */
+function asLayout(layout: BowlLayout | number): BowlLayout {
+  return typeof layout === "number" ? { scale: layout, subRows: subRowsFor(layout), spacing: layout } : layout;
+}
+
+/** How many chairs a layout puts on the stone. */
+export function seatCount(layout: BowlLayout | number): number {
+  const L = asLayout(layout);
+  const spacing = SEAT_ARC_SPACING * L.spacing;
+  let total = 0;
   for (let row = 0; row < ROWS; row++) {
-    const r = INNER_R + (row + 0.5) * ROW_STEP;
-    const y = BASE_H + row * STEP_H; // top surface of this terrace
-    /* Rows 0–1 keep a wider margin so their innermost seats sit clear of
-       the tunnel hood (roof edge at |x| = 1.25); each wedge re-spaces its
-       seats evenly across the shortened arc, so the lower rows stay
-       uniform rather than bunching at the tunnel side. */
-    const margin = row < 2 ? AISLE_HALF + 7 : AISLE_HALF + 1.5;
-    const wedges: { side: "pro" | "con"; from: number; to: number; interior?: boolean }[] = [
-      { side: "con", from: EDGE + 2, to: 90 - margin },
-      { side: "pro", from: 90 + margin, to: 180 - EDGE - 2 },
-    ];
-    /* The center aisle no longer needs to be walkable — queue entry is
-       teleport-based and the tunnel dives below grade just past the portal.
-       Rows 2+ reclaim the gap as one continuous strip; interior-only
-       placement keeps even spacing and can't collide with the seats that
-       already sit on the strip's endpoints. */
-    if (row >= 2) {
-      wedges.push({ side: "con", from: 90 - AISLE_HALF - 1.5, to: 90 + AISLE_HALF + 1.5, interior: true });
+    const arcs = arcsOf(row);
+    const rFront = subRadius(row, 0, L.subRows);
+    for (let sub = 0; sub < L.subRows; sub++) {
+      for (const arc of arcs) total += arcCount(arc, rFront, spacing, sub % 2 === 1);
     }
-    for (const w of wedges) {
-      const arcLen = (w.to - w.from) * DEG * r;
-      if (w.interior) {
-        const count = Math.max(0, Math.floor(arcLen / spacing) - 1);
+  }
+  return total;
+}
+
+/* Every chair in a layout. */
+export function generateSeats(layout: BowlLayout | number = REST_LAYOUT): Seat3D[] {
+  const L = asLayout(layout);
+  const seats: Seat3D[] = [];
+  const spacing = SEAT_ARC_SPACING * L.spacing;
+  for (let row = 0; row < ROWS; row++) {
+    const y = BASE_H + row * STEP_H; // top surface of this terrace
+    const arcs = arcsOf(row);
+    const rFront = subRadius(row, 0, L.subRows);
+    for (let sub = 0; sub < L.subRows; sub++) {
+      const r = subRadius(row, sub, L.subRows);
+      const staggered = sub % 2 === 1;
+      for (const arc of arcs) {
+        const count = arcCount(arc, rFront, spacing, staggered);
         for (let i = 0; i < count; i++) {
-          const a = (w.from + ((i + 1) / (count + 1)) * (w.to - w.from)) * DEG;
+          const a = (arc.from + arcStop(arc, count, i, staggered) * (arc.to - arc.from)) * DEG;
           seats.push({
             x: r * Math.cos(a),
             z: -r * Math.sin(a),
             y,
-            yaw: a - Math.PI / 2,
-            side: a <= Math.PI / 2 ? "con" : "pro", // match the flanking halves
+            yaw: a - Math.PI / 2, // backrest faces radially outward
+            side: arc.side === "mid" ? (a <= Math.PI / 2 ? "con" : "pro") : arc.side, // the strip matches its flanking halves
             row,
-            scale,
+            sub,
+            scale: L.scale,
             center: Math.abs(a / DEG - 90),
             angle: a,
             radius: r,
           });
         }
-        continue;
-      }
-      const count = Math.max(1, Math.floor(arcLen / spacing));
-      for (let i = 0; i < count; i++) {
-        const t = count === 1 ? 0.5 : i / (count - 1);
-        const a = (w.from + t * (w.to - w.from)) * DEG;
-        seats.push({
-          x: r * Math.cos(a),
-          z: -r * Math.sin(a),
-          y,
-          yaw: a - Math.PI / 2, // backrest faces radially outward
-          side: w.side,
-          row,
-          scale,
-          center: Math.abs(a / DEG - 90),
-          angle: a,
-          radius: r,
-        });
       }
     }
   }
   return seats;
 }
 
-/* The chair size that seats this many: full size up to the bowl's rest
-   capacity, then tightening continuously — every arrival past that draws
-   every row a hair closer, so there is never a step to see — down to a
-   quarter. The bowl's stone never changes; only how many sit on it.
-   Seats along an arc are counted whole, so the first guess can fall a
-   few short; a couple of nudges settle it. */
-export function scaleFor(count: number): number {
-  const rest = generateSeats(1).length;
-  if (count <= rest) return 1;
-  let scale = Math.max(MIN_SEAT_SCALE, rest / count);
-  for (let i = 0; i < 4 && scale > MIN_SEAT_SCALE; i++) {
-    const seats = generateSeats(scale).length;
-    if (seats >= count) break;
-    scale = Math.max(MIN_SEAT_SCALE, scale * (seats / count) * 0.995);
+/* The layout that seats this many: the bowl at rest up to its rest
+   capacity, then whichever keeps the chairs largest — more rows on each
+   step before smaller chairs. The chair size never jumps: as a crowd
+   grows, chairs shrink until one more row fits each step; the bowl
+   re-spaces into that row (chairs the same size, spread a little, the
+   new row in the gaps of the one in front); the spread closes as more
+   arrive; the chairs shrink again. Every arrival draws every row a hair
+   closer. Down to a fifth — past that, the rest stand. The bowl's stone
+   never changes; only how many sit on it. */
+export function layoutFor(count: number): BowlLayout {
+  if (count <= seatCount(REST_LAYOUT)) return REST_LAYOUT;
+  let best: BowlLayout | null = null;
+  let packed: BowlLayout = { scale: MIN_SEAT_SCALE, subRows: 1, spacing: MIN_SEAT_SCALE };
+  for (let subRows = 1; ; subRows++) {
+    const fit = Math.min(1, ROW_STEP / (subRows * SEAT_DEPTH));
+    if (fit < MIN_SEAT_SCALE) break;
+    const holds = (spacing: number) => seatCount({ scale: fit, subRows, spacing }) >= count;
+    if (!holds(MIN_SEAT_SCALE)) {
+      packed = { scale: MIN_SEAT_SCALE, subRows, spacing: MIN_SEAT_SCALE };
+      continue;
+    }
+    /* The widest spacing at which these rows seat everyone. Seats along
+       an arc are counted whole, so it is a step function — bisected. */
+    let lo = MIN_SEAT_SCALE;
+    let hi = subRows * 1.2; // that wide, the rows hold about the rest count — fewer than asked
+    for (let i = 0; i < 26; i++) {
+      const mid = (lo + hi) / 2;
+      if (holds(mid)) lo = mid;
+      else hi = mid;
+    }
+    const cand = { scale: Math.min(fit, lo), subRows, spacing: lo };
+    if (!best || cand.scale > best.scale + 1e-6) best = cand; // ties go to fewer rows
   }
-  return scale;
+  return best ?? packed;
 }
 
 /* Front and centre first: the order seats fill in. Thirty people read as
    a full front rather than thirty sprinkled over two hundred and fifty
    chairs, and a viewer keeps their chair as others arrive behind them. */
 export function fillOrder(seats: Seat3D[]): number[] {
-  return seats.map((_, i) => i).sort((a, b) => seats[a].row - seats[b].row || seats[a].center - seats[b].center || a - b);
+  return seats
+    .map((_, i) => i)
+    .sort((a, b) => seats[a].row - seats[b].row || seats[a].center - seats[b].center || seats[a].sub - seats[b].sub || a - b);
 }
 
 const AVATAR_COLORS = [
@@ -719,24 +800,41 @@ function buildChairsAndCrowd(
   occupancy: Map<number, SeatedPerson | null>,
   /** The bowl before this rebuild, or null the first time: each chair
       eases from its nearest old neighbour's place and size — a row that
-      gains a chair shuffles along to make room, rather than popping. */
-  prev: { seats: Seat3D[]; scale: number } | null
+      gains a chair shuffles along to make room, and a step that gains a
+      row sends chairs back into it, rather than popping. */
+  prev: { seats: Seat3D[]; layout: BowlLayout } | null
 ): ((now: number) => boolean) | null {
   const n = seats.length;
-  const fromScale = prev?.scale ?? (seats[0]?.scale ?? 1);
-  /* Where each chair starts from: the nearest old seat on the same row
-     — by angle, since a row is one arc — or its own place when the bowl
-     is new. Rows never overlap in angle, so nearest is exact. */
-  const fromAngle = seats.map((seat) => {
-    if (!prev) return seat.angle;
-    let best = seat.angle;
-    let bestD = Infinity;
+  const fromScale = prev?.layout.scale ?? (seats[0]?.scale ?? 1);
+  /* Where each chair starts from: the nearest old seat on the same step
+     — by angle, whichever row of the step it sat in — or its own place
+     when the bowl is new. Each step's old seats are sorted by angle
+     once, so a bowl of thousands finds its neighbours in a blink. */
+  const oldByRow = new Map<number, { angles: number[]; radii: number[] }>();
+  if (prev) {
+    const groups = new Map<number, Seat3D[]>();
     for (const old of prev.seats) {
-      if (old.row !== seat.row) continue;
-      const d = Math.abs(old.angle - seat.angle);
-      if (d < bestD) { bestD = d; best = old.angle; }
+      const g = groups.get(old.row);
+      if (g) g.push(old);
+      else groups.set(old.row, [old]);
     }
-    return best;
+    groups.forEach((g, row) => {
+      g.sort((a, b) => a.angle - b.angle);
+      oldByRow.set(row, { angles: g.map((s) => s.angle), radii: g.map((s) => s.radius) });
+    });
+  }
+  const from = seats.map((seat) => {
+    const g = oldByRow.get(seat.row);
+    if (!g) return { angle: seat.angle, radius: seat.radius };
+    let lo = 0;
+    let hi = g.angles.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (g.angles[mid] < seat.angle) lo = mid + 1;
+      else hi = mid;
+    }
+    const at = lo > 0 && Math.abs(g.angles[lo - 1] - seat.angle) < Math.abs(g.angles[lo] - seat.angle) ? lo - 1 : lo;
+    return { angle: g.angles[at], radius: g.radii[at] };
   });
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
@@ -791,12 +889,14 @@ function buildChairsAndCrowd(
      rows that didn't change, and every frame for half a second for rows
      that did. */
   const place = (k: number) => {
-    /* A chair on its way: along the row's arc from the old angle, at a
-       size on its way from the old size. */
+    /* A chair on its way: along the step's arc from the old angle, out
+       to its row from the old radius, at a size on its way from the old
+       size. */
     const at = (seat: Seat3D, i: number) => {
-      const a = fromAngle[i] + (seat.angle - fromAngle[i]) * k;
+      const a = from[i].angle + (seat.angle - from[i].angle) * k;
+      const r = from[i].radius + (seat.radius - from[i].radius) * k;
       const sc = fromScale + (seat.scale - fromScale) * k;
-      return { x: seat.radius * Math.cos(a), z: -seat.radius * Math.sin(a), yaw: a - Math.PI / 2, sc, outX: Math.cos(a), outZ: -Math.sin(a) };
+      return { x: r * Math.cos(a), z: -r * Math.sin(a), yaw: a - Math.PI / 2, sc, outX: Math.cos(a), outZ: -Math.sin(a) };
     };
     seats.forEach((seat, i) => {
       const { x, z, yaw, sc, outX, outZ } = at(seat, i);
@@ -830,7 +930,10 @@ function buildChairsAndCrowd(
 
   scene.add(cushions, backs, heads, torsos);
 
-  const changed = !!prev && (Math.abs(fromScale - (seats[0]?.scale ?? 1)) > 1e-4 || seats.some((seat, i) => Math.abs(fromAngle[i] - seat.angle) > 1e-4));
+  const changed =
+    !!prev &&
+    (Math.abs(fromScale - (seats[0]?.scale ?? 1)) > 1e-4 ||
+      seats.some((seat, i) => Math.abs(from[i].angle - seat.angle) > 1e-4 || Math.abs(from[i].radius - seat.radius) > 1e-4));
   if (!changed) {
     place(1);
     return null;
@@ -844,10 +947,10 @@ function buildChairsAndCrowd(
   };
 }
 
-/* The standing crowd: whoever there is no chair for, as figures over the
-   top of the bowl — the upper terraces and the rim — seeded so the same
-   room draws the same crowd. Past CROWD_FIELD_MAX the number carries the
-   rest. */
+/* The standing crowd: whoever there is no chair for, as figures along
+   the top of the rim wall and then on the ground outside it — a band
+   that deepens with the crowd — seeded so the same room draws the same
+   crowd. Past CROWD_FIELD_MAX the number carries the rest. */
 function buildCrowdField(scene: THREE.Object3D, extra: number, seed: number) {
   const n = Math.min(extra, CROWD_FIELD_MAX);
   if (n <= 0) return;
@@ -857,11 +960,18 @@ function buildCrowdField(scene: THREE.Object3D, extra: number, seed: number) {
   const dots = new THREE.InstancedMesh(geo, mat, n);
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
+  const from = (EDGE - 3) * DEG; // the wall's span
+  const to = (183 - EDGE) * DEG;
+  const rimTop = BASE_H + ROWS * STEP_H + 0.8;
+  /* The rim holds a ring two deep; the rest stand outside, about two to
+     the square metre, as far out as that takes. */
+  const rimN = Math.min(n, Math.floor(((to - from) * (OUTER_R + 0.45)) / 0.4) * 2);
+  const depth = Math.max(1.5, (n - rimN) / (2.2 * (to - from) * (OUTER_R + 2.5)));
   for (let i = 0; i < n; i++) {
-    const row = 4 + Math.floor(rng() * (ROWS - 4 + 1)); // rows 4–7, and the rim past them
-    const r = row < ROWS ? INNER_R + (row + 0.15 + rng() * 0.7) * ROW_STEP : OUTER_R + 0.15 + rng() * 0.6;
-    const y = row < ROWS ? BASE_H + row * STEP_H + 0.2 : BASE_H + ROWS * STEP_H + 0.9;
-    const a = (EDGE + 2 + rng() * (180 - 2 * (EDGE + 2))) * DEG;
+    const onRim = i < rimN;
+    const r = onRim ? OUTER_R + 0.15 + rng() * 0.6 : OUTER_R + 1.3 + rng() * depth;
+    const y = onRim ? rimTop + 0.15 : 0.12;
+    const a = from + rng() * (to - from);
     dummy.position.set(r * Math.cos(a), y, -r * Math.sin(a));
     dummy.updateMatrix();
     dots.setMatrixAt(i, dummy.matrix);
@@ -871,7 +981,6 @@ function buildCrowdField(scene: THREE.Object3D, extra: number, seed: number) {
   scene.add(dots);
 }
 
-/* The number above the bowl, for the crowd there is no chair for. */
 function buildCountLabel(scene: THREE.Object3D, extra: number) {
   const cnv = document.createElement("canvas");
   cnv.width = 640;
@@ -1348,7 +1457,7 @@ export default function AgoraScene3D({
   const crowdRef = useRef<THREE.Group | null>(null);
   /* A row that thickened eases to its new size over the next frames. */
   const crowdTickRef = useRef<((now: number) => boolean) | null>(null);
-  const crowdPrevRef = useRef<{ seats: Seat3D[]; scale: number } | null>(null);
+  const crowdPrevRef = useRef<{ seats: Seat3D[]; layout: BowlLayout } | null>(null);
   const audienceRef = useRef(audience);
   audienceRef.current = audience;
   const backgroundRef = useRef(background);
@@ -1733,30 +1842,36 @@ export default function AgoraScene3D({
     crowd.clear();
     crowdTickRef.current = null;
 
-    /* Occupancy: the bowl thickens from the back until everyone fits,
-       and fills front and centre first. */
+    /* Occupancy: the whole bowl tightens together — more rows on each
+       step, then smaller chairs — until everyone fits, and fills front
+       and centre first. */
     const people = audienceRef.current;
     const count = Math.max(viewerCountRef.current, people.length);
-    const scale = scaleFor(count);
-    const seats = generateSeats(scale);
+    const layout = layoutFor(count);
+    const seats = generateSeats(layout);
     const bySide: Record<"pro" | "con", number[]> = { pro: [], con: [] };
     fillOrder(seats).forEach((i) => bySide[seats[i].side].push(i));
+    const next = { pro: 0, con: 0 };
+    const take = (side: "pro" | "con"): number | undefined => {
+      const other = side === "pro" ? "con" : "pro";
+      if (next[side] < bySide[side].length) return bySide[side][next[side]++];
+      if (next[other] < bySide[other].length) return bySide[other][next[other]++];
+      return undefined;
+    };
     const occupancy = new Map<number, SeatedPerson | null>();
     people.forEach((person, i) => {
-      const side = i % 2 === 0 ? "pro" : "con";
-      const idx = bySide[side].shift() ?? bySide[side === "pro" ? "con" : "pro"].shift();
+      const idx = take(i % 2 === 0 ? "pro" : "con");
       if (idx !== undefined) occupancy.set(idx, person);
     });
     const remaining = Math.max(0, count - people.length);
     for (let i = 0; i < remaining; i++) {
-      const side = i % 2 === 0 ? "pro" : "con";
-      const idx = bySide[side].shift() ?? bySide[side === "pro" ? "con" : "pro"].shift();
+      const idx = take(i % 2 === 0 ? "pro" : "con");
       if (idx === undefined) break;
       occupancy.set(idx, null);
     }
 
     crowdTickRef.current = buildChairsAndCrowd(crowd, seats, occupancy, crowdPrevRef.current);
-    crowdPrevRef.current = { seats, scale };
+    crowdPrevRef.current = { seats, layout };
     /* Nobody is dropped at the door: past every seat, the rest stand. */
     const extra = count - seats.length;
     if (extra > 0) {
