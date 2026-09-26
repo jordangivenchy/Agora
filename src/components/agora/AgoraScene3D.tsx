@@ -794,10 +794,90 @@ function buildOrchestra(scene: THREE.Scene) {
   scene.add(floor);
 }
 
+/* The seated figure: one low-poly silhouette — hips, shoulders, a neck,
+   a head — leaning a little toward the stage. It reads as a person at
+   twenty pixels from the bowl camera and looks meant at two hundred.
+   Body and head are two instanced meshes sharing a base at the seat,
+   so the head can nod on its own. Built once per crowd rebuild. */
+function figureGeometry(): { body: THREE.BufferGeometry; head: THREE.BufferGeometry } {
+  const profile = [
+    [0.0, 0.0], [0.40, 0.0], [0.44, 0.18], [0.42, 0.42], [0.40, 0.58],
+    [0.45, 0.72], [0.43, 0.80], [0.30, 0.88], [0.17, 0.93], [0.0, 0.93],
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  const body = new THREE.LatheGeometry(profile, 12);
+  body.rotateX(FIGURE_LEAN);
+  const head = new THREE.SphereGeometry(0.24, 10, 8);
+  head.translate(0, 1.16, 0.02);
+  head.rotateX(FIGURE_LEAN);
+  return { body, head };
+}
+const FIGURE_LEAN = 0.14; // radians toward the stage
+const FIGURE_NECK = "vec3(0., 0.92, 0.13)"; // the neck after the lean, in the figure's own frame
+
+/* Idle life, in the vertex shader so ten thousand cost what ten do: a
+   slow breath of pitch and roll about the base, each figure on its own
+   phase and rate; and now and then a head nods — a gate that opens a
+   few percent of the time, a quick double nod while it does. Off under
+   reduced motion, since the clock then stands still. */
+const FIGURE_SWAY_GLSL = /* glsl */ `
+uniform float uSway;
+mat3 agSway(float id) {
+  float p = fract(sin(id * 12.9898) * 43758.5453) * 6.2831853;
+  float q = fract(sin(id * 78.233) * 43758.5453);
+  float t = uSway * (0.6 + 0.6 * q);
+  float pitch = 0.05 * sin(t + p) + 0.025 * sin(2.3 * t + p * 1.7);
+  float roll = 0.04 * sin(0.8 * t + p * 2.3);
+  float cp = cos(pitch), sp = sin(pitch), cr = cos(roll), sr = sin(roll);
+  return mat3(1., 0., 0., 0., cp, sp, 0., -sp, cp) * mat3(cr, sr, 0., -sr, cr, 0., 0., 0., 1.);
+}
+`;
+const FIGURE_NOD_GLSL = /* glsl */ `
+mat3 agNod(float id) {
+  float p = fract(sin(id * 12.9898) * 43758.5453) * 6.2831853;
+  float g = smoothstep(0.93, 1.0, sin(0.11 * uSway + p * 3.0));
+  float a = 0.35 * g * sin(5.0 * uSway + p);
+  float c = cos(a), s = sin(a);
+  return mat3(1., 0., 0., 0., c, s, 0., -s, c);
+}
+`;
+function figureMaterial(time: { value: number }, nod: boolean): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({ flatShading: true });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uSway = time;
+    shader.vertexShader = shader.vertexShader
+      .replace("void main() {", `${FIGURE_SWAY_GLSL}${nod ? FIGURE_NOD_GLSL : ""}void main() {`)
+      .replace(
+        "#include <beginnormal_vertex>",
+        `#include <beginnormal_vertex>\n  mat3 agS = agSway(float(gl_InstanceID));\n${nod ? "  mat3 agN = agNod(float(gl_InstanceID));\n  objectNormal = agN * objectNormal;\n" : ""}  objectNormal = agS * objectNormal;`
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>\n${nod ? `  transformed = ${FIGURE_NECK} + agN * (transformed - ${FIGURE_NECK});\n` : ""}  transformed = agS * transformed;`
+      );
+  };
+  mat.customProgramCacheKey = () => (nod ? "ag-figure-head" : "ag-figure-body");
+  return mat;
+}
+
+/* A crowd is not one paint: a few shades a side, so it reads as people
+   who chose seats. A viewer keeps their shade as the bowl re-lays out —
+   it hangs off their arrival, not their chair. */
+const CROWD_SHADES: Record<"pro" | "con", number[]> = {
+  con: [0x3a6cc2, 0x2e5aa8, 0x4f80d4, 0x6a92d6],
+  pro: [0x6d4ab8, 0x5a3a9f, 0x8161c9, 0x9b7fd6],
+};
+function crowdShade(side: "pro" | "con", arrival: number): number {
+  const shades = CROWD_SHADES[side];
+  return shades[(Math.imul(arrival + 1, 2654435761) >>> 0) % shades.length];
+}
+
 function buildChairsAndCrowd(
   scene: THREE.Object3D, // a Group in practice — lets the crowd rebuild without touching the scene
   seats: Seat3D[],
-  occupancy: Map<number, SeatedPerson | null>,
+  /** Who sits where: a member, or a plain viewer by arrival order. */
+  occupancy: Map<number, SeatedPerson | number>,
+  /** The sway clock, ticked by the render loop. */
+  time: { value: number },
   /** The bowl before this rebuild, or null the first time: each chair
       eases from its nearest old neighbour's place and size — a row that
       gains a chair shuffles along to make room, and a step that gains a
@@ -848,15 +928,12 @@ function buildChairsAndCrowd(
   // No castShadow: hundreds of chair/crowd casters would dominate the shadow
   // pass for shadows that are invisible under the night lighting anyway.
 
-  // Crowd: head + torso for every occupied seat.
+  // Crowd: a figure — body and head — for every occupied seat.
   const occupiedIdx = seats.map((_, i) => i).filter((i) => occupancy.has(i));
-  const headGeo = new THREE.SphereGeometry(0.26, 10, 8);
-  const torsoGeo = new THREE.SphereGeometry(0.4, 10, 8);
-  torsoGeo.scale(1, 0.8, 0.9);
-  const personMat = new THREE.MeshStandardMaterial({ flatShading: true });
-  const heads = new THREE.InstancedMesh(headGeo, personMat, Math.max(1, occupiedIdx.length));
-  const torsos = new THREE.InstancedMesh(torsoGeo, personMat.clone(), Math.max(1, occupiedIdx.length));
-  heads.count = torsos.count = occupiedIdx.length;
+  const figure = figureGeometry();
+  const bodies = new THREE.InstancedMesh(figure.body, figureMaterial(time, false), Math.max(1, occupiedIdx.length));
+  const heads = new THREE.InstancedMesh(figure.head, figureMaterial(time, true), Math.max(1, occupiedIdx.length));
+  bodies.count = heads.count = occupiedIdx.length;
 
   seats.forEach((seat, i) => {
     const occupied = occupancy.has(i);
@@ -874,13 +951,13 @@ function buildChairsAndCrowd(
   });
   occupiedIdx.forEach((seatIdx, j) => {
     const seat = seats[seatIdx];
-    const person = occupancy.get(seatIdx);
-    if (person) {
-      color.setHex(AVATAR_COLORS[hashString(person.id) % AVATAR_COLORS.length]);
+    const who = occupancy.get(seatIdx);
+    if (typeof who === "object" && who) {
+      color.setHex(AVATAR_COLORS[hashString(who.id) % AVATAR_COLORS.length]);
     } else {
-      color.setHex(seat.side === "pro" ? 0xa78bfa : 0x7ab8ff);
+      color.setHex(crowdShade(seat.side, typeof who === "number" ? who : j));
     }
-    torsos.setColorAt(j, color);
+    bodies.setColorAt(j, color);
     heads.setColorAt(j, color.clone().multiplyScalar(1.15));
   });
 
@@ -913,22 +990,21 @@ function buildChairsAndCrowd(
     occupiedIdx.forEach((seatIdx, j) => {
       const seat = seats[seatIdx];
       const { x, z, yaw, sc } = at(seat, seatIdx);
+      // The figure stands on the cushion's top; body and head share the base.
       dummy.scale.set(sc, sc, sc);
       dummy.rotation.set(0, yaw, 0);
-      dummy.position.set(x, seat.y + 0.62 * sc, z);
+      dummy.position.set(x, seat.y + 0.32 * sc, z);
       dummy.updateMatrix();
-      torsos.setMatrixAt(j, dummy.matrix);
-      dummy.position.set(x, seat.y + 1.12 * sc, z);
-      dummy.updateMatrix();
+      bodies.setMatrixAt(j, dummy.matrix);
       heads.setMatrixAt(j, dummy.matrix);
     });
     cushions.instanceMatrix.needsUpdate = true;
     backs.instanceMatrix.needsUpdate = true;
-    torsos.instanceMatrix.needsUpdate = true;
+    bodies.instanceMatrix.needsUpdate = true;
     heads.instanceMatrix.needsUpdate = true;
   };
 
-  scene.add(cushions, backs, heads, torsos);
+  scene.add(cushions, backs, bodies, heads);
 
   const changed =
     !!prev &&
@@ -1457,6 +1533,9 @@ export default function AgoraScene3D({
   const crowdRef = useRef<THREE.Group | null>(null);
   /* A row that thickened eases to its new size over the next frames. */
   const crowdTickRef = useRef<((now: number) => boolean) | null>(null);
+  /* The figures' idle clock — seconds since the scene mounted, stopped
+     under reduced motion. */
+  const figureTimeRef = useRef({ value: 0 });
   const crowdPrevRef = useRef<{ seats: Seat3D[]; layout: BowlLayout } | null>(null);
   const audienceRef = useRef(audience);
   audienceRef.current = audience;
@@ -1720,6 +1799,7 @@ export default function AgoraScene3D({
       lastDraw = now;
       if (crowdTickRef.current?.(now)) crowdTickRef.current = null;
       if (!stillMotion) {
+        figureTimeRef.current.value = t;
         /* A slow breath in the warm pool, an order of magnitude calmer
            than the old torch flicker (0.9s vs 9s harmonics). */
         warmLights.forEach((light, i) => {
@@ -1858,7 +1938,7 @@ export default function AgoraScene3D({
       if (next[other] < bySide[other].length) return bySide[other][next[other]++];
       return undefined;
     };
-    const occupancy = new Map<number, SeatedPerson | null>();
+    const occupancy = new Map<number, SeatedPerson | number>();
     people.forEach((person, i) => {
       const idx = take(i % 2 === 0 ? "pro" : "con");
       if (idx !== undefined) occupancy.set(idx, person);
@@ -1867,10 +1947,10 @@ export default function AgoraScene3D({
     for (let i = 0; i < remaining; i++) {
       const idx = take(i % 2 === 0 ? "pro" : "con");
       if (idx === undefined) break;
-      occupancy.set(idx, null);
+      occupancy.set(idx, i);
     }
 
-    crowdTickRef.current = buildChairsAndCrowd(crowd, seats, occupancy, crowdPrevRef.current);
+    crowdTickRef.current = buildChairsAndCrowd(crowd, seats, occupancy, figureTimeRef.current, crowdPrevRef.current);
     crowdPrevRef.current = { seats, layout };
     /* Nobody is dropped at the door: past every seat, the rest stand. */
     const extra = count - seats.length;
