@@ -4083,3 +4083,150 @@
 .ag-queue-pill { background: var(--ag-solid); border-color: var(--ag-solid-line); color: #e7e9ee; }
 .ag-queue-pill.is-next { color: #ffb700; box-shadow: none; }
 .ag-queue-pill.is-mic { color: #6fd3a0; }
+
+/* ── The call, minimized ──────────────────────────────────────────
+   The room lives in the root layout's call slot (CallSlot.tsx) and
+   carries on while you browse. Leaving it for another page, it shrinks
+   into the corner (.ag-call-frame.is-moving, animated from
+   AgoraRoomPage) and becomes a card there (.call-mini, MiniCall.tsx);
+   opening the card grows it back to fill the screen before the room
+   takes over. Solid surfaces, like every new control on the site. */
+
+/* No box of its own while the room is up — the room lays out exactly as
+   it always has — and fixed over the page it is giving way to while it
+   shrinks. */
+.ag-call-frame { display: contents; }
+.ag-call-frame.is-moving {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 945;
+  overflow: hidden;
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+.ag-minimize { display: grid; place-items: center; }
+.ag-minimize:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
+
+@keyframes callMiniIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.call-mini {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 940;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: #0e0e11;
+  border: 1px solid #2a2a33;
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  color: #f5f5f0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  overflow: hidden;
+  transform-origin: 0 0;
+  animation: callMiniIn 0.2s ease-out both;
+}
+/* Growing back into the room: an empty panel in the room's own night,
+   so the hand-over to the room is colour to colour. */
+.call-mini.is-opening {
+  background: #05070f;
+  border-color: #05070f;
+  box-shadow: none;
+  animation: none;
+}
+.call-mini.is-opening > * { opacity: 0; transition: opacity 0.1s ease; }
+.call-mini-video { aspect-ratio: 16 / 9; background: #000; }
+.call-mini-video > * { width: 100%; height: 100%; }
+.call-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+}
+.call-mini-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.call-mini-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff6b61;
+}
+.call-mini-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 8px rgba(255, 59, 48, 0.7);
+}
+.call-mini-live i.is-over { background: #6b6b75; box-shadow: none; }
+.call-mini-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.call-mini-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: #9aa0ac;
+}
+.call-mini-sub-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.call-mini-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.call-mini-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #1a1a21;
+  border: 1px solid #2a2a33;
+  color: #e7e9ee;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.call-mini-btn:hover { background: #24242d; border-color: #3a3a45; }
+.call-mini-btn:active { transform: scale(0.95); }
+.call-mini-btn:disabled { opacity: 0.45; cursor: default; }
+.call-mini-btn.is-live { background: #34c759; border-color: #34c759; color: #04240f; }
+.call-mini-btn.is-leave { background: #ff3b30; border-color: #ff3b30; color: #fff; }
+.call-mini-btn.is-leave:hover { background: #ff5147; border-color: #ff5147; }
+/* On a phone the card spans the screen, just above the tab bar. */
+@media (max-width: 639px) {
+  .call-mini {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-mini { animation: none; }
+}

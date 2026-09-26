@@ -30,8 +30,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  call,
 }: Readonly<{
   children: React.ReactNode;
+  /** The live room (app/@call): it stays mounted across in-app
+      navigation, so a call carries on, minimized, while you browse. */
+  call: React.ReactNode;
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable} h-full`}>
@@ -63,6 +67,7 @@ export default function RootLayout({
         <PresenceBoot />
         <UserMenuProvider>
           {children}
+          {call}
           <MessagesDock />
           <ImageLightbox />
           <CreateMenu />

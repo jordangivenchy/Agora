@@ -23,6 +23,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { notifHref, type NotifRow } from "@/lib/notifications";
 import NotificationsPanel, { type PushState } from "@/components/notifications/NotificationsPanel";
 import { sessionUser } from "@/lib/session";
+import { goTo } from "@/lib/softNav";
 
 interface Props {
   container?: HTMLElement | null;
@@ -175,7 +176,7 @@ export default function NotificationsBell({ container }: Props) {
             const n = new Notification("AgoraSphere", { body });
             n.onclick = () => {
               window.focus();
-              if (row.post_id) window.location.href = `/posts/${row.post_id}`;
+              if (row.post_id) goTo(`/posts/${row.post_id}`);
               else if (row.room_id) window.location.href = `/agora/${row.room_id}`;
             };
           }
@@ -224,7 +225,7 @@ export default function NotificationsBell({ container }: Props) {
         setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
         supabase.rpc("mark_notification_read", { p_id: n.id });
       }
-      if (href) window.location.href = href;
+      if (href) goTo(href);
     },
     [supabase]
   );

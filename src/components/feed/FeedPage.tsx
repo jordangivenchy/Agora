@@ -29,6 +29,7 @@ import { useUserMenu } from "@/components/userMenuContext";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { navigateTo } from "@/lib/progress";
+import { goTo } from "@/lib/softNav";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -319,8 +320,8 @@ export default function FeedPage({ open = true, onClose }: Props) {
           key={it.item_id}
           role="link"
           tabIndex={0}
-          onClick={() => { window.location.href = replayPath(r); }}
-          onKeyDown={(e) => { if (e.key === "Enter") window.location.href = replayPath(r); }}
+          onClick={() => goTo(replayPath(r))}
+          onKeyDown={(e) => { if (e.key === "Enter") goTo(replayPath(r)); }}
           className="p-3 mb-3 flex gap-4 items-center cursor-pointer feed-replay"
           style={{ ...card, padding: 18 }}
         >

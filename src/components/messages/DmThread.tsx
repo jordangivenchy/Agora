@@ -44,6 +44,7 @@ import { COMMUNITY_KINDS } from "@/components/community/CreateCommunityModal";
 import Link from "next/link";
 import { userPath } from "@/lib/urls";
 import { progressOnClick } from "@/lib/progress";
+import { goTo } from "@/lib/softNav";
 
 export interface Dm {
   id: string;
@@ -894,7 +895,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               aria-label="Chat options"
               style={{ position: "absolute", top: "calc(100% + 6px)", right: onClose ? 36 : 0, zIndex: 40, minWidth: 224, padding: 6, borderRadius: 12, background: "#000", border: "1px solid rgba(255,255,255,0.14)", boxShadow: "0 18px 48px rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", gap: 2 }}
             >
-              {optionRow("user", "View profile", () => { window.location.href = `/users/${peer.username}`; })}
+              {optionRow("user", "View profile", () => goTo(`/users/${peer.username}`))}
               {optionRow(
                 rel?.is_following ? "user-check" : "user-plus",
                 rel?.is_following ? "Following" : rel?.is_followed_by ? "Add friend back" : "Add friend",

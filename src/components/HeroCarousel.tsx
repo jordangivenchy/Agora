@@ -107,6 +107,8 @@ function liveFor(iso: string | null): string {
 /* A full page load with the loading screen up first (the adapter's
    go(): the sky paints, then the navigation starts). */
 function leaveTo(url: string) {
+  // A live call (minimized in the corner) would be hung up by a page load.
+  if (window.__agoraSoftNav?.(url)) return;
   window.__agoraLeave?.();
   requestAnimationFrame(() => { window.location.href = url; });
 }
