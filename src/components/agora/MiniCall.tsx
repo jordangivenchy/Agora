@@ -41,6 +41,8 @@ export default function MiniCall({
   hlsSrc,
   onLeave,
   onExpand,
+  onWake,
+  onSleep,
 }: {
   /** The room is still shrinking into the corner: come up as it lands. */
   arriving: boolean;
@@ -64,6 +66,10 @@ export default function MiniCall({
   onLeave: () => void;
   /** Back into the room. */
   onExpand: () => void;
+  /** A hand is on the card (pointer, press, focus): get the room ready. */
+  onWake: () => void;
+  /** The hand has gone. */
+  onSleep: () => void;
 }) {
   /* Whether it came up under a room still landing: kept for the card's
      life, so its entrance isn't retimed when the room lands. */
@@ -83,10 +89,17 @@ export default function MiniCall({
       role="region"
       aria-label="Call in progress"
       inert={leaving}
+      onPointerEnter={onWake}
+      onPointerDown={onWake}
+      onPointerLeave={onSleep}
+      onFocus={onWake}
+      onBlur={onSleep}
     >
       {hlsSrc && !ended && (
         <div className="call-mini-video">
-          <HlsBroadcastSurface src={hlsSrc} compact />
+          {/* Pictures only: the room, kept under the card, carries the
+              broadcast's sound, so there is one voice, not two. */}
+          <HlsBroadcastSurface src={hlsSrc} compact silent />
         </div>
       )}
       <div className="call-mini-row">

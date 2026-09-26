@@ -43,7 +43,7 @@ import type { User } from "@supabase/supabase-js";
 import { Icon } from "@/components/icons";
 import RoomFrame from "@/components/agora/RoomFrame";
 import MiniCall from "@/components/agora/MiniCall";
-import { useCallSlot } from "@/components/agora/CallSlot";
+import { takeCoverScroll, useCallSlot } from "@/components/agora/CallSlot";
 import { softNavTarget } from "@/lib/softNav";
 import "@/app/agora/agora.css";
 import { sessionUser } from "@/lib/session";
@@ -361,6 +361,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       setRoom(roomData);
       setFirstStatus((prev) => prev ?? roomData.status);
       if (partData) setParticipants(partData as StageParticipant[]);
+      /* The room is known: it can mount and its call can start now. A
+         community room's name is a label in the top bar, not a reason to
+         hold everything else back another round trip. */
+      setLoaded(true);
       if (roomData.community_id) {
         const { data: comm } = await supabase
           .from("communities")
@@ -717,7 +721,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     enteredAt.current ??= Date.now();
     const ENTER_MIN_MS = 1200, ENTER_CAP_MS = 12000;
     const elapsed = Date.now() - enteredAt.current;
-    const wait = callUp ? Math.max(0, ENTER_MIN_MS - elapsed) : Math.max(0, ENTER_CAP_MS - elapsed);
+    /* The beat counts from when the sky came up, not from when this
+       room mounted: a sky carried in from a card, or brought up when a
+       room was made, has usually been turning for a while already, and
+       holding it another full beat on top was pure waiting. */
+    const S = window.__agoraSkySession;
+    const skyUp = S && S.frozen == null && S.live > 0 && S.start != null ? performance.now() - S.start : 0;
+    const shown = Math.max(elapsed, skyUp);
+    const wait = callUp ? Math.max(0, ENTER_MIN_MS - shown) : Math.max(0, ENTER_CAP_MS - elapsed);
     const t = window.setTimeout(() => setEntering("leaving"), wait);
     return () => clearTimeout(t);
   }, [entering, callUp, broadcast]);
@@ -1406,19 +1417,19 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       /* Away from the room — or, mid-way back in, somewhere else after all. */
       if (phase === "full" || phase === "growing") setPhase(callLive ? "shrinking" : "mini");
     } else if (phase === "mini") {
-      /* Back to the room without the card (the browser's Back or
-         Forward): the page it would grow over is already gone, so the
-         room is simply there. */
-      setPhase("full");
+      /* Back to the room without the card (the browser's Forward): over
+         the page it was minimized from, still there underneath, it grows
+         back as from the card; where that page has gone (a history entry
+         from before), the room is simply there. */
+      setPhase(slot.overPage && callLive ? "growing" : "full");
     } else if (phase === "shrinking") {
       setPhase("full");
     }
   }
   const frameRef = useRef<HTMLDivElement>(null);
-  /* The card's way back in: the address changes once the room has grown
-     to fill the screen, so the page you were on stays under it the whole
-     way (changing it first would drop that page mid-grow, leaving the
-     room growing over an empty screen). */
+  /* Back as a page of its own (below), the address changes once the room
+     has grown to fill the screen, so the page you were on stays under it
+     the whole way. */
   const expandWhenGrown = useRef<(() => void) | null>(null);
   /* Started before the frame is painted (a layout effect), so the room
      is never seen for a frame at the wrong size. */
@@ -1437,8 +1448,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     };
     const el = frameRef.current;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    /* A grow cut short (a click on the page under it went somewhere
-       else) takes its address change with it. */
+    /* A grow cut short (somewhere else after all) takes its address
+       change with it. */
     const drop = () => {
       over = true;
       if (phase === "growing") expandWhenGrown.current = null;
@@ -1496,13 +1507,78 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       corners.cancel();
     };
   }, [phase]);
+  /* Minimize: the room starts for the corner at the click. The page it
+     gives way to is already underneath if the room came back over it
+     (history takes you there, nothing to load); otherwise it comes from
+     the server and arrives underneath when it can — waiting for it first
+     was the pause between the click and anything moving. */
+  const minimizeNow = () => {
+    if (phase === "full" && callLive) setPhase("shrinking");
+    slot.minimize();
+  };
   /* Out of the card: the room is already built, so going back in is the
-     room growing out of the card, then the address following it. */
+     room growing out of the card. Where it fits the screen (a phone, a
+     desktop) it comes back over the page you were on, which stays
+     mounted underneath — the address changes with it (CallSlot), nothing
+     is torn down, and minimizing again is instant. Where it is taller
+     than the screen (a tablet's stacked layout, which scrolls the whole
+     page) it takes that page's place again, as a page of its own. */
   const openFromCard = () => {
     if (phase !== "mini") return;
-    expandWhenGrown.current = slot.expand;
+    const root = frameRef.current?.querySelector(".ag-root");
+    const fits = !root || root.scrollHeight <= window.innerHeight + 1;
+    if (fits) slot.expand(true);
+    else if (slot.minimized) expandWhenGrown.current = () => slot.expand(false);
+    else slot.expand(false);
     setPhase("growing");
   };
+  /* A hand on the card (a pointer over it, a press, focus): wake the
+     room out of sight — drawn but invisible, its stage turning, and its
+     pictures counted as on screen again, so the call resumes sending
+     them — and by the time the room has grown back, everything in it is
+     already moving. Asleep again a little after the hand leaves. */
+  const [waking, setWaking] = useState(false);
+  const sleepTimer = useRef(0);
+  const wake = useCallback(() => {
+    window.clearTimeout(sleepTimer.current);
+    setWaking(true);
+  }, []);
+  const sleep = useCallback(() => {
+    window.clearTimeout(sleepTimer.current);
+    sleepTimer.current = window.setTimeout(() => setWaking(false), 1500);
+  }, []);
+  useEffect(() => () => window.clearTimeout(sleepTimer.current), []);
+  const awake = waking && phase === "mini";
+  /* Over the page it was minimized from (back from the card), the room
+     lies on top of that page rather than replacing it: the page is kept
+     out of reach underneath — no focus, no screen reader — until the
+     room gives way to it again. */
+  const covering = slot.overPage && !slot.minimized && callLive;
+  useLayoutEffect(() => {
+    if (!covering) return;
+    const page = document.getElementById("agora-page");
+    page?.setAttribute("inert", "");
+    /* Held still too: no scrolling reaches it, and nothing moves it —
+       it is exactly where it was when the room gives way to it again
+       (see takeCoverScroll). Where scrollbars take up room (Windows),
+       the one taken away is made up in padding, so nothing shifts. */
+    const html = document.documentElement;
+    const bar = window.innerWidth - html.clientWidth;
+    html.classList.add("agora-covered");
+    if (bar > 0) document.body.style.paddingRight = `${bar}px`;
+    const y = takeCoverScroll() ?? window.scrollY;
+    const hold = () => {
+      if (Math.abs(window.scrollY - y) > 0.5) window.scrollTo({ top: y, behavior: "instant" });
+    };
+    hold();
+    window.addEventListener("scroll", hold, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", hold);
+      page?.removeAttribute("inert");
+      html.classList.remove("agora-covered");
+      document.body.style.paddingRight = "";
+    };
+  }, [covering]);
 
   /* While a call is live, pages change in the app — a full page load
      would hang the call up. Next's own links already navigate in place;
@@ -1531,7 +1607,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   /* The card: up while you browse (coming up under the room as it
      shrinks), and fading under it as the room grows back out. */
-  const showCard = !!room && (callLive || endedWhileAway) && ((slot.minimized && phase !== "full") || phase === "growing");
+  const showCard = !!room && (callLive || endedWhileAway) && phase !== "full";
   const speakingNow = showCard ? [...stageStrip, ...proSpeakers, ...conSpeakers].find((p) => p.speaking) ?? null : null;
   const miniCard = showCard && room ? (
     <MiniCall
@@ -1563,6 +1639,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         }
       }}
       onExpand={openFromCard}
+      onWake={wake}
+      onSleep={sleep}
     />
   ) : null;
   /* No call to keep drawn (it ended while you were away, or never came
@@ -1789,11 +1867,17 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   );
 
   /* The frame: no box of its own while the room is the page; fixed over
-     the page while it moves, and over it (in use) for the moment the
-     address takes to follow the room back in; out of sight under the
-     card. */
+     the page while it moves, and over it (in use) once it has come back
+     over the page it was minimized from; out of sight under the card —
+     or, with a hand on the card, drawn there but still invisible. */
   const frameState =
-    phase === "mini" ? " is-away" : phase !== "full" ? " is-moving" : slot.minimized ? " is-over" : "";
+    phase === "mini"
+      ? ` is-away${awake ? " is-waking" : ""}`
+      : phase !== "full"
+        ? " is-moving"
+        : slot.minimized || slot.overPage
+          ? " is-over"
+          : "";
   return (
     <>
     <div ref={frameRef} className={`ag-call-frame${frameState}`}>
@@ -1853,7 +1937,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             <button
               type="button"
               className="ag-more ag-minimize"
-              onClick={slot.minimize}
+              onClick={minimizeNow}
               title="Minimize — keep listening while you browse"
               aria-label="Minimize the call and keep listening while you browse"
             >
@@ -1961,7 +2045,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             out of CPU ~20 s into every camera room (the replay kept only
             those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
-          paused={phase === "mini"}
+          paused={phase === "mini" && !awake}
           performanceMode={broadcast}
           flat={phone || broadcast || simpleStage.on}
           background={layout !== "stage"}

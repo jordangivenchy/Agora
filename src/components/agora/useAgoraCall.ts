@@ -244,6 +244,16 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     setVideoTiles(tiles);
   }, []);
 
+  /* While the room is still loading: open the network path to the call
+     server (DNS, TLS), so the real connection, once the room and your
+     place in it are known, doesn't start with a handshake. */
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    if (!roomId || !url || external) return;
+    new Room().prepareConnection(url).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
+
   useEffect(() => {
     if (!ready || !roomId) return;
 

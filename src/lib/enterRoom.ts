@@ -19,6 +19,17 @@ export function enterRoomInApp(push: () => void): void {
   push();
 }
 
+/** The sky, up now, for a room about to open in the app — before the
+    room even exists, so making it is part of the entrance. Returns a way
+    to take it down again if the room never comes (an error to show). */
+export function skyForRoom(): () => void {
+  window.__agoraSkyOver?.();
+  return () => {
+    const el = document.querySelector(".ld-enter[data-over]");
+    if (el) window.__agoraSkyOverEnd?.(el, true);
+  };
+}
+
 export function openRoom(room: { id: string; motion?: string | null; status?: string | null }): void {
   const url = roomPath(room);
   if (room.status === "live") enterRoom(url);

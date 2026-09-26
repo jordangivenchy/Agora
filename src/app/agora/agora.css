@@ -4094,13 +4094,15 @@
    like every new control on the site. */
 
 /* No box of its own while the room is up — the room lays out exactly as
-   it always has — fixed over the page while it moves, and not drawn at
-   all while the card stands in for it. */
+   it always has. */
 .ag-call-frame { display: contents; }
-.ag-call-frame.is-away { display: none; }
-/* Grown back over the page, the address a moment behind it. */
-.ag-call-frame.is-over { display: block; position: fixed; inset: 0; z-index: 945; overflow: hidden; }
-.ag-call-frame.is-moving {
+/* Out of its own layout — one box, the same in every state, so moving
+   between them never rebuilds the room's layers: moving, hidden under
+   the card, and grown back over the page while the address catches up
+   (the only one of the three you can use). */
+.ag-call-frame.is-moving,
+.ag-call-frame.is-away,
+.ag-call-frame.is-over {
   display: block;
   position: fixed;
   inset: 0;
@@ -4108,8 +4110,37 @@
   overflow: hidden;
   transform-origin: 0 0;
   will-change: transform, opacity;
-  pointer-events: none;
 }
+.ag-call-frame.is-moving,
+.ag-call-frame.is-away { pointer-events: none; }
+/* Hidden under the card without being taken apart: its layout and the
+   state of its animations are kept, so nothing replays when it comes
+   back (display: none would restart every entrance — the speaker panes
+   fading in again, the chips walking on), and its videos still count as
+   out of sight, so the call stops sending them. */
+.ag-call-frame.is-away { content-visibility: hidden; }
+@supports not (content-visibility: hidden) {
+  .ag-call-frame.is-away { display: none; }
+}
+/* A hand on the card: drawn again, still invisible — its videos count
+   as on screen, so they are flowing again before the room grows back. */
+.ag-call-frame.is-away.is-waking { content-visibility: visible; display: block; opacity: 0; }
+/* Lying over the page it was minimized from, which stays mounted
+   underneath (CallSlot): the room's own night behind everything, so no
+   gap ever shows that page, and scrolling never reaches it. */
+.ag-call-frame.is-moving,
+.ag-call-frame.is-over { background: #05070f; }
+/* At rest over the page, a plain box again: the room's screen-fixed
+   parts (its backdrops, a phone's chat sheet waiting below the screen)
+   hang from the screen, exactly as when the room is its own page — as
+   the moving layer's anchor they would join its scrollable area, and a
+   swipe could drag the whole room. It only comes back over a page when
+   it fits the screen (AgoraRoomPage); should a resize leave it taller,
+   it scrolls in place. */
+.ag-call-frame.is-over { will-change: auto; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+/* The page underneath, held still while the room lies over it (the room
+   makes up the width of a scrollbar it takes away, so nothing shifts). */
+html.agora-covered { overflow: hidden; }
 
 .ag-minimize { display: grid; place-items: center; }
 .ag-minimize:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
 import { useRouter } from "next/navigation";
-import { enterRoomInApp } from "@/lib/enterRoom";
+import { enterRoomInApp, skyForRoom } from "@/lib/enterRoom";
 import { roomPath } from "@/lib/urls";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
 import TopicIcon from "./topicIcons";
@@ -167,10 +167,17 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
 
     setLoading(true);
     setError("");
+    /* A public room opens the moment it exists, so its sky comes up now,
+       while it is being made — the wait becomes part of the entrance
+       instead of a pause before it. A private room shows its invite code
+       first and a scheduled one stays here, so they wait as before. If
+       making it fails, the sky goes and the error shows. */
+    const dropSky = !scheduledIso && !isPrivate ? skyForRoom() : () => {};
 
     try {
       const { data: { user } } = await sessionUser(supabase);
       if (!user) {
+        dropSky();
         setError("You must be signed in to create a room");
         setLoading(false);
         return;
@@ -203,6 +210,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           /* Guard messages arrive as "code: sentence" (20260890) — show the sentence. */
           setError(msg.replace(/^[a-z_]+:\s*/, "") || "Failed to create room");
         }
+        dropSky();
         setLoading(false);
         return;
       }
@@ -213,6 +221,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       const inviteCode: string | null = row?.invite_code ?? null;
 
       if (!roomId) {
+        dropSky();
         setError("Room creation failed — no room ID returned.");
         setLoading(false);
         return;
@@ -251,7 +260,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         return;
       }
 
-      /* Into the room through the sky: it comes up over this form and
+      /* Into the room through the sky (already up for a public room):
          the room's own screens carry it on to the stage (lib/enterRoom).
          The form stays under it, as it was ("Creating…"), until the
          room's page takes over — no screen of its own in between. */
@@ -260,6 +269,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       enterRoomInApp(() => router.push(roomPath({ id: roomId, motion })));
       return;
     } catch (err: unknown) {
+      dropSky();
       const message = err instanceof Error ? err.message : "Failed to create room";
       setError(message);
       setLoading(false);

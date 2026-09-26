@@ -5,8 +5,28 @@
    instead. Safari plays HLS natively; everyone else gets hls.js, loaded
    on demand so the room bundle doesn't carry it. */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
+
+/* Whether the broadcast's sound is on, for the whole page: one tap on
+   any surface turns it on everywhere. The room keeps its own surface —
+   and so its sound — while it is minimized to the call card, and the
+   card shows the same broadcast silently beside it (`silent`), so there
+   is only ever one voice, whichever surface the tap came from. */
+let broadcastSound = false;
+const soundListeners = new Set<() => void>();
+function subscribeSound(fn: () => void) {
+  soundListeners.add(fn);
+  return () => { soundListeners.delete(fn); };
+}
+function turnSoundOn() {
+  if (broadcastSound) return;
+  broadcastSound = true;
+  soundListeners.forEach((fn) => fn());
+}
+function useBroadcastSound(): boolean {
+  return useSyncExternalStore(subscribeSound, () => broadcastSound, () => false);
+}
 
 /* Attach an HLS source to a <video>: native on Safari, hls.js elsewhere.
    `live` tunes hls.js for edge-chasing; VOD playlists (the replay) load
@@ -61,17 +81,34 @@ export function useHlsSource(
    audience view). Autoplay must start muted to satisfy browser policy —
    a tap-to-unmute overlay does the gesture — and a small pill is honest
    about the segment delay so the ~15s lag never reads as "broken". */
-export function HlsBroadcastSurface({ src, compact = false }: { src: string; compact?: boolean }) {
+export function HlsBroadcastSurface({ src, compact = false, silent = false }: {
+  src: string;
+  compact?: boolean;
+  /** Pictures only — another surface carries the sound (the call card
+      beside the minimized room). Its unmute still turns that sound on. */
+  silent?: boolean;
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const { error } = useHlsSource(videoRef, src, { live: true });
-  const [muted, setMuted] = useState(true);
+  const sound = useBroadcastSound();
+  const muted = silent || !sound;
+
+  /* The sound turned on from another surface (or this one): follow it.
+     Set on the element — React doesn't keep `muted` in step after mount. */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+    if (!muted) v.play().catch(() => {});
+  }, [muted]);
 
   const unmute = () => {
     const v = videoRef.current;
-    if (!v) return;
-    v.muted = false;
-    v.play().catch(() => {});
-    setMuted(false);
+    if (v && !silent) {
+      v.muted = false;
+      v.play().catch(() => {});
+    }
+    turnSoundOn();
   };
 
   return (
@@ -116,7 +153,7 @@ export function HlsBroadcastSurface({ src, compact = false }: { src: string; com
           The broadcast stream couldn&apos;t be loaded — it may be restarting.
         </div>
       )}
-      {muted && !error && (
+      {!sound && !error && (
         <button
           onClick={unmute}
           className="cursor-pointer"

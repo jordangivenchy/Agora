@@ -66,7 +66,13 @@ export default function RootLayout({
         <SettingsBoot />
         <PresenceBoot />
         <UserMenuProvider>
-          {children}
+          {/* The page. No box of its own (the body's flex layout sees the
+              page's own elements, as before); it exists so a live room
+              covering it can make it unreachable — no focus, no screen
+              reader — while keeping it mounted underneath (CallSlot). */}
+          <div id="agora-page" style={{ display: "contents" }}>
+            {children}
+          </div>
           {call}
           <MessagesDock />
           <ImageLightbox />
