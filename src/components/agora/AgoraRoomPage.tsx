@@ -54,18 +54,69 @@ import { sessionUser } from "@/lib/session";
 const isPhoneViewport = () =>
   typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
 
-/* The call card's corner, as a transform of the whole screen: the room
-   kept at the screen's shape, small, over where the card sits (MiniCall).
-   A phone's card spans the width, so there the room drops away into it
-   (and rises back out of it) instead. */
-function cornerTransform(): { s: number; to: string } {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  if (isPhoneViewport()) {
-    const s = 0.92;
-    return { s, to: `translate(${(vw * (1 - s)) / 2}px, ${vh * 0.55}px) scale(${s})` };
-  }
-  const s = Math.min(0.42, 360 / vw);
-  return { s, to: `translate(${vw - 20 - vw * s}px, ${vh - 20 - vh * s}px) scale(${s})` };
+/* ── The move between the room and its call card ────────────────────
+   The room doesn't shrink to a box and fade out beside the card: it
+   folds into the card's own rectangle. The window it is seen through
+   narrows from the whole screen to the card, while the room inside it
+   stays in proportion — scaled just enough to cover the card, the stage
+   kept in view — so what lands in the corner is the room itself, in the
+   card's shape, and the card's words come up over it. Coming back, the
+   card opens out into the room the same way. The room is only ever
+   scaled evenly (never stretched and unstretched, which makes the
+   browser redraw it at several times its size) and the window is a clip
+   around it; the browser runs both off the main thread. */
+type Box = { x: number; y: number; w: number; h: number };
+const clampTo = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/* A spring's progress (0 → 1) and how long it takes to settle: quick to
+   leave, soft to land, the way things move on a phone. Damping below 1
+   lets it run a hair past the end and settle back. It starts already
+   moving (`velocity`, in whole moves per second), as if the click had
+   pushed it: from rest a spring barely stirs for its first frames, and
+   that reads as a pause after the click. */
+function spring(damping: number, response: number, velocity: number) {
+  const w = (2 * Math.PI) / response;
+  const wd = w * Math.sqrt(1 - damping * damping);
+  const at = (t: number) =>
+    1 - Math.exp(-damping * w * t) * (Math.cos(wd * t) + ((damping * w - velocity) / wd) * Math.sin(wd * t));
+  return { at, settle: -Math.log(0.004) / (damping * w) };
+}
+
+/* Where the call card sits (its laid-out box, its own entrance aside) —
+   or, if it isn't there, where it would: bottom right on a desktop,
+   above the tab bar on a phone. */
+function callCardBox(vw: number, vh: number): Box {
+  const card = document.querySelector<HTMLElement>(".call-mini");
+  if (card && card.offsetWidth) return { x: card.offsetLeft, y: card.offsetTop, w: card.offsetWidth, h: card.offsetHeight };
+  if (isPhoneViewport()) return { x: 8, y: vh - 66 - 70, w: vw - 16, h: 70 };
+  return { x: vw - 20 - 360, y: vh - 20 - 70, w: 360, h: 70 };
+}
+
+/* The fold at each sampled progress p (0 the whole screen, 1 the card):
+   the room's scale and place, and the window clipped around it (its
+   corners 16 px on screen at the card). */
+function foldKeyframes(card: Box, focus: { x: number; y: number }, vw: number, vh: number, ps: number[]) {
+  const uEnd = Math.max(card.w / vw, card.h / vh);
+  const bandW = card.w / uEnd, bandH = card.h / uEnd;
+  const bandX = clampTo(focus.x - bandW / 2, 0, vw - bandW);
+  const bandY = clampTo(focus.y - bandH / 2, 0, vh - bandH);
+  const move: Keyframe[] = [], clip: Keyframe[] = [];
+  ps.forEach((p, i) => {
+    const offset = i / (ps.length - 1);
+    /* The window on screen, and the room's own scale. */
+    const x = card.x * p, y = card.y * p;
+    const w = vw + (card.w - vw) * p, h = vh + (card.h - vh) * p;
+    const u = 1 + (uEnd - 1) * p;
+    /* The part of the room the window shows, in the room's own px: the
+       whole of it at first, drawing in on the stage. */
+    const bw = w / u, bh = h / u;
+    const bx = clampTo(bandX * p, 0, Math.max(0, vw - bw));
+    const by = clampTo(bandY * p, 0, Math.max(0, vh - bh));
+    const r = (16 * clampTo(p, 0, 1)) / u;
+    move.push({ offset, transform: `translate(${x - bx * u}px, ${y - by * u}px) scale(${u})` });
+    clip.push({ offset, clipPath: `inset(${by}px ${vw - bx - bw}px ${vh - by - bh}px ${bx}px round ${r}px)` });
+  });
+  return { move, clip };
 }
 
 function fmtElapsed(fromIso: string | null): string {
@@ -1390,6 +1441,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     }
   }
 
+  /* A prompt is up above the controls, or a menu is open from them:
+     the browser's-mute prompt waits its turn behind either. */
+  const promptUp = (leavePrompt && room?.status !== "ended") || (noteOpen && !!room) || !!invite;
+  const menuUp = moreOpen || topMenuOpen || micMenuOpen || camMenuOpen || reactOpen;
+
   const topic = TOPICS.find((t) => t.key === room?.topic_key);
   const audienceCount = Math.max(room?.viewer_count ?? 0, audience.length);
 
@@ -1411,22 +1467,37 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const endedWhileAway = wasInCall && room?.status === "ended";
   const [phase, setPhase] = useState<"full" | "shrinking" | "mini" | "growing">(slot.minimized ? "mini" : "full");
   const [seenPath, setSeenPath] = useState(slot.path);
+  /* The phase this render settles on (a change of address can move it). */
+  let nextPhase = phase;
   if (seenPath !== slot.path) {
     setSeenPath(slot.path);
     if (slot.minimized) {
       /* Away from the room — or, mid-way back in, somewhere else after all. */
-      if (phase === "full" || phase === "growing") setPhase(callLive ? "shrinking" : "mini");
+      if (phase === "full" || phase === "growing") nextPhase = callLive ? "shrinking" : "mini";
     } else if (phase === "mini") {
       /* Back to the room without the card (the browser's Forward): over
          the page it was minimized from, still there underneath, it grows
          back as from the card; where that page has gone (a history entry
          from before), the room is simply there. */
-      setPhase(slot.overPage && callLive ? "growing" : "full");
+      nextPhase = slot.overPage && callLive ? "growing" : "full";
     } else if (phase === "shrinking") {
-      setPhase("full");
+      nextPhase = "full";
     }
+    if (nextPhase !== phase) setPhase(nextPhase);
   }
+  /* The page underneath is held (see below) from the moment the room
+     covers it until the room has folded away into its card — not just
+     while the address is the room's: the browser redraws the whole
+     screen's layers when the page's scrolling is locked or let go, and
+     the stage's picture drops out until the scene next draws, so that
+     happens only while the room is out of sight, under the card or not
+     yet grown. */
+  const covering = slot.overPage && !slot.minimized && callLive;
+  const [holding, setHolding] = useState(false);
+  if (covering && !holding) setHolding(true);
+  if (holding && !covering && nextPhase !== "shrinking") setHolding(false);
   const frameRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
   /* Back as a page of its own (below), the address changes once the room
      has grown to fill the screen, so the page you were on stays under it
      the whole way. */
@@ -1461,40 +1532,64 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         window.clearTimeout(t);
       };
     }
-    const { s, to } = cornerTransform();
-    const MS = 340;
-    const ease = "cubic-bezier(.2,.7,.2,1)";
     const going = phase === "shrinking";
-    /* Three animations, not one. The move (transform) and the fade
-       (opacity) are the kind the browser runs off the main thread, so
-       they stay smooth while the page underneath is still mounting — but
-       only as animations of their own: one that also animated the
-       corners would run entirely on the main thread, and stutter with
-       it. The corners (16 px on screen at the end) follow separately.
-       The move eases out — quick away, gentle landing — while the fade
-       runs on the clock: going, the room stays solid until it is nearly
-       in the corner, then fades as the card comes up under it (the card
-       starts 150 ms in, agora.css); coming back, it is solid within the
-       first 70 ms while the card fades under it. */
-    const whole = "translate(0px, 0px) scale(1)";
-    const move = el.animate([{ transform: going ? whole : to }, { transform: going ? to : whole }], {
-      duration: MS,
-      easing: ease,
-      fill: "forwards",
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const card = callCardBox(vw, vh);
+    /* The part of the room that stays in view as it folds into the card:
+       the speakers' pictures if there are any, else the speakers' strip,
+       else the lit ring of the stage (the middle of a phone's). Measured
+       now, before the move, with the room still whole. */
+    const at = (sel: string) => {
+      const r = el.querySelector<HTMLElement>(sel)?.getBoundingClientRect();
+      return r && r.width && r.height ? r : null;
+    };
+    const who = at(".ag-cast") ?? at(".ag-strip");
+    const theater = at(".ag-theater");
+    const focus = who
+      ? { x: who.left + who.width / 2, y: who.top + who.height / 2 }
+      : theater
+        ? { x: theater.left + theater.width / 2, y: theater.top + theater.height * (isPhoneViewport() ? 0.5 : 0.72) }
+        : { x: vw / 2, y: vh * 0.6 };
+    const sp = going ? spring(0.86, 0.42, 6) : spring(0.8, 0.44, 6);
+    const ms = Math.round(sp.settle * 1000);
+    const STEPS = 32;
+    const ps = Array.from({ length: STEPS + 1 }, (_, i) => {
+      const v = sp.at((i / STEPS) * sp.settle);
+      return going ? v : 1 - v;
     });
+    const k = foldKeyframes(card, focus, vw, vh, ps);
+    const timing: KeyframeAnimationOptions = { duration: ms, easing: "linear", fill: "forwards" };
+    const move = el.animate(k.move, timing);
+    const clip = el.animate(k.clip, timing);
+    /* The room and the card trade places where they meet, overlapping so
+       the corner is never dim: going, the card's words come up over the
+       room as it lands and the room goes beneath them; coming back, the
+       room is solid over the card within a few frames and the card goes
+       under it. */
     const fade = el.animate(
       going
-        ? [{ opacity: 1 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }]
-        : [{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1 }],
-      { duration: MS, easing: "linear", fill: "forwards" }
+        ? [{ opacity: 1 }, { opacity: 1, offset: 0.45 }, { opacity: 0, offset: 0.8 }, { opacity: 0 }]
+        : [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1 }],
+      timing
     );
-    const round = `${Math.round(16 / s)}px`;
-    const corners = el.animate(
-      [{ borderRadius: going ? "0px" : round }, { borderRadius: going ? round : "0px" }],
-      { duration: MS, easing: ease, fill: "forwards" }
+    const cardFade = document.querySelector<HTMLElement>(".call-mini")?.animate(
+      going
+        ? [
+            { opacity: 0, transform: "scale(0.97)" },
+            { opacity: 0, transform: "scale(0.97)", offset: 0.3 },
+            { opacity: 1, transform: "scale(1)", offset: 0.6 },
+            { opacity: 1, transform: "scale(1)" },
+          ]
+        : [{ opacity: 1 }, { opacity: 1, offset: 0.1 }, { opacity: 0, offset: 0.3 }, { opacity: 0 }],
+      { duration: ms, easing: "linear", fill: "both" }
+    );
+    /* The page behind: dimmed while the room is large, lit as it goes. */
+    const dim = scrimRef.current?.animate(
+      ps.map((p, i) => ({ offset: i / STEPS, opacity: 0.4 * (1 - clampTo(p, 0, 1)) })),
+      timing
     );
     /* A hidden tab pauses animations; the move must still land. */
-    const late = window.setTimeout(land, 900);
+    const late = window.setTimeout(land, ms + 500);
     move.onfinish = () => {
       window.clearTimeout(late);
       land();
@@ -1503,8 +1598,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       drop();
       window.clearTimeout(late);
       move.cancel();
+      clip.cancel();
       fade.cancel();
-      corners.cancel();
+      cardFade?.cancel();
+      dim?.cancel();
     };
   }, [phase]);
   /* Minimize: the room starts for the corner at the click. The page it
@@ -1553,9 +1650,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      lies on top of that page rather than replacing it: the page is kept
      out of reach underneath — no focus, no screen reader — until the
      room gives way to it again. */
-  const covering = slot.overPage && !slot.minimized && callLive;
   useLayoutEffect(() => {
-    if (!covering) return;
+    if (!holding) return;
     const page = document.getElementById("agora-page");
     page?.setAttribute("inert", "");
     /* Held still too: no scrolling reaches it, and nothing moves it —
@@ -1578,7 +1674,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       html.classList.remove("agora-covered");
       document.body.style.paddingRight = "";
     };
-  }, [covering]);
+  }, [holding]);
 
   /* While a call is live, pages change in the app — a full page load
      would hang the call up. Next's own links already navigate in place;
@@ -1880,6 +1976,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           : "";
   return (
     <>
+    {(phase === "shrinking" || phase === "growing") && <div ref={scrimRef} className="ag-call-scrim" aria-hidden="true" />}
     <div ref={frameRef} className={`ag-call-frame${frameState}`}>
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
       {entering !== "gone" && (
@@ -1974,7 +2071,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               {topMenuOpen && (
                 <div className="ag-more-menu ag-more-menu--down" role="menu" aria-label="Room options">
                   <button
-                    className="ag-more-item"
+                    className="ag-cam-item"
                     role="menuitem"
                     onClick={() => {
                       setTopMenuOpen(false);
@@ -1988,10 +2085,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       });
                     }}
                   >
-                    Report stream
+                    <span className="ag-cam-ico" aria-hidden><Icon name="flag" size={15} /></span>
+                    <span className="ag-cam-name">Report stream</span>
                   </button>
                   <button
-                    className="ag-more-item"
+                    className="ag-cam-item"
                     role="menuitem"
                     onClick={() => {
                       setTopMenuOpen(false);
@@ -2005,10 +2103,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       });
                     }}
                   >
-                    Report something else
+                    <span className="ag-cam-ico" aria-hidden><Icon name="alert-triangle" size={15} /></span>
+                    <span className="ag-cam-name">Report something else</span>
                   </button>
                   <button
-                    className="ag-more-item"
+                    className="ag-cam-item"
                     role="menuitem"
                     onClick={() => {
                       setTopMenuOpen(false);
@@ -2017,7 +2116,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       setNoteOpen(true);
                     }}
                   >
-                    Request a community note
+                    <span className="ag-cam-ico" aria-hidden><Icon name="text-quote" size={15} /></span>
+                    <span className="ag-cam-name">Request a community note</span>
                   </button>
                 </div>
               )}
@@ -2046,6 +2146,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
           paused={phase === "mini" && !awake}
+          moving={phase === "shrinking" || phase === "growing"}
           performanceMode={broadcast}
           flat={phone || broadcast || simpleStage.on}
           background={layout !== "stage"}
@@ -2079,48 +2180,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             onChanged={fetchAll}
           />
         )}
-
-        {/* ── Host leave prompt: the stage lives and dies with its host —
-              leaving always closes the room, so this is just a confirm. ── */}
-        {leavePrompt && room?.status !== "ended" && (
-          <div className="ag-invite" role="dialog" aria-label="Close stage confirmation">
-            <span className="ag-invite-text">
-              You&apos;re the <strong>host</strong> — leaving closes the stage for everyone. Close it?
-            </span>
-            <div className="ag-invite-actions">
-              <button
-                className="ag-invite-decline"
-                disabled={closingStage}
-                onClick={() => setLeavePrompt(false)}
-              >
-                Stay
-              </button>
-              <button
-                className="ag-invite-join"
-                style={{ background: "#c0392b" }}
-                disabled={closingStage}
-                onClick={async () => {
-                  setClosingStage(true);
-                  await supabase
-                    .from("debate_rooms")
-                    .update({ status: "ended", ended_at: new Date().toISOString() })
-                    .eq("id", roomId);
-                  /* Kill any restream with the stage — an egress left running
-                     films a black page and bills LiveKit minutes. */
-                  fetch("/api/egress", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ roomId, action: "stop_all" }),
-                  }).catch(() => {});
-                  slot.leave("/");
-                }}
-              >
-                {closingStage ? "Closing…" : "Close stage"}
-              </button>
-            </div>
-          </div>
-        )}
-
 
         {/* ── Stage closed: everyone gets walked out ── */}
         {room?.status === "ended" && !broadcast && (
@@ -2157,64 +2216,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         <ReportModal target={reportTarget} onClose={() => setReportTarget(null)} />
-
-        {noteOpen && room && (
-          <div className="ag-invite" role="dialog" aria-label="Request a community note">
-            {noteDone ? (
-              <span className="ag-invite-text">
-                Request sent — reviewers will see it with this room attached.
-              </span>
-            ) : (
-              <>
-                <span className="ag-invite-text">
-                  <strong>Request a community note.</strong> What should it address?
-                </span>
-                <textarea
-                  className="ag-note-input"
-                  value={noteText}
-                  maxLength={800}
-                  rows={2}
-                  placeholder="A claim made in this discussion that needs context…"
-                  onChange={(e) => setNoteText(e.target.value)}
-                />
-                <div className="ag-invite-actions">
-                  <button className="ag-invite-decline" disabled={noteBusy} onClick={() => setNoteOpen(false)}>
-                    Cancel
-                  </button>
-                  <button
-                    className="ag-invite-join"
-                    disabled={noteBusy || !noteText.trim()}
-                    onClick={async () => {
-                      setNoteBusy(true);
-                      const { error } = await supabase.rpc("submit_report", {
-                        p_reported: room.host_id,
-                        p_reason: "other",
-                        p_description: `[Community note request] ${noteText.trim()}`,
-                        p_context: "room",
-                        p_room: roomId,
-                        p_message: null,
-                      });
-                      setNoteBusy(false);
-                      if (!error) setNoteDone(true);
-                    }}
-                  >
-                    {noteBusy ? "Sending…" : "Send request"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ── Invite prompt ── */}
-        {invite && (
-          <InvitePrompt
-            inviterName={invite.inviterName}
-            busy={inviteBusy}
-            onJoin={() => respondToInvite(true)}
-            onDecline={() => respondToInvite(false)}
-          />
-        )}
 
         {/* ── The stage: debater boxes, and the share when one is live.
               In speaker view it waits for the camera to land among the
@@ -2295,25 +2296,146 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
         <ReactionOverlay reactions={call.reactions} />
 
-        {/* ── Queue position pill: the number reinforces what the 3D line
-              already shows — your character physically nearing the mic ── */}
-        {currentUser && (amMicHolder || myQueuePos !== null) && (
-          <div
-            className={`ag-queue-pill ${
-              amMicHolder ? "is-mic" : myQueuePos === 1 ? "is-next" : ""
-            }`}
-          >
-            {amMicHolder ? (
-              <><Icon name="mic" size={14} /> You have the mic</>
-            ) : myQueuePos === 1 ? (
-              <><Icon name="sparkles" size={14} /> YOU&apos;RE NEXT</>
-            ) : (
-              <>
-                #{myQueuePos} in queue · {myQueuePos! - 1} ahead of you
-              </>
-            )}
-          </div>
-        )}
+        {/* ── Above the controls, one column: a prompt (closing the stage,
+              a community note, an invitation to the stage, the browser's
+              mute), a mic or camera failure, and your place in the queue
+              on top — stacked, so none of them can cover another. ── */}
+        <div className="ag-notices">
+          {/* ── Host leave prompt: the stage lives and dies with its host —
+                leaving always closes the room, so this is just a confirm. ── */}
+          {leavePrompt && room?.status !== "ended" && (
+            <div className="ag-invite" role="dialog" aria-label="Close stage confirmation">
+              <span className="ag-invite-text">
+                You&apos;re the <strong>host</strong> — leaving closes the stage for everyone. Close it?
+              </span>
+              <div className="ag-invite-actions">
+                <button
+                  className="ag-invite-decline"
+                  disabled={closingStage}
+                  onClick={() => setLeavePrompt(false)}
+                >
+                  Stay
+                </button>
+                <button
+                  className="ag-invite-danger"
+                  disabled={closingStage}
+                  onClick={async () => {
+                    setClosingStage(true);
+                    await supabase
+                      .from("debate_rooms")
+                      .update({ status: "ended", ended_at: new Date().toISOString() })
+                      .eq("id", roomId);
+                    /* Kill any restream with the stage — an egress left running
+                       films a black page and bills LiveKit minutes. */
+                    fetch("/api/egress", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ roomId, action: "stop_all" }),
+                    }).catch(() => {});
+                    slot.leave("/");
+                  }}
+                >
+                  {closingStage ? "Closing…" : "Close stage"}
+                </button>
+              </div>
+            </div>
+          )}
+          {noteOpen && room && (
+            <div className="ag-invite" role="dialog" aria-label="Request a community note">
+              {noteDone ? (
+                <span className="ag-invite-text">
+                  Request sent — reviewers will see it with this room attached.
+                </span>
+              ) : (
+                <>
+                  <span className="ag-invite-text">
+                    <strong>Request a community note.</strong> What should it address?
+                  </span>
+                  <textarea
+                    className="ag-note-input"
+                    value={noteText}
+                    maxLength={800}
+                    rows={2}
+                    placeholder="A claim made in this discussion that needs context…"
+                    onChange={(e) => setNoteText(e.target.value)}
+                  />
+                  <div className="ag-invite-actions">
+                    <button className="ag-invite-decline" disabled={noteBusy} onClick={() => setNoteOpen(false)}>
+                      Cancel
+                    </button>
+                    <button
+                      className="ag-invite-join"
+                      disabled={noteBusy || !noteText.trim()}
+                      onClick={async () => {
+                        setNoteBusy(true);
+                        const { error } = await supabase.rpc("submit_report", {
+                          p_reported: room.host_id,
+                          p_reason: "other",
+                          p_description: `[Community note request] ${noteText.trim()}`,
+                          p_context: "room",
+                          p_room: roomId,
+                          p_message: null,
+                        });
+                        setNoteBusy(false);
+                        if (!error) setNoteDone(true);
+                      }}
+                    >
+                      {noteBusy ? "Sending…" : "Send request"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {/* ── Invite prompt ── */}
+          {invite && (
+            <InvitePrompt
+              inviterName={invite.inviterName}
+              busy={inviteBusy}
+              onJoin={() => respondToInvite(true)}
+              onDecline={() => respondToInvite(false)}
+            />
+          )}
+          {/* ── Autoplay-blocked prompt: without this, listeners sit in
+                silence with no idea the browser muted the room. It steps
+                aside while another prompt or a menu is up, and comes back. ── */}
+          {call.audioBlocked && !promptUp && !menuUp && (
+            <button
+              className="ag-invite ag-audio-prompt cursor-pointer"
+              onClick={call.enableAudio}
+            >
+              <span className="ag-invite-text">
+                <Icon name="volume-2" size={14} /> Your browser muted the room — <strong>tap to listen</strong>
+              </span>
+            </button>
+          )}
+          {/* ── Mic/camera failure toast — a silent dead button is worse ── */}
+          {call.mediaError && (
+            <div className="ag-media-error" role="alert">
+              <span>{call.mediaError}</span>
+              <button onClick={call.clearMediaError} aria-label="Dismiss">×</button>
+            </div>
+          )}
+          {/* ── Queue position pill: the number reinforces what the 3D line
+                already shows — your character physically nearing the mic ── */}
+          {currentUser && (amMicHolder || myQueuePos !== null) && (
+            <div
+              className={`ag-queue-pill ${
+                amMicHolder ? "is-mic" : myQueuePos === 1 ? "is-next" : ""
+              }`}
+            >
+              {amMicHolder ? (
+                <><Icon name="mic" size={14} /> You have the mic</>
+              ) : myQueuePos === 1 ? (
+                <><Icon name="sparkles" size={14} /> YOU&apos;RE NEXT</>
+              ) : (
+                <>
+                  #{myQueuePos} in queue · {myQueuePos! - 1} ahead of you
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {avDebugOn && avDebug && (
           <pre
@@ -2336,27 +2458,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
           >
             {JSON.stringify(avDebug, null, 1)}
           </pre>
-        )}
-
-        {/* ── Autoplay-blocked prompt: without this, listeners sit in
-              silence with no idea the browser muted the room ── */}
-        {call.audioBlocked && (
-          <button
-            className="ag-invite ag-audio-prompt cursor-pointer"
-            onClick={call.enableAudio}
-          >
-            <span className="ag-invite-text">
-              <Icon name="volume-2" size={14} /> Your browser muted the room — <strong>tap to listen</strong>
-            </span>
-          </button>
-        )}
-
-        {/* ── Mic/camera failure toast — a silent dead button is worse ── */}
-        {call.mediaError && (
-          <div className="ag-media-error" role="alert">
-            <span>{call.mediaError}</span>
-            <button onClick={call.clearMediaError} aria-label="Dismiss">×</button>
-          </div>
         )}
 
         {/* ── Bottom control bar ── */}
@@ -2438,7 +2539,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                     setChatOpen(true);
                   }}
                 >
-                  <span className="ag-cam-check" />
+                  <span className="ag-cam-ico" aria-hidden><Icon name="settings" size={15} /></span>
                   <span className="ag-cam-name">Audio settings</span>
                 </button>
               </div>
@@ -2506,9 +2607,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                 <div className="ag-cam-menu-sep" />
 
                 <button className="ag-cam-item" disabled title="Not built yet">
-                  <span className="ag-cam-check" />
+                  <span className="ag-cam-ico" aria-hidden><Icon name="sparkles" size={15} /></span>
                   <span className="ag-cam-name">Blur my background</span>
-                  <span className="ag-tool-soon ag-cam-soon">Soon</span>
+                  <span className="ag-cam-soon">Soon</span>
                 </button>
                 <button
                     className="ag-cam-item"
@@ -2522,7 +2623,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       setChatOpen(true);
                     }}
                   >
-                  <span className="ag-cam-check" />
+                  <span className="ag-cam-ico" aria-hidden><Icon name="settings" size={15} /></span>
                   <span className="ag-cam-name">Video &amp; audio settings</span>
                 </button>
               </div>
@@ -2660,66 +2761,35 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
           <div className="ag-react-wrap" ref={moreWrapRef}>
             {moreOpen && (
-              <div className="ag-more-menu" role="menu" aria-label="Room tools">
+              <div className="ag-more-menu ag-tools-menu" role="menu" aria-label="Room tools">
                 {!hlsAudience && !duel && (
                   <div className="ag-more-layout">
                     <span className="ag-more-layout-label">Layout</span>
                     {layoutSwitch}
                   </div>
                 )}
-                <div className="ag-tool-grid">
-                  <button className="ag-tool" role="menuitem" disabled title="Whiteboard — not built yet">
-                    <span className="ag-tool-ico"><Icon name="monitor" size={23} /></span>
-                    <span className="ag-tool-label">Whiteboard</span>
-                    <span className="ag-tool-soon">Soon</span>
-                  </button>
-
-                  <button className="ag-tool" role="menuitem" disabled title="Notepad — not built yet">
-                    <span className="ag-tool-ico"><Icon name="clipboard-list" size={23} /></span>
-                    <span className="ag-tool-label">Notepad</span>
-                    <span className="ag-tool-soon">Soon</span>
-                  </button>
-
-                  <button className="ag-tool" role="menuitem" disabled title="Documents — not built yet">
-                    <span className="ag-tool-ico"><Icon name="file-text" size={23} /></span>
-                    <span className="ag-tool-label">Documents</span>
-                    <span className="ag-tool-soon">Soon</span>
-                  </button>
-
-                  {/* An anchor, not a button calling window.open: a real
-                      link with target=_blank is a native user navigation
-                      that popup blockers never intercept, where window.open
-                      can be silently swallowed and leave a dead tile. New
-                      tab either way — navigating this one would tear down
-                      the LiveKit connection and drop you out of a live room
-                      to change a preference. */}
-                  <button
-                    className="ag-tool"
-                    role="menuitem"
-                    title="Call settings"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      setCamMenuOpen(false);
-                      setSettingsOpen(true);
-                      setRailCollapsed(false);
-                      setChatOpen(true);
-                    }}
-                  >
-                    <span className="ag-tool-ico"><Icon name="settings" size={23} /></span>
-                    <span className="ag-tool-label">Settings</span>
-                  </button>
-                </div>
-
-                {/* Kept from the old list: it is the only secondary action in
-                    this room that already works, and it isn't a tool, so it
-                    rides under the quadrants rather than taking one. */}
                 <button
-                  className="ag-more-item"
+                  className="ag-cam-item"
+                  role="menuitem"
+                  title="Call settings"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    setCamMenuOpen(false);
+                    setSettingsOpen(true);
+                    setRailCollapsed(false);
+                    setChatOpen(true);
+                  }}
+                >
+                  <span className="ag-cam-ico" aria-hidden><Icon name="settings" size={15} /></span>
+                  <span className="ag-cam-name">Settings</span>
+                </button>
+                {/* The panel deliberately stays open on copy: the row itself
+                    is the confirmation, and closing it would hide the only
+                    feedback that the copy worked. */}
+                <button
+                  className="ag-cam-item"
                   role="menuitem"
                   onClick={() => {
-                    /* The panel deliberately stays open: the label itself is
-                       the confirmation, and closing it would hide the only
-                       feedback that the copy worked. */
                     navigator.clipboard
                       ?.writeText(window.location.href)
                       .then(() => {
@@ -2729,7 +2799,25 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       .catch(() => setCopied(false));
                   }}
                 >
-                  {copied ? "Copied" : "Copy room link"}
+                  <span className="ag-cam-ico" aria-hidden><Icon name={copied ? "check" : "link"} size={15} /></span>
+                  <span className="ag-cam-name">{copied ? "Copied" : "Copy room link"}</span>
+                </button>
+                <div className="ag-cam-menu-sep" />
+                {/* Not built yet, and saying so. */}
+                <button className="ag-cam-item" role="menuitem" disabled title="Whiteboard — not built yet">
+                  <span className="ag-cam-ico" aria-hidden><Icon name="monitor" size={15} /></span>
+                  <span className="ag-cam-name">Whiteboard</span>
+                  <span className="ag-cam-soon">Soon</span>
+                </button>
+                <button className="ag-cam-item" role="menuitem" disabled title="Notepad — not built yet">
+                  <span className="ag-cam-ico" aria-hidden><Icon name="clipboard-list" size={15} /></span>
+                  <span className="ag-cam-name">Notepad</span>
+                  <span className="ag-cam-soon">Soon</span>
+                </button>
+                <button className="ag-cam-item" role="menuitem" disabled title="Documents — not built yet">
+                  <span className="ag-cam-ico" aria-hidden><Icon name="file-text" size={15} /></span>
+                  <span className="ag-cam-name">Documents</span>
+                  <span className="ag-cam-soon">Soon</span>
                 </button>
               </div>
             )}

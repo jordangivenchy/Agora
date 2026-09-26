@@ -412,7 +412,7 @@ function MoreMenu({
   const above = anchor.y + anchor.h / 2 > box.h / 2;
   const style = above ? { left, width, bottom: box.h - anchor.y + 8 } : { left, width, top: anchor.y + anchor.h + 8 };
   return (
-    <div ref={ref} className="ag-lgal-menu" role="menu" style={style}>
+    <div ref={ref} className={`ag-lgal-menu${above ? "" : " is-below"}`} role="menu" style={style}>
       <div className="ag-lgal-menu-title">{people.length} more on stage · pick one to keep in view</div>
       {people.map((t) => {
         const talking = speaking.has(t.identity);

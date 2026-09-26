@@ -4113,6 +4113,17 @@
 }
 .ag-call-frame.is-moving,
 .ag-call-frame.is-away { pointer-events: none; }
+/* The page behind the moving room: dimmed while the room is large, lit
+   as it folds away (its opacity is animated; black, never a tint). */
+.ag-call-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 939;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
 /* Hidden under the card without being taken apart: its layout and the
    state of its animations are kept, so nothing replays when it comes
    back (display: none would restart every entrance — the speaker panes
@@ -4149,10 +4160,6 @@ html.agora-covered { overflow: hidden; }
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
-@keyframes callMiniOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
 .call-mini {
   position: fixed;
   right: 20px;
@@ -4167,14 +4174,12 @@ html.agora-covered { overflow: hidden; }
   color: #f5f5f0;
   font-family: 'DM Sans', system-ui, sans-serif;
   overflow: hidden;
-  transform-origin: 0 0;
   animation: callMiniIn 0.2s ease-out both;
 }
-/* Coming up under the room as it lands in the corner: the room fades
-   out over the last part of its move while the card fades in. */
-.call-mini.is-arriving { animation-delay: 0.15s; }
-/* The room growing back out of it: gone under the room in a beat. */
-.call-mini.is-leaving { animation: callMiniOut 0.14s ease-in both; pointer-events: none; }
+/* Arriving with the room, or leaving as it opens back out: the room's
+   move times the card's words to its own (AgoraRoomPage). */
+.call-mini.is-arriving, .call-mini.is-leaving { animation: none; }
+.call-mini.is-leaving { pointer-events: none; }
 .call-mini-video { aspect-ratio: 16 / 9; background: #000; }
 .call-mini-video > * { width: 100%; height: 100%; }
 .call-mini-row {
@@ -4265,4 +4270,484 @@ html.agora-covered { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .call-mini, .call-mini.is-arriving { animation: none; }
   .call-mini.is-leaving { animation: none; opacity: 0; }
+}
+
+/* ── Pop-ups: one family ──────────────────────────────────────────────
+   Everything that opens from the call's controls — the device menus,
+   the room's options and tools, reactions, the host panel, the prompts
+   (an invitation to the stage, closing it, a community note) and the
+   media notice — shares one body: the call card's (solid near-black, a
+   hairline, 16px corners, a soft drop). Menus list things one way, as
+   rows with an icon and a label that lift on hover — no pills or boxed
+   tiles inside the box. Prompts wrap their words rather than squeezing
+   them, and their buttons never break a label: yellow for the one thing
+   to do, the toolbar's red for what can't be undone, solid for the way
+   out. And one entrance: a short rise and fade from where it opens.
+   Centring rides the `translate` property, not `transform`, so an
+   entrance can never knock a pop-up off centre (the old prompts started
+   half their width to the right and snapped back as they landed). */
+@keyframes agPopRise {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes agPopDrop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.ag-more-menu,
+.ag-react-picker,
+.ag-host-panel,
+.ag-invite,
+.ag-media-error,
+.ag-queue-pill {
+  animation: agPopRise 0.16s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ag-more-menu,
+.ag-react-picker,
+.ag-invite,
+.ag-media-error,
+.ag-queue-pill {
+  transform: none;
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+}
+/* The room's options hang from the top bar, to the right. */
+.ag-more-menu--down {
+  translate: none;
+  transform-origin: 100% 0;
+  animation-name: agPopDrop;
+}
+.ag-host-panel { transform-origin: 100% 100%; }
+
+.ag-more-menu,
+.ag-host-panel,
+.ag-invite,
+.ag-media-error {
+  background: var(--ag-solid);
+  border: 1px solid var(--ag-solid-line);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: none;
+}
+.ag-react-picker {
+  background: var(--ag-solid);
+  border: 1px solid var(--ag-solid-line);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: none;
+}
+
+/* Menus: rows. */
+.ag-more-menu { padding: 6px; }
+.ag-tools-menu { width: 244px; }
+.ag-cam-menu { width: 272px; }
+.ag-more-menu--down { min-width: 244px; }
+.ag-cam-item {
+  min-height: 36px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: #e7e9ee;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ag-cam-item + .ag-cam-item { margin-top: 1px; }
+.ag-cam-item:hover:not(:disabled) { background: var(--ag-solid-hover); color: #fff; }
+.ag-cam-item:disabled { color: #6b6b74; cursor: default; }
+.ag-cam-ico,
+.ag-cam-check {
+  flex: 0 0 16px;
+  width: 16px;
+  display: grid;
+  place-items: center;
+}
+.ag-cam-ico { color: #9aa0ac; }
+.ag-cam-item:hover:not(:disabled) .ag-cam-ico { color: #e7e9ee; }
+.ag-cam-item:disabled .ag-cam-ico { color: #4f4f58; }
+.ag-cam-soon {
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid var(--ag-solid-line);
+  border-radius: 999px;
+  color: #8a90a0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ag-cam-menu-title {
+  padding: 8px 10px 4px;
+  color: #8a90a0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.ag-cam-menu-empty { padding: 2px 10px 8px; }
+.ag-cam-menu-sep { height: 1px; margin: 6px 6px; background: var(--ag-solid-line); }
+.ag-more-layout { padding: 4px 4px 8px; }
+
+/* Prompts: the words take the room they need; the buttons sit together. */
+.ag-invite {
+  width: max-content;
+  max-width: min(560px, calc(100% - 32px));
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 14px 14px 14px 18px;
+}
+.ag-invite-text { flex: 1 1 240px; min-width: 0; font-size: 13.5px; line-height: 1.45; color: #e7e9ee; }
+.ag-invite-actions { flex: 0 0 auto; margin-left: auto; gap: 8px; }
+.ag-invite .ag-note-input {
+  flex: 1 1 100%;
+  margin: 0;
+  background: var(--ag-solid-2);
+  border-color: var(--ag-solid-line);
+}
+.ag-invite .ag-note-input:focus { border-color: var(--ag-solid-line-hi); }
+.ag-invite-join,
+.ag-invite-decline,
+.ag-invite-danger {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ag-invite-decline {
+  background: var(--ag-solid-2);
+  border: 1px solid var(--ag-solid-line);
+  color: #e7e9ee;
+}
+.ag-invite-decline:hover:not(:disabled) {
+  background: var(--ag-solid-hover);
+  border-color: var(--ag-solid-line-hi);
+  color: #fff;
+}
+.ag-invite-danger {
+  background: #ff3b30;
+  border: 1px solid #ff3b30;
+  color: #fff;
+}
+.ag-invite-danger:hover:not(:disabled) { background: #ff4f45; border-color: #ff4f45; }
+.ag-invite-danger:disabled { opacity: 0.6; cursor: default; }
+
+/* The media notice: the same body; the words carry the alarm. */
+.ag-media-error { color: #f08a80; }
+.ag-media-error button {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  color: #c9ccd4;
+}
+.ag-media-error button:hover { background: var(--ag-solid-hover); color: #fff; }
+
+/* The host panel: the site's own tabs (a soft fill marks where you
+   are), people and actions as plain rows, the same pill buttons. */
+@media (min-width: 640px) {
+  .ag-host-panel { bottom: calc(100% + 10px); }
+}
+.ag-host-tabs {
+  gap: 2px;
+  padding: 6px;
+  border-bottom: 1px solid var(--ag-solid-line);
+}
+.ag-host-tab {
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 10px;
+  color: #8a90a0;
+  font-family: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.ag-host-tab:hover { color: #e7e9ee; }
+.ag-host-tab.active { background: var(--ag-solid-hover); color: #fff; }
+.ag-host-notice {
+  margin: 8px 8px 0;
+  border-radius: 10px;
+  background: var(--ag-solid-2);
+  border-color: var(--ag-solid-line);
+}
+.ag-host-body { padding: 8px 6px 10px; gap: 2px; }
+.ag-host-row { gap: 6px 8px; padding: 6px 8px; background: none; }
+.ag-host-queuectl {
+  padding: 2px 4px 10px;
+  margin-bottom: 4px;
+  border-bottom-color: var(--ag-solid-line);
+  border-radius: 0;
+}
+.ag-host-search,
+.ag-host-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ag-solid-line);
+  background: var(--ag-solid-2);
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.ag-host-search { margin: 0 0 6px; }
+.ag-host-input { margin-bottom: 8px; }
+.ag-host-search:focus,
+.ag-host-input:focus { border-color: var(--ag-solid-line-hi); }
+.ag-host-avatar { background: #26262e; }
+.ag-host-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--ag-solid-line);
+  border-radius: 999px;
+  background: var(--ag-solid-2);
+  color: #e7e9ee;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.ag-host-act:hover:not(:disabled) { border-color: var(--ag-solid-line-hi); }
+.ag-host-act.wide { width: 100%; height: 34px; padding: 0 16px; }
+.ag-host-act.danger { color: #ff6b61; }
+.ag-host-act.danger:hover:not(:disabled) { color: #ff857c; }
+.ag-host-act:disabled,
+.ag-host-act.primary:disabled {
+  opacity: 1;
+  background: var(--ag-solid-2);
+  border-color: var(--ag-solid-line);
+  color: #5d5d66;
+  cursor: default;
+}
+.ag-host-badge {
+  background: #ffb700;
+  color: #1a0e00;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px var(--ag-solid);
+}
+.ag-host-roomctl { gap: 2px; padding: 0; }
+.ag-cam-item.is-danger,
+.ag-cam-item.is-danger .ag-cam-ico { color: #ff6b61; }
+.ag-cam-item.is-danger:hover:not(:disabled),
+.ag-cam-item.is-danger:hover:not(:disabled) .ag-cam-ico { color: #ff857c; }
+.ag-host-sect {
+  margin-top: 6px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--ag-solid-line);
+}
+.ag-host-sect-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #8a90a0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.ag-host-live { color: #ff3b30; font-size: 10.5px; letter-spacing: 0.06em; }
+.ag-host-thumb { display: flex; align-items: center; gap: 10px; }
+.ag-host-thumb-img {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--ag-solid-line);
+  object-fit: cover;
+}
+.ag-host-thumb-img.is-empty { border-style: dashed; border-color: var(--ag-solid-line-hi); }
+.ag-host-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #9aa0ac;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ag-host-check input { margin: 0; accent-color: #ffb700; }
+.ag-host-err { margin-top: 6px; color: #f08a80; font-size: 11.5px; }
+.ag-host-finehint { padding: 6px 0 0; color: #7f8595; font-size: 11px; }
+.ag-host-roomctl > .ag-host-finehint { padding: 10px 10px 2px; }
+
+/* Call settings (in the rail): the site's own switch and the yellow
+   accent, and "Soon" as it reads in the menus. */
+.ag-set-slider input[type="range"] { accent-color: #ffb700; }
+.ag-set-row--switch input {
+  position: relative;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #3a3a42;
+  appearance: none;
+  transition: background 0.15s ease;
+}
+.ag-set-row--switch input::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: translate 0.15s ease;
+}
+.ag-set-row--switch input:checked { background: #1d9e75; }
+.ag-set-row--switch input:checked::before { translate: 16px 0; }
+.ag-set-row--switch input:focus-visible { outline: 2px solid #ffb700; outline-offset: 2px; }
+.ag-set-row .ag-cam-soon { margin-left: 12px; }
+
+/* Everyone behind a gallery's "+N": the same menu body. */
+.ag-lgal-menu {
+  border-radius: 16px;
+  background: var(--ag-solid);
+  border: 1px solid var(--ag-solid-line);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  transform-origin: 50% 100%;
+  animation: agPopRise 0.16s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ag-lgal-menu.is-below { transform-origin: 50% 0; animation-name: agPopDrop; }
+.ag-lgal-menu-title { color: #8a90a0; font-weight: 700; }
+.ag-lgal-menu-item { border-radius: 10px; font-size: 13px; }
+.ag-lgal-menu-item:hover,
+.ag-lgal-menu-item:focus-visible { background: var(--ag-solid-hover); }
+
+/* The browser muted the room: the one prompt that is itself the button,
+   so it keeps a yellow edge and a yellow "tap to listen". */
+.ag-audio-prompt { border-color: #ffb700; cursor: pointer; }
+.ag-audio-prompt .ag-invite-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 auto;
+}
+.ag-audio-prompt strong { color: #ffb700; }
+.ag-audio-prompt:hover { border-color: #ffc22e; }
+
+/* The stage closed: one card in the middle for everyone. (Its styles
+   lived in the replay page's sheet and went with it on Sep 11 — the
+   card had been showing as bare text.) */
+.ag-ended-card {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  z-index: 95;
+  width: min(420px, calc(100% - 32px));
+  padding: 24px 24px 20px;
+  border-radius: 16px;
+  background: var(--ag-solid);
+  border: 1px solid var(--ag-solid-line);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  color: #e7e9ee;
+  transform-origin: 50% 50%;
+  animation: agPopRise 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ag-ended-card h2 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+.ag-ended-card p {
+  margin: 0 0 18px;
+  color: #9aa0ac;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.ag-ended-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Above the controls, one column (.ag-notices in AgoraRoomPage): the
+   prompt nearest the controls, a mic or camera failure over it, your
+   place in the queue on top. Each keeps its own look; the column places
+   them, so none can land on another (they used to share one spot, and
+   the browser's-mute prompt sat over the buttons of whatever else was
+   asking). */
+.ag-notices {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  translate: -50% 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 10px;
+  width: min(560px, calc(100% - 32px));
+  pointer-events: none;
+}
+.ag-notices > * {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  translate: none;
+  max-width: 100%;
+  pointer-events: auto;
+}
+
+@media (max-width: 639px) {
+  /* Full width from the row's top edge: nothing to centre. */
+  .ag-invite,
+  .ag-media-error,
+  .ag-controls .ag-more-menu,
+  .ag-controls .ag-react-picker,
+  .ag-queue-pill { translate: none; }
+  .ag-controls .ag-more-menu { width: auto; }
+  /* Stacked: the words, the note, then the buttons sharing the width. */
+  .ag-invite {
+    width: auto;
+    max-width: none;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .ag-invite-text,
+  .ag-invite .ag-note-input { flex: 0 0 auto; }
+  .ag-invite-actions { margin-left: 0; }
+  .ag-invite-danger { flex: 1; }
+  /* The column spans the row; the queue pill keeps its own band, beside
+     the host's crown. */
+  .ag-notices {
+    left: 10px;
+    right: 10px;
+    bottom: var(--ag-band-b);
+    translate: none;
+    width: auto;
+    align-items: stretch;
+  }
+  .ag-notices > .ag-queue-pill {
+    position: absolute;
+    left: 0;
+    bottom: calc(var(--ag-band-a) - var(--ag-band-b));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-more-menu,
+  .ag-react-picker,
+  .ag-host-panel,
+  .ag-invite,
+  .ag-media-error,
+  .ag-queue-pill,
+  .ag-lgal-menu,
+  .ag-ended-card { animation: none; }
 }

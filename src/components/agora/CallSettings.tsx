@@ -248,7 +248,7 @@ export default function CallSettings({
             />
             <div className="ag-set-row ag-set-row--off">
               <span>Blur my background</span>
-              <span className="ag-tool-soon">Soon</span>
+              <span className="ag-cam-soon">Soon</span>
             </div>
           </>
         );
@@ -327,6 +327,7 @@ export default function CallSettings({
               </span>
               <input
                 type="checkbox"
+                role="switch"
                 checked={simpleStage}
                 onChange={(e) => onSimpleStage?.(e.target.checked)}
               />

@@ -58,6 +58,8 @@ interface Props {
   background?: boolean;
   /** Out of sight under the call's card: the scene draws nothing. */
   paused?: boolean;
+  /** Folding into the call's card or out of it: every frame drawn. */
+  moving?: boolean;
 }
 
 function hashString(s: string): number {
@@ -136,6 +138,7 @@ export default function Amphitheater({
   flat = false,
   background = false,
   paused = false,
+  moving = false,
 }: Props) {
   const inSpeaker = view === "speaker";
   /* Flat: no 3D scene at all (phones — a full Three.js bowl with shadow
@@ -165,6 +168,7 @@ export default function Amphitheater({
           micLive={micLive}
           background={background}
           paused={paused}
+          moving={moving}
         />
       )}
 

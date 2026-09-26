@@ -56,6 +56,10 @@ interface Props {
   /** Out of sight (the call minimized to its card): draw nothing, and
       keep the picture as it stands for when the room comes back. */
   paused?: boolean;
+  /** The room folding into its card or out of it: draw every frame,
+      backdrop or not — the browser can drop the scene's picture while it
+      rebuilds the screen's layers, and it must be back within a frame. */
+  moving?: boolean;
 }
 
 /* ── Deterministic PRNG ── */
@@ -1474,6 +1478,7 @@ export default function AgoraScene3D({
   onViewSettled,
   background = false,
   paused = false,
+  moving = false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   /* The view lives in a ref so switching cameras never rebuilds the
@@ -1609,6 +1614,10 @@ export default function AgoraScene3D({
   audienceRef.current = audience;
   const backgroundRef = useRef(background);
   backgroundRef.current = background;
+  const movingRef = useRef(moving);
+  useLayoutEffect(() => {
+    movingRef.current = moving;
+  }, [moving]);
   const pausedRef = useRef(paused);
   /* Before the browser paints: a room growing back out of its card draws
      live from its first frame. */
@@ -1882,7 +1891,7 @@ export default function AgoraScene3D({
       /* Frames nobody needs: under a flat layout the scene is a backdrop
          (15 fps); on a machine that has stepped all the way down, 4 fps.
          The glide's own clock still runs on real time (dt above). */
-      const budget = still ? 250 : backgroundRef.current ? 66 : 0;
+      const budget = still ? 250 : backgroundRef.current && !movingRef.current ? 66 : 0;
       if (budget && now - lastDraw < budget) return;
       lastDraw = now;
       if (crowdTickRef.current?.(now)) crowdTickRef.current = null;

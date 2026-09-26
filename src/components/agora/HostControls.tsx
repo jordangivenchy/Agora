@@ -463,23 +463,26 @@ export default function HostControls({ room, participants, currentUser, myRole, 
 
             {tab === "room" && (
               <div className="ag-host-roomctl">
-                <button className="ag-host-act wide" disabled={busy !== null} onClick={toggleLock}>
-                  {room.speaker_requests_locked ? "Unlock speaker requests" : "Lock speaker requests"}
+                <button className="ag-cam-item" disabled={busy !== null} onClick={toggleLock}>
+                  <span className="ag-cam-ico" aria-hidden><Icon name={room.speaker_requests_locked ? "unlock" : "lock"} size={15} /></span>
+                  <span className="ag-cam-name">
+                    {room.speaker_requests_locked ? "Unlock speaker requests" : "Lock speaker requests"}
+                  </span>
                 </button>
-                <button className="ag-host-act wide" disabled={busy !== null} onClick={muteAllSpeakers}>
-                  Mute all speakers
+                <button className="ag-cam-item" disabled={busy !== null} onClick={muteAllSpeakers}>
+                  <span className="ag-cam-ico" aria-hidden><Icon name="mic-off" size={15} /></span>
+                  <span className="ag-cam-name">Mute all speakers</span>
                 </button>
                 {isPrimaryHost && (
-                  <button className="ag-host-act wide danger" disabled={busy !== null} onClick={endDiscussion}>
-                    End discussion
+                  <button className="ag-cam-item is-danger" disabled={busy !== null} onClick={endDiscussion}>
+                    <span className="ag-cam-ico" aria-hidden><Icon name="phone-off" size={15} /></span>
+                    <span className="ag-cam-name">End discussion</span>
                   </button>
                 )}
                 {isPrimaryHost && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
-                      THUMBNAIL
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="ag-host-sect">
+                    <div className="ag-host-sect-title">Thumbnail</div>
+                    <div className="ag-host-thumb">
                       {thumbUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -487,25 +490,10 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                           alt="Room thumbnail"
                           width={48}
                           height={48}
-                          style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 8,
-                            objectFit: "cover",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            flexShrink: 0,
-                          }}
+                          className="ag-host-thumb-img"
                         />
                       ) : (
-                        <div
-                          style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 8,
-                            border: "1px dashed rgba(255,255,255,0.25)",
-                            flexShrink: 0,
-                          }}
-                        />
+                        <div className="ag-host-thumb-img is-empty" />
                       )}
                       <button
                         className="ag-host-act"
@@ -526,18 +514,16 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                         }}
                       />
                     </div>
-                    {thumbError && (
-                      <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 5 }}>{thumbError}</div>
-                    )}
+                    {thumbError && <div className="ag-host-err">{thumbError}</div>}
                     <div className="ag-host-finehint">
                       Square art shown on room cards. Center-cropped to 512px — 5MB max.
                     </div>
                   </div>
                 )}
                 {isPrimaryHost && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
-                      RESTREAM {egressId && <span style={{ color: "#e05a5a" }}>● LIVE</span>}
+                  <div className="ag-host-sect">
+                    <div className="ag-host-sect-title">
+                      Restream {egressId && <span className="ag-host-live">● LIVE</span>}
                     </div>
                     {!egressId && (
                       <input
@@ -545,32 +531,11 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                         onChange={(e) => setRtmpUrl(e.target.value)}
                         placeholder="rtmp://… ingest URL + stream key"
                         spellCheck={false}
-                        style={{
-                          width: "100%",
-                          height: 32,
-                          marginBottom: 6,
-                          borderRadius: 8,
-                          border: "1px solid #2a2a33",
-                          background: "#0e0e11",
-                          color: "white",
-                          fontSize: 11.5,
-                          padding: "0 10px",
-                          boxSizing: "border-box",
-                        }}
+                        className="ag-host-input"
                       />
                     )}
                     {!egressId && (
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          fontSize: 11.5,
-                          color: "rgba(255,255,255,0.6)",
-                          marginBottom: 6,
-                          cursor: "pointer",
-                        }}
-                      >
+                      <label className="ag-host-check">
                         <input
                           type="checkbox"
                           checked={egressPortrait}
@@ -586,9 +551,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                     >
                       {egressBusy ? "…" : egressId ? "Stop restream" : "Go live on TikTok / RTMP"}
                     </button>
-                    {egressError && (
-                      <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 5 }}>{egressError}</div>
-                    )}
+                    {egressError && <div className="ag-host-err">{egressError}</div>}
                     <div className="ag-host-finehint">
                       Paste the RTMP server URL with your stream key appended (from TikTok LIVE
                       Studio, Twitch, or YouTube). The stage broadcasts until you stop it.
@@ -596,9 +559,9 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                   </div>
                 )}
                 {isPrimaryHost && hlsConfigured && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginTop: 6 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)", marginBottom: 6 }}>
-                      HLS BROADCAST {hlsLive && <span style={{ color: "#e05a5a" }}>● LIVE</span>}
+                  <div className="ag-host-sect">
+                    <div className="ag-host-sect-title">
+                      HLS broadcast {hlsLive && <span className="ag-host-live">● LIVE</span>}
                     </div>
                     <button
                       className={`ag-host-act wide${hlsLive ? " danger" : ""}`}
@@ -607,9 +570,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                     >
                       {hlsBusy ? "…" : hlsLive ? "Stop HLS broadcast" : "Start HLS broadcast"}
                     </button>
-                    {hlsError && (
-                      <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 5 }}>{hlsError}</div>
-                    )}
+                    {hlsError && <div className="ag-host-err">{hlsError}</div>}
                     <div className="ag-host-finehint">
                       Gives the audience a low-cost stream view for big rooms — the stage stays
                       on WebRTC; listeners can switch to the stream from the top bar.
