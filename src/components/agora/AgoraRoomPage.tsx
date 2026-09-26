@@ -7,7 +7,7 @@
    the raised-hand step). Hosts come from the room's configuration; the
    Host Controls panel is invisible to everyone else. */
 
-import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { logRoomEvent, noteRoomAction, takeRoomAction } from "@/lib/roomDiag";
 import { useRouter } from "next/navigation";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -53,6 +53,20 @@ import { sessionUser } from "@/lib/session";
    that sheet instead of folding the desktop rail. */
 const isPhoneViewport = () =>
   typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
+
+/* The call card's corner, as a transform of the whole screen: the room
+   kept at the screen's shape, small, over where the card sits (MiniCall).
+   A phone's card spans the width, so there the room drops away into it
+   (and rises back out of it) instead. */
+function cornerTransform(): { s: number; to: string } {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  if (isPhoneViewport()) {
+    const s = 0.92;
+    return { s, to: `translate(${(vw * (1 - s)) / 2}px, ${vh * 0.55}px) scale(${s})` };
+  }
+  const s = Math.min(0.42, 360 / vw);
+  return { s, to: `translate(${vw - 20 - vw * s}px, ${vh - 20 - vh * s}px) scale(${s})` };
+}
 
 function fmtElapsed(fromIso: string | null): string {
   if (!fromIso) return "00:00:00";
@@ -114,7 +128,9 @@ export default function AgoraPage({ params }: { params: Promise<{ id: string }> 
    loaded. Entering a live room from a card or Watch Live is one exposure
    from the click to the stage — the sky came up over the page left
    behind and carries on here, the same stars still turning
-   (lib/skySplash.ts), until the entering overlay takes it over and ends
+   (lib/skySplash.ts: carried across the page load from a card, handed
+   over in the same document for a room opened in the app, like one you
+   have just made), until the entering overlay takes it over and ends
    on the stage. With no sky to carry (a link opened cold, a past
    discussion) the screen stays out of sight and the bar does the
    waiting: the sky is for a call, and a past discussion never sees it. */
@@ -1370,61 +1386,123 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      Another page showing (CallSlot keeps this room mounted through
      in-app navigation): the room shrinks into the corner and becomes a
      card there (MiniCall). Only a call is carried — a room with no call
-     up (a gate, a replay, one you never got into) just goes quiet. The
-     card grows back into the room when you open it. */
+     up (a gate, a replay, one you never got into) just goes quiet.
+
+     The room itself stays built the whole time, out of sight under the
+     card with its stage paused, so opening the card again is only an
+     animation: the room grows back out of the card exactly as it went
+     in, with nothing to rebuild — no scene to set up, no pictures to
+     re-attach. `phase` is where it stands: "full" (the page), "shrinking"
+     into the corner, "mini" (the card), "growing" back out of it. */
   const callLive = !broadcast && !!room && !(arrivedEnded || showReplay) && (call.connected || hlsAudience);
   const [wasInCall, setWasInCall] = useState(false);
   if (callLive && !wasInCall) setWasInCall(true);
   const endedWhileAway = wasInCall && room?.status === "ended";
-  const [phase, setPhase] = useState<"full" | "mini">(slot.minimized ? "mini" : "full");
-  const [seenMinimized, setSeenMinimized] = useState(slot.minimized);
-  if (seenMinimized !== slot.minimized) {
-    setSeenMinimized(slot.minimized);
-    /* Back in: the card has already grown to fill the screen (or this is
-       the browser's Back), so the room is simply there. */
-    if (!slot.minimized) setPhase("full");
-  }
-  /* Out: the room is still drawn, fixed over the page it is giving way
-     to, while it shrinks into the corner. */
-  const shrinking = slot.minimized && phase === "full" && callLive;
-  const frameRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!slot.minimized || phase !== "full") return;
-    const el = frameRef.current;
-    if (!el || !callLive) {
-      const t = window.setTimeout(() => setPhase("mini"), 0);
-      return () => window.clearTimeout(t);
+  const [phase, setPhase] = useState<"full" | "shrinking" | "mini" | "growing">(slot.minimized ? "mini" : "full");
+  const [seenPath, setSeenPath] = useState(slot.path);
+  if (seenPath !== slot.path) {
+    setSeenPath(slot.path);
+    if (slot.minimized) {
+      /* Away from the room — or, mid-way back in, somewhere else after all. */
+      if (phase === "full" || phase === "growing") setPhase(callLive ? "shrinking" : "mini");
+    } else if (phase === "mini") {
+      /* Back to the room without the card (the browser's Back or
+         Forward): the page it would grow over is already gone, so the
+         room is simply there. */
+      setPhase("full");
+    } else if (phase === "shrinking") {
+      setPhase("full");
     }
+  }
+  const frameRef = useRef<HTMLDivElement>(null);
+  /* The card's way back in: the address changes once the room has grown
+     to fill the screen, so the page you were on stays under it the whole
+     way (changing it first would drop that page mid-grow, leaving the
+     room growing over an empty screen). */
+  const expandWhenGrown = useRef<(() => void) | null>(null);
+  /* Started before the frame is painted (a layout effect), so the room
+     is never seen for a frame at the wrong size. */
+  useLayoutEffect(() => {
+    if (phase !== "shrinking" && phase !== "growing") return;
+    /* Once only, and never after this move has been superseded: a finish
+       event already queued when the move is cancelled still arrives. */
+    let over = false;
+    const land = () => {
+      if (over) return;
+      over = true;
+      setPhase(phase === "shrinking" ? "mini" : "full");
+      const expand = phase === "growing" ? expandWhenGrown.current : null;
+      expandWhenGrown.current = null;
+      expand?.();
+    };
+    const el = frameRef.current;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const phone = isPhoneViewport();
-    /* Into the card's corner, keeping the screen's shape: the frame ends
-       as a small copy of the room over where the card appears, and fades
-       as the card comes up. A phone's card spans the width, so there the
-       room drops away into it instead. */
-    const s = phone ? 0.92 : Math.min(0.42, 360 / vw);
-    const to = phone
-      ? `translate(${(vw * (1 - s)) / 2}px, ${vh * 0.55}px) scale(${s})`
-      : `translate(${vw - 20 - vw * s}px, ${vh - 20 - vh * s}px) scale(${s})`;
-    const shrink = el.animate(
-      [
-        { transform: "translate(0px, 0px) scale(1)", borderRadius: "0px", opacity: 1 },
-        { opacity: 1, offset: 0.7 },
-        { transform: to, borderRadius: `${Math.round(16 / s)}px`, opacity: 0 },
-      ],
-      { duration: still ? 1 : 360, easing: "cubic-bezier(.2,.7,.2,1)", fill: "forwards" }
+    /* A grow cut short (a click on the page under it went somewhere
+       else) takes its address change with it. */
+    const drop = () => {
+      over = true;
+      if (phase === "growing") expandWhenGrown.current = null;
+    };
+    if (!el || still) {
+      const t = window.setTimeout(land, 0);
+      return () => {
+        drop();
+        window.clearTimeout(t);
+      };
+    }
+    const { s, to } = cornerTransform();
+    const MS = 340;
+    const ease = "cubic-bezier(.2,.7,.2,1)";
+    const going = phase === "shrinking";
+    /* Three animations, not one. The move (transform) and the fade
+       (opacity) are the kind the browser runs off the main thread, so
+       they stay smooth while the page underneath is still mounting — but
+       only as animations of their own: one that also animated the
+       corners would run entirely on the main thread, and stutter with
+       it. The corners (16 px on screen at the end) follow separately.
+       The move eases out — quick away, gentle landing — while the fade
+       runs on the clock: going, the room stays solid until it is nearly
+       in the corner, then fades as the card comes up under it (the card
+       starts 150 ms in, agora.css); coming back, it is solid within the
+       first 70 ms while the card fades under it. */
+    const whole = "translate(0px, 0px) scale(1)";
+    const move = el.animate([{ transform: going ? whole : to }, { transform: going ? to : whole }], {
+      duration: MS,
+      easing: ease,
+      fill: "forwards",
+    });
+    const fade = el.animate(
+      going
+        ? [{ opacity: 1 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }]
+        : [{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1 }],
+      { duration: MS, easing: "linear", fill: "forwards" }
     );
-    /* A hidden tab pauses animations; the card must still arrive. */
-    const late = window.setTimeout(() => setPhase("mini"), 900);
-    shrink.onfinish = () => {
+    const round = `${Math.round(16 / s)}px`;
+    const corners = el.animate(
+      [{ borderRadius: going ? "0px" : round }, { borderRadius: going ? round : "0px" }],
+      { duration: MS, easing: ease, fill: "forwards" }
+    );
+    /* A hidden tab pauses animations; the move must still land. */
+    const late = window.setTimeout(land, 900);
+    move.onfinish = () => {
       window.clearTimeout(late);
-      setPhase("mini");
+      land();
     };
     return () => {
+      drop();
       window.clearTimeout(late);
-      shrink.cancel();
+      move.cancel();
+      fade.cancel();
+      corners.cancel();
     };
-  }, [slot.minimized, phase, callLive]);
+  }, [phase]);
+  /* Out of the card: the room is already built, so going back in is the
+     room growing out of the card, then the address following it. */
+  const openFromCard = () => {
+    if (phase !== "mini") return;
+    expandWhenGrown.current = slot.expand;
+    setPhase("growing");
+  };
 
   /* While a call is live, pages change in the app — a full page load
      would hang the call up. Next's own links already navigate in place;
@@ -1451,40 +1529,45 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     };
   }, [callLive, router]);
 
-  if (slot.minimized && !shrinking) {
-    if (!room || !(callLive || endedWhileAway)) return null;
-    const speakingNow = [...stageStrip, ...proSpeakers, ...conSpeakers].find((p) => p.speaking) ?? null;
-    return (
-      <MiniCall
-        motion={room.motion}
-        ended={endedWhileAway}
-        speaker={speakingNow ? { id: speakingNow.id, username: speakingNow.username, name: speakingNow.name, avatarUrl: speakingNow.avatarUrl } : null}
-        hostName={hostUser ? displayName(hostUser) : null}
-        onStage={onStage(myRole)}
-        micOn={call.micOn}
-        micReady={call.connected && !call.mediaBusy}
-        onToggleMic={call.toggleMic}
-        audioBlocked={call.audioBlocked}
-        onEnableAudio={call.enableAudio}
-        hlsSrc={hlsAudience ? call.hlsMode!.url : null}
-        onLeave={() => {
-          if (endedWhileAway) {
-            vacateSeat();
-            slot.end();
-          } else if (isHostRole(myRole) && !duel) {
-            /* A host leaving is a choice — end it for everyone, or step
-               away — and that choice lives in the room. */
-            setLeavePrompt(true);
-            slot.expand();
-          } else {
-            vacateSeat();
-            slot.end();
-          }
-        }}
-        onExpand={slot.expand}
-      />
-    );
-  }
+  /* The card: up while you browse (coming up under the room as it
+     shrinks), and fading under it as the room grows back out. */
+  const showCard = !!room && (callLive || endedWhileAway) && ((slot.minimized && phase !== "full") || phase === "growing");
+  const speakingNow = showCard ? [...stageStrip, ...proSpeakers, ...conSpeakers].find((p) => p.speaking) ?? null : null;
+  const miniCard = showCard && room ? (
+    <MiniCall
+      arriving={phase === "shrinking"}
+      leaving={phase === "growing"}
+      motion={room.motion}
+      ended={endedWhileAway}
+      speaker={speakingNow ? { id: speakingNow.id, username: speakingNow.username, name: speakingNow.name, avatarUrl: speakingNow.avatarUrl } : null}
+      hostName={hostUser ? displayName(hostUser) : null}
+      onStage={onStage(myRole)}
+      micOn={call.micOn}
+      micReady={call.connected && !call.mediaBusy}
+      onToggleMic={call.toggleMic}
+      audioBlocked={call.audioBlocked}
+      onEnableAudio={call.enableAudio}
+      hlsSrc={hlsAudience ? call.hlsMode!.url : null}
+      onLeave={() => {
+        if (endedWhileAway) {
+          vacateSeat();
+          slot.end();
+        } else if (isHostRole(myRole) && !duel) {
+          /* A host leaving is a choice — end it for everyone, or step
+             away — and that choice lives in the room. */
+          setLeavePrompt(true);
+          openFromCard();
+        } else {
+          vacateSeat();
+          slot.end();
+        }
+      }}
+      onExpand={openFromCard}
+    />
+  ) : null;
+  /* No call to keep drawn (it ended while you were away, or never came
+     up): just the card, or nothing. */
+  if (slot.minimized && !callLive) return miniCard;
 
   if (deniedGate) {
     const who = deniedGate.host ? `@${deniedGate.host}` : "the host";
@@ -1705,8 +1788,15 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     </div>
   );
 
+  /* The frame: no box of its own while the room is the page; fixed over
+     the page while it moves, and over it (in use) for the moment the
+     address takes to follow the room back in; out of sight under the
+     card. */
+  const frameState =
+    phase === "mini" ? " is-away" : phase !== "full" ? " is-moving" : slot.minimized ? " is-over" : "";
   return (
-    <div ref={frameRef} className={`ag-call-frame${shrinking ? " is-moving" : ""}`}>
+    <>
+    <div ref={frameRef} className={`ag-call-frame${frameState}`}>
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
       {entering !== "gone" && (
         <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
@@ -1871,6 +1961,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             out of CPU ~20 s into every camera room (the replay kept only
             those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
+          paused={phase === "mini"}
           performanceMode={broadcast}
           flat={phone || broadcast || simpleStage.on}
           background={layout !== "stage"}
@@ -2653,5 +2744,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       )}
     </div>
     </div>
+    {miniCard}
+    </>
   );
 }

@@ -22,6 +22,8 @@ import AgoraPage from "./AgoraRoomPage";
 export interface CallSlotApi {
   /** Another page is showing: the call carries on as a card in the corner. */
   minimized: boolean;
+  /** The page showing now (the room's own address, or the one browsed to). */
+  path: string;
   /** Leave the room for good: the call ends once `href` is showing. */
   leave: (href: string) => void;
   /** End the call where you are (the card's Leave). */
@@ -35,6 +37,7 @@ export interface CallSlotApi {
 /* Outside a slot (never in practice): leaving is a plain page load. */
 const outside: CallSlotApi = {
   minimized: false,
+  path: "",
   leave: (href) => { window.location.href = href; },
   end: () => {},
   minimize: () => { window.location.href = "/"; },
@@ -77,6 +80,7 @@ export default function CallSlot({ params }: { params: Promise<{ id: string }> }
 
   const api = useMemo<CallSlotApi>(() => ({
     minimized: !onRoute,
+    path: pathname ?? "",
     leave: (href) => {
       setEnding(true);
       router.push(href);
@@ -86,7 +90,7 @@ export default function CallSlot({ params }: { params: Promise<{ id: string }> }
     expand: () => {
       if (roomHref) router.push(roomHref);
     },
-  }), [onRoute, router, browseHref, roomHref]);
+  }), [onRoute, pathname, router, browseHref, roomHref]);
 
   if (ending && !onRoute) return null;
   return (

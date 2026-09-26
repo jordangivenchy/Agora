@@ -54,6 +54,14 @@ describe("the call slot", () => {
     expect(room.mounts).toBe(1); // never remounted: the call was never dropped
   });
 
+  it("tells the room which page is showing", () => {
+    expect(slot().path).toBe("/agora/room-1");
+    at("/communities/c-1");
+    expect(slot().path).toBe("/communities/c-1");
+    at("/users/jordan");
+    expect(slot().path).toBe("/users/jordan"); // still minimized, but a new page
+  });
+
   it("minimizes to the last page browsed, and opens back into the room", () => {
     act(() => slot().minimize());
     expect(nav.push).toHaveBeenLastCalledWith("/"); // nothing browsed yet: home

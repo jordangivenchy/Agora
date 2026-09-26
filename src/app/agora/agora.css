@@ -4088,14 +4088,18 @@
    The room lives in the root layout's call slot (CallSlot.tsx) and
    carries on while you browse. Leaving it for another page, it shrinks
    into the corner (.ag-call-frame.is-moving, animated from
-   AgoraRoomPage) and becomes a card there (.call-mini, MiniCall.tsx);
-   opening the card grows it back to fill the screen before the room
-   takes over. Solid surfaces, like every new control on the site. */
+   AgoraRoomPage) and a card comes up there under it (.call-mini,
+   MiniCall.tsx); the room stays built, out of sight (.is-away), and
+   opening the card grows it back out of the corner. Solid surfaces,
+   like every new control on the site. */
 
 /* No box of its own while the room is up — the room lays out exactly as
-   it always has — and fixed over the page it is giving way to while it
-   shrinks. */
+   it always has — fixed over the page while it moves, and not drawn at
+   all while the card stands in for it. */
 .ag-call-frame { display: contents; }
+.ag-call-frame.is-away { display: none; }
+/* Grown back over the page, the address a moment behind it. */
+.ag-call-frame.is-over { display: block; position: fixed; inset: 0; z-index: 945; overflow: hidden; }
 .ag-call-frame.is-moving {
   display: block;
   position: fixed;
@@ -4114,6 +4118,10 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
+@keyframes callMiniOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 .call-mini {
   position: fixed;
   right: 20px;
@@ -4131,15 +4139,11 @@
   transform-origin: 0 0;
   animation: callMiniIn 0.2s ease-out both;
 }
-/* Growing back into the room: an empty panel in the room's own night,
-   so the hand-over to the room is colour to colour. */
-.call-mini.is-opening {
-  background: #05070f;
-  border-color: #05070f;
-  box-shadow: none;
-  animation: none;
-}
-.call-mini.is-opening > * { opacity: 0; transition: opacity 0.1s ease; }
+/* Coming up under the room as it lands in the corner: the room fades
+   out over the last part of its move while the card fades in. */
+.call-mini.is-arriving { animation-delay: 0.15s; }
+/* The room growing back out of it: gone under the room in a beat. */
+.call-mini.is-leaving { animation: callMiniOut 0.14s ease-in both; pointer-events: none; }
 .call-mini-video { aspect-ratio: 16 / 9; background: #000; }
 .call-mini-video > * { width: 100%; height: 100%; }
 .call-mini-row {
@@ -4228,5 +4232,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .call-mini { animation: none; }
+  .call-mini, .call-mini.is-arriving { animation: none; }
+  .call-mini.is-leaving { animation: none; opacity: 0; }
 }

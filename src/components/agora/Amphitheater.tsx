@@ -56,6 +56,8 @@ interface Props {
   micLive?: boolean;
   /** A flat layout's tiles are over the scene: draw it as a backdrop. */
   background?: boolean;
+  /** Out of sight under the call's card: the scene draws nothing. */
+  paused?: boolean;
 }
 
 function hashString(s: string): number {
@@ -133,6 +135,7 @@ export default function Amphitheater({
   onViewSettled,
   flat = false,
   background = false,
+  paused = false,
 }: Props) {
   const inSpeaker = view === "speaker";
   /* Flat: no 3D scene at all (phones — a full Three.js bowl with shadow
@@ -161,6 +164,7 @@ export default function Amphitheater({
           micHolder={micHolder}
           micLive={micLive}
           background={background}
+          paused={paused}
         />
       )}
 

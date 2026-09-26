@@ -11,6 +11,14 @@ export function enterRoom(url: string): void {
   else window.location.href = url;
 }
 
+/** Into a room that opens in the app (router.push) — one you have just
+    made, or joined by code: the same sky comes up over this page, and
+    the room's own screens carry it on in the same document. */
+export function enterRoomInApp(push: () => void): void {
+  window.__agoraSkyOver?.();
+  push();
+}
+
 export function openRoom(room: { id: string; motion?: string | null; status?: string | null }): void {
   const url = roomPath(room);
   if (room.status === "live") enterRoom(url);

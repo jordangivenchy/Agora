@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { TOPICS, LANGUAGES } from "@/types/database";
 import { useRouter } from "next/navigation";
+import { enterRoomInApp } from "@/lib/enterRoom";
 import { roomPath } from "@/lib/urls";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
 import TopicIcon from "./topicIcons";
@@ -135,28 +136,6 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
 
   if (!open && !navigating) return null;
 
-  // Navigation spinner (seamless transition into /agora/[id])
-  if (navigating) {
-    return (
-      <div
-        className="fixed inset-0 z-[1000] flex items-center justify-center"
-        style={{ background: "#0a0a0a" }}
-      >
-        <div
-          className="animate-spin"
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            border: "2px solid var(--accent-blue)",
-            borderTopColor: "transparent",
-          }}
-        />
-      </div>
-    );
-  }
-
-
   const motionIssue = cleanTextError(motion, NAME_MIN);
 
   async function handleCreate() {
@@ -272,12 +251,13 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
         return;
       }
 
-      // Flip loading off before router.push so the button doesn't read
-      // "Creating..." through the whole navigation — if anything goes wrong
-      // during navigation, the user can see the action button and retry.
+      /* Into the room through the sky: it comes up over this form and
+         the room's own screens carry it on to the stage (lib/enterRoom).
+         The form stays under it, as it was ("Creating…"), until the
+         room's page takes over — no screen of its own in between. */
       setLoading(false);
       setNavigating(true);
-      router.push(roomPath({ id: roomId, motion }));
+      enterRoomInApp(() => router.push(roomPath({ id: roomId, motion })));
       return;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create room";
@@ -316,8 +296,9 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
       setJoinErr("That code doesn't match a live room.");
       return;
     }
-    onClose();
-    router.push(`/agora/${row.room_id}`);
+    /* The form stays under the sky until the room's page takes over. */
+    setNavigating(true);
+    enterRoomInApp(() => router.push(`/agora/${row.room_id}`));
   }
 
   /* ──────────────────────────────────────────────────────────
@@ -522,7 +503,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 onClose();
               } else {
                 setNavigating(true);
-                router.push(`/agora/${createdInvite.roomId}`);
+                enterRoomInApp(() => router.push(`/agora/${createdInvite.roomId}`));
               }
             }}
             className="w-full cursor-pointer transition-all"
@@ -1009,7 +990,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           </button>
           <button
             onClick={handleCreate}
-            disabled={loading || !motion.trim() || !!motionIssue}
+            disabled={loading || navigating || !motion.trim() || !!motionIssue}
             className="cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: "#ffb700",
@@ -1029,7 +1010,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               e.currentTarget.style.background = "#ffb700";
             }}
           >
-            {loading
+            {loading || navigating
               ? "Creating…"
               : scheduleEnabled
               ? "Schedule discussion"

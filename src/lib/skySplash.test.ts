@@ -107,4 +107,40 @@ describe("the loading sky", () => {
     expect(sessionStorage.getItem("ag-sky-carry")).not.toBeNull();
     expect(window.location.hash).toBe("#entered");
   });
+
+  it("a room opened in the app takes the sky over from the page, and that one steps aside", () => {
+    window.__agoraSkyOver!();
+    const over = document.querySelector(".ld-enter[data-over]");
+    expect(over).not.toBeNull();
+    crank(); // on screen, turning
+    const seed = window.__agoraSkySession!.seed;
+    // The room's first screen mounts in the same document: only continuing.
+    const [a, b] = canvases();
+    const sky = window.__agoraSky!(a, b, null, { carry: true, only: true });
+    expect(sky.idle).toBeUndefined();
+    expect(window.__agoraSkySession!.seed).toBe(seed);
+    expect(over!.isConnected).toBe(true); // until the room's screen has painted
+    crank();
+    crank();
+    expect(over!.isConnected).toBe(false);
+    expect(window.__agoraSkySession!.live).toBe(1); // the room's screen alone
+    expect(sessionStorage.getItem("ag-sky-carry")).toBeNull(); // nothing to carry: one document
+  });
+
+  it("a sky brought up over the page that nothing takes over fades away", () => {
+    const timers: Array<() => void> = [];
+    const realSet = window.setTimeout;
+    window.setTimeout = ((f: () => void) => { timers.push(f); return timers.length; }) as unknown as typeof window.setTimeout;
+    try {
+      window.__agoraSkyOver!();
+      const over = document.querySelector(".ld-enter[data-over]") as HTMLElement;
+      timers.shift()!(); // fifteen seconds on
+      expect(over.style.opacity).toBe("0");
+      timers.shift()!(); // the fade done
+      expect(over.isConnected).toBe(false);
+      expect(window.__agoraSkySession!.live).toBe(0);
+    } finally {
+      window.setTimeout = realSet;
+    }
+  });
 });

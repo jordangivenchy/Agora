@@ -12,7 +12,7 @@
    from the stage. Occupancy mirrors the old SVG logic: named spectators
    first, then viewer_count generic figures, seeded by room id. */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import {
   MIC_POS,
@@ -53,6 +53,9 @@ interface Props {
   /** A flat layout's tiles are over the scene: it is a backdrop now, and
       draws at a quarter of the rate — the bowl barely moves. */
   background?: boolean;
+  /** Out of sight (the call minimized to its card): draw nothing, and
+      keep the picture as it stands for when the room comes back. */
+  paused?: boolean;
 }
 
 /* ── Deterministic PRNG ── */
@@ -1470,6 +1473,7 @@ export default function AgoraScene3D({
   performanceMode = false,
   onViewSettled,
   background = false,
+  paused = false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   /* The view lives in a ref so switching cameras never rebuilds the
@@ -1605,6 +1609,12 @@ export default function AgoraScene3D({
   audienceRef.current = audience;
   const backgroundRef = useRef(background);
   backgroundRef.current = background;
+  const pausedRef = useRef(paused);
+  /* Before the browser paints: a room growing back out of its card draws
+     live from its first frame. */
+  useLayoutEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
   const viewerCountRef = useRef(viewerCount);
   viewerCountRef.current = viewerCount;
 
@@ -1746,12 +1756,20 @@ export default function AgoraScene3D({
        the window of it that lands on screen. The optical axis stays over
        the middle of the *main column*, so the framing is exactly what it
        was — the extra width is pure bleed behind the rail. */
+    let sized = { w: 0, h: 0, mainW: 0 };
     const resize = () => {
-      const w = host.clientWidth || 1;
-      const h = host.clientHeight || 1;
+      /* Out of sight (the room hidden under the call's card) there is no
+         size to take: keep the picture as it was. Coming back at the same
+         size is no change at all — resizing would clear the canvas, and
+         the room would grow back out of the card with a blank stage. */
+      if (!host.clientWidth || !host.clientHeight) return;
+      const w = host.clientWidth;
+      const h = host.clientHeight;
       /* The host is fixed to the viewport; its parent (.ag-theater) still
          measures the main column, which is what the shot is composed for. */
       const mainW = host.parentElement?.clientWidth || w;
+      if (w === sized.w && h === sized.h && mainW === sized.mainW) return;
+      sized = { w, h, mainW };
       const railW = Math.max(0, w - mainW);
       /* Widening by the rail on the far side keeps world x=0 at the main
          column's centre once the offset window is applied. */
@@ -1841,6 +1859,12 @@ export default function AgoraScene3D({
 
     const animate = () => {
       raf = requestAnimationFrame(animate);
+      if (pausedRef.current) {
+        /* Nobody can see it. The clock keeps up, so the first frame back
+           doesn't read the whole absence as one step. */
+        lastFrame = performance.now();
+        return;
+      }
       const now = performance.now();
       const dt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
       lastFrame = now;

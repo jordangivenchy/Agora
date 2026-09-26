@@ -6,13 +6,14 @@
    tabs. The room's title, who is talking, your mic if you are on stage,
    Leave; the rest of the card takes you back in.
 
-   Going back in, the card grows to fill the screen first and the room
-   takes over from there — the way out (the room shrinking into this
-   corner, AgoraRoomPage) reversed. An audience watching the broadcast
-   (the biggest rooms) hears it through the video, so for them the card
-   carries that video along its top. */
+   The card only appears and goes; the room does the moving
+   (AgoraRoomPage): it shrinks into this corner while the card comes up
+   under it, and grows back out of the card while the card fades under
+   it. An audience watching the broadcast (the biggest rooms) hears it
+   through the video, so for them the card carries that video along its
+   top. */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
 import { HlsBroadcastSurface } from "./HlsPlayer";
@@ -25,6 +26,8 @@ export interface MiniSpeaker {
 }
 
 export default function MiniCall({
+  arriving,
+  leaving,
   motion,
   ended,
   speaker,
@@ -39,6 +42,10 @@ export default function MiniCall({
   onLeave,
   onExpand,
 }: {
+  /** The room is still shrinking into the corner: come up as it lands. */
+  arriving: boolean;
+  /** The room is growing back out of the card: fade under it. */
+  leaving: boolean;
   motion: string;
   /** The host closed the stage while you were away. */
   ended: boolean;
@@ -55,43 +62,12 @@ export default function MiniCall({
   /** The broadcast, for an audience watching it rather than in the call. */
   hlsSrc: string | null;
   onLeave: () => void;
-  /** Called once the card has grown to fill the screen. */
+  /** Back into the room. */
   onExpand: () => void;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [opening, setOpening] = useState(false);
-
-  const open = () => {
-    if (opening) return;
-    setOpening(true);
-    const el = cardRef.current;
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!el || still) {
-      onExpand();
-      return;
-    }
-    const r = el.getBoundingClientRect();
-    const grow = el.animate(
-      [
-        { transform: "translate(0px, 0px) scale(1, 1)", borderRadius: "16px" },
-        {
-          transform: `translate(${-r.left}px, ${-r.top}px) scale(${window.innerWidth / r.width}, ${window.innerHeight / r.height})`,
-          borderRadius: "0px",
-        },
-      ],
-      { duration: 300, easing: "cubic-bezier(.2,.7,.2,1)", fill: "forwards" }
-    );
-    /* A hidden tab pauses animations; the room must still open. */
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      window.clearTimeout(late);
-      onExpand();
-    };
-    const late = window.setTimeout(finish, 700);
-    grow.onfinish = finish;
-  };
+  /* Whether it came up under a room still landing: kept for the card's
+     life, so its entrance isn't retimed when the room lands. */
+  const [lateEntrance] = useState(arriving);
 
   const sub = ended
     ? "The discussion has ended"
@@ -102,14 +78,19 @@ export default function MiniCall({
         : "Listening";
 
   return (
-    <div ref={cardRef} className={`call-mini${opening ? " is-opening" : ""}`} role="region" aria-label="Call in progress">
+    <div
+      className={`call-mini${lateEntrance ? " is-arriving" : ""}${leaving ? " is-leaving" : ""}`}
+      role="region"
+      aria-label="Call in progress"
+      inert={leaving}
+    >
       {hlsSrc && !ended && (
         <div className="call-mini-video">
           <HlsBroadcastSurface src={hlsSrc} compact />
         </div>
       )}
       <div className="call-mini-row">
-        <button type="button" className="call-mini-main" onClick={open} title="Back to the room">
+        <button type="button" className="call-mini-main" onClick={onExpand} title="Back to the room">
           <span className="call-mini-live">
             <i className={ended ? "is-over" : ""} />
             {ended ? "Ended" : "Live"}
@@ -141,7 +122,7 @@ export default function MiniCall({
               <Icon name={micOn ? "mic" : "mic-off"} size={17} />
             </button>
           )}
-          <button type="button" className="call-mini-btn" onClick={open} title="Back to the room" aria-label="Back to the room">
+          <button type="button" className="call-mini-btn" onClick={onExpand} title="Back to the room" aria-label="Back to the room">
             <Icon name="chevron-up" size={18} />
           </button>
           <button

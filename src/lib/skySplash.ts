@@ -42,7 +42,10 @@
    carried sky ({ carry: true, only: true }): the same stars, at the
    angle they have reached, still turning — and, if there is nothing to
    carry and nothing live, it stays out of sight, so a past discussion
-   opened from a link never sees a sky.
+   opened from a link never sees a sky. A room opened in the app (one
+   you have just made) needs no carrying: window.__agoraSkyOver() brings
+   the same sky up over the page, and the room's screens, mounting in
+   the same document, simply continue it.
 
    The sky is the site's opening: the boot splash shows it on the
    first document of a browser session and hides itself at parse time on
@@ -132,6 +135,15 @@ window.__agoraSky = function (trails, heads, center, o) {
   S.live++;
   window.__agoraSkyLiveCount = (window.__agoraSkyLiveCount || 0) + 1;
   var elapsed0 = S.start == null ? 0 : now0 - S.start;
+  // Taking over the sky brought up over a page (window.__agoraSkyOver):
+  // once this screen has been on screen for a frame, that one steps
+  // aside, the same stars at the same angle underneath it.
+  if (handoff) {
+    var over = document.querySelector('.ld-enter[data-over]');
+    if (over && !over.contains(trails)) {
+      requestAnimationFrame(function () { requestAnimationFrame(function () { window.__agoraSkyOverEnd(over, false); }); });
+    }
+  }
 
   var stopped = false, raf = 0, markTimer = 0, counted = true;
   var retire = function () {
@@ -262,15 +274,9 @@ window.__agoraSkyTakeCarry = function () {
   return c;
 };
 
-/* Into a live room: the sky comes up over the page you are on — no mark,
-   no words, no bar, just the stars turning — and once it is on screen
-   the room loads and carries on with it (see the note at the top). */
-window.__agoraEnter = function (url) {
-  var go = function () {
-    if (window.__agoraSkyCarry) window.__agoraSkyCarry();
-    window.location.href = url;
-  };
-  if (!window.__agoraSky || document.querySelector('.ld-enter')) { go(); return; }
+/* The entry screen: a sky over everything on the page — no mark, no
+   words, no bar, just the stars turning. */
+window.__agoraEnterScreen = function () {
   var el = document.createElement('div');
   el.className = 'ld-screen ld-enter';
   el.setAttribute('role', 'status');
@@ -281,11 +287,47 @@ window.__agoraEnter = function (url) {
   el.appendChild(a);
   el.appendChild(b);
   document.body.appendChild(el);
-  window.__agoraSky(a, b, null);
+  return el;
+};
+
+/* Into a live room: the sky comes up over the page you are on, and once
+   it is on screen the room loads and carries on with it (see the note
+   at the top). */
+window.__agoraEnter = function (url) {
+  var go = function () {
+    if (window.__agoraSkyCarry) window.__agoraSkyCarry();
+    window.location.href = url;
+  };
+  if (!window.__agoraSky || document.querySelector('.ld-enter')) { go(); return; }
+  var el = window.__agoraEnterScreen();
+  window.__agoraSky(el.children[0], el.children[1], null);
   // Two frames: the first starts the sky's clock, the second is on screen.
   requestAnimationFrame(function () { requestAnimationFrame(go); });
   // Back to this page from the cache: nothing is being entered any more.
   window.addEventListener('pageshow', function (e) { if (e.persisted && el.isConnected) el.remove(); }, { once: true });
+};
+
+/* Into a room without leaving the page — a room you have just made, which
+   opens in the app: the same sky comes up over the page, and the room's
+   own screens pick it up as they mount (a hand-off in one document), at
+   which point this one steps aside (__agoraSky, above). If nothing has
+   taken it over in fifteen seconds, the room never came: it fades away. */
+window.__agoraSkyOver = function () {
+  if (!window.__agoraSky || document.querySelector('.ld-enter')) return;
+  var el = window.__agoraEnterScreen();
+  el.setAttribute('data-over', '');
+  el.__agoraStop = window.__agoraSky(el.children[0], el.children[1], null).stop;
+  el.__agoraTimer = setTimeout(function () { window.__agoraSkyOverEnd(el, true); }, 15000);
+};
+window.__agoraSkyOverEnd = function (el, fade) {
+  if (!el || !el.isConnected || el.__agoraEnding) return;
+  el.__agoraEnding = true;
+  clearTimeout(el.__agoraTimer);
+  var end = function () { if (el.__agoraStop) el.__agoraStop(); el.remove(); };
+  if (!fade) { end(); return; }
+  el.style.transition = 'opacity 0.3s ease';
+  el.style.opacity = '0';
+  setTimeout(end, 320);
 };
 
 /* The end of a session's sky: freeze it where it stands and hand the
@@ -388,6 +430,12 @@ declare global {
     __agoraLeave?: () => void;
     /** Into a live room through the sky, carried across the page load (see skySplash.ts). */
     __agoraEnter?: (url: string) => void;
+    /** The entry screen (two sky canvases), appended to the body. */
+    __agoraEnterScreen?: () => HTMLDivElement;
+    /** The entry sky over this page, for a room opened in the app; the room's own screens take it over. */
+    __agoraSkyOver?: () => void;
+    /** Retire a sky brought up by __agoraSkyOver: at once, or with a fade. */
+    __agoraSkyOverEnd?: (el: Element, fade: boolean) => void;
     /** Write the session's sky to sessionStorage for the next document. */
     __agoraSkyCarry?: () => void;
     /** Read and clear a carried sky, if one is fresh. */
