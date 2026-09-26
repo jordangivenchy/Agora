@@ -347,7 +347,7 @@ function buildTerraces(scene: THREE.Scene) {
    queue entry teleports, the hooded tunnel reads as built architecture on
    its own, and anything half-sunk at the mouth just clipped the floor.
    Circulation moved to the bowl's SIDES instead: a staircase climbs each
-   edge of the seating, straddling the terrace boundary. */
+   edge of the seating, alongside the terraces. */
 function buildSideStairs(scene: THREE.Scene) {
   /* Same stones as the terrace floors, alternating by row, so the stairs
      read as part of the bowl's masonry rather than a separate build. */
@@ -355,26 +355,58 @@ function buildSideStairs(scene: THREE.Scene) {
   const stoneB = new THREE.MeshStandardMaterial({ color: 0x5e554b, flatShading: true });
   const stepsPerRow = 3;
   const stepDepth = ROW_STEP / stepsPerRow;
-  const HALF_W = 0.75; // half the stair width
-  const GAP = 0.55; // breathing room to the outermost seats, matching seat rhythm
+  const WIDTH = 1.5; // the flight
+  /* Breathing room between the outermost seats and the stair. The front
+     rows' end chairs already reach a little past the terraces' ends, so
+     a stair hard against them would cut into those chairs. */
+  const GAP = 0.55;
+  /* How far a stone runs on under its neighbour — into the terrace's
+     end, under the stair, under the next row up — so no seam can open
+     into a crack of night. Every overlap hides inside taller stone or
+     lies flush with stone of the same colour. */
+  const TUCK = 0.03;
   for (const side of [1, -1]) {
-    for (let i = 0; i < ROWS * stepsPerRow; i++) {
-      const r = INNER_R + (i / stepsPerRow) * ROW_STEP + stepDepth / 2;
-      /* Fully OUTSIDE the terrace arc with an even seat-like gap: the
-         angular clearance shrinks with radius, so it's computed per step —
-         parallel to the bowl's side all the way up, never clipping. */
-      const off = (HALF_W + GAP) / r;
-      const a = side === 1 ? EDGE * DEG - off : (180 - EDGE) * DEG + off;
-      const row = Math.floor(i / stepsPerRow);
-      const h = BASE_H + row * STEP_H + (i % stepsPerRow) * (STEP_H / stepsPerRow);
-      const step = new THREE.Mesh(
-        new THREE.BoxGeometry(1.5, h, stepDepth + 0.05),
-        row % 2 === 0 ? stoneA : stoneB
-      );
-      step.position.set(r * Math.cos(a), h / 2, -r * Math.sin(a));
-      step.rotation.y = a - Math.PI / 2; // tread faces along the radial climb
-      step.receiveShadow = true;
-      scene.add(step);
+    /* A flight is laid along its edge line — the radial the terraces end
+       on — so it runs straight: one direction for every step, its inner
+       side parallel to the terraces' ends, its outer side one line.
+       Between the two, the breathing room is floor, not a gap: each
+       terrace carries on at its own level to the foot of the stair. */
+    const edge = (side === 1 ? EDGE : 180 - EDGE) * DEG;
+    /* A stone of this profile — along the edge line, and up — laid from
+       v0 to v1 away from the terraces. Local z points to smaller angles,
+       so the far flight is laid the other way. */
+    const lay = (profile: THREE.Shape, v0: number, v1: number, stone: THREE.Material) => {
+      const geo = new THREE.ExtrudeGeometry(profile, { depth: v1 - v0, bevelEnabled: false });
+      geo.translate(0, 0, side === 1 ? v0 : -v1);
+      const mesh = new THREE.Mesh(geo, stone);
+      mesh.rotation.y = edge; // local x runs up the edge line, out from the orchestra
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+    };
+    for (let row = 0; row < ROWS; row++) {
+      const u0 = INNER_R + row * ROW_STEP;
+      const u1 = u0 + ROW_STEP + (row < ROWS - 1 ? TUCK : 0);
+      const level = BASE_H + row * STEP_H;
+      const stone = row % 2 === 0 ? stoneA : stoneB;
+      // The terrace, carried on to the stair.
+      const floor = new THREE.Shape();
+      floor.moveTo(u0, 0);
+      floor.lineTo(u0, level);
+      floor.lineTo(u1, level);
+      floor.lineTo(u1, 0);
+      floor.closePath();
+      lay(floor, -TUCK, GAP + TUCK, stone);
+      // The row's three steps, as one stone.
+      const stair = new THREE.Shape();
+      stair.moveTo(u0, 0);
+      for (let k = 0; k < stepsPerRow; k++) {
+        const h = level + k * (STEP_H / stepsPerRow);
+        stair.lineTo(u0 + k * stepDepth, h);
+        stair.lineTo(k === stepsPerRow - 1 ? u1 : u0 + (k + 1) * stepDepth, h);
+      }
+      stair.lineTo(u1, 0);
+      stair.closePath();
+      lay(stair, GAP, GAP + WIDTH, stone);
     }
   }
 }
