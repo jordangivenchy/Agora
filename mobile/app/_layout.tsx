@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Stack } from "expo-router";
+import { DarkTheme, Stack, ThemeProvider, type Theme } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SessionProvider, useSession } from "../src/session";
 import { CallProvider } from "../src/callSession";
@@ -18,6 +18,27 @@ import { supabase } from "../src/supabase";
 import { colors } from "../src/theme";
 import { useAppFonts } from "../src/fonts";
 import * as ScreenOrientation from "expo-screen-orientation";
+import * as SystemUI from "expo-system-ui";
+
+/* Dark behind every screen. iOS 26 slides a page in and out with
+   rounded corners, which shows what lies behind the pages — and the
+   native stack paints that in the navigation theme's background, which,
+   with no theme given, was React Navigation's light grey. It showed at
+   the corners, and beside a page's Back button as it slid in, and the
+   glass button, which takes its look from what is behind it, flashed
+   white. The theme's background is now the pages' own colour, so the
+   corners never show at all. */
+const NAV_THEME: Theme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: colors.bg, card: colors.bg, text: colors.text, border: colors.border },
+};
+
+/* And black under all of it: app.json's backgroundColor for the window
+   and the root view, which only took effect once expo-system-ui was in
+   the app (its Info.plist key, RCTRootViewBackgroundColor). The module
+   starts when first used, so it is used here, in the root file, as its
+   docs say. */
+SystemUI.setBackgroundColorAsync("#000000").catch(() => undefined);
 
 /* The opening: the sky until the fonts and the session are in. Reduce
    motion applies from storage at once, then from the account. */
@@ -56,6 +77,7 @@ export default function RootLayout() {
                 <StatusBar style="light" />
                 {fontsReady && (
                   <View style={{ flex: 1 }} onLayout={() => setScreenIn(true)}>
+                  <ThemeProvider value={NAV_THEME}>
                   <Stack
                     screenOptions={{
                       headerStyle: { backgroundColor: colors.bg },
@@ -93,6 +115,7 @@ export default function RootLayout() {
                     <Stack.Screen name="posts/[id]" options={{ title: "Thread", headerBackTitle: "Back" }} />
                     <Stack.Screen name="dev/stage" options={{ title: "Stage (design)" }} />
                   </Stack>
+                  </ThemeProvider>
                   </View>
                 )}
                 <ToastHost />
