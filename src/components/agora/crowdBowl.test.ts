@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ROW_MAX_DENSITY, densitiesFor, fillOrder, generateSeats } from "./AgoraScene3D";
+import { MIN_SEAT_SCALE, fillOrder, generateSeats, scaleFor } from "./AgoraScene3D";
 
 /* The bowl's stone never changes; how many sit on it does. */
 describe("the bowl's seats", () => {
@@ -8,46 +8,63 @@ describe("the bowl's seats", () => {
   it("holds about two hundred and fifty at rest, more at the back", () => {
     expect(base.length).toBeGreaterThan(240);
     expect(base.length).toBeLessThan(260);
-    const perRow = ROW_MAX_DENSITY.map((_, r) => base.filter((s) => s.row === r).length);
+    const perRow = Array.from({ length: 8 }, (_, r) => base.filter((s) => s.row === r).length);
     for (let r = 1; r < perRow.length; r++) expect(perRow[r]).toBeGreaterThan(perRow[r - 1]);
     expect(base.every((s) => s.scale === 1)).toBe(true);
   });
 
-  it("thickens from the back, the whole bowl to two before any row to four", () => {
-    const d = densitiesFor(base.length + 1);
-    expect(d[d.length - 1]).toBe(2);
-    expect(d.slice(0, -1).every((x) => x === 1)).toBe(true);
-    /* The front two rows never thicken, so "everything at two" is the
-       other six rows doubled — 457 seats before the last of them, 482
-       after. */
-    const d2 = densitiesFor(470);
-    expect(Math.max(...d2)).toBe(2);
-    expect(d2.slice(2).every((x) => x === 2)).toBe(true);
-    expect(d2[0]).toBe(1);
-    expect(d2[1]).toBe(1);
-    const d4 = densitiesFor(base.length * 3);
-    expect(d4.includes(4)).toBe(true);
-    expect(d4[0]).toBe(1);
-    expect(d4[1]).toBe(1);
+  it("stays full size until the bowl is full, then tightens — all rows alike", () => {
+    expect(scaleFor(1)).toBe(1);
+    expect(scaleFor(base.length)).toBe(1);
+    const s1 = scaleFor(base.length + 1);
+    expect(s1).toBeLessThan(1);
+    expect(s1).toBeGreaterThan(0.95);
+    const seats = generateSeats(s1);
+    expect(seats.length).toBeGreaterThanOrEqual(base.length + 1);
+    expect(new Set(seats.map((s) => s.scale)).size).toBe(1);
   });
 
-  it("never exceeds each row's most, and stops there", () => {
-    const d = densitiesFor(100000);
-    expect(d).toEqual(ROW_MAX_DENSITY);
-    const seats = generateSeats(d);
-    expect(seats.length).toBeGreaterThan(base.length * 3);
-    expect(seats.length).toBeLessThan(base.length * 4);
+  it("every arrival draws the bowl a hair closer — no steps", () => {
+    let last = 1;
+    for (let count = base.length; count <= base.length * 4; count += 7) {
+      const s = scaleFor(count);
+      expect(s).toBeLessThanOrEqual(last);
+      expect(last - s).toBeLessThan(0.05);
+      last = s;
+    }
   });
 
-  it("a thickened row's chairs are smaller and there are more of them", () => {
-    const d = ROW_MAX_DENSITY.map(() => 1);
-    d[7] = 2;
-    const seats = generateSeats(d);
-    const back = seats.filter((s) => s.row === 7);
-    const baseBack = base.filter((s) => s.row === 7);
-    expect(back.length).toBeGreaterThan(baseBack.length * 1.8);
-    expect(back.every((s) => s.scale === 0.5)).toBe(true);
-    expect(seats.filter((s) => s.row === 0).length).toBe(base.filter((s) => s.row === 0).length);
+  it("seats everyone it says it can, down to a quarter, then stops", () => {
+    for (const count of [300, 500, 800, 1000]) {
+      const s = scaleFor(count);
+      expect(generateSeats(s).length).toBeGreaterThanOrEqual(count);
+    }
+    expect(scaleFor(100000)).toBe(MIN_SEAT_SCALE);
+    const most = generateSeats(MIN_SEAT_SCALE).length;
+    expect(most).toBeGreaterThan(base.length * 3.5);
+    expect(most).toBeLessThan(base.length * 4.5);
+  });
+
+  it("stays symmetrical at every size: each row mirrors about the centre, evenly spaced", () => {
+    for (const scale of [1, 0.9, 0.61, 0.33, 0.25]) {
+      const seats = generateSeats(scale);
+      for (let row = 0; row < 8; row++) {
+        const angles = seats.filter((s) => s.row === row).map((s) => s.angle).sort((a, b) => a - b);
+        // Mirror: for every chair at angle a there is one at π − a.
+        for (const a of angles) {
+          const mirror = Math.PI - a;
+          expect(Math.min(...angles.map((b) => Math.abs(b - mirror)))).toBeLessThan(1e-6);
+        }
+        // Even: the front rows are two blocks split by the aisle, so one
+        // side's chairs are one block — every gap in it the same, however
+        // many chairs it holds.
+        if (row < 2) {
+          const side = angles.filter((a) => a < Math.PI / 2);
+          const gaps = side.slice(1).map((a, i) => a - side[i]);
+          for (const g of gaps) expect(Math.abs(g - gaps[0])).toBeLessThan(1e-6);
+        }
+      }
+    }
   });
 
   it("fills front and centre first, and the same way every time", () => {
