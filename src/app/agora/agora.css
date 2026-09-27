@@ -4283,9 +4283,14 @@ html.agora-covered { overflow: hidden; }
    them, and their buttons never break a label: yellow for the one thing
    to do, the toolbar's red for what can't be undone, solid for the way
    out. And one entrance: a short rise and fade from where it opens.
-   Centring rides the `translate` property, not `transform`, so an
-   entrance can never knock a pop-up off centre (the old prompts started
-   half their width to the right and snapped back as they landed). */
+   An entrance must never knock a pop-up off centre (the old prompts
+   started half their width to the right and snapped back as they
+   landed): a menu centred over its button carries the centring in every
+   frame of its entrance, the prompts sit in a column that centres them
+   (.ag-notices), and the ended card centres with its margins. Not the
+   `translate` property: the CSS build folds `transform: none` and
+   `translate` in one rule into a single `transform`, which the entrance
+   then overrides — exactly the jump this was meant to end. */
 @keyframes agPopRise {
   from { opacity: 0; transform: translateY(6px) scale(0.98); }
   to { opacity: 1; transform: none; }
@@ -4294,26 +4299,27 @@ html.agora-covered { overflow: hidden; }
   from { opacity: 0; transform: translateY(-6px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
-.ag-more-menu,
-.ag-react-picker,
+@keyframes agPopRiseCentred {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
 .ag-host-panel,
 .ag-invite,
 .ag-media-error,
 .ag-queue-pill {
+  transform-origin: 50% 100%;
   animation: agPopRise 0.16s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
+/* Centred over their buttons (left: 50%). */
 .ag-more-menu,
-.ag-react-picker,
-.ag-invite,
-.ag-media-error,
-.ag-queue-pill {
-  transform: none;
-  translate: -50% 0;
+.ag-react-picker {
+  transform: translateX(-50%);
   transform-origin: 50% 100%;
+  animation: agPopRiseCentred 0.16s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 /* The room's options hang from the top bar, to the right. */
 .ag-more-menu--down {
-  translate: none;
+  transform: none;
   transform-origin: 100% 0;
   animation-name: agPopDrop;
 }
@@ -4641,11 +4647,11 @@ html.agora-covered { overflow: hidden; }
    card had been showing as bare text.) */
 .ag-ended-card {
   position: fixed;
-  left: 50%;
-  top: 50%;
-  translate: -50% -50%;
+  inset: 0;
   z-index: 95;
   width: min(420px, calc(100% - 32px));
+  height: fit-content;
+  margin: auto;
   padding: 24px 24px 20px;
   border-radius: 16px;
   background: var(--ag-solid);
@@ -4686,7 +4692,7 @@ html.agora-covered { overflow: hidden; }
   position: absolute;
   left: 50%;
   bottom: 84px;
-  translate: -50% 0;
+  transform: translateX(-50%);
   z-index: 30;
   display: flex;
   flex-direction: column-reverse;
@@ -4700,18 +4706,20 @@ html.agora-covered { overflow: hidden; }
   left: auto;
   right: auto;
   bottom: auto;
-  translate: none;
+  transform: none;
   max-width: 100%;
   pointer-events: auto;
 }
+/* While the room folds into its card or out of it, a prompt that opens
+   (a host's Leave on the card) waits at its first frame, and comes in
+   where it belongs once the room has landed — not riding in from the
+   corner. */
+.ag-notices.is-folding > * { animation-play-state: paused; }
 
 @media (max-width: 639px) {
   /* Full width from the row's top edge: nothing to centre. */
-  .ag-invite,
-  .ag-media-error,
   .ag-controls .ag-more-menu,
-  .ag-controls .ag-react-picker,
-  .ag-queue-pill { translate: none; }
+  .ag-controls .ag-react-picker { animation-name: agPopRise; }
   .ag-controls .ag-more-menu { width: auto; }
   /* Stacked: the words, the note, then the buttons sharing the width. */
   .ag-invite {
@@ -4731,7 +4739,7 @@ html.agora-covered { overflow: hidden; }
     left: 10px;
     right: 10px;
     bottom: var(--ag-band-b);
-    translate: none;
+    transform: none;
     width: auto;
     align-items: stretch;
   }

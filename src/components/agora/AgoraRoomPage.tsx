@@ -2300,7 +2300,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               a community note, an invitation to the stage, the browser's
               mute), a mic or camera failure, and your place in the queue
               on top — stacked, so none of them can cover another. ── */}
-        <div className="ag-notices">
+        <div className={`ag-notices${phase === "shrinking" || phase === "growing" ? " is-folding" : ""}`}>
           {/* ── Host leave prompt: the stage lives and dies with its host —
                 leaving always closes the room, so this is just a confirm. ── */}
           {leavePrompt && room?.status !== "ended" && (
