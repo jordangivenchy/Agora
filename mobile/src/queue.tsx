@@ -172,12 +172,17 @@ export function QueueDock({ bottom }: { bottom: number }) {
   const n = q.entries.length;
   const oldest = n ? Math.min(...q.entries.map((e) => e.since)) : 0;
   if (!q.open) {
+    /* What you're waiting in — the question's field (and how many more,
+       past one) — in a small pill that keeps out of the page's way; the
+       panel has the clock. */
+    const first = n ? topicOf(q.entries[0].topicKey) : null;
+    const what = `${first?.label ?? "a question"}${n > 1 ? ` +${n - 1}` : ""}`;
     return (
-      <Pressable onPress={expandQueue} style={{ position: "absolute", right: 12, bottom: bottom + 10 }}>
-        <Glass fallback="#111114" fallbackStyle={{ borderWidth: 1, borderColor: "#2e2e38" }} interactive style={{ flexDirection: "row", alignItems: "center", gap: 8, height: 36, paddingHorizontal: 14, borderRadius: 999, overflow: "hidden" }}>
+      <Pressable onPress={expandQueue} accessibilityLabel={`In queue · ${what} · waiting ${mmss(now - oldest)} — open the queue`} style={{ position: "absolute", right: 12, bottom: bottom + 10 }}>
+        <Glass fallback="#111114" fallbackStyle={{ borderWidth: 1, borderColor: "#2e2e38" }} interactive style={{ flexDirection: "row", alignItems: "center", gap: 7, height: 32, paddingHorizontal: 12, borderRadius: 999, overflow: "hidden" }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold }} />
-        <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>In queue · {n} question{n === 1 ? "" : "s"} · {mmss(now - oldest)}</Text>
-        <Ionicons name="chevron-up" size={14} color={colors.muted} />
+        <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12 }}>In queue · {what}</Text>
+        <Ionicons name="chevron-up" size={13} color={colors.muted} />
         </Glass>
       </Pressable>
     );

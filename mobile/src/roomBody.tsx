@@ -67,6 +67,10 @@ export interface RoomBodyProps {
 
 const rank = (r: StageRole) => (r === "host" ? 0 : r === "cohost" ? 1 : 2);
 
+/* The scene's sky at the top of the frame (sceneTokens SKY.zenith, the
+   amphitheater's own backdrop): the top bar sits on the same night. */
+const SKY = "#05070f";
+
 export function RoomBody(p: RoomBodyProps) {
   const { room, seats, meId, myRole, call } = p;
   const insets = useSafeAreaInsets();
@@ -205,8 +209,10 @@ export function RoomBody(p: RoomBodyProps) {
   const hlsAudience = !!call.hls;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* ── Top bar ── */}
+    <View style={{ flex: 1, backgroundColor: SKY }}>
+      {/* ── Top bar: on the scene's own night (its sky's colour at the top),
+          not a black strip laid over it — the buttons one family of pills,
+          the title first and the room's state in one line under it. ── */}
       <View style={{ paddingTop: insets.top + 4, paddingHorizontal: 10 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} hitSlop={8} accessibilityLabel="Back" style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center", marginLeft: -6 }}>
@@ -220,32 +226,31 @@ export function RoomBody(p: RoomBodyProps) {
             </Pressable>
           )}
           {!isHostViewer && (
-            <Pressable onPress={p.onToggleFollow} disabled={p.followBusy} style={{ height: 30, paddingHorizontal: 10, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: p.following ? "#141418" : colors.yellow, borderWidth: 1, borderColor: p.following ? "#2a2a33" : colors.yellow, opacity: p.followBusy ? 0.6 : 1 }}>
+            <Pressable onPress={p.onToggleFollow} disabled={p.followBusy} style={{ height: 30, paddingHorizontal: 12, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: p.following ? "#0e0e11" : colors.yellow, borderWidth: 1, borderColor: p.following ? "#2a2a33" : colors.yellow, opacity: p.followBusy ? 0.6 : 1 }}>
               <Text style={{ color: p.following ? colors.text : colors.ink, fontFamily: fonts.bold, fontSize: 11.5 }}>{p.following ? "Following ✓" : "Follow"}</Text>
             </Pressable>
           )}
-          <Pressable onPress={() => setFrameOpen(true)} accessibilityLabel="About this room" style={{ height: 30, paddingHorizontal: 9, borderRadius: 8, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }}>
+          <Pressable onPress={() => setFrameOpen(true)} accessibilityLabel="About this room" style={{ height: 30, paddingHorizontal: 11, borderRadius: 999, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }}>
             <Ionicons name="information-circle-outline" size={14} color={colors.text} />
             <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 11.5 }}>About</Text>
             {frameNews && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.yellow }} />}
           </Pressable>
-          <Pressable onPress={() => setTopMenu(true)} accessibilityLabel="Room options" style={{ width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }}>
+          <Pressable onPress={() => setTopMenu(true)} accessibilityLabel="Room options" style={{ width: 30, height: 30, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33" }}>
             <Ionicons name="ellipsis-horizontal" size={16} color={colors.text} />
           </Pressable>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: room.status === "live" ? colors.live : colors.faint }} />
-            <Text style={{ color: room.status === "live" ? colors.live : colors.muted, fontFamily: fonts.bold, fontSize: 9.5, letterSpacing: 1 }}>{room.status === "live" ? "LIVE DISCUSSION" : room.status === "created" ? "STARTING SOON" : "DISCUSSION"}</Text>
-          </View>
-          <Text numberOfLines={1} style={{ flex: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 10.5 }}>
-            <Ionicons name="time-outline" size={10} color={colors.muted} /> {elapsed}  <Ionicons name="people-outline" size={10} color={colors.muted} /> {audienceCount} in audience
-            {topic ? `  · ${topic.label}` : ""}{p.communityName ? `  · ${p.communityName}` : ""}
-            {call.live && !call.connected ? (call.reconnecting ? "  · Reconnecting…" : "  · Connecting…") : ""}
+        <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15, lineHeight: 19, marginTop: 10 }}>{room.motion}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: room.status === "live" ? colors.live : colors.faint }} />
+          <Text numberOfLines={1} style={{ flex: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>
+            <Text style={{ color: room.status === "live" ? colors.live : colors.muted, fontFamily: fonts.bold, letterSpacing: 0.6 }}>
+              {room.status === "live" ? "LIVE" : room.status === "created" ? "STARTING SOON" : "DISCUSSION"}
+            </Text>
+            {` · ${elapsed} · ${audienceCount} in audience`}
+            {topic ? ` · ${topic.label}` : ""}{p.communityName ? ` · ${p.communityName}` : ""}
+            {call.live && !call.connected ? (call.reconnecting ? " · Reconnecting…" : " · Connecting…") : ""}
           </Text>
-
         </View>
-        <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 14, lineHeight: 18, marginTop: 3 }}>{room.motion}</Text>
       </View>
 
       {/* ── The room: the amphitheater and its two vantages, or a duel's two pictures ── */}
