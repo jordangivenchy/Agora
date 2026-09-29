@@ -8,9 +8,11 @@
   font-family: "DM Sans", "Segoe UI", sans-serif;
 }
 .dr-wrap {
-  max-width: 1600px;
+  max-width: 1800px;
   margin: 0 auto;
-  padding: 8px 20px 64px;
+  /* The top: the gap under the site's bar (globals.css). The sides: the
+     pages' shared 24px on the right, where the scroll edge's corner sits. */
+  padding: var(--page-gap-top, 12px) 24px 64px 20px;
 }
 .dr-topbar {
   display: flex;
@@ -76,13 +78,21 @@
 }
 .dr-btn.primary:hover { background: #3c8ceb; }
 
-.dr-head { margin-bottom: 14px; }
-/* Like and Share, under the title where the eye already is. */
-.dr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+/* Under the video, as on YouTube: the title, its meta line, then one row
+   — the people on the left, Like / Share / Transcript on the right. */
+.dr-head { min-width: 0; }
+.dr-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+.dr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .dr-motion {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-family: "Space Grotesk", "DM Sans", sans-serif;
-  font-size: clamp(22px, 3vw, 32px);
+  font-size: clamp(19px, 1.7vw, 24px);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.01em;
@@ -110,7 +120,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
 }
 .dr-person {
   display: inline-flex;
@@ -134,25 +143,16 @@
 .dr-person-role.pro { color: #4ade80; }
 .dr-person-role.con { color: #f87171; }
 
-.dr-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 18px;
-  /* Stretch so the transcript panel can match the player's height. */
-  align-items: stretch;
-}
-/* Two-column layout: the transcript panel is exactly as tall as the
-   player column. The scrollable list absolutely fills a flex body, so
-   it contributes no intrinsic height — the row is sized by the player
-   alone and the panel stretches to match. (A height:0/min-height:100%
-   variant collapsed the panel entirely in auto-sized rows.) */
+/* The transcript panel in the side column has a set height; its list
+   absolutely fills a flex body, so it scrolls inside rather than growing
+   the panel. (A height:0/min-height:100% variant collapsed the panel
+   entirely in auto-sized rows.) */
 .dr-panel-body {
   flex: 1;
   min-height: 0;
   position: relative;
 }
-@media (min-width: 961px) {
-  .dr-panel { align-self: stretch; }
+@media (min-width: 1000px) {
   .dr-panel-body .dr-transcript {
     position: absolute;
     inset: 0;
@@ -165,11 +165,6 @@
     justify-content: center;
   }
 }
-@media (max-width: 960px) {
-  .dr-grid { grid-template-columns: minmax(0, 1fr); }
-}
-/* Transcript closed: the video takes the row. */
-.dr-grid--solo { grid-template-columns: minmax(0, 1fr); }
 .dr-panel { position: relative; }
 .dr-panel-close {
   position: absolute;
@@ -191,7 +186,7 @@
 
 .dr-player {
   position: relative;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
   background: #000;
   border: 0.5px solid #2c2c34;
@@ -406,14 +401,9 @@
   animation: dr-shimmer 1.3s ease-in-out infinite;
   border-radius: 8px;
 }
-.dr-skel-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-.dr-skel-back { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; }
-.dr-skel-tag { width: 74px; height: 16px; }
-.dr-skel-share { width: 86px; height: 34px; border-radius: 999px; }
-/* Heights tuned so the head block ≈ the real dr-head (~122px) for a
-   single-line title, keeping the player from jumping when content loads.
-   (Long, wrapping titles still add a line — unavoidable without the text.) */
-.dr-skel-head { margin-bottom: 20px; }
+/* Heights tuned so the head block ≈ the real dr-head for a single-line
+   title, keeping what's under it from jumping when content loads. (Long,
+   wrapping titles still add a line — unavoidable without the text.) */
 .dr-skel-motion { height: 38px; width: min(65%, 460px); margin-bottom: 12px; }
 .dr-skel-metaline { height: 22px; width: min(45%, 300px); margin-bottom: 14px; }
 .dr-skel-people { display: flex; gap: 8px; }
@@ -425,7 +415,7 @@
   background: #000;
 }
 .dr-skel-panel { border-radius: 14px; min-height: 240px; }
-@media (max-width: 960px) { .dr-skel-panel { display: none; } }
+@media (max-width: 999px) { .dr-skel-panel { display: none; } }
 @keyframes dr-shimmer { to { background-position: -200% 0; } }
 
 /* ── "More replays" recommendation rail ── */
@@ -478,3 +468,131 @@
 /* The like, beside Share: quiet until it is yours, then yellow. */
 .dr-like.is-on { border-color: #ffb700; color: #ffb700; }
 .dr-like:disabled { opacity: 0.6; }
+
+/* ── The watch page, as on YouTube ────────────────────────────────────
+   The video first, sized so the title, its buttons and the start of the
+   discussion are on screen with it — not a window the page has to be
+   scrolled past to reach the player's own controls. The transcript and
+   what to watch next sit in a column beside it. Theater (the player's
+   wide-rectangle button, or t) lays the video across the whole width,
+   the title and everything else just below; full screen is still there
+   for the biggest picture. The player keeps its place in the page in
+   every layout (only its grid area changes), so switching never
+   restarts it. */
+.dr-root {
+  /* Under the video: the title, its meta line and its row. */
+  --dr-under: 176px;
+  /* Above it: the site's bar and the gap under it. */
+  --dr-top: calc(var(--nav-height, 60px) + var(--page-gap-top, 12px));
+  --dr-player-max-h: max(280px, calc(100vh - var(--dr-top) - var(--dr-under)));
+  --dr-theater-max-h: max(320px, calc(100vh - var(--dr-top) - 132px));
+  /* The column beside the video gives way on smaller windows. */
+  --dr-side-w: clamp(300px, 26vw, 400px);
+}
+.dr-watch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "player" "head" "transcript" "disc" "more";
+  gap: 16px;
+}
+.dr-stage { grid-area: player; min-width: 0; }
+.dr-head { grid-area: head; }
+.dr-discussion { grid-area: disc; margin-top: 0; }
+/* One column: the transcript under the title, what's next at the end. */
+.dr-side { display: contents; }
+.dr-side .dr-panel { grid-area: transcript; }
+.dr-side .dr-more { grid-area: more; margin-top: 0; }
+.dr-side .dr-skel-panel { grid-area: transcript; }
+/* No recording: the note needs no 16:9 picture's worth of room. */
+.dr-player:has(.dr-player-empty) { aspect-ratio: auto; min-height: 200px; }
+
+@media (min-width: 1000px) {
+  /* The video's column is as wide as the height it may take allows, so
+     the column and the player are one width; the side column hugs it. */
+  .dr-watch {
+    grid-template-columns: minmax(0, calc(var(--dr-player-max-h) * 16 / 9)) var(--dr-side-w);
+    /* The side column's height goes to the last row, never between the
+       video and its title. */
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "player side" "head side" "disc side";
+    align-items: start;
+    column-gap: 24px;
+  }
+  .dr-side {
+    grid-area: side;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .dr-side .dr-panel { height: min(var(--dr-player-max-h), 640px); }
+  .dr-watch--solo {
+    grid-template-columns: minmax(0, calc(var(--dr-player-max-h) * 16 / 9));
+    grid-template-areas: "player" "head" "disc";
+  }
+
+  /* Theater: the video across the page, on a black band edge to edge of
+     the column; the rest in the two columns under it. */
+  .is-theater .dr-watch {
+    grid-template-columns: minmax(0, 1fr) var(--dr-side-w);
+    grid-template-areas: "player player" "head side" "disc side";
+  }
+  .is-theater .dr-watch--solo {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "player" "head" "disc";
+  }
+  .is-theater .dr-stage {
+    display: flex;
+    justify-content: center;
+    margin: 0 -24px 0 -20px;
+    background: #000;
+  }
+  .is-theater .dr-stage > .dr-player,
+  .is-theater .dr-stage > .dr-skel-player {
+    width: min(100%, calc(var(--dr-theater-max-h) * 16 / 9));
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* What to watch next, beside the video: big cards, the picture across
+     the column and the title under it. */
+  .dr-side .dr-more .dr-section-title { font-size: 15px; }
+  .dr-side .dr-more-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 12px;
+  }
+  .dr-side .dr-more-thumb { border-radius: 12px; }
+  .dr-side .dr-more-motion { margin-top: 9px; font-size: 14px; font-weight: 600; line-height: 1.35; }
+  .dr-side .dr-more-meta { margin-top: 3px; font-size: 12px; }
+}
+
+/* What to watch next floats on the page, with no box of its own around
+   it — just its heading and the cards. */
+.dr-section.dr-more {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+@media (max-width: 639px) {
+  html .dr-section.dr-more { padding: 0 !important; border-radius: 0 !important; }
+}
+
+/* The theater button only where there is a page to lay out around it. */
+@media (max-width: 999px) {
+  .rp-theater { display: none !important; }
+}
+
+/* Phones: the video edge to edge under the bar, like every page head. */
+@media (max-width: 639px) {
+  .dr-stage { margin: 0 -12px; }
+  .dr-stage > .dr-player,
+  .dr-stage > .dr-skel-player {
+    border: 0;
+    border-radius: 0;
+  }
+  .dr-byline { gap: 10px; }
+  .dr-actions { margin-left: 0; }
+}

@@ -1778,13 +1778,19 @@ export default function AgoraScene3D({
          measures the main column, which is what the shot is composed for. */
       const mainW = host.parentElement?.clientWidth || w;
       if (w === sized.w && h === sized.h && mainW === sized.mainW) return;
+      /* Only a new canvas size resizes the renderer. Sizing it throws its
+         picture away and allocates a fresh one, even at the same size, and
+         the chat rail sliding in or out changes the main column on every
+         frame of the slide: the shot re-frames (below) each frame, the
+         canvas must not be rebuilt each frame. */
+      const canvasSized = w !== sized.w || h !== sized.h;
       sized = { w, h, mainW };
       const railW = Math.max(0, w - mainW);
       /* Widening by the rail on the far side keeps world x=0 at the main
          column's centre once the offset window is applied. */
       const virtualW = w + railW;
 
-      renderer.setSize(w, h, false);
+      if (canvasSized) renderer.setSize(w, h, false);
       camera.aspect = virtualW / h;
 
       /* Framing is solved against the main column, not the canvas — the

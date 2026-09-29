@@ -580,14 +580,15 @@ export default function MessagesPage({
   );
 
   return (
-    /* Top and bottom edges sit level with the sidebar rail (nav + 6px,
-       and 12px off the bottom of the viewport — .sidebar in mvp-home.css). */
-    <main className="messages-beside-sidebar" style={{ paddingTop: 6, paddingBottom: 12 }}>
+    /* Top and bottom edges sit level with the sidebar rail (the gap under
+       the bar, and 12px off the bottom of the viewport — .sidebar in
+       mvp-home.css). */
+    <main className="messages-beside-sidebar" style={{ paddingTop: "var(--page-gap-top, 12px)", paddingBottom: 12 }}>
       <div
         className="msgs-shell"
         style={{
           display: "flex",
-          height: "calc(100vh - var(--nav-height, 60px) - 18px)",
+          height: "calc(100vh - var(--nav-height, 60px) - var(--page-gap-top, 12px) - 12px)",
           minHeight: 420,
           borderRadius: 18,
           /* Same starfield glass as the dock/friends panel. */

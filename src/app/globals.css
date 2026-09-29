@@ -26,6 +26,10 @@
   --border: rgba(255,255,255,0.08);
   --border-hover: rgba(255,255,255,0.16);
   --nav-height: 60px;
+  /* The gap under the bar that nothing enters: every page starts at its
+     far edge, and whatever scrolls up disappears there (.site-chrome
+     .nav::after) — never against the search bar. 8px on phones. */
+  --page-gap-top: 12px;
   --sidebar-width: 230px;
 
   /* Glass system */
@@ -1742,15 +1746,72 @@ html.reduce-motion .nav-sparkle {
   border-bottom: none;
   backdrop-filter: none;
 }
-/* The gap band under the bar (mvp-home.css, .nav::after) is 12px on the
-   old home; here it is 4px. The search pill ends 3px past the bar's box,
-   so without a band anything scrolling under the bar shows beneath the
-   pill's bottom edge (the profile banner did). 4px covers that edge and
-   stops short of the sidebar and the Messages shell, which start 6px in
-   and once lost their rounded tops to the full band. */
+/* The gap under the bar (mvp-home.css, .nav::after), painted in the
+   bar's black: a page at rest starts at its far edge, and a page
+   scrolled up disappears there, so nothing ever comes up against the
+   search pill (which ends 3px past the bar's box). It was 4px here —
+   scrolled pages ran right up to the pill's edge — so the sidebar and
+   the Messages panel could start 6px in; they start at the gap's edge
+   now, with everything else. */
 .site-chrome .nav::after {
-  height: 4px;
+  height: var(--page-gap-top, 12px);
 }
+/* The scroll edge has corners, like the sidebar beside it: where the
+   content column starts (the rail, then 36px: the pages' shared gutter)
+   and where it ends (24px from the right), a quarter-round of the bar's
+   black just under the gap, so what scrolls up passes under a rounded
+   edge instead of a flat cut beside the sidebar's rounded top. At rest
+   nothing shows — every page's corners there are at least this round.
+   Desktop only; phones have no rail and pages run edge to edge. */
+@media (min-width: 640px) {
+  .site-chrome .nav::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + var(--page-gap-top, 12px));
+    height: 16px;
+    background:
+      radial-gradient(circle at 100% 100%, rgba(0, 0, 0, 0) 15.5px, #000 16px) left calc(var(--sidebar-width, 64px) + 36px) top 0 / 16px 16px no-repeat,
+      radial-gradient(circle at 0 100%, rgba(0, 0, 0, 0) 15.5px, #000 16px) right 24px top 0 / 16px 16px no-repeat;
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+/* The rail's width isn't inherited (a registered property), so the corner
+   takes it the way the pages do — and slides with them as the rail opens. */
+:root:has(#sidebar) .site-chrome .nav::before {
+  --sidebar-width: 64px;
+  transition: --sidebar-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+:root:has(#sidebar:hover) .site-chrome .nav::before,
+:root:has(#sidebar :focus-visible) .site-chrome .nav::before,
+:root:has(#sidebar.friends-overlay-open) .site-chrome .nav::before { --sidebar-width: 240px; }
+:root:has(#sidebar:hover) .site-chrome .nav::before { transition-delay: 140ms; }
+
+/* The tabs that scroll in their own box (Feed, Trending, Communities,
+   News): the box starts on the same line with its content right at its
+   top, so what scrolls up disappears exactly where the page begins. */
+.site-chrome .shell-page { top: calc(var(--nav-height, 60px) + var(--page-gap-top, 12px)) !important; }
+.site-chrome .shell-page-inner { padding-top: 0 !important; }
+
+/* The navbar's Create: a plain button in the bar's language — solid, a
+   hairline, a shade lighter on hover. Its bevel is gone (the stacked
+   inner highlights and the dark ring drawn around it), with the blue
+   glow that swept up it and the shimmer in its letters. */
+.nav-search .create-btn {
+  border: 1px solid #2a2a33;
+  background: #141418;
+  color: #f5f5f0;
+  box-shadow: none;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.nav-search .create-btn::before,
+.nav-search .create-btn::after { content: none; }
+.nav-search .create-btn .create-label span { color: inherit; text-shadow: none; animation: none; }
+.nav-search .create-btn:hover { background: #1b1b21; border-color: #4a4a56; }
+.nav-search .create-btn:active { background: #202027; border-color: #4a4a56; }
 
 /* Replay route: shift the replay content out from under the homepage
    glass sidebar. Same --sidebar-width tracking as the profile route;
@@ -2527,6 +2588,7 @@ html.reduce-motion .nav-sparkle {
 .qd { width: 360px; max-width: calc(100vw - 40px); padding: 14px 16px 14px; border-radius: 16px; background: #0b0b0d; border: 1px solid #23232b; box-shadow: 0 18px 48px rgba(0,0,0,0.6); color: #f5f5f0; }
 .qd-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 12px; border-radius: 999px; background: #0b0b0d; border: 1px solid #2b2b34; color: #f5f5f0; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 12px 32px rgba(0,0,0,0.55); }
 .qd-pill:hover { border-color: #3a3a45; }
+.qd-pill-time { margin-left: -4px; font-variant-numeric: tabular-nums; }
 .qd-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ffb700; animation: qd-pulse 1.6s ease-in-out infinite; }
 @keyframes qd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 .qd-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -2580,6 +2642,10 @@ html.reduce-motion .nav-sparkle {
 @media (max-width: 639px) {
   .qd, .qd-pill { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom)); }
   .qd { left: 12px; width: auto; max-width: none; }
+  /* Waiting, on a phone: a small chip — the dot and what you're in line
+     for — so the page under it stays usable. The panel has the clock. */
+  .qd-pill { height: 32px; gap: 7px; padding: 0 11px; font-size: 12.5px; }
+  .qd-pill-time { display: none; }
 }
 
 /* ═══ The phone comment composer (CommentSheet.tsx): a dock above the
@@ -2691,9 +2757,10 @@ html.reduce-motion .nav-sparkle {
      like the sheets. Inbox → thread slides in from the right, back slides
      the inbox in from the left; with a thread open the tab bar tucks
      away and the thread takes the whole height (html.msgs-thread-open). */
-  .site-chrome main.messages-beside-sidebar { padding: 0 !important; }
+  :root { --page-gap-top: 8px; }
+  .site-chrome main.messages-beside-sidebar { padding: var(--page-gap-top, 8px) 0 0 !important; }
   .messages-beside-sidebar > .msgs-shell {
-    height: calc(100dvh - var(--nav-height, 60px) - 58px - env(safe-area-inset-bottom)) !important;
+    height: calc(100dvh - var(--nav-height, 60px) - var(--page-gap-top, 8px) - 58px - env(safe-area-inset-bottom)) !important;
     min-height: 0 !important;
     border-radius: 0 !important;
     border: none !important;
@@ -2708,7 +2775,7 @@ html.reduce-motion .nav-sparkle {
      itself is locked while a thread is open. */
   .msgs-thread-open .messages-beside-sidebar > .msgs-shell {
     position: fixed;
-    top: var(--nav-height, 60px);
+    top: calc(var(--nav-height, 60px) + var(--page-gap-top, 8px));
     left: 0;
     right: 0;
     bottom: 0;
@@ -3015,7 +3082,7 @@ html.reduce-motion .nav-sparkle {
 
   /* Replay route */
   html .replay-beside-sidebar:not(.settings-shell) { padding-left: 0 !important; }
-  html .replay-beside-sidebar .dr-wrap { padding: 4px 12px calc(76px + env(safe-area-inset-bottom)) !important; }
+  html .replay-beside-sidebar .dr-wrap { padding: var(--page-gap-top, 8px) 12px calc(76px + env(safe-area-inset-bottom)) !important; }
   html .dr-btn { min-height: 36px; }
   html .dr-panel-head { flex-wrap: wrap; }
   html .dr-search { flex-basis: 100%; min-height: 36px; }
@@ -3027,6 +3094,9 @@ html.reduce-motion .nav-sparkle {
     gap: 12px;
     margin: 0 -12px;
     padding: 12px 12px 4px;
+    /* Snap to the page's gutter, not the row's edge: the first card lines
+       up under the heading instead of sitting flush with the screen. */
+    scroll-padding-inline: 12px;
     scrollbar-width: none;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
@@ -3222,11 +3292,11 @@ html.reduce-motion .nav-sparkle {
 /* Explore is the MVP engine's own page; its banner title takes the same
    metrics and lands on the same pixel as the others (the .main shell
    already pads 12px under the nav, so the banner adds the last 8). */
-.explore-banner { padding: 8px 0 16px !important; align-items: flex-start; gap: 14px; }
+.explore-banner { padding: 0 0 16px !important; align-items: flex-start; gap: 14px; }
 .explore-title { font-size: 24px !important; font-weight: 800 !important; line-height: 36px !important; margin: 0 !important; letter-spacing: -0.01em; }
 .explore-subtitle { margin: 0 !important; font-size: 12.5px !important; }
 @media (max-width: 639px) {
-  .explore-banner { padding: 4px 0 10px !important; }
+  .explore-banner { padding: 0 0 10px !important; }
   .explore-title { font-size: 24px !important; line-height: 32px !important; }
   .explore-subtitle { font-size: 11px !important; margin-top: 6px !important; }
   .page-head { gap: 8px; row-gap: 6px; min-height: 30px; margin-bottom: 10px !important; }
@@ -3329,7 +3399,7 @@ html.reduce-motion .nav-sparkle {
    sized to the viewport so it fills the screen without pushing the
    info below the fold, and centred; the info row, the host card and
    the "More clips" grid share its width. */
-.clip-page-col { max-width: 1600px; margin: 0 24px 0 calc(var(--sidebar-width, 220px) + 12px); padding: 10px 20px 60px; }
+.clip-page-col { max-width: 1600px; margin: 0 24px 0 calc(var(--sidebar-width, 220px) + 12px); padding: var(--page-gap-top, 12px) 20px 60px; }
 .clip-stage {
   width: min(100%, calc((100vh - var(--nav-height, 60px) - 270px) * 16 / 9));
   min-width: min(100%, 640px);
@@ -3339,7 +3409,7 @@ html.reduce-motion .nav-sparkle {
 .clip-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .clip-channel { display: flex; align-items: center; gap: 14px; margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); }
 @media (max-width: 639px) {
-  .clip-page-col { padding: 0 12px calc(76px + env(safe-area-inset-bottom)); }
+  .clip-page-col { padding: var(--page-gap-top, 8px) 12px calc(76px + env(safe-area-inset-bottom)); }
   .clip-stage { width: 100%; min-width: 0; }
   .clip-channel { gap: 10px; margin-top: 16px; padding-top: 14px; }
   .clip-channel > button { padding: 0 14px !important; height: 32px !important; font-size: 12.5px !important; }
@@ -3389,7 +3459,7 @@ html.reduce-motion .nav-sparkle {
 .rp-index {
   max-width: 1400px;
   margin-inline: calc(var(--sidebar-width, 220px) + 12px) 24px;
-  padding: 22px 0 64px;
+  padding: var(--page-gap-top, 12px) 0 64px;
 }
 .rp-index-head h1 {
   margin: 0;
@@ -3450,7 +3520,7 @@ html.reduce-motion .nav-sparkle {
 
 @media (max-width: 639px) {
   /* Clear of the tab bar, which floats over the bottom of the page. */
-  .rp-index { margin-inline: 0; padding: 16px 14px calc(96px + env(safe-area-inset-bottom)); }
+  .rp-index { margin-inline: 0; padding: var(--page-gap-top, 8px) 14px calc(96px + env(safe-area-inset-bottom)); }
   .rp-index-head h1 { font-size: 21px; }
   .rp-index-head p { font-size: 12.5px; }
   .rp-grid { grid-template-columns: 1fr 1fr; gap: 14px 10px; }

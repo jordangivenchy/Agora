@@ -167,7 +167,7 @@ export default function NotificationsPage({ initial }: {
 
   return (
     <>
-      <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar beside-rail--reading" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <main className="max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar beside-rail--reading" style={{ paddingTop: "var(--page-gap-top, 12px)", fontFamily: "'DM Sans', sans-serif" }}>
         <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
           <div>
             <h1 className="page-title">Notifications</h1>

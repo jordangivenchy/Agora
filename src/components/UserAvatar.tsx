@@ -1,8 +1,8 @@
 "use client";
 
 /* Small round avatar shown next to every username: the profile photo when
-   one exists, otherwise an initial on a deterministic per-user color (same
-   hash as the agora chat colors, so a user looks the same everywhere).
+   one exists, otherwise an initial on a deterministic per-user color (the
+   room's chat uses it too, so a user looks the same everywhere).
    Failed photo loads (e.g. Google's lh3 rate-limiting bursts with 429s)
    fall back to the initial glyph instead of a broken-image icon. */
 

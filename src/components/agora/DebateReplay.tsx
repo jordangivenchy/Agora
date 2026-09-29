@@ -10,7 +10,7 @@
      get_debate_transcript(p_room)      — ordered utterances with offsets
      ensure_debate_discussion(p_room)   — lazily creates the discussion post */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { replayPath, roomPath, userPath } from "@/lib/urls";
@@ -29,6 +29,29 @@ import { fmtDay, roomDuration } from "@/lib/duration";
 import { parseTimeline, videoTime, type TimelineSpan } from "./hlsTimeline";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
+
+/* Theater view, as on YouTube: the player across the page's whole width,
+   the title and everything else right below it. Remembered on this
+   browser, like YouTube does. A tiny store rather than state set from an
+   effect: the first paint on the client is already the right layout. */
+const THEATER_KEY = "agora:replay-theater";
+let theaterNow: boolean | null = null;
+const theaterListeners = new Set<() => void>();
+function readTheater(): boolean {
+  if (theaterNow === null) {
+    try { theaterNow = localStorage.getItem(THEATER_KEY) === "1"; } catch { theaterNow = false; }
+  }
+  return theaterNow;
+}
+function writeTheater(next: boolean) {
+  theaterNow = next;
+  try { localStorage.setItem(THEATER_KEY, next ? "1" : "0"); } catch { /* private window: this visit only */ }
+  theaterListeners.forEach((f) => f());
+}
+function subscribeTheater(f: () => void) {
+  theaterListeners.add(f);
+  return () => { theaterListeners.delete(f); };
+}
 
 type Person = {
   id: string;
@@ -215,29 +238,28 @@ async function loadFallback(supabase: Client, roomId: string): Promise<{ room: R
    blocking "loading" screen. Shared by the /replays route (prefix
    resolution) and DebateReplay's own initial load. */
 export function ReplaySkeleton() {
+  const theater = useSyncExternalStore(subscribeTheater, readTheater, () => false);
   return (
-    <div className="dr-root">
+    <div className={`dr-root${theater ? " is-theater" : ""}`}>
       <div className="dr-wrap">
-        {/* Thin control row (back · tag · share) — mirrors dr-topbar. */}
-        <div className="dr-skel-topbar">
-          <div className="dr-skel-line dr-skel-back" />
-          <div className="dr-skel-line dr-skel-tag" />
-          <span style={{ flex: 1 }} />
-          <div className="dr-skel-line dr-skel-share" />
-        </div>
-        {/* Head placeholder (title · meta · people) — mirrors dr-head so
-            the player below doesn't jump when the real content loads. */}
-        <div className="dr-skel-head">
-          <div className="dr-skel-line dr-skel-motion" />
-          <div className="dr-skel-line dr-skel-metaline" />
-          <div className="dr-skel-people">
-            <div className="dr-skel-line dr-skel-chip" />
-            <div className="dr-skel-line dr-skel-chip" />
+        {/* The page's own grid: the video, the title and its row under
+            it, the column beside — so nothing moves as the real page
+            fills in. */}
+        <div className="dr-watch">
+          <div className="dr-stage">
+            <div className="dr-skel-player" />
           </div>
-        </div>
-        <div className="dr-grid">
-          <div className="dr-skel-player" />
-          <div className="dr-skel-block dr-skel-panel" />
+          <div className="dr-head dr-skel-head">
+            <div className="dr-skel-line dr-skel-motion" />
+            <div className="dr-skel-line dr-skel-metaline" />
+            <div className="dr-skel-people">
+              <div className="dr-skel-line dr-skel-chip" />
+              <div className="dr-skel-line dr-skel-chip" />
+            </div>
+          </div>
+          <div className="dr-side">
+            <div className="dr-skel-block dr-skel-panel" />
+          </div>
         </div>
       </div>
     </div>
@@ -263,6 +285,7 @@ export default function DebateReplay({
   const coarse = useCoarsePointer();
   const [query, setQuery] = useState("");
   const [transcriptOpen, setTranscriptOpen] = useState<boolean | null>(null);
+  const theater = useSyncExternalStore(subscribeTheater, readTheater, () => false);
   const [currentTime, setCurrentTime] = useState(0);
   const [discussBusy, setDiscussBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -646,286 +669,299 @@ export default function DebateReplay({
     : undefined;
 
   return (
-    <div className="dr-root">
+    <div className={`dr-root${theater && recorded ? " is-theater" : ""}`}>
       <div className="dr-wrap">
-        <header className="dr-head">
-          <h1 className="dr-motion">{motion}</h1>
-          <div className="dr-meta">
-            <span className="dr-tag">
-              <span className="dr-tag-dot" /> {recorded ? "Past discussion" : "Ended · no recording"}
-            </span>
-            {topic && (
-              <span className="dr-chip" style={{ borderColor: `${topic.color}55` }}>
-                <span aria-hidden>{topic.emoji}</span> {topic.label}
-              </span>
-            )}
-            <span>
-              {new Date(when).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}
-            </span>
-            {recorded && durationLabel && (
-              <span>
-                <Icon name="video" size={12} /> Recorded · {durationLabel}
-              </span>
-            )}
-            {!recorded && durationLabel && <span>Lasted {durationLabel}</span>}
-            {!!replayViews && (
-              <span>
-                <Icon name="eye" size={12} /> {replayViews} view{replayViews === 1 ? "" : "s"}
-              </span>
-            )}
-            {!!room.viewer_count && (
-              <span>{room.viewer_count} watched live</span>
-            )}
-          </div>
-          {/* Like and Share belong with the title, not the corner of the page. */}
-          <div className="dr-actions">
-            {likes && (
-              <button
-                className={`dr-btn dr-like${likes.liked ? " is-on" : ""}`}
-                onClick={toggleLike}
-                disabled={likeBusy}
-                aria-pressed={likes.liked}
-                title={likes.liked ? "Liked" : "Like this discussion"}
-              >
-                <Icon name="thumbs-up" size={13} /> {likes.count > 0 ? likes.count : "Like"}
-              </button>
-            )}
-            <button className="dr-btn" onClick={share} title="Copy the link">
-              <Icon name="share" size={13} /> Share
-            </button>
-            {recorded && hasTranscript && (
-              <button
-                className={`dr-btn${showTranscript ? " is-on" : ""}`}
-                onClick={() => setTranscriptOpen(!showTranscript)}
-                aria-expanded={showTranscript}
-                title={showTranscript ? "Hide the transcript" : "Show the transcript"}
-              >
-                <Icon name="file-text" size={13} /> {showTranscript ? "Hide transcript" : "Transcript"}
-              </button>
-            )}
-          </div>
-          <div className="dr-people">
-            {room.speakers.map((p) => (
-              <a key={p.id} className="dr-person" href={userPath(p.username)}>
-                <UserAvatar username={p.username} avatarUrl={p.avatar_url} seed={p.id} size={22} />
-                <span>{displayName(p)}</span>
-                <span className={`dr-person-role ${p.side ?? ""}`}>
-                  {p.role === "host" ? "Host" : p.role === "cohost" ? "Co-host" : p.side ? p.side : "Speaker"}
-                </span>
-              </a>
-            ))}
-            {room.speakers.length === 0 && room.host && (
-              <a className="dr-person" href={userPath(room.host.username)}>
-                <UserAvatar username={room.host.username} avatarUrl={room.host.avatar_url} seed={room.host.id} size={22} />
-                <span>{displayName(room.host)}</span>
-                <span className="dr-person-role">Host</span>
-              </a>
-            )}
-          </div>
-        </header>
-
-        <div className={`dr-grid${showTranscript ? "" : " dr-grid--solo"}`}>
-          <div className="dr-player" style={posterStyle}>
-            {recorded ? (
-              <>
-                <ReplayPlayer
-                  ref={videoRef}
-                  src={recordingUrl}
-                  clipRoomId={room.id}
-                  poster={room.thumbnail_url ?? room.host?.avatar_url ?? undefined}
-                  onTimeUpdate={setCurrentTime}
-                  onSeeking={() => setUserScrolled(false)}
-                  onError={setPlayerError}
-                  errorFallback={
-                    <div className="dr-player-error">
-                      This recording couldn&apos;t be loaded. It may still be finalizing — try again in a minute.
-                    </div>
-                  }
-                  style={{ height: "100%", borderRadius: 0 }}
-                />
-              </>
-            ) : (
-              <div className="dr-player-empty">
-                {room.host && (
-                  <UserAvatar username={room.host.username} avatarUrl={room.host.avatar_url} seed={room.host.id} size={56} />
-                )}
-                <strong>This discussion wasn&apos;t recorded</strong>
-                <span>
-                  {hasTranscript
-                    ? "The host didn't stream it, but the stage transcript is here — and the discussion is open."
-                    : "The host didn't stream it, and no transcript was captured. The discussion is still open."}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {showTranscript && (
-          <aside className="dr-panel">
-            <div className="dr-panel-head">
-              <span className="dr-panel-title">Transcript{lines.length ? ` · ${lines.length}` : ""}</span>
-              {hasTranscript && (
-                <label className="dr-search">
-                  <Icon name="search" size={12} />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search the transcript"
-                    aria-label="Search the transcript"
+        {/* As on YouTube: the video, sized so the title, its buttons and
+            the start of the discussion are on screen with it; the
+            transcript and what to watch next beside it. Theater lays the
+            video across the whole width, everything else just below. The
+            player never moves in the page (only its place in the grid
+            changes), so switching views never restarts it. */}
+        <div className={`dr-watch${showTranscript || more.length > 0 ? "" : " dr-watch--solo"}`}>
+          <div className="dr-stage">
+            <div className="dr-player" style={posterStyle}>
+              {recorded ? (
+                <>
+                  <ReplayPlayer
+                    ref={videoRef}
+                    src={recordingUrl}
+                    clipRoomId={room.id}
+                    poster={room.thumbnail_url ?? room.host?.avatar_url ?? undefined}
+                    onTimeUpdate={setCurrentTime}
+                    onSeeking={() => setUserScrolled(false)}
+                    onError={setPlayerError}
+                    theater={theater}
+                    onTheaterChange={writeTheater}
+                    errorFallback={
+                      <div className="dr-player-error">
+                        This recording couldn&apos;t be loaded. It may still be finalizing — try again in a minute.
+                      </div>
+                    }
+                    style={{ height: "100%", borderRadius: 0 }}
                   />
-                </label>
-              )}
-            </div>
-            <div className="dr-panel-body">
-            <div
-              className="dr-transcript"
-              ref={transcriptRef}
-              onWheel={() => setUserScrolled(true)}
-              onTouchMove={() => setUserScrolled(true)}
-            >
-              {!hasTranscript && (
-                <div className="dr-empty">
-                  No transcript for this discussion.
-                  <br />
-                  Transcripts are captured when speakers have live listening on.
+                </>
+              ) : (
+                <div className="dr-player-empty">
+                  {room.host && (
+                    <UserAvatar username={room.host.username} avatarUrl={room.host.avatar_url} seed={room.host.id} size={56} />
+                  )}
+                  <strong>This discussion wasn&apos;t recorded</strong>
+                  <span>
+                    {hasTranscript
+                      ? "The host didn't stream it, but the stage transcript is here — and the discussion is open."
+                      : "The host didn't stream it, and no transcript was captured. The discussion is still open."}
+                  </span>
                 </div>
               )}
-              {hasTranscript && filtered.length === 0 && (
-                <div className="dr-empty">Nothing matches &ldquo;{query}&rdquo;.</div>
+            </div>
+          </div>
+
+          <header className="dr-head">
+            <h1 className="dr-motion">{motion}</h1>
+            <div className="dr-meta">
+              <span className="dr-tag">
+                <span className="dr-tag-dot" /> {recorded ? "Past discussion" : "Ended · no recording"}
+              </span>
+              {topic && (
+                <span className="dr-chip" style={{ borderColor: `${topic.color}55` }}>
+                  <span aria-hidden>{topic.emoji}</span> {topic.label}
+                </span>
               )}
-              {filtered.map((l) => {
-                const canSeek = recorded && l.offset_seconds !== null && !playerError;
-                return (
-                  <div
-                    key={l.id}
-                    ref={(el) => {
-                      if (el) lineRefs.current.set(l.id, el);
-                      else lineRefs.current.delete(l.id);
-                    }}
-                    className={`dr-line${canSeek ? " seekable" : ""}${l.id === currentId ? " current" : ""}`}
-                    onClick={canSeek ? () => seekTo(l.offset_seconds!) : undefined}
-                    role={canSeek ? "button" : undefined}
-                    title={canSeek ? "Jump to this moment" : undefined}
-                  >
-                    <UserAvatar username={l.username} avatarUrl={l.avatar_url} seed={l.user_id ?? l.username} size={24} />
-                    <div>
-                      <div className="dr-line-name">{displayName(l)}</div>
-                      <div className="dr-line-text">{highlight(l.content, query.trim())}</div>
-                    </div>
-                    <span className="dr-line-time">
-                      {l.offset_seconds !== null
-                        ? fmtClock(videoOffset(l.offset_seconds))
-                        : new Date(l.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+              <span>
+                {new Date(when).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}
+              </span>
+              {recorded && durationLabel && (
+                <span>
+                  <Icon name="video" size={12} /> Recorded · {durationLabel}
+                </span>
+              )}
+              {!recorded && durationLabel && <span>Lasted {durationLabel}</span>}
+              {!!replayViews && (
+                <span>
+                  <Icon name="eye" size={12} /> {replayViews} view{replayViews === 1 ? "" : "s"}
+                </span>
+              )}
+              {!!room.viewer_count && (
+                <span>{room.viewer_count} watched live</span>
+              )}
+            </div>
+            <div className="dr-byline">
+              <div className="dr-people">
+                {room.speakers.map((p) => (
+                  <a key={p.id} className="dr-person" href={userPath(p.username)}>
+                    <UserAvatar username={p.username} avatarUrl={p.avatar_url} seed={p.id} size={22} />
+                    <span>{displayName(p)}</span>
+                    <span className={`dr-person-role ${p.side ?? ""}`}>
+                      {p.role === "host" ? "Host" : p.role === "cohost" ? "Co-host" : p.side ? p.side : "Speaker"}
                     </span>
-                  </div>
-                );
-              })}
-            </div>
-            </div>
-            {recorded && (
-              <button className="dr-panel-close" onClick={() => setTranscriptOpen(false)} aria-label="Hide the transcript" title="Hide the transcript">
-                <Icon name="x" size={14} />
-              </button>
-            )}
-          </aside>
-          )}
-        </div>
-
-        <section className="dr-section">
-          <div className="dr-section-head">
-            <div>
-              <h2 className="dr-section-title">
-                Discussion
-                {room.discussion_comment_count > 0 && (
-                  <span className="dr-count-chip">{room.discussion_comment_count}</span>
+                  </a>
+                ))}
+                {room.speakers.length === 0 && room.host && (
+                  <a className="dr-person" href={userPath(room.host.username)}>
+                    <UserAvatar username={room.host.username} avatarUrl={room.host.avatar_url} seed={room.host.id} size={22} />
+                    <span>{displayName(room.host)}</span>
+                    <span className="dr-person-role">Host</span>
+                  </a>
                 )}
-              </h2>
-              {room.discussion_comment_count === 0 && (
-                <p className="dr-section-sub">Nobody has weighed in yet — be the first.</p>
-              )}
+              </div>
+              {/* Like, Share and the transcript sit with the title. */}
+              <div className="dr-actions">
+                {likes && (
+                  <button
+                    className={`dr-btn dr-like${likes.liked ? " is-on" : ""}`}
+                    onClick={toggleLike}
+                    disabled={likeBusy}
+                    aria-pressed={likes.liked}
+                    title={likes.liked ? "Liked" : "Like this discussion"}
+                  >
+                    <Icon name="thumbs-up" size={13} /> {likes.count > 0 ? likes.count : "Like"}
+                  </button>
+                )}
+                <button className="dr-btn" onClick={share} title="Copy the link">
+                  <Icon name="share" size={13} /> Share
+                </button>
+                {recorded && hasTranscript && (
+                  <button
+                    className={`dr-btn${showTranscript ? " is-on" : ""}`}
+                    onClick={() => setTranscriptOpen(!showTranscript)}
+                    aria-expanded={showTranscript}
+                    title={showTranscript ? "Hide the transcript" : "Show the transcript"}
+                  >
+                    <Icon name="file-text" size={13} /> {showTranscript ? "Hide transcript" : "Transcript"}
+                  </button>
+                )}
+              </div>
             </div>
-            <button className="dr-btn" onClick={openDiscussion} disabled={discussBusy}>
-              <Icon name="megaphone" size={13} />
-              {discussBusy ? "Opening…" : "Open full thread"}
-            </button>
-          </div>
+          </header>
 
-          {/* The same composer and thread as a community post: comments
-              land in the room's community thread, where replies and votes
-              live ("Open full thread"). */}
-          <div className="flex gap-2 items-end cm-composer-row dr-composer">
-            <span className="relative flex-1 min-w-0">
-              <RichEditor
-                compact
-                value={commentDraft}
-                onChange={setCommentDraft}
-                placeholder={signedIn ? (coarse ? "Add a comment…" : "Add a comment… (@ to mention, ⌘↩ to send)") : "Sign in to comment"}
-                onSubmit={() => { void submitReplayComment(); }}
-                mentions={!!signedIn}
-                onFocus={() => { if (signedIn === false) window.location.href = "/login"; }}
-              />
-            </span>
-            <button
-              onClick={() => { void submitReplayComment(); }}
-              disabled={commentBusy || !commentDraft.trim()}
-              className="cm-send cursor-pointer text-[12.5px] shrink-0 disabled:opacity-50 disabled:cursor-default"
-              style={{ background: "#2f7fe0", border: "none", color: "#fff", borderRadius: 999, height: 36, padding: "0 18px", fontWeight: 600, fontFamily: "inherit" }}
-            >
-              {commentBusy ? "Posting…" : "Comment"}
-            </button>
-          </div>
-
-          {comments.length > 0 && (
-            <div className="cm-thread dr-thread">
-              {comments.map((c) => (
-                <div key={c.id} className="cm-node cm-node--root">
-                  <div className="cm-comment">
-                    <div className="cm-head">
-                      <span className="cm-avatar">
-                        <UserAvatar size={24} username={c.author_username} avatarUrl={avatars[c.author_id ?? ""] ?? null} seed={c.author_id ?? c.author_username} />
-                      </span>
-                      <span className="cm-author">@{c.author_username}</span>
-                      <span className="cm-time">· {timeAgo(c.created_at)}</span>
-                    </div>
-                    <div className="cm-body"><RichText text={c.body} /></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {more.length > 0 && (
-          <section className="dr-section">
+          <section className="dr-section dr-discussion">
             <div className="dr-section-head">
               <div>
-                <h2 className="dr-section-title">More past discussions</h2>
-                <p className="dr-section-sub">Recent ones to watch next</p>
+                <h2 className="dr-section-title">
+                  Discussion
+                  {room.discussion_comment_count > 0 && (
+                    <span className="dr-count-chip">{room.discussion_comment_count}</span>
+                  )}
+                </h2>
+                {room.discussion_comment_count === 0 && (
+                  <p className="dr-section-sub">Nobody has weighed in yet — be the first.</p>
+                )}
               </div>
+              <button className="dr-btn" onClick={openDiscussion} disabled={discussBusy}>
+                <Icon name="megaphone" size={13} />
+                {discussBusy ? "Opening…" : "Open full thread"}
+              </button>
             </div>
-            <div className="dr-more-grid">
-              {more.map((m) => (
-                <a key={m.id} className="dr-more-card" href={replayPath(m)}>
-                  <div className="dr-more-thumb">
-                    {m.thumbnail_url || m.host?.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={(m.thumbnail_url || m.host?.avatar_url)!} alt="" />
-                    ) : (
-                      <span className="dr-more-thumb-fallback">
-                        <Icon name="play" size={18} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="dr-more-motion">{m.motion}</div>
-                  <div className="dr-more-meta">
-                    {m.host ? displayName(m.host) : ""}
-                    {m.ended_at ? ` · ${fmtDay(m.ended_at)}` : ""}
-                    {roomDuration(m.started_at, m.ended_at) ? ` · ${roomDuration(m.started_at, m.ended_at)}` : ""}
-                  </div>
-                </a>
-              ))}
+
+            {/* The same composer and thread as a community post: comments
+                land in the room's community thread, where replies and votes
+                live ("Open full thread"). */}
+            <div className="flex gap-2 items-end cm-composer-row dr-composer">
+              <span className="relative flex-1 min-w-0">
+                <RichEditor
+                  compact
+                  value={commentDraft}
+                  onChange={setCommentDraft}
+                  placeholder={signedIn ? (coarse ? "Add a comment…" : "Add a comment… (@ to mention, ⌘↩ to send)") : "Sign in to comment"}
+                  onSubmit={() => { void submitReplayComment(); }}
+                  mentions={!!signedIn}
+                  onFocus={() => { if (signedIn === false) window.location.href = "/login"; }}
+                />
+              </span>
+              <button
+                onClick={() => { void submitReplayComment(); }}
+                disabled={commentBusy || !commentDraft.trim()}
+                className="cm-send cursor-pointer text-[12.5px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+                style={{ background: "#2f7fe0", border: "none", color: "#fff", borderRadius: 999, height: 36, padding: "0 18px", fontWeight: 600, fontFamily: "inherit" }}
+              >
+                {commentBusy ? "Posting…" : "Comment"}
+              </button>
             </div>
+
+            {comments.length > 0 && (
+              <div className="cm-thread dr-thread">
+                {comments.map((c) => (
+                  <div key={c.id} className="cm-node cm-node--root">
+                    <div className="cm-comment">
+                      <div className="cm-head">
+                        <span className="cm-avatar">
+                          <UserAvatar size={24} username={c.author_username} avatarUrl={avatars[c.author_id ?? ""] ?? null} seed={c.author_id ?? c.author_username} />
+                        </span>
+                        <span className="cm-author">@{c.author_username}</span>
+                        <span className="cm-time">· {timeAgo(c.created_at)}</span>
+                      </div>
+                      <div className="cm-body"><RichText text={c.body} /></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
-        )}
+
+
+          <div className="dr-side">
+            {showTranscript && (
+            <aside className="dr-panel">
+              <div className="dr-panel-head">
+                <span className="dr-panel-title">Transcript{lines.length ? ` · ${lines.length}` : ""}</span>
+                {hasTranscript && (
+                  <label className="dr-search">
+                    <Icon name="search" size={12} />
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search the transcript"
+                      aria-label="Search the transcript"
+                    />
+                  </label>
+                )}
+              </div>
+              <div className="dr-panel-body">
+              <div
+                className="dr-transcript"
+                ref={transcriptRef}
+                onWheel={() => setUserScrolled(true)}
+                onTouchMove={() => setUserScrolled(true)}
+              >
+                {!hasTranscript && (
+                  <div className="dr-empty">
+                    No transcript for this discussion.
+                    <br />
+                    Transcripts are captured when speakers have live listening on.
+                  </div>
+                )}
+                {hasTranscript && filtered.length === 0 && (
+                  <div className="dr-empty">Nothing matches &ldquo;{query}&rdquo;.</div>
+                )}
+                {filtered.map((l) => {
+                  const canSeek = recorded && l.offset_seconds !== null && !playerError;
+                  return (
+                    <div
+                      key={l.id}
+                      ref={(el) => {
+                        if (el) lineRefs.current.set(l.id, el);
+                        else lineRefs.current.delete(l.id);
+                      }}
+                      className={`dr-line${canSeek ? " seekable" : ""}${l.id === currentId ? " current" : ""}`}
+                      onClick={canSeek ? () => seekTo(l.offset_seconds!) : undefined}
+                      role={canSeek ? "button" : undefined}
+                      title={canSeek ? "Jump to this moment" : undefined}
+                    >
+                      <UserAvatar username={l.username} avatarUrl={l.avatar_url} seed={l.user_id ?? l.username} size={24} />
+                      <div>
+                        <div className="dr-line-name">{displayName(l)}</div>
+                        <div className="dr-line-text">{highlight(l.content, query.trim())}</div>
+                      </div>
+                      <span className="dr-line-time">
+                        {l.offset_seconds !== null
+                          ? fmtClock(videoOffset(l.offset_seconds))
+                          : new Date(l.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              </div>
+              {recorded && (
+                <button className="dr-panel-close" onClick={() => setTranscriptOpen(false)} aria-label="Hide the transcript" title="Hide the transcript">
+                  <Icon name="x" size={14} />
+                </button>
+              )}
+            </aside>
+            )}
+            {more.length > 0 && (
+              <section className="dr-section dr-more">
+                <div className="dr-section-head">
+                  <div>
+                    <h2 className="dr-section-title">More past discussions</h2>
+                  </div>
+                </div>
+                <div className="dr-more-grid">
+                  {more.map((m) => (
+                    <a key={m.id} className="dr-more-card" href={replayPath(m)}>
+                      <div className="dr-more-thumb">
+                        {m.thumbnail_url || m.host?.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={(m.thumbnail_url || m.host?.avatar_url)!} alt="" />
+                        ) : (
+                          <span className="dr-more-thumb-fallback">
+                            <Icon name="play" size={18} />
+                          </span>
+                        )}
+                      </div>
+                      <div className="dr-more-motion">{m.motion}</div>
+                      <div className="dr-more-meta">
+                        {m.host ? displayName(m.host) : ""}
+                        {m.ended_at ? ` · ${fmtDay(m.ended_at)}` : ""}
+                        {roomDuration(m.started_at, m.ended_at) ? ` · ${roomDuration(m.started_at, m.ended_at)}` : ""}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
       </div>
       {toast && (
         <div className="dr-toast" role="status">

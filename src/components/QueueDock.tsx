@@ -48,10 +48,21 @@ export default function QueueDock() {
   const oldest = n ? Math.min(...q.entries.map((e) => e.since)) : 0;
 
   if (!q.open) {
+    /* What you're waiting in: the field of the question (and how many
+       more, past one). The clock rides along on wider screens; on a phone
+       the pill keeps to the words, and the panel has the time. */
+    const first = n ? field(q.entries[0].topicKey) : null;
+    const what = `${first?.label ?? "a question"}${n > 1 ? ` +${n - 1}` : ""}`;
     return (
-      <button type="button" className="qd-pill" onClick={expandQueue} aria-label="Open the queue">
+      <button
+        type="button"
+        className="qd-pill"
+        onClick={expandQueue}
+        aria-label={`In queue · ${what} · waiting ${mmss(now - oldest)} — open the queue`}
+      >
         <span className="qd-dot" aria-hidden="true" />
-        In queue · {n} question{n === 1 ? "" : "s"} · {mmss(now - oldest)}
+        <span aria-hidden="true">In queue · {what}</span>
+        <span className="qd-pill-time" aria-hidden="true">· {mmss(now - oldest)}</span>
         <Icon name="chevron-up" size={14} />
       </button>
     );

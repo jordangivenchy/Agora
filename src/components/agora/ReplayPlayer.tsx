@@ -13,7 +13,7 @@
    Controls fade while playing and reappear on any pointer or key
    activity. Keyboard on the focused player: space/k toggles, ←/→ scrub
    5s, j/l 10s, </> slow down and speed up, m mutes, f fullscreens,
-   p picture in picture. */
+   p picture in picture, t theater (where the page offers it). */
 
 import {
   forwardRef,
@@ -61,11 +61,16 @@ export interface ReplayPlayerProps {
   /** Enable the ✂ control: viewers mark [start, end] at the current
       position and the range is saved to the clips table for this room. */
   clipRoomId?: string | null;
+  /** Theater view, as on YouTube: the page lays the player across its
+      whole width. Passing onTheaterChange adds the button (and the t
+      key); the page owns the state and the layout. */
+  theater?: boolean;
+  onTheaterChange?: (next: boolean) => void;
   style?: React.CSSProperties;
 }
 
 const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
-  function ReplayPlayer({ src, poster, onTimeUpdate, onSeeking, errorFallback, onError, range, clipRoomId, style }, fwdRef) {
+  function ReplayPlayer({ src, poster, onTimeUpdate, onSeeking, errorFallback, onError, range, clipRoomId, theater = false, onTheaterChange, style }, fwdRef) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const wrapRef = useRef<HTMLDivElement | null>(null);
     const barRef = useRef<HTMLDivElement | null>(null);
@@ -276,6 +281,7 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
           else if (e.key === "m") { setVolume(muted ? (vol || 1) : 0); }
           else if (e.key === "f") { toggleFs(); }
           else if (e.key === "p" && canPip) { togglePip(); }
+          else if (e.key === "t" && onTheaterChange && !fs) { onTheaterChange(!theater); }
         }}
         style={{
           position: "relative", width: "100%", borderRadius: fs ? 0 : 12,
@@ -438,6 +444,18 @@ const ReplayPlayer = forwardRef<HTMLVideoElement | null, ReplayPlayerProps>(
                 style={btn}
               >
                 <Icon name="scissors" size={16} />
+              </button>
+            )}
+            {onTheaterChange && !fs && (
+              <button
+                onClick={() => onTheaterChange(!theater)}
+                aria-label={theater ? "Default view" : "Theater mode"}
+                aria-pressed={theater}
+                title={theater ? "Default view (t)" : "Theater mode (t)"}
+                className="rp-btn rp-theater"
+                style={{ ...btn, color: theater ? GOLD : btn.color }}
+              >
+                <Icon name="rectangle-horizontal" size={17} />
               </button>
             )}
             <button onClick={toggleFs} aria-label={fs ? "Exit fullscreen" : "Fullscreen"} className="rp-btn" style={btn}>

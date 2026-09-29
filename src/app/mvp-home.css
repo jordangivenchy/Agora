@@ -491,11 +491,13 @@ body {
 /* ─── SIDEBAR ─── */
 .sidebar {
   position: fixed;
-  top: calc(var(--nav-height) + 6px);
+  /* At the far edge of the gap under the bar, level with the top of
+     every page (--page-gap-top, globals.css). */
+  top: calc(var(--nav-height) + var(--page-gap-top, 12px));
   left: 12px;
-  height: calc(100vh - var(--nav-height) - 18px);
+  height: calc(100vh - var(--nav-height) - var(--page-gap-top, 12px) - 12px);
   width: var(--sidebar-width);
-  /* Above the bar (100): its top 6px sit inside the bar's painted gap band. */
+  /* Above the bar (100), as it always was. */
   z-index: 101;
   border-radius: 16px;
   display: flex;
@@ -3333,7 +3335,7 @@ body { background: transparent; }
    but the stats tuck under the title in a line and the search, filters
    and results run flush with the title instead of 32px in. ═══ */
 @media (max-width: 639px) {
-  html .explore-banner { display: block !important; padding: 4px 0 12px !important; }
+  html .explore-banner { display: block !important; padding: 0 0 12px !important; }
   /* The three groups sit together, centred, 26px apart. */
   html .explore-banner-stats { display: flex; justify-content: center; gap: 28px; margin-top: 18px; }
   html .explore-stat { text-align: left; display: flex; align-items: baseline; gap: 14px; }

@@ -966,7 +966,7 @@ export default function SettingsPage({ initial }: {
   return (
     <>
     <div className="replay-beside-sidebar settings-shell" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="settings-inner" style={{ maxWidth: 980, margin: 0, padding: "24px 20px" }}>
+      <div className="settings-inner" style={{ maxWidth: 980, margin: 0, padding: "var(--page-gap-top, 12px) 20px 24px" }}>
 
         {/* header */}
         <div className="flex items-center gap-3 mb-5 settings-head">

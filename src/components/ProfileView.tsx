@@ -636,9 +636,10 @@ export default function ProfileView({
             ? "max-w-[860px] mx-auto px-6 pb-16"
             : "max-w-[860px] mx-auto px-6 pb-16 profile-beside-sidebar"
         }
-        /* Breathing room between the fixed navbar and the banner card on
-           the standalone route (inline — the mvp reset eats pt- utilities). */
-        style={{ paddingTop: embedded ? 0 : 28 }}
+        /* On the standalone route the banner starts at the gap under the
+           bar, where every page starts (inline — the mvp reset eats pt-
+           utilities). */
+        style={{ paddingTop: embedded ? 0 : "var(--page-gap-top, 12px)" }}
       >
        {/* Standalone: profile column + the feed's right rail (lg+). On
            phones the row stacks — profile first, rail after (globals.css

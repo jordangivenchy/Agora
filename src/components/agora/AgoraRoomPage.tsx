@@ -351,6 +351,21 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      watching without the chat in frame. Lives here rather than in the
      rail because the collapsed class drives layout on .ag-root. */
   const [railCollapsed, setRailCollapsed] = useState(false);
+  /* The chat rail sliding in or out (0.34 s in CSS): the stage re-frames
+     on every frame of it, so it draws every frame for it too — even as a
+     backdrop behind a flat layout, where it otherwise runs at 15 fps and
+     the re-framing would step. */
+  const [railSliding, setRailSliding] = useState(false);
+  const [seenRail, setSeenRail] = useState(railCollapsed);
+  if (railCollapsed !== seenRail) {
+    setSeenRail(railCollapsed);
+    setRailSliding(true);
+  }
+  useEffect(() => {
+    if (!railSliding) return;
+    const t = window.setTimeout(() => setRailSliding(false), 450);
+    return () => window.clearTimeout(t);
+  }, [railSliding, railCollapsed]);
   /* Phone-only: the chat sheet. Desktop ignores it (agora.css). */
   const [chatOpen, setChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -718,7 +733,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      Over the spectator ceiling the token API answers "watch the
      broadcast" instead of minting a WebRTC token: the stage surface
      renders the composited HLS stream and the publish controls hide.
-     Chat, Q&A and hand-raise are Supabase-driven and keep working.
+     Chat and hand-raise are Supabase-driven and keep working.
      Promotion is seamless: an approved raise-hand updates our
      participants row, onStage(myRole) flips, and the call hook's
      connect effect re-requests a token with the new role — the server
@@ -2146,7 +2161,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
           paused={phase === "mini" && !awake}
-          moving={phase === "shrinking" || phase === "growing"}
+          moving={phase === "shrinking" || phase === "growing" || railSliding}
           performanceMode={broadcast}
           flat={phone || broadcast || simpleStage.on}
           background={layout !== "stage"}
