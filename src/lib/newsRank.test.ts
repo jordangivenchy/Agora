@@ -80,6 +80,29 @@ describe("rankStories", () => {
     );
     expect(ranked[0].id).toBe("story");
   });
+  it("gives the majors to stories with a picture", () => {
+    const ranked = rankStories(
+      [
+        art("bare", "Parliament votes on sanctions after missile strike", "reuters", 1),
+        { ...art("pic", "Council approves new tram line", "bbc", 2), imageUrl: "https://ichef.bbci.co.uk/a.jpg" },
+      ],
+      { majorCount: 1, now: NOW }
+    );
+    // Still ranked first (it leads the ticker), but the hero needs a picture.
+    expect(ranked[0].id).toBe("bare");
+    expect(ranked.filter((s) => s.major).map((s) => s.id)).toEqual(["pic"]);
+  });
+  it("fills the majors with stories without a picture when too few have one", () => {
+    const ranked = rankStories(
+      [
+        art("bare1", "Parliament votes on sanctions after missile strike", "reuters", 1),
+        art("bare2", "Earthquake prompts evacuations across the region", "aljazeera", 1),
+        { ...art("pic", "Council approves new tram line", "bbc", 2), imageUrl: "https://ichef.bbci.co.uk/a.jpg" },
+      ],
+      { majorCount: 2, now: NOW }
+    );
+    expect(ranked.filter((s) => s.major).map((s) => s.id).sort()).toEqual([ranked[0].id, "pic"].sort());
+  });
   it("hard-news vocabulary counts", () => {
     expect(hardNewsScore("Earthquake kills dozens; troops evacuate region")).toBeGreaterThanOrEqual(3);
     expect(hardNewsScore("Gandhi notes sold at auction")).toBe(0);

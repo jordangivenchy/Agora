@@ -146,7 +146,8 @@ export function hardNewsScore(headline: string): number {
   );
 }
 
-/** Rank clustered stories; the top `majorCount` are flagged `major`. */
+/** Rank clustered stories; the top `majorCount` that have a picture are
+    flagged `major`. */
 export function rankStories(
   articles: RankArticle[],
   opts: { majorCount?: number; now?: number; perOutletCap?: number } = {}
@@ -177,5 +178,10 @@ export function rankStories(
     perOutlet.set(key, n + 1);
     return true;
   });
-  return kept.map((s, i) => ({ ...s, major: i < majorCount }));
+  // The majors are the hero's slides and the News page's picture cards,
+  // so they go to the highest-ranked stories with a picture: a story
+  // without one would be a bare gradient there. It keeps its rank (and
+  // leads the ticker) and only fills in when too few stories have one.
+  const majors = new Set([...kept.filter((s) => s.imageUrl), ...kept.filter((s) => !s.imageUrl)].slice(0, majorCount));
+  return kept.map((s) => ({ ...s, major: majors.has(s) }));
 }

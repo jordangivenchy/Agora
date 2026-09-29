@@ -30,8 +30,8 @@
  * Stories come back RANKED (see lib/newsRank): near-duplicate headlines
  * from different outlets are clustered into one story carrying every
  * outlet, then scored by coverage + hard-news vocabulary + recency. The
- * top three are flagged `major` — the hero carousel shows those, the
- * ticker shows the rest, no overlap.
+ * top three with a picture are flagged `major` — the hero carousel shows
+ * those, the ticker shows the rest, no overlap.
  */
 
 /* The upstream fetches also use Next's shared data cache (revalidate),
@@ -222,18 +222,36 @@ function normalizeNewsData(json: unknown): Story[] {
   });
 }
 
-/** Outlet image CDNs encode the size in the URL; ask for a hero-grade
-    variant where that's safe (BBC "standard/240" is a thumbnail and any
-    width works; signed CDNs must be left untouched). */
+/** Outlet image CDNs encode the size in the URL; ask each for a
+    hero-grade picture that is also light. The feed often hands over the
+    original upload (Politico's are 5000px and 6MB, CNN's PNGs 4MB), and
+    a phone waits seconds on one while its slide shows only the gradient.
+    Signed CDNs must be left untouched. */
 function upgradeImage(url: string | null): string | null {
   if (!url) return null;
   try {
     const u = new URL(url);
     if (u.hostname === "ichef.bbci.co.uk") {
       // 2048 keeps the ~900-CSS-px hero sharp on 2x displays (iChef
-      // serves standard/{...2048,2560}; 2048 ≈ 170KB).
+      // serves standard/{...2048,2560}; "standard/240" is a thumbnail).
+      // A ".webp" suffix gets the same picture as WebP: a 2.4MB PNG
+      // comes back at 190KB.
       u.pathname = u.pathname.replace(/\/standard\/\d+\//, "/standard/2048/");
+      if (/\/standard\/2048\/.*\.(jpe?g|png)$/i.test(u.pathname)) u.pathname += ".webp";
       return u.toString();
+    }
+    if (u.hostname === "media.cnn.com" && u.pathname.startsWith("/api/v1/images/")) {
+      // CNN's image API: c= is the crop, q= the transform. 1600 wide as
+      // WebP is 100-350KB (the feed's "c=original" can be a 4MB PNG,
+      // and its "w_800" is soft on a 2x hero).
+      u.search = "?c=original&q=w_1600/f_webp";
+      return u.toString();
+    }
+    if (u.hostname === "static.politico.com" && /\.(jpe?g|png)$/i.test(u.pathname)) {
+      // Politico's 6MB originals, through its resizer on the same host:
+      // 1600 wide is 130KB. (The resizer on www.politico.com sits behind
+      // a bot check that turns the app's image loader away.)
+      return `https://static.politico.com/dims4/default/resize/1600/?url=${encodeURIComponent(url)}`;
     }
     // Guardian (i.guim.co.uk) URLs are signed (&s=…) — any parameter
     // change invalidates them, and they already arrive at width=1200.
@@ -270,7 +288,7 @@ function normalizeGNews(json: unknown): Story[] {
       url,
       publishedAt: (r.publishedAt as string | undefined) ?? null,
       sources: src?.name ? [{ name: src.name, domain }] : [],
-      imageUrl: img && /^https:\/\//.test(img) ? img : null,
+      imageUrl: upgradeImage(img && /^https:\/\//.test(img) ? img : null),
       summary: clip(r.description as string | undefined),
       category: null,
     }];
