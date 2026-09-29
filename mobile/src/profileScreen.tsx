@@ -22,6 +22,9 @@ import { whenLabel } from "./feed";
 import { useUserMenu } from "./userMenu";
 import { SITE } from "./api";
 import { ReminderBell, useReminders } from "./reminders";
+import { VerifiedBadge, VerifiedMark } from "./verifiedMark";
+import { LengthPill } from "./replayCard";
+import { viewsAndAgo } from "./duration";
 import { colors, fonts } from "./theme";
 import { Note } from "./ui";
 import { FloatingBack } from "./floatingBack";
@@ -117,7 +120,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
           <Text style={{ color: colors.purple, fontFamily: fonts.extra, fontSize: 10, letterSpacing: 0.6 }}>{whenLabel(d.scheduled_start).toUpperCase()}</Text>
           <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15, marginTop: 4 }}>{d.motion}</Text>
           <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }}>
-            {d.role === "host" ? "hosting" : `debating · hosted by @${d.host_username ?? "?"}`} · {topicOf(d.topic_key).label}
+            {d.role === "host" ? "hosting" : <>debating · hosted by @{d.host_username ?? "?"}<VerifiedMark inline id={d.host_id} username={d.host_username} size={12} /></>} · {topicOf(d.topic_key).label}
             {(reminders[d.id]?.count ?? 0) > 0 ? ` · ${reminders[d.id].count} waiting` : ""}
           </Text>
         </View>
@@ -219,7 +222,7 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
             <>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 28, flexWrap: "wrap" }}>
                 <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 24, letterSpacing: -0.4 }}>{profile.display_name || profile.username}</Text>
-                {profile.verified && <Ionicons name="checkmark-circle" size={20} color={colors.yellow} />}
+                {profile.verified && <VerifiedBadge size={22} />}
                 {profile.live_room_id && (
                   <Pressable onPress={() => router.push({ pathname: "/room/[id]", params: { id: profile.live_room_id! } })} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 4 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#ef4444", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
@@ -246,7 +249,13 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
                 )}
               </View>
               {!isSelf && !!profile.mutual_names?.length && (
-                <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, marginTop: 8 }}>Also followed by <Text style={{ color: "#c9c9d2", fontFamily: fonts.semi }}>{profile.mutual_names.join(", ")}</Text></Text>
+                <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, marginTop: 8 }}>
+                  Also followed by{" "}
+                  <Text style={{ color: "#c9c9d2", fontFamily: fonts.semi }}>
+                    {/* The names are usernames, so each can carry its mark. */}
+                    {profile.mutual_names.map((n, i) => <Text key={n}>{i ? ", " : ""}{n}<VerifiedMark inline username={n} size={12} /></Text>)}
+                  </Text>
+                </Text>
               )}
             </>
           )}
@@ -270,20 +279,25 @@ export function ProfileScreen({ username, menu, back = true }: { username: strin
         )}
       </Animated.ScrollView>
       <Animated.View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: BAR, paddingTop: insets.top, backgroundColor: colors.bg, opacity: barOpacity, alignItems: "center", justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
-        <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17, paddingHorizontal: 60 }}>{profile?.display_name || profile?.username || ""}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 60 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.title, fontSize: 17 }}>{profile?.display_name || profile?.username || ""}</Text>
+          {profile?.verified && <VerifiedBadge size={16} />}
+        </View>
       </Animated.View>
       {back && (
         <FloatingBack top={insets.top - 8} />
       )}
-      <ActionSheet open={menuOpen} title={profile?.display_name || profile?.username || ""} onClose={() => setMenuOpen(false)} actions={menuActions} />
+      <ActionSheet open={menuOpen} title={profile?.display_name || profile?.username || ""} titlePerson={profile} onClose={() => setMenuOpen(false)} actions={menuActions} />
     </View>
   );
 }
 
 const card = { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline, borderRadius: 14 } as const;
 
-/* A recorded discussion: the picture wide, Watch on it, the motion and
-   the part this person played. Tap to play it in the app. */
+/* A recorded discussion, the way a video sits on a channel: the picture
+   wide with Watch on it and how long it ran in the corner, the motion,
+   the part this person played, then "12 views · 3 days ago". Tap to
+   play it in the app. */
 function DebateCard({ d, fallback }: { d: DebateRow; /** The page's own avatar, for rooms this person hosted. */ fallback: string | null }) {
   const img = d.thumbnail_url || d.host_avatar_url || (d.role === "host" ? fallback : null);
   return (
@@ -294,11 +308,14 @@ function DebateCard({ d, fallback }: { d: DebateRow; /** The page's own avatar, 
           <Ionicons name="play" size={11} color={colors.text} />
           <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12 }}>Watch</Text>
         </View>
+        <LengthPill room={d} inset={10} />
       </View>
       <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
         <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{d.motion}</Text>
-        <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }}>{d.role === "host" ? "hosted" : `debated · hosted by @${d.host_username ?? "?"}`} · {topicOf(d.topic_key).label}</Text>
-        <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11.5, marginTop: 3 }}>{new Date(d.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}{d.viewer_count ? ` · ${d.viewer_count} watched` : ""}</Text>
+        <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }}>
+          {d.role === "host" ? "hosted" : <>debated · hosted by @{d.host_username ?? "?"}<VerifiedMark inline id={d.host_id} username={d.host_username} size={12} /></>} · {topicOf(d.topic_key).label}
+        </Text>
+        <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11.5, marginTop: 3 }}>{viewsAndAgo(d.replay_views, d, !!d.recording_url)}</Text>
       </View>
     </Pressable>
   );

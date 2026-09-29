@@ -34,6 +34,7 @@ import { ReminderBell, useReminders } from "../../src/reminders";
 import { ApplySheet, InviteSheet } from "../../src/communitySheets";
 import { communityLink, openLink } from "../../src/siteLinks";
 import { Avatar } from "../../src/avatar";
+import { VerifiedMark } from "../../src/verifiedMark";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 import { FloatingBack } from "../../src/floatingBack";
@@ -318,10 +319,11 @@ export default function CommunityScreen() {
           {[...mods].sort((a, b) => Number(presence.has(b.user_id)) - Number(presence.has(a.user_id))).map((m) => (
             <Pressable key={m.user_id} onPress={() => m.user?.username && openUserMenu({ userId: m.user_id, username: m.user.username, displayName: m.user.display_name })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6, opacity: pressed ? 0.7 : 1 })}>
               <Avatar url={m.user?.avatar_url ?? null} name={m.user?.username ?? "?"} size={24} />
-              <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.85)", fontFamily: fonts.body, fontSize: 13 }}>
-                {personName(m.user)}
-                {m.role === "owner" && <Text style={{ color: GOLD, fontFamily: fonts.bold, fontSize: 9 }}>  OWNER</Text>}
-              </Text>
+              <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text numberOfLines={1} style={{ flexShrink: 1, color: "rgba(238,238,245,0.85)", fontFamily: fonts.body, fontSize: 13 }}>{personName(m.user)}</Text>
+                <VerifiedMark id={m.user_id} username={m.user?.username} size={13} />
+                {m.role === "owner" && <Text style={{ color: GOLD, fontFamily: fonts.bold, fontSize: 9, marginLeft: 3 }}>OWNER</Text>}
+              </View>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: presence.has(m.user_id) ? "#00b894" : "rgba(238,238,245,0.22)" }} />
             </Pressable>
           ))}

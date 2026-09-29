@@ -13,6 +13,7 @@ import { GroupTile } from "../../src/groupTile";
 import { NewGroupSheet } from "../../src/newGroup";
 import { NewMessageSheet } from "../../src/newMessage";
 import { LoadingLine } from "../../src/sky";
+import { VerifiedMark } from "../../src/verifiedMark";
 import { colors, fonts } from "../../src/theme";
 import { Button, Screen, Sub, Title } from "../../src/ui";
 
@@ -112,7 +113,10 @@ export default function Messages() {
                 {it.kind === "dm" ? <Avatar url={it.t.peer_avatar_url} name={it.t.peer_username} size={44} /> : <GroupTile members={it.g.members} size={44} />}
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-                    <Text numberOfLines={1} style={{ flex: 1, color: colors.text, fontFamily: unread > 0 ? fonts.bold : fonts.medium, fontSize: 14.5 }}>{title}</Text>
+                    <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: unread > 0 ? fonts.bold : fonts.medium, fontSize: 14.5 }}>{title}</Text>
+                      {it.kind === "dm" && <VerifiedMark id={it.t.peer_id} username={it.t.peer_username} size={14} />}
+                    </View>
                     <Text style={{ color: "#6f6f7a", fontFamily: fonts.body, fontSize: 11 }}>{relTime(it.at)}</Text>
                   </View>
                   <Text numberOfLines={1} style={{ color: unread > 0 ? "#c9c9d4" : colors.muted, fontFamily: fonts.body, fontSize: 13 }}>{preview}</Text>

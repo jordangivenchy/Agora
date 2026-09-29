@@ -18,6 +18,9 @@ import { showToast } from "../../src/toast";
 import { RoomSquare } from "../../src/roomCard";
 import { RichText, plainPreview } from "../../src/richText";
 import { personName } from "../../src/home";
+import { viewsAndAgo } from "../../src/duration";
+import { LengthPill } from "../../src/replayCard";
+import { VerifiedBadge, VerifiedMark } from "../../src/verifiedMark";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
 import { same, useFocusRefresh } from "../../src/refresh";
@@ -118,6 +121,7 @@ export default function Feed() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
               <Avatar url={c.author.avatar_url} name={c.author.username} size={22} />
               <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }} onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author.username } })}>@{c.author.username}</Text>
+              <VerifiedMark id={c.author.id} username={c.author.username} size={12} style={{ marginLeft: -3 }} />
               <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
             </View>
             <RichText text={c.body} numberOfLines={3} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 6 }} />
@@ -128,17 +132,35 @@ export default function Feed() {
     }
     const r = it.payload as FeedRoom;
     const replay = it.kind === "replay";
+    const meta = { color: colors.muted, fontFamily: fonts.body, fontSize: 11.5 } as const;
     return (
       <View style={{ marginBottom: 12 }}>
         {reason}
         <Pressable onPress={() => (replay ? router.push({ pathname: "/replay/[id]", params: { id: r.id } }) : router.push({ pathname: "/room/[id]", params: { id: r.id } }))} style={[card, { padding: 12, flexDirection: "row", gap: 12, alignItems: "center" }]}>
-          <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden", backgroundColor: colors.surface2 }}>
-            {(r.thumbnail_url || r.host?.avatar_url) && <Img uri={r.thumbnail_url || r.host?.avatar_url} style={{ width: 64, height: 64 }} recyclingKey={r.id} />}
+          {/* A past discussion is a video: its picture at 16:9, how long it ran in the corner. */}
+          <View style={{ width: replay ? 112 : 64, height: replay ? 63 : 64, borderRadius: replay ? 10 : 12, overflow: "hidden", backgroundColor: colors.surface2 }}>
+            {(r.thumbnail_url || r.host?.avatar_url) && <Img uri={r.thumbnail_url || r.host?.avatar_url} style={{ width: "100%", height: "100%" }} recyclingKey={r.id} />}
+            {replay && <LengthPill room={r} inset={4} />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: replay ? "#c0c0c8" : colors.purple, fontFamily: fonts.extra, fontSize: 10, letterSpacing: 0.6 }}>{replay ? "REPLAY" : whenLabel(r.scheduled_start).toUpperCase()}</Text>
             <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 14, marginTop: 3 }}>{r.motion}</Text>
-            <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginTop: 3 }}>{r.community ? r.community.name : personName(r.host)}{!replay && r.reminder_count ? ` · ${r.reminder_count} waiting` : ""}</Text>
+            {replay ? (
+              <>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
+                  <Text numberOfLines={1} style={[meta, { flexShrink: 1 }]}>{personName(r.host)}</Text>
+                  <VerifiedMark id={r.host?.id} username={r.host?.username} size={11} />
+                </View>
+                {/* Without its stamps (a room this viewer can't read directly), the feed's own time for it — when it ended — stands in. */}
+                <Text numberOfLines={1} style={[meta, { marginTop: 1 }]}>{viewsAndAgo(r.replay_views, { ...r, ended_at: r.ended_at ?? it.created_at }, !!r.recording_url)}</Text>
+              </>
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
+                <Text numberOfLines={1} style={[meta, { flexShrink: 1 }]}>{r.community ? r.community.name : personName(r.host)}</Text>
+                {!r.community && <VerifiedMark id={r.host?.id} username={r.host?.username} size={11} />}
+                {!!r.reminder_count && <Text style={meta}>· {r.reminder_count} waiting</Text>}
+              </View>
+            )}
           </View>
           {it.kind === "scheduled" && <ReminderBell set={r.am_set} onPress={() => void toggleReminder(r.id)} disabled={reminderBusy === r.id} />}
         </Pressable>
@@ -204,7 +226,10 @@ export default function Feed() {
                   {suggestions.filter((s) => s.id !== uid).map((s) => (
                     <Pressable key={s.id} onPress={() => router.push({ pathname: "/u/[username]", params: { username: s.username } })} style={[card, { width: 150, padding: 12, alignItems: "center" }]}>
                       <Avatar url={s.avatar_url} name={s.display_name || s.username} size={44} />
-                      <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 13, marginTop: 8 }}>{s.display_name || s.username}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 }}>
+                        <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 13 }}>{s.display_name || s.username}</Text>
+                        {s.verified && <VerifiedBadge size={13} />}
+                      </View>
                       <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>@{s.username}</Text>
                       <Text numberOfLines={1} style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 10.5, marginTop: 2 }}>{s.reason}</Text>
                       <Pressable onPress={() => void follow(s)} disabled={followed.has(s.id)} style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 999, backgroundColor: followed.has(s.id) ? colors.surface2 : colors.blue }}>

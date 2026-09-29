@@ -1,6 +1,7 @@
 /* Notifications: the site's page behind the bell. The filters, the
    rows by day, unread in gold, Mark all read; a friend request gets
-   Accept and Dismiss on the row; realtime brings new ones in. */
+   Accept and Dismiss on the row; realtime brings new ones in. The
+   person a sentence opens with carries their verified mark. */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { Stack, router } from "expo-router";
@@ -9,12 +10,23 @@ import { supabase } from "../src/supabase";
 import { useSession } from "../src/session";
 import { actorLabel, bumpUnread, dayLabel, fetchNotifications, markAllRead, markRead, matchesFilter, notifDetail, notifIcon, notifTarget, notifText, timeAgo, NOTIF_FILTERS, NOTIF_PAGE, type NotifFilter, type NotifRow } from "../src/notifications";
 import { Avatar } from "../src/avatar";
+import { VerifiedMark } from "../src/verifiedMark";
 import { LoadingLine } from "../src/sky";
 import { showToast } from "../src/toast";
 import { colors, fonts } from "../src/theme";
 import { Button, Screen, Sub, Title } from "../src/ui";
 
 type Row = { kind: "label"; key: string; label: string } | { kind: "row"; key: string; n: NotifRow; first: boolean };
+
+/* The sentence, with the mark after the person it starts with ("Jordan ✓
+   went live: …"), as the site's ActorText. Sentences that don't open
+   with a person pass through as they are. */
+function ActorText({ n }: { n: NotifRow }) {
+  const text = notifText(n);
+  const who = n.actor_id ? actorLabel(n, "") : "";
+  if (!who || !text.startsWith(who)) return <>{text}</>;
+  return <>{who}<VerifiedMark inline id={n.actor_id} username={n.actor_username} size={13} />{text.slice(who.length)}</>;
+}
 
 export default function Notifications() {
   const { session } = useSession();
@@ -173,7 +185,7 @@ export default function Notifications() {
                   </View>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: unreadRow ? colors.text : "#c9c9d1", fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19 }}>{notifText(n)}</Text>
+                  <Text style={{ color: unreadRow ? colors.text : "#c9c9d1", fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19 }}><ActorText n={n} /></Text>
                   {!!detail && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }}>“{detail}”</Text>}
                   {!!n.community_name && (n.type === "post_comment" || n.type === "post_reply" || n.type === "repost" || n.type === "post_upvotes") && <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, marginTop: 3 }}>in {n.community_name}</Text>}
                   {friendReq && (

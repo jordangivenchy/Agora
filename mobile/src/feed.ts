@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PostRow } from "./communities";
 import type { Person } from "./home";
+import { fetchReplayStats, type ReplayStats } from "./replay";
 
 export type FeedFilter = "all" | "following" | "communities" | "popular";
 export const FEED_FILTERS: { id: FeedFilter; label: string }[] = [
@@ -31,6 +32,12 @@ export interface FeedRoom {
   reminder_count: number;
   am_set: boolean;
   created_at: string;
+  /* A replay's views and stamps, read after the feed (fetchFeed). */
+  replay_views?: number | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  recording_started_at?: string | null;
+  recording_ended_at?: string | null;
 }
 export type FeedPost = PostRow & { author_avatar_url?: string | null; community_color?: string | null; community_avatar_url?: string | null };
 export interface FeedComment {
@@ -50,7 +57,17 @@ export type FeedItem =
 export async function fetchFeed(supabase: SupabaseClient, filter: FeedFilter, before: string | null): Promise<FeedItem[]> {
   const { data, error } = await supabase.rpc("get_home_feed", { p_filter: filter, p_limit: FEED_PAGE, p_before: before });
   if (error) throw new Error(error.message.includes("does not exist") ? "The feed isn't set up on this database yet." : "Couldn't load your feed — try again.");
-  return (data ?? []) as FeedItem[];
+  const items = (data ?? []) as FeedItem[];
+  /* A past discussion reads like a video — its views, how long it ran,
+     when it went up — and get_home_feed doesn't carry those: one more
+     read for the replays on the page. */
+  const replayIds = items.filter((it) => it.kind === "replay").map((it) => it.item_id);
+  if (replayIds.length === 0) return items;
+  const stats = await fetchReplayStats(supabase, replayIds).catch(() => new Map<string, ReplayStats>());
+  return items.map((it): FeedItem => {
+    const s = it.kind === "replay" ? stats.get(it.item_id) : undefined;
+    return s && it.kind === "replay" ? { ...it, payload: { ...it.payload, ...s } } : it;
+  });
 }
 
 export interface Suggestion {

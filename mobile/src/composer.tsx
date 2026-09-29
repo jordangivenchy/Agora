@@ -17,6 +17,7 @@ import { pickImage, uploadPostImage, type PickedImage } from "./postImages";
 import { fetchTags, type Tag } from "./communities";
 import { TagChip } from "./postCard";
 import { Avatar } from "./avatar";
+import { VerifiedMark } from "./verifiedMark";
 import { TOPICS } from "./topics";
 import { cleanTextError, BODY_MIN, NAME_MIN } from "./cleanText";
 import { colors, fonts } from "./theme";
@@ -38,6 +39,7 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
   initialBody?: string;
   /** For replies: the line under the buttons, e.g. the comment answered. */
   context?: string | null;
+  /** Who is answered ("@name"), bold before the context, with their verified mark. */
   contextName?: string | null;
   /** Posts: the community whose tags to offer. */
   communityId?: string | null;
@@ -154,7 +156,7 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
           <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>
             {context ? (
               <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 13, marginTop: 6 }}>
-                {contextName ? <Text style={{ color: "#f2f2f6", fontFamily: fonts.bold }}>{contextName}  </Text> : null}{context}
+                {contextName ? <Text style={{ color: "#f2f2f6", fontFamily: fonts.bold }}>{contextName}<VerifiedMark inline username={contextName} size={13} />{"  "}</Text> : null}{context}
               </Text>
             ) : null}
             {kind === "post" && (
@@ -238,6 +240,7 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
                 <Pressable key={u.id} onPress={() => pickMention(u)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7, paddingHorizontal: 4, borderRadius: 8, backgroundColor: pressed ? "#26262e" : "transparent" })}>
                   <Avatar url={u.avatar_url} name={u.username} size={22} />
                   <Text style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>@{u.username}</Text>
+                  <VerifiedMark id={u.id} username={u.username} size={13} style={{ marginLeft: -4 }} />
                   {!!u.display_name?.trim() && <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 12 }}>{u.display_name}</Text>}
                 </Pressable>
               ))}

@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "./supabase";
 import { SITE } from "./api";
 import { Avatar } from "./avatar";
+import { VerifiedMark } from "./verifiedMark";
 import { showToast } from "./toast";
 import { colors, fonts } from "./theme";
 
@@ -61,7 +62,10 @@ export function InviteFriends({ communityId, communityName, isPrivate }: { commu
         <View key={c.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2a2a34" }}>
           <Avatar url={c.avatar_url} name={c.username} size={30} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{c.display_name?.trim() || c.username}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{c.display_name?.trim() || c.username}</Text>
+              <VerifiedMark id={c.id} username={c.username} size={13} />
+            </View>
             <Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>@{c.username}</Text>
           </View>
           <Pressable onPress={() => !c.invited && void invite(c)} disabled={busy === c.id} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: c.invited ? "#0b0b0d" : colors.yellow, borderWidth: 1, borderColor: c.invited ? "#2e2e38" : colors.yellow }}>

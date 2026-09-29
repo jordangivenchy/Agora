@@ -177,6 +177,7 @@ function DmThreadScreen({ me, peer }: { me: string; peer: Peer }) {
       <ChatHeader
         left={<Avatar url={peer.avatar_url} name={peer.username} size={40} />}
         title={displayName(peer)}
+        titlePerson={peer}
         sub={`@${peer.username}`}
         onTitle={() => router.push({ pathname: "/u/[username]", params: { username: peer.username } })}
         right={<Pressable onPress={() => { setOptions(true); if (!rel) void loadRel(); }} hitSlop={8} accessibilityLabel="Chat options" style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}><Ionicons name="ellipsis-horizontal" size={20} color="rgba(255,255,255,0.7)" /></Pressable>}
@@ -211,7 +212,7 @@ function DmThreadScreen({ me, peer }: { me: string; peer: Peer }) {
         }}
         uploadImage={(img) => uploadPostImage(me, img)}
       />
-      <ActionSheet open={options} title={displayName(peer)} sub={`@${peer.username}`} onClose={() => setOptions(false)} actions={optionActions} />
+      <ActionSheet open={options} title={displayName(peer)} titlePerson={peer} sub={`@${peer.username}`} onClose={() => setOptions(false)} actions={optionActions} />
       <ReportSheet target={report} onClose={() => setReport(null)} />
       <NewGroupSheet open={newGroup} onClose={() => setNewGroup(false)} initialMembers={[peer.id]} onCreated={(chatId) => { setNewGroup(false); router.replace({ pathname: "/messages/g/[id]", params: { id: chatId } }); }} />
     </View>

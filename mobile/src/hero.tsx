@@ -20,6 +20,7 @@ import { outletIcon, topicFor } from "./discover";
 import { expandQueue, openQueue, useQueue } from "./queue";
 import { useReduceMotion } from "./motion";
 import { openUrl } from "./web";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 /* The hero's least height; a slide with more to say makes it taller. */
@@ -322,6 +323,7 @@ function RoomSlide({ room, ground, onMeasure }: { room: HeroRoom; ground: string
                 <Text style={{ color: sp.open ? "rgba(255,255,255,0.75)" : "#fff", fontFamily: fonts.title, fontSize: 11 }}>{sp.name.replace(/^@/, "").charAt(0).toUpperCase()}</Text>
               </View>
               <Text numberOfLines={1} style={{ flexShrink: 1, color: sp.open ? colors.muted : "#eeeef5", fontFamily: sp.open ? fonts.medium : fonts.semi, fontSize: 12.5 }}>{sp.name}</Text>
+              {!sp.open && <VerifiedMark id={sp.id} username={sp.username} size={12} style={{ marginLeft: -3 }} />}
             </View>
           ))}
         </View>
@@ -330,14 +332,17 @@ function RoomSlide({ room, ground, onMeasure }: { room: HeroRoom; ground: string
             <Ionicons name="play" size={11} color={colors.ink} />
             <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 }}>Watch live</Text>
           </View>
-          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>
-            hosted by{" "}
-            {room.community ? (
-              <Text style={{ color: room.community.color ?? colors.blueText, fontFamily: fonts.bold }}>{room.community.name}</Text>
-            ) : (
-              <Text style={{ color: colors.soft, fontFamily: fonts.semi }}>{personName(room.host)}</Text>
-            )}
-          </Text>
+          <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>
+              hosted by{" "}
+              {room.community ? (
+                <Text style={{ color: room.community.color ?? colors.blueText, fontFamily: fonts.bold }}>{room.community.name}</Text>
+              ) : (
+                <Text style={{ color: colors.soft, fontFamily: fonts.semi }}>{personName(room.host)}</Text>
+              )}
+            </Text>
+            {!room.community && <VerifiedMark id={room.host?.id} username={room.host?.username} size={12} />}
+          </View>
         </View>
       </View>
     </Pressable>

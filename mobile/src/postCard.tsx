@@ -1,10 +1,11 @@
 /* The site's post card (components/community/PostCard.tsx): votes down
-   the left, the community's tile, the meta line, the title, a two-line
-   preview, the picture (tap to see it big), the clip it shares, the
-   conversation it carries, the repost's original, and the actions:
-   comments, share, repost. The ⋯ menu sits at the top right, where a
-   phone's width has room for it (press and hold opens it too, as on the
-   site's phones). The thread view uses it whole. */
+   the left, the community's tile, the meta line (the author with their
+   verified mark), the title, a two-line preview, the picture (tap to
+   see it big), the clip it shares, the conversation it carries, the
+   repost's original, and the actions: comments, share, repost. The ⋯
+   menu sits at the top right, where a phone's width has room for it
+   (press and hold opens it too, as on the site's phones). The thread
+   view uses it whole. */
 import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { openImage } from "./lightbox";
 import { clipIdInBody, stripClipLink } from "./clips";
 import { PostTopicQueue } from "./postTopic";
 import { openPostMenu, startRepost, type PostHandlers } from "./postMenu";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export const META = "rgba(238,238,245,0.5)";
@@ -130,7 +132,8 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
             <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10.5 }}>
               {showCommunity && <Text style={{ color: colors.gold }} onPress={onOpenCommunity}>{p.community_name} · </Text>}
-              <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: p.author_username } })}>@{p.author_username}</Text> · {timeAgo(p.created_at)}{p.edited_at ? " · edited" : ""}
+              <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: p.author_username } })}>@{p.author_username}</Text>
+              <VerifiedMark inline id={p.author_id} username={p.author_username} size={11} /> · {timeAgo(p.created_at)}{p.edited_at ? " · edited" : ""}
             </Text>
             <RoleBadge role={p.author_role} />
             {p.pinned_at && <Badge label="PINNED" color={colors.blueText} icon="pin-outline" />}
@@ -159,6 +162,7 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
                 <>
                   <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10 }}>
                     <Ionicons name="repeat-outline" size={10} color={META} /> from <Text style={{ color: colors.gold }}>{p.orig_community_name}</Text> · @{p.orig_author_username}
+                    <VerifiedMark inline username={p.orig_author_username} size={10} />
                   </Text>
                   {!!p.orig_title && <Text onPress={() => router.push({ pathname: "/posts/[id]", params: { id: p.repost_of! } })} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, marginTop: 5 }}>{p.orig_title}</Text>}
                   {!!origBody && <RichText text={origBody} numberOfLines={2} style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, marginTop: 3 }} />}

@@ -108,6 +108,7 @@ export function HomeHeader() {
         top={insets.top + 57}
         name={me?.display_name || me?.username || "You"}
         sub={me?.username ? `@${me.username}` : undefined}
+        person={me}
         items={[
           { label: "Profile", icon: "person-outline", onPress: () => router.push("/you") },
           { label: "Messages", icon: "chatbubble-outline", onPress: () => router.push("/messages") },

@@ -44,7 +44,9 @@ export async function setFollowing(supabase: SupabaseClient, target: string, fol
   if (error) throw new Error(error.message);
 }
 
-/* Rooms this person hosted or debated in, newest first. */
+/* Rooms this person hosted or debated in, newest first, with what a
+   past discussion shows: its views, and the stamps for how long it ran
+   and when it went up. */
 export interface DebateRow {
   id: string;
   motion: string | null;
@@ -52,7 +54,12 @@ export interface DebateRow {
   status: string;
   created_at: string;
   scheduled_start: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  recording_started_at: string | null;
+  recording_ended_at: string | null;
   viewer_count: number | null;
+  replay_views: number | null;
   thumbnail_url: string | null;
   recording_url: string | null;
   is_private?: boolean | null;
@@ -63,17 +70,18 @@ export interface DebateRow {
   host_avatar_url?: string | null;
 }
 type HostedRow = Omit<DebateRow, "role">;
+const ROOM_FIELDS = "id, motion, topic_key, status, created_at, scheduled_start, started_at, ended_at, recording_started_at, recording_ended_at, viewer_count, replay_views, thumbnail_url, recording_url, is_private";
 
 export async function fetchDebates(supabase: SupabaseClient, uid: string): Promise<DebateRow[]> {
   const [{ data: parts }, { data: hosted }] = await Promise.all([
     supabase
       .from("debate_participants")
-      .select("role, room:debate_rooms(id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, is_private, host_id)")
+      .select(`role, room:debate_rooms(${ROOM_FIELDS}, host_id)`)
       .eq("user_id", uid)
       .eq("role", "debater"),
     supabase
       .from("debate_rooms")
-      .select("id, motion, topic_key, status, created_at, scheduled_start, viewer_count, thumbnail_url, recording_url, is_private")
+      .select(ROOM_FIELDS)
       .eq("host_id", uid)
       .order("created_at", { ascending: false })
       .limit(40),

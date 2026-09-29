@@ -13,6 +13,8 @@ import { votePost } from "../src/communities";
 import { setFollowing } from "../src/profile";
 import { PostCard, CommunityTile } from "../src/postCard";
 import { RoomSquare, type SquareRoom } from "../src/roomCard";
+import { ReplayCard } from "../src/replayCard";
+import { VerifiedBadge, VerifiedMark } from "../src/verifiedMark";
 import { Avatar } from "../src/avatar";
 import { TOPICS } from "../src/topics";
 import { LoadingLine } from "../src/sky";
@@ -171,7 +173,7 @@ export default function Search() {
       return (
         <Pressable key={r.id} onPress={() => router.push({ pathname: "/posts/[id]", params: { id: c.post_id } })} style={[card, { paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10 }]}>
           <Text numberOfLines={2} style={{ color: "rgba(238,238,245,0.6)", fontFamily: fonts.body, fontSize: 11.5 }}>
-            <Ionicons name="chatbubble-outline" size={11} color="rgba(238,238,245,0.6)" /> {c.author ? `@${c.author.username}` : "(deleted)"} commented on <Text style={{ color: "#eeeef5" }}>{c.post_title}</Text> · {c.community_name} · {timeAgo(c.created_at)}
+            <Ionicons name="chatbubble-outline" size={11} color="rgba(238,238,245,0.6)" /> {c.author ? <>@{c.author.username}<VerifiedMark inline id={c.author.id} username={c.author.username} size={11} /></> : "(deleted)"} commented on <Text style={{ color: "#eeeef5" }}>{c.post_title}</Text> · {c.community_name} · {timeAgo(c.created_at)}
           </Text>
           <Highlight text={excerpt} query={query} style={{ color: "rgba(238,238,245,0.72)", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 19, marginTop: 4 }} />
         </Pressable>
@@ -266,7 +268,10 @@ export default function Search() {
                       <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" }}><Ionicons name="play-outline" size={14} color={colors.text} /></View>
                     )}
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>{s.label}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>{s.label}</Text>
+                        {s.kind === "person" && <VerifiedMark id={s.id} username={s.sublabel} size={12} />}
+                      </View>
                       <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 10.5 }}>
                         {s.kind === "debate" && s.sublabel === "Live now" ? <Text style={{ color: "#e05a5a", fontFamily: fonts.bold }}>LIVE</Text> : s.sublabel}{s.sublabel ? " · " : ""}{KIND_LABEL[s.kind]}
                       </Text>
@@ -298,11 +303,14 @@ export default function Search() {
                     <ScrollView horizontal={kind === "all"} showsHorizontalScrollIndicator={false} contentContainerStyle={kind === "all" ? { gap: 12 } : { flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
                       {debates.map((r) => {
                         const d = r.payload;
-                        const ended = d.status === "ended";
+                        /* A past discussion is a video: the replay's card, not a room's door. */
+                        if (d.status === "ended") {
+                          return <ReplayCard key={r.id} room={{ ...d, host: Array.isArray(d.host) ? d.host[0] ?? null : d.host }} width={168} onPress={() => router.push({ pathname: "/replay/[id]", params: { id: d.id } })} />;
+                        }
                         return (
                           <View key={r.id}>
-                            <RoomSquare room={d} onPress={() => router.push(ended ? { pathname: "/replay/[id]", params: { id: d.id } } : { pathname: "/room/[id]", params: { id: d.id } })} />
-                            <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.body, fontSize: 10, marginTop: 4, maxWidth: 168 }}>{ended ? `Ended ${d.ended_at ? timeAgo(d.ended_at) + " ago" : ""}` : d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}</Text>
+                            <RoomSquare room={d} onPress={() => router.push({ pathname: "/room/[id]", params: { id: d.id } })} />
+                            <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.body, fontSize: 10, marginTop: 4, maxWidth: 168 }}>{d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}</Text>
                           </View>
                         );
                       })}
@@ -320,8 +328,8 @@ export default function Search() {
                           <Avatar url={p.avatar_url} name={p.display_name || p.username} size={40} />
                           <View style={{ flex: 1, minWidth: 0 }}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                              <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 13.5 }}>{p.display_name?.trim() || `@${p.username}`}</Text>
-                              {p.verified && <Ionicons name="checkmark-circle" size={14} color={colors.yellow} />}
+                              <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 13.5 }}>{p.display_name?.trim() || `@${p.username}`}</Text>
+                              {p.verified && <VerifiedBadge size={14} />}
                             </View>
                             <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5 }}>@{p.username} · {p.bio?.trim() || `${p.followers} ${p.followers === 1 ? "follower" : "followers"}`}</Text>
                           </View>

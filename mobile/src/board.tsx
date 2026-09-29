@@ -11,6 +11,7 @@ import { TOPICS, darkInkOn, type IconName, type Topic } from "./topics";
 import { fmtRotate, isScheduled, msToUtcMidnight, personName, roomHost, type BoardRoom, type TopicRow } from "./home";
 import { whenLabel } from "./rooms";
 import { ReminderBell, useReminders, type ReminderState } from "./reminders";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 const QUESTIONS_SHOWN = 4;
@@ -135,7 +136,7 @@ function Strip({ children }: { children: ReactNode }) {
   );
 }
 
-/* The 168-square room card: the host's picture, what's on, who's hosting. */
+/* The 168-square room card: the host's picture, what's on, who's hosting (with their mark). */
 function RoomTile({ room, reminder, onReminder, reminderBusy }: { room: BoardRoom; reminder?: ReminderState; onReminder?: () => void; reminderBusy?: boolean }) {
   const host = roomHost(room);
   const img = room.thumbnail_url || host?.avatar_url || null;
@@ -162,10 +163,11 @@ function RoomTile({ room, reminder, onReminder, reminderBusy }: { room: BoardRoo
       </View>
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, paddingHorizontal: 10, paddingVertical: 8 }}>
         <Text numberOfLines={2} style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 13, lineHeight: 17 }}>{room.motion}</Text>
-        <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 3 }}>
-          {personName(host)}
-          {reminder && <> · <Ionicons name="notifications-outline" size={10} color={colors.muted} /> {reminder.count}</>}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>{personName(host)}</Text>
+          <VerifiedMark id={host?.id} username={host?.username} size={11} />
+          {reminder && <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>· <Ionicons name="notifications-outline" size={10} color={colors.muted} /> {reminder.count}</Text>}
+        </View>
       </View>
       {reminder && onReminder && (
         <View style={{ position: "absolute", top: 8, right: 8 }}>

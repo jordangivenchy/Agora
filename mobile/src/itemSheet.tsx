@@ -4,12 +4,14 @@
    Cancel underneath. An action runs once the sheet has gone (sheetModal.tsx
    reports it), so whatever it presents — another sheet, an alert, a
    screen — isn't dropped while this modal is still leaving, and doesn't
-   wait any longer than that. */
+   wait any longer than that. A row that is a person carries their
+   verified mark after the name. */
 import { useRef } from "react";
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SheetModal } from "./sheetModal";
+import { VerifiedMark } from "./verifiedMark";
 import { fonts } from "./theme";
 
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -18,6 +20,8 @@ export interface SheetItem {
   label: string;
   run: () => void;
   danger?: boolean;
+  /** The person the row names, for their mark. */
+  person?: { id?: string | null; username?: string | null };
 }
 
 export const AFTER_SHEET_MS = 320;
@@ -52,7 +56,8 @@ export function ItemSheet({ open, title, items, onClose }: { open: boolean; titl
               style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, height: 48, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? "#17171c" : "transparent" })}
             >
               <Ionicons name={it.icon} size={18} color={it.danger ? "#ff8a80" : "#eeeef5"} />
-              <Text style={{ color: it.danger ? "#ff8a80" : "#eeeef5", fontFamily: fonts.semi, fontSize: 15 }}>{it.label}</Text>
+              <Text numberOfLines={it.person ? 1 : undefined} style={{ flexShrink: it.person ? 1 : undefined, color: it.danger ? "#ff8a80" : "#eeeef5", fontFamily: fonts.semi, fontSize: 15 }}>{it.label}</Text>
+              {it.person && <VerifiedMark id={it.person.id} username={it.person.username} size={15} style={{ marginLeft: -8 }} />}
             </Pressable>
           ))}
         </ScrollView>

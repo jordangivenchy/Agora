@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { createGroup, displayName, fetchGroupCandidates, GROUP_NAME_MAX, type GroupMember } from "./messages";
 import { Avatar } from "./avatar";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { open: boolean; onClose: () => void; onCreated: (chatId: string) => void; initialMembers?: string[] }) {
@@ -74,7 +75,10 @@ export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { op
                 <Pressable onPress={() => toggle(f.id)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7, paddingHorizontal: 8, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: on ? "#7a5a10" : "#1f1f26", marginBottom: 6 }}>
                   <Avatar url={f.avatar_url} name={f.username} size={30} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(f)}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Text numberOfLines={1} style={{ flexShrink: 1, color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(f)}</Text>
+                      <VerifiedMark id={f.id} username={f.username} size={13} />
+                    </View>
                     <Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>@{f.username}</Text>
                   </View>
                   <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.yellow : "#0b0b0d", borderWidth: 1, borderColor: on ? colors.yellow : "rgba(255,255,255,0.2)" }}>{on && <Ionicons name="checkmark" size={13} color={colors.ink} />}</View>

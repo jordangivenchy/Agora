@@ -36,6 +36,8 @@ export interface ReplayRoom {
   /** That community's name, for the line that points at it. */
   discussion_community: string | null;
   transcript_count: number;
+  /** How many times it has been watched, read with the room (the watch itself bumps it). */
+  replay_views?: number | null;
 }
 
 export interface TranscriptLine {
@@ -57,7 +59,11 @@ export interface MoreReplay {
   thumbnail_url: string | null;
   started_at: string | null;
   ended_at: string | null;
-  host: { username: string; display_name: string | null; avatar_url: string | null } | null;
+  recording_started_at: string | null;
+  recording_ended_at: string | null;
+  recording_url: string | null;
+  replay_views: number | null;
+  host: { id: string; username: string; display_name: string | null; avatar_url: string | null } | null;
 }
 
 type PolishedLine = { offset_seconds: number; text: string; user_id: string | null; username: string | null; display_name: string | null; avatar_url: string | null };
@@ -127,11 +133,13 @@ async function loadFallback(supabase: SupabaseClient, roomId: string): Promise<{
 }
 
 export async function fetchReplay(supabase: SupabaseClient, roomId: string): Promise<{ room: ReplayRoom | null; lines: TranscriptLine[] }> {
-  const [{ data: replay, error: rErr }, { data: tx }, { data: polishedRow }] = await Promise.all([
+  const [{ data: replay, error: rErr }, { data: tx }, { data: polishedRow }, { data: viewsRow }] = await Promise.all([
     supabase.rpc("get_debate_replay", { p_room: roomId }),
     supabase.rpc("get_debate_transcript", { p_room: roomId, p_limit: 2000 }),
     supabase.from("replay_transcripts").select("status, lines").eq("room_id", roomId).maybeSingle(),
+    supabase.from("debate_rooms").select("replay_views").eq("id", roomId).maybeSingle(),
   ]);
+  const views = (viewsRow as { replay_views?: number | null } | null)?.replay_views ?? null;
   let room = (replay as ReplayRoom | null) ?? null;
   let lines = (tx as TranscriptLine[] | null) ?? [];
   /* The post-run transcript (full coverage, punctuation, speakers aligned)
@@ -156,7 +164,7 @@ export async function fetchReplay(supabase: SupabaseClient, roomId: string): Pro
     room = fb.room;
     if (!tx && !hasPolished) lines = fb.lines;
   }
-  return { room, lines: lines.filter((l) => l && l.content) };
+  return { room: room ? { ...room, replay_views: room.replay_views ?? views } : null, lines: lines.filter((l) => l && l.content) };
 }
 
 /** The thread under the replay, newest first, as the site lists it. */
@@ -229,7 +237,7 @@ export async function fetchTimeline(recordingUrl: string): Promise<TimelineSpan[
 export async function fetchMoreReplays(supabase: SupabaseClient, selfId: string, topicKey: string | null): Promise<MoreReplay[]> {
   const { data } = await supabase
     .from("debate_rooms")
-    .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+    .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, recording_started_at, recording_ended_at, recording_url, replay_views, host:users!debate_rooms_host_id_fkey(id, username, display_name, avatar_url)")
     .eq("status", "ended")
     .eq("is_private", false)
     .not("recording_url", "is", null)
@@ -239,6 +247,29 @@ export async function fetchMoreReplays(supabase: SupabaseClient, selfId: string,
   const rows = ((data ?? []) as unknown as (MoreReplay & { host: MoreReplay["host"] | MoreReplay["host"][] })[]).map((r) => ({ ...r, host: one(r.host) }));
   rows.sort((a, b) => Number(b.topic_key === topicKey) - Number(a.topic_key === topicKey));
   return rows.slice(0, 6);
+}
+
+/* What a list of past discussions shows — the views, the recording, the
+   stamps for its length and when it went up — for rows from an RPC that
+   doesn't carry them (the feed, search). A room this viewer can't read
+   directly is simply left out. */
+export interface ReplayStats {
+  replay_views: number | null;
+  recording_url: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  recording_started_at: string | null;
+  recording_ended_at: string | null;
+}
+export async function fetchReplayStats(supabase: SupabaseClient, ids: string[]): Promise<Map<string, ReplayStats>> {
+  const out = new Map<string, ReplayStats>();
+  if (ids.length === 0) return out;
+  const { data } = await supabase
+    .from("debate_rooms")
+    .select("id, replay_views, recording_url, started_at, ended_at, recording_started_at, recording_ended_at")
+    .in("id", [...new Set(ids)]);
+  for (const r of (data ?? []) as (ReplayStats & { id: string })[]) out.set(r.id, r);
+  return out;
 }
 
 export function fmtClock(sec: number): string {

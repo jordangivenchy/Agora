@@ -18,6 +18,7 @@ import { supabase } from "./supabase";
 import { displayName, fetchGroupCandidates, type GroupMember } from "./messages";
 import { searchPeople, type Friend } from "./friends";
 import { Avatar } from "./avatar";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 type Row =
@@ -119,7 +120,10 @@ export function NewMessageSheet({ open, onClose, meId, onPick, onNewGroup, onOpe
     >
       <Avatar url={r.person.avatar_url} name={r.person.username} size={38} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.medium, fontSize: 14 }}>{displayName(r.person)}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.medium, fontSize: 14 }}>{displayName(r.person)}</Text>
+          <VerifiedMark id={r.person.id} username={r.person.username} size={14} />
+        </View>
         <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>
           @{r.person.username}{r.kind === "other" ? " · follow each other to message" : ""}
         </Text>

@@ -1,8 +1,9 @@
 /* The pictures (components/agora/CallLayouts.tsx, the site's two flat
    layouts): every on-stage person as a tile, live camera or the avatar
-   plate, the name tag, the mute badge, a yellow ring while they talk; a
-   shared screen as a tile of its own. Gallery is Discord's grid, the
-   site's own logic (components/agora/callGrid.ts and gallerySlots.ts,
+   plate, the name tag with their verified mark, the mute badge, a
+   yellow ring while they talk; a shared screen as a tile of its own.
+   Gallery is Discord's grid, the site's own logic
+   (components/agora/callGrid.ts and gallerySlots.ts,
    shared with the website): one person alone is the site's 16:9 picture
    across the width; from two people, square windows as big as the room
    allows (never past two across), a screen two windows wide; past nine
@@ -19,6 +20,7 @@ import type { CallTile } from "./roomCall";
 import { planGrid } from "../../src/components/agora/callGrid";
 import { planSlots, type SlotPerson } from "../../src/components/agora/gallerySlots";
 import { ItemSheet } from "./itemSheet";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export type Layout = "gallery" | "multi";
@@ -58,9 +60,11 @@ export function Tile({ tile, speaking, small, featured, size, onPress, onLongPre
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: small ? 5 : 7, paddingVertical: small ? 2 : 3, borderRadius: 6, backgroundColor: "#0a0a0c", maxWidth: "100%" }}>
           {tile.micMuted && !screen && <Ionicons name="mic-off" size={small ? 9 : 11} color={colors.red} />}
           {screen && <Ionicons name="desktop-outline" size={small ? 9 : 11} color={colors.soft} />}
-          <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: small ? 9.5 : 11.5 }}>
-            {tile.local ? "You" : tile.username}{screen ? " · screen" : ""}
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: small ? 9.5 : 11.5 }}>
+            {tile.local ? "You" : tile.username}
           </Text>
+          {!tile.local && <VerifiedMark id={tile.identity} username={tile.handle} size={small ? 10 : 12} />}
+          {screen && <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: small ? 9.5 : 11.5 }}>· screen</Text>}
           {!small && !screen && <Text style={{ color: speaking ? colors.yellow : colors.muted, fontFamily: fonts.body, fontSize: 10 }}>· {speaking ? "Speaking" : tile.roleLabel}</Text>}
         </View>
       </View>
@@ -186,6 +190,7 @@ export function StageTiles({ tiles, speaking, layout, pinned, onPin, width, heig
         items={behind.map((t) => ({
           icon: speaking.has(t.identity) ? "mic" : t.call ? "videocam-outline" : "person-circle-outline",
           label: t.local ? "You" : t.username,
+          person: t.local ? undefined : { id: t.identity, username: t.handle },
           run: () => onPin(t.key),
         }))}
       />

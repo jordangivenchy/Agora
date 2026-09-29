@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { addGroupMembers, displayName, fetchGroupCandidates, groupErrorText, leaveGroup, removeGroupMember, renameGroup, GROUP_NAME_MAX, type GroupMember, type GroupMemberRow } from "./messages";
 import { Avatar } from "./avatar";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export function GroupInfoSheet({ open, chatId, name, me, members, onClose, onRenamed, onMembersChanged, onLeft }: {
@@ -75,7 +76,11 @@ export function GroupInfoSheet({ open, chatId, name, me, members, onClose, onRen
               <View key={m.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7, paddingHorizontal: 8, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#1f1f26", marginBottom: 6 }}>
                 <Avatar url={m.avatar_url} name={m.username} size={30} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(m)}{m.id === me ? " (you)" : ""}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Text numberOfLines={1} style={{ flexShrink: 1, color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(m)}</Text>
+                    <VerifiedMark id={m.id} username={m.username} size={13} />
+                    {m.id === me && <Text style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>(you)</Text>}
+                  </View>
                   <Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>@{m.username}{m.is_owner ? " · owner" : ""}</Text>
                 </View>
                 {isOwner && m.id !== me && <Pressable onPress={() => remove(m)} hitSlop={8}><Text style={{ color: "#ff8a80", fontFamily: fonts.semi, fontSize: 12 }}>Remove</Text></Pressable>}
@@ -86,7 +91,10 @@ export function GroupInfoSheet({ open, chatId, name, me, members, onClose, onRen
               <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7, paddingHorizontal: 8, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#1f1f26", marginBottom: 6 }}>
                 <Avatar url={u.avatar_url} name={u.username} size={30} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(u)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Text numberOfLines={1} style={{ flexShrink: 1, color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(u)}</Text>
+                    <VerifiedMark id={u.id} username={u.username} size={13} />
+                  </View>
                   <Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>@{u.username}</Text>
                 </View>
                 <Pressable onPress={() => void add(u)} disabled={busy === u.id} style={{ height: 30, paddingHorizontal: 12, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.yellow, opacity: busy === u.id ? 0.6 : 1 }}><Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 12 }}>{busy === u.id ? "Adding…" : "Add"}</Text></Pressable>

@@ -11,6 +11,7 @@ import { bumpMe } from "../src/me";
 import { fetchSuggestions, type Suggestion } from "../src/feed";
 import { setFollowing } from "../src/profile";
 import { Avatar } from "../src/avatar";
+import { VerifiedBadge } from "../src/verifiedMark";
 import { friendlyProfileError, normalizeUsername, USERNAME_REGEX } from "../src/profileText";
 import { LoadingLine } from "../src/sky";
 import { colors, fonts } from "../src/theme";
@@ -136,7 +137,10 @@ export default function Welcome() {
                   <View key={p.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}>
                     <Avatar url={p.avatar_url} name={p.display_name || p.username} size={40} />
                     <View style={{ flex: 1 }}>
-                      <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14 }}>{p.display_name?.trim() || `@${p.username}`}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 14 }}>{p.display_name?.trim() || `@${p.username}`}</Text>
+                        {p.verified && <VerifiedBadge size={14} />}
+                      </View>
                       <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>@{p.username}{p.reason ? ` · ${p.reason}` : ""}</Text>
                     </View>
                     <Pressable onPress={() => void toggleFollow(p)} style={{ height: 32, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: followed.has(p.id) ? colors.surface2 : colors.blue, borderWidth: followed.has(p.id) ? 1 : 0, borderColor: colors.border }}>

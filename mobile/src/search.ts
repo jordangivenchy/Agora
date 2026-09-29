@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PostRow } from "./communities";
 import type { SquareRoom } from "./roomCard";
+import { fetchReplayStats, type ReplayStats } from "./replay";
 
 export type SearchKind = "all" | "debate" | "post" | "comment" | "community" | "person";
 export const SEARCH_TABS: { id: SearchKind; label: string }[] = [
@@ -22,7 +23,7 @@ export const INSTANT_LIMIT = 12;
 const RECENT_KEY = "agora:recent-searches";
 const RECENT_MAX = 8;
 
-export type DebatePayload = SquareRoom & { created_at: string; ended_at: string | null; recording_url: string | null };
+export type DebatePayload = SquareRoom & { created_at: string; ended_at: string | null; recording_url: string | null } & Partial<ReplayStats>;
 export type CommentPayload = {
   id: string; post_id: string; post_title: string; community_id: string; community_name: string;
   body: string; excerpt: string | null; created_at: string;
@@ -56,7 +57,19 @@ export async function searchAll(supabase: SupabaseClient, q: string, kind: Searc
     const m = error.message ?? "";
     return { rows: [], status: /does not exist|not find|schema cache|404/i.test(m) ? "warming" : "error" };
   }
-  return { rows: (data ?? []) as SearchRow[], status: "ok" };
+  const rows = (data ?? []) as SearchRow[];
+  /* A past discussion shows as a video — its views, how long it ran,
+     when it went up — which search_all doesn't carry: one more read. */
+  const ended = rows.filter((r) => r.kind === "debate" && r.payload.status === "ended").map((r) => r.id);
+  if (ended.length === 0) return { rows, status: "ok" };
+  const stats = await fetchReplayStats(supabase, ended).catch(() => new Map<string, ReplayStats>());
+  return {
+    rows: rows.map((r): SearchRow => {
+      const s = r.kind === "debate" ? stats.get(r.id) : undefined;
+      return s && r.kind === "debate" ? { ...r, payload: { ...r.payload, ...s } } : r;
+    }),
+    status: "ok",
+  };
 }
 
 export async function readRecent(supabase: SupabaseClient, uid: string | null): Promise<string[]> {

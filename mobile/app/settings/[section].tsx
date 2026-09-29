@@ -13,6 +13,7 @@ import { fetchSettings, saveSettings, validateNewPassword, CONSENT_CATEGORIES, D
 import { SECTIONS, type SectionKey } from "./index";
 import { Btn, Input, Msg, Pad, SectionCard, Toggle } from "../../src/settingsUi";
 import { Avatar } from "../../src/avatar";
+import { VerifiedMark } from "../../src/verifiedMark";
 import { LoadingLine } from "../../src/sky";
 import { colors, fonts } from "../../src/theme";
 import { Screen } from "../../src/ui";
@@ -316,7 +317,10 @@ export default function SettingsSection() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 12 }}>
               <Avatar url={profile.avatar_url} name={profile.display_name || profile.username} size={52} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 14 }}>{profile.display_name?.trim() || profile.username}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.body, fontSize: 14 }}>{profile.display_name?.trim() || profile.username}</Text>
+                  <VerifiedMark id={profile.id} username={profile.username} size={14} />
+                </View>
                 <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5 }}>@{profile.username}</Text>
                 {!!profile.bio && <Text numberOfLines={1} style={{ color: "#9a9aa2", fontFamily: fonts.body, fontSize: 11.5, marginTop: 3 }}>{profile.bio}</Text>}
               </View>
@@ -505,7 +509,7 @@ export default function SettingsSection() {
             ) : blocked.map((u) => (
               <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
                 <Avatar url={u.avatar_url} name={u.display_name || u.username} size={32} />
-                <Text style={{ flex: 1, color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{u.display_name?.trim() || u.username} <Text style={{ color: colors.muted, fontSize: 11 }}>@{u.username}</Text></Text>
+                <Text style={{ flex: 1, color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{u.display_name?.trim() || u.username}<VerifiedMark inline id={u.id} username={u.username} size={13} /> <Text style={{ color: colors.muted, fontSize: 11 }}>@{u.username}</Text></Text>
                 <Btn kind="ghost" label={unblockBusy === u.id ? "Unblocking…" : "Unblock"} onPress={() => void unblock(u)} disabled={unblockBusy === u.id} />
               </View>
             ))}

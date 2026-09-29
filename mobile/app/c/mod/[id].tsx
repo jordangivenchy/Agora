@@ -27,6 +27,7 @@ import { useUserMenu } from "../../../src/userMenu";
 import { Btn, Input, Msg, Pad, SectionCard, Toggle } from "../../../src/settingsUi";
 import { TagChip, RoleBadge } from "../../../src/postCard";
 import { Avatar } from "../../../src/avatar";
+import { VerifiedMark } from "../../../src/verifiedMark";
 import { timeAgo } from "../../../src/communities";
 import { showToast } from "../../../src/toast";
 import { LoadingLine } from "../../../src/sky";
@@ -135,6 +136,7 @@ export default function ModToolsScreen() {
         <Pressable onPress={() => u?.username && openUserMenu({ userId, username: u.username, displayName: u.display_name })} style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
           <Avatar url={u?.avatar_url ?? null} name={u?.username ?? "?"} size={26} />
           <Text numberOfLines={1} style={{ flexShrink: 1, color: "rgba(238,238,245,0.9)", fontFamily: fonts.body, fontSize: 13.5 }}>{personName(u)}</Text>
+          <VerifiedMark id={userId} username={u?.username} size={13} style={{ marginLeft: -6 }} />
         </Pressable>
         {right}
       </View>
@@ -284,7 +286,10 @@ export default function ModToolsScreen() {
                   <View key={r.id} style={{ flexDirection: "row", gap: 10, paddingVertical: 3 }}>
                     <Text numberOfLines={1} style={{ width: 54, color: "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 11.5 }}>{timeAgo(r.created_at)}</Text>
                     <Text style={{ flex: 1, color: "rgba(238,238,245,0.65)", fontFamily: fonts.body, fontSize: 12, lineHeight: 17 }}>
-                      <Text style={{ color: "#eeeef5" }}>{personName(r.actor)}</Text> {p.verb}{p.target ? " " : ""}{p.target && <Text style={{ color: "#e2b96b" }}>{p.target}</Text>}{p.tail ? ` ${p.tail}` : ""}
+                      <Text style={{ color: "#eeeef5" }}>{personName(r.actor)}</Text>
+                      <VerifiedMark inline id={r.actor_id} username={r.actor?.username} size={12} /> {p.verb}{p.target ? " " : ""}
+                      {p.target && <Text style={{ color: "#e2b96b" }}>{p.target}</Text>}
+                      {p.target && <VerifiedMark inline id={r.target_user} username={r.target?.username} size={12} />}{p.tail ? ` ${p.tail}` : ""}
                     </Text>
                   </View>
                 );

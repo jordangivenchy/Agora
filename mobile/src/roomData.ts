@@ -163,7 +163,7 @@ export async function restoreSeat(supabase: SupabaseClient, roomId: string, user
 }
 
 /* ── Stage invites: the consent moment ───────────────────────────── */
-export interface PendingInvite { id: string; inviterName: string }
+export interface PendingInvite { id: string; inviterName: string; /** Who sent it, for their verified mark. */ inviterId?: string }
 
 export async function inviterName(supabase: SupabaseClient, inviterId: string): Promise<string> {
   try {
@@ -180,7 +180,7 @@ export async function fetchPendingInvite(supabase: SupabaseClient, roomId: strin
     const { data } = await supabase.from("stage_invites").select("id, inviter_id").eq("room_id", roomId).eq("invitee_id", userId).eq("status", "pending").order("created_at", { ascending: false }).limit(1);
     const row = (data as { id: string; inviter_id: string }[] | null)?.[0];
     if (!row) return null;
-    return { id: row.id, inviterName: await inviterName(supabase, row.inviter_id) };
+    return { id: row.id, inviterName: await inviterName(supabase, row.inviter_id), inviterId: row.inviter_id };
   } catch {
     return null;
   }
@@ -192,7 +192,7 @@ export function watchInvites(supabase: SupabaseClient, roomId: string, userId: s
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "stage_invites", filter: `invitee_id=eq.${userId}` }, (payload) => {
       const row = payload.new as { id: string; room_id: string; inviter_id: string; status: string };
       if (row.room_id !== roomId || row.status !== "pending") return;
-      void inviterName(supabase, row.inviter_id).then((name) => onInvite({ id: row.id, inviterName: name }));
+      void inviterName(supabase, row.inviter_id).then((name) => onInvite({ id: row.id, inviterName: name, inviterId: row.inviter_id }));
     })
     .subscribe();
   return () => {

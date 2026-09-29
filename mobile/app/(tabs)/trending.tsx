@@ -1,13 +1,18 @@
 /* Trending, as the site's page: the chips, "updated in real time", and
-   the rooms as wide tiles — live first, then open, then replays. */
+   the rooms as wide tiles — live first, then open, then replays, which
+   read like videos: how long it ran on the picture's corner, the host
+   and "12 views · 3 days ago" under the motion. */
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Img } from "../../src/img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";
-import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, roomDuration, type TrendingRoom } from "../../src/discover";
+import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, type TrendingRoom } from "../../src/discover";
 import { personName } from "../../src/home";
+import { viewsAndAgo } from "../../src/duration";
+import { LengthPill } from "../../src/replayCard";
+import { VerifiedMark } from "../../src/verifiedMark";
 import { Avatar } from "../../src/avatar";
 import { HomeHeader } from "../../src/header";
 import { same, useFocusRefresh } from "../../src/refresh";
@@ -75,8 +80,7 @@ export default function Trending() {
           const host = one(r.host);
           const img = r.thumbnail_url || host?.avatar_url || null;
           const live = r.status === "live";
-          const count = r.status === "ended" ? (r.replay_views ?? 0) : (r.viewer_count ?? 0);
-          const dur = r.status === "ended" ? roomDuration(r.started_at, r.ended_at) : null;
+          const ended = r.status === "ended";
           return (
             <Pressable onPress={() => open(r)} style={({ pressed }) => ({ marginBottom: 18, opacity: pressed ? 0.9 : 1 })}>
               <View style={{ aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", backgroundColor: GRADIENT_STANDINS[index % GRADIENT_STANDINS.length], borderWidth: StyleSheet.hairlineWidth, borderColor: "#3a3a44" }}>
@@ -85,16 +89,25 @@ export default function Trending() {
                   {live && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" }} />}
                   <Text style={{ color: live ? "#fcebeb" : r.status === "created" ? colors.gold : "#c0c0c8", fontFamily: fonts.medium, fontSize: 10 }}>{live ? "LIVE" : r.status === "created" ? "OPEN — JOIN" : "ENDED"}</Text>
                 </View>
-                <View style={{ position: "absolute", bottom: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.bg }}>
-                  <Ionicons name="eye-outline" size={11} color="#e5e5ec" />
-                  <Text style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 10 }}>{fmtCount(count)}{dur ? ` · ${dur}` : ""}</Text>
-                </View>
+                {ended ? (
+                  <LengthPill room={r} inset={8} />
+                ) : (
+                  <View style={{ position: "absolute", bottom: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.bg }}>
+                    <Ionicons name="eye-outline" size={11} color="#e5e5ec" />
+                    <Text style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 10 }}>{fmtCount(r.viewer_count ?? 0)}</Text>
+                  </View>
+                )}
               </View>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
                 <Avatar url={host?.avatar_url} name={personName(host)} size={32} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }}>{r.motion}</Text>
-                  <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 2 }}>{personName(host)} · {live ? "watching now" : agoDays(r.created_at)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                    <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>{personName(host)}</Text>
+                    <VerifiedMark id={host?.id} username={host?.username} size={11} />
+                    {!ended && <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>· {live ? "watching now" : agoDays(r.created_at)}</Text>}
+                  </View>
+                  {ended && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 1 }}>{viewsAndAgo(r.replay_views, r, !!r.recording_url)}</Text>}
                 </View>
               </View>
             </Pressable>

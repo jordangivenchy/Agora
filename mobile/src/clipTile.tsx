@@ -1,9 +1,11 @@
 /* One clip in a grid (components/clips/ClipTile.tsx): the picture or
-   the clip's colours, the duration, the title, who clipped it, views. */
+   the clip's colours, the duration, the title, who clipped it (with
+   their verified mark), views. */
 import { Image, Pressable, Text, View } from "react-native";
 import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./avatar";
+import { VerifiedMark } from "./verifiedMark";
 import { clipColors, formatClipDuration, formatViews, type ClipTileData } from "./clips";
 import { colors, fonts } from "./theme";
 
@@ -24,6 +26,7 @@ export function ClipTile({ clip, width, onPress }: { clip: ClipTileData; width: 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
         {clip.uploader && <Avatar url={clip.uploader.avatar_url} name={clip.uploader.username} size={16} />}
         {who && <Text numberOfLines={1} style={{ flexShrink: 1, color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 11.5 }}>{who}</Text>}
+        {who && <VerifiedMark username={clip.uploader?.username} size={11} style={{ marginLeft: -2 }} />}
         {who && <Text style={{ color: "#3a3a42" }}>·</Text>}
         <Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 11.5 }}>{formatViews(clip.view_count)}</Text>
       </View>

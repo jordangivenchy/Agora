@@ -18,6 +18,7 @@ import { pickImage } from "./postImages";
 import { uploadRoomThumbnail } from "./roomThumbnail";
 import { advanceQueue, egress, endDiscussion, muteAllSpeakers, removeFromRoom, sendInvite, setAutoAdvance, setSeatMuted, type RoomDetail } from "./roomData";
 import { ROLE_LABEL, deriveStageRole, isHostRole, onStage, seatName, seatUser, sortRequests, type Seat, type StageRole } from "./stageModel";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 type Tab = "requests" | "audience" | "stage" | "room";
@@ -38,7 +39,10 @@ function Row({ seat, role, children }: { seat: Seat; role: StageRole; children: 
       {seat.hand_raised_at && !onStage(role) && <Ionicons name="hand-left" size={13} color={colors.yellow} />}
       <Avatar url={u?.avatar_url} name={seatName(seat)} size={28} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>{seatName(seat)}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>{seatName(seat)}</Text>
+          <VerifiedMark id={seat.user_id} username={u?.username} size={12} />
+        </View>
         <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 10.5 }}>{ROLE_LABEL[role]}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 5, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "58%" }}>{children}</View>

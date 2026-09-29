@@ -16,6 +16,7 @@ import { SITE, apiFetch } from "../../src/api";
 import { agoLong, bumpClipView, fetchClip, fetchClips, formatClipDuration, formatViews, type ClipRow, type ClipTileData } from "../../src/clips";
 import { ClipTile } from "../../src/clipTile";
 import { Avatar } from "../../src/avatar";
+import { VerifiedBadge, VerifiedMark } from "../../src/verifiedMark";
 import { topicOf } from "../../src/topics";
 import { setFollowing } from "../../src/profile";
 import { useCreate } from "../../src/create";
@@ -164,6 +165,7 @@ export default function ClipPage() {
                 <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 13 }}>{clip.room ? "Clipped by" : "Posted by"}</Text>
                 <Avatar url={clip.uploader.avatar_url} name={clip.uploader.username} size={16} />
                 <Text style={{ color: "#c9c9d2", fontFamily: fonts.semi, fontSize: 13 }}>@{clip.uploader.username}</Text>
+                <VerifiedMark username={clip.uploader.username} size={13} style={{ marginLeft: -1 }} />
                 <Text style={{ color: "#3a3a42" }}>·</Text>
               </Pressable>
             )}
@@ -181,7 +183,7 @@ export default function ClipPage() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 15, flexShrink: 1 }}>{hostName}</Text>
-                  {host.verified && <Ionicons name="checkmark-circle" size={15} color={colors.yellow} />}
+                  {host.verified && <VerifiedBadge size={15} />}
                   <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>@{host.username}</Text>
                 </View>
                 <Text numberOfLines={2} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, marginTop: 3 }}>

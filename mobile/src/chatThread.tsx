@@ -5,7 +5,8 @@
    labels, reply quotes, pictures, reactions, invite cards, system
    lines, the typing strip; the composer with emoji, a picture, a GIF
    when GIPHY is on, and the yellow send. Press and hold a bubble for
-   its menu. */
+   its menu. A name carries its verified mark wherever it shows — but
+   never on your own yellow bubble, where the yellow seal would vanish. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Img } from "./img";
@@ -21,6 +22,7 @@ import { CommunityTile } from "./postCard";
 import { QUICK_REACTIONS, dayLabel, displayName, fmtTime, isGif, type InviteMeta, type Reaction } from "./messages";
 import { showToast } from "./toast";
 import { LinkedText } from "./linkText";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export interface ChatMsg { id: string; sender_id: string | null; content: string; image_url: string | null; reply_to: string | null; created_at: string; kind?: "text" | "system"; read_at?: string | null; community_id?: string | null }
@@ -120,10 +122,13 @@ export function ChatThread(p: ChatThreadProps) {
     const mine = m.sender_id === p.me;
     const day = newDay ? <Text style={{ alignSelf: "center", marginTop: 10, marginBottom: 2, color: "#6b6b74", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6 }}>{dayLabel(m.created_at).toUpperCase()}</Text> : null;
     if (m.kind === "system") {
+      const actor = p.who(m.sender_id);
       return (
         <View>
           {day}
-          <Text style={{ alignSelf: "center", textAlign: "center", marginVertical: 6, color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, maxWidth: "85%" }}>{`${mine ? "You" : displayName(p.who(m.sender_id))} ${m.content}`}</Text>
+          <Text style={{ alignSelf: "center", textAlign: "center", marginVertical: 6, color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, maxWidth: "85%" }}>
+            {mine ? "You" : <>{displayName(actor)}<VerifiedMark inline id={actor.id} username={actor.username} size={11} /></>}{` ${m.content}`}
+          </Text>
         </View>
       );
     }
@@ -144,7 +149,12 @@ export function ChatThread(p: ChatThreadProps) {
     return (
       <View style={{ paddingHorizontal: 12, marginBottom: 6 }}>
         {day}
-        {!mine && startsRun && <Text style={{ marginLeft: 34, marginTop: 8, marginBottom: 2, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5 }}>{displayName(sender)}</Text>}
+        {!mine && startsRun && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 34, marginTop: 8, marginBottom: 2 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5 }}>{displayName(sender)}</Text>
+            <VerifiedMark id={sender.id} username={sender.username} size={11} />
+          </View>
+        )}
         <View style={{ flexDirection: mine ? "row-reverse" : "row", alignItems: "flex-end", gap: 6, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "84%" }}>
           {!mine && <View style={{ width: 22, height: 22, marginBottom: 2 }}>{endsRun && <Avatar url={sender.avatar_url} name={sender.username} size={22} />}</View>}
           <Pressable
@@ -154,7 +164,9 @@ export function ChatThread(p: ChatThreadProps) {
           >
             {m.reply_to && (
               <View style={{ margin: m.image_url ? 4 : 0, marginBottom: 5, paddingHorizontal: 8, paddingVertical: 3, borderLeftWidth: 2, borderLeftColor: mine ? "rgba(0,0,0,0.4)" : YELLOW, borderRadius: 6, backgroundColor: mine ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.06)" }}>
-                <Text style={{ color: mine ? INK : "#f2f2f5", fontFamily: fonts.bold, fontSize: 12, opacity: 0.8 }}>{quoted ? (quoted.sender_id === p.me ? "You" : displayName(p.who(quoted.sender_id))) : "Earlier message"}</Text>
+                <Text style={{ color: mine ? INK : "#f2f2f5", fontFamily: fonts.bold, fontSize: 12, opacity: 0.8 }}>
+                  {quoted ? (quoted.sender_id === p.me ? "You" : <>{displayName(p.who(quoted.sender_id))}{!mine && <VerifiedMark inline id={quoted.sender_id} username={p.who(quoted.sender_id).username} size={12} />}</>) : "Earlier message"}
+                </Text>
                 {quoted && <Text numberOfLines={1} style={{ color: mine ? INK : "#f2f2f5", fontFamily: fonts.body, fontSize: 12, opacity: 0.75 }}>{quoted.content.trim() || (quoted.image_url ? (isGif(quoted.image_url) ? "GIF" : "Photo") : "")}</Text>}
               </View>
             )}
@@ -228,7 +240,9 @@ export function ChatThread(p: ChatThreadProps) {
         {replyTo && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 4, borderLeftWidth: 2, borderLeftColor: YELLOW, borderRadius: 6, backgroundColor: "#1a1710" }}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: "#c9c9d4", fontFamily: fonts.bold, fontSize: 12 }}>Replying to {replyTo.sender_id === p.me ? "yourself" : displayName(p.who(replyTo.sender_id))}</Text>
+              <Text style={{ color: "#c9c9d4", fontFamily: fonts.bold, fontSize: 12 }}>
+                Replying to {replyTo.sender_id === p.me ? "yourself" : <>{displayName(p.who(replyTo.sender_id))}<VerifiedMark inline id={replyTo.sender_id} username={p.who(replyTo.sender_id).username} size={12} /></>}
+              </Text>
               <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>{replyTo.content.trim() || (replyTo.image_url ? (isGif(replyTo.image_url) ? "GIF" : "Photo") : "")}</Text>
             </View>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8}><Ionicons name="close" size={14} color="rgba(255,255,255,0.5)" /></Pressable>
@@ -324,8 +338,18 @@ function MessageMenu({ msg, mine, reactions, myReactions, canUnsend, showDelete,
   );
 }
 
-/* The conversation's top bar: back, the picture and the name, actions. */
-export function ChatHeader({ left, title, sub, onTitle, right }: { left: ReactNode; title: string; sub?: string; onTitle?: () => void; right?: ReactNode }) {
+/* The conversation's top bar: back, the picture and the name (with the
+   person's mark in a direct message), actions. */
+export function ChatHeader({ left, title, titlePerson, sub, onTitle, right }: {
+  left: ReactNode;
+  title: string;
+  /** The person the title names, in a direct message. */
+  titlePerson?: { id?: string | null; username?: string | null };
+  /** A line under the title; a group's members can carry their marks. */
+  sub?: ReactNode;
+  onTitle?: () => void;
+  right?: ReactNode;
+}) {
   const insets = useSafeAreaInsets();
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: colors.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#1f1f26" }}>
@@ -336,7 +360,10 @@ export function ChatHeader({ left, title, sub, onTitle, right }: { left: ReactNo
         <Pressable onPress={onTitle} disabled={!onTitle} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 9, minWidth: 0 }}>
           {left}
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 16 }}>{title}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 16 }}>{title}</Text>
+              {titlePerson && <VerifiedMark id={titlePerson.id} username={titlePerson.username} size={15} />}
+            </View>
             {!!sub && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }}>{sub}</Text>}
           </View>
         </Pressable>

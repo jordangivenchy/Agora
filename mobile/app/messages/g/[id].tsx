@@ -2,7 +2,7 @@
    runs and system lines for membership, the typing strip with names,
    the composer; the group's info up top — rename, members, add, leave. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -14,6 +14,7 @@ import { GroupTile } from "../../../src/groupTile";
 import { GroupInfoSheet } from "../../../src/groupInfo";
 import { uploadPostImage } from "../../../src/postImages";
 import { LoadingLine } from "../../../src/sky";
+import { VerifiedMark } from "../../../src/verifiedMark";
 import { colors } from "../../../src/theme";
 import { Screen } from "../../../src/ui";
 import { Alert } from "react-native";
@@ -134,7 +135,9 @@ export default function GroupScreen() {
       <ChatHeader
         left={<GroupTile members={tileMembers} size={40} />}
         title={name}
-        sub={others.length ? others.map((m) => displayName(m)).join(", ") : `${memberCount} member${memberCount === 1 ? "" : "s"}`}
+        sub={others.length
+          ? others.map((m, i) => <Text key={m.id}>{i ? ", " : ""}{displayName(m)}<VerifiedMark inline id={m.id} username={m.username} size={12} /></Text>)
+          : `${memberCount} member${memberCount === 1 ? "" : "s"}`}
         onTitle={() => setInfo(true)}
         right={<Pressable onPress={() => setInfo(true)} hitSlop={8} accessibilityLabel="Group info" style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}><Ionicons name="information-circle-outline" size={22} color="rgba(255,255,255,0.7)" /></Pressable>}
       />

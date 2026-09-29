@@ -8,6 +8,7 @@ import { Stack, router } from "expo-router";
 import { supabase } from "../src/supabase";
 import { useSession } from "../src/session";
 import { LoadingLine } from "../src/sky";
+import { VerifiedMark } from "../src/verifiedMark";
 import { colors, fonts } from "../src/theme";
 import { Screen } from "../src/ui";
 
@@ -120,7 +121,9 @@ export default function Mod() {
               </View>
               <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>
                 <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: r.reported_username } })} style={{ color: "#9cc4f0" }}>@{r.reported_username}</Text>
+                <VerifiedMark inline username={r.reported_username} size={13} />
                 <Text style={{ color: colors.muted }}> reported by </Text>@{r.reporter_username}
+                <VerifiedMark inline username={r.reporter_username} size={13} />
               </Text>
               {!!r.description && <Text style={{ color: "#c0c0c8", fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginTop: 6 }}>“{r.description}”</Text>}
               {!!r.message_content && <Text style={{ color: "#9a9aa2", fontFamily: fonts.body, fontSize: 11, marginTop: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#0a0a0e", borderWidth: 1, borderColor: colors.border }}>Reported message: “{r.message_content}”</Text>}

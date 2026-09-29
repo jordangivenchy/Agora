@@ -7,6 +7,7 @@ import { Stack, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/supabase";
 import { Avatar } from "../src/avatar";
 import { LoadingLine } from "../src/sky";
+import { VerifiedMark } from "../src/verifiedMark";
 import { colors, fonts } from "../src/theme";
 import { Screen } from "../src/ui";
 
@@ -58,7 +59,10 @@ export default function People() {
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: r.username } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, borderRadius: 12, backgroundColor: pressed ? colors.surface2 : colors.surface, borderWidth: 1, borderColor: colors.hairline })}>
               <Avatar url={r.avatar_url} name={r.display_name || r.username} size={36} />
               <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 13.5 }}>{r.display_name?.trim() || r.username}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 13.5 }}>{r.display_name?.trim() || r.username}</Text>
+                  <VerifiedMark id={r.id} username={r.username} size={13} />
+                </View>
                 <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginTop: 2 }}>@{r.username}{r.bio ? ` — ${r.bio}` : ""}</Text>
               </View>
             </Pressable>

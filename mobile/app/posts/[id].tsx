@@ -21,6 +21,7 @@ import { openCommentMenu } from "../../src/postMenu";
 import { copyPostLink } from "../../src/postActions";
 import { Avatar } from "../../src/avatar";
 import { openImage } from "../../src/lightbox";
+import { VerifiedMark } from "../../src/verifiedMark";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 import { same, useScreenOpened } from "../../src/refresh";
@@ -178,6 +179,7 @@ export default function ThreadScreen() {
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author_username } })} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
               <Avatar url={avatars.get(c.author_id ?? "") ?? null} name={c.author_username} size={24} />
               <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }}>@{c.author_username}</Text>
+              <VerifiedMark id={c.author_id} username={c.author_username} size={12} style={{ marginLeft: -3 }} />
             </Pressable>
             {isAuthor && <Text style={{ color: colors.yellow, fontFamily: fonts.bold, fontSize: 10.5 }}>author</Text>}
             <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>

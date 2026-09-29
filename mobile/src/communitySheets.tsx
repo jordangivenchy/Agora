@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { InviteFriends } from "./inviteFriends";
 import { cleanTextError, BODY_MIN } from "./cleanText";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 type Target = { id: string; name: string; application_prompt: string | null; is_private: boolean };
@@ -104,7 +105,7 @@ export function BanSheet({ target, communityName, onClose, onBan }: { target: { 
   };
   return (
     <Sheet open={!!target} onClose={onClose} title="Ban member" action={{ label: busy ? "Banning…" : "Ban", onPress: () => void ban(), disabled: busy, danger: true }}>
-      <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14, lineHeight: 20, marginBottom: 4 }}>Ban {target?.name} from {communityName}?</Text>
+      <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14, lineHeight: 20, marginBottom: 4 }}>Ban {target?.name}<VerifiedMark inline id={target?.userId} size={14} /> from {communityName}?</Text>
       <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginBottom: 12 }}>They leave the community and can't rejoin until a moderator unbans them.</Text>
       <TextInput value={reason} onChangeText={(t) => setReason(t.slice(0, 300))} placeholder="Reason (optional)" placeholderTextColor={colors.faint} multiline maxLength={300} style={[field, { minHeight: 64 }]} />
       {error && <Text style={{ color: "#ff9d92", fontFamily: fonts.body, fontSize: 12.5, marginTop: 8 }}>{error}</Text>}

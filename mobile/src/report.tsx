@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, Tex
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export interface ReportTarget {
@@ -85,12 +86,15 @@ export function ReportSheet({ target, onClose }: { target: ReportTarget | null; 
           ) : (
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 520 }}>
               <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
-                <Text style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 17 }}>Report @{target?.username}</Text>
+                <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <Text style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.bold, fontSize: 17 }}>Report @{target?.username}</Text>
+                  <VerifiedMark id={target?.userId} username={target?.username} size={17} />
+                </View>
                 <Pressable onPress={onClose} hitSlop={8} style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }}>
                   <Ionicons name="close" size={14} color={colors.muted} />
                 </Pressable>
               </View>
-              <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginTop: 4, marginBottom: 16 }}>Your report is confidential — @{target?.username} won't know who reported them.</Text>
+              <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginTop: 4, marginBottom: 16 }}>Your report is confidential — @{target?.username}<VerifiedMark inline id={target?.userId} username={target?.username} size={12} /> won't know who reported them.</Text>
               {!!target?.messagePreview && (
                 <View style={{ paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.surface, borderLeftWidth: 2, borderLeftColor: "#7a3535", marginBottom: 14 }}>
                   <Text numberOfLines={3} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>“{target.messagePreview}”</Text>

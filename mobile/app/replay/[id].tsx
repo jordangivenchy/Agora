@@ -1,13 +1,15 @@
 /* A past discussion, as the site's replay page draws it on a phone
    (components/agora/DebateReplay.tsx): the recording up top with the
    system's controls (and the lock screen's, since the app keeps audio
-   going); the motion with when it happened, how long it ran and who
-   watched; Like, Share and Clip this moment; the speakers; the transcript
-   following playback, searchable, a tap on a line jumping there; the
-   clips cut from it; the discussion thread, where a comment lands on the
-   room's post (made on first use) and Open full thread goes to replies
-   and votes; and more past discussions to watch next. A room that wasn't
-   recorded still opens: its transcript and its discussion. */
+   going); the motion, then its views and when it went up the way a
+   video says it, how long it ran and who watched live; Like, Share and
+   Clip this moment; the speakers; the transcript following playback,
+   searchable, a tap on a line jumping there; the clips cut from it; the
+   discussion thread, where a comment lands on the room's post (made on
+   first use) and Open full thread goes to replies and votes; and more
+   past discussions to watch next, each with its length, host, views
+   and age. A room that wasn't recorded still opens: its transcript and
+   its discussion. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvent, useEventListener } from "expo";
 import { Animated, Image, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
@@ -25,7 +27,9 @@ import {
   type MoreReplay, type ReplayRoom, type TranscriptLine,
 } from "../../src/replay";
 import { roomLink } from "../../src/roomData";
-import { roomDuration, fmtCount } from "../../src/discover";
+import { fmtAgo, fmtViews } from "../../src/duration";
+import { ReplayCard } from "../../src/replayCard";
+import { VerifiedMark } from "../../src/verifiedMark";
 import { TOPICS } from "../../src/topics";
 import { Avatar } from "../../src/avatar";
 import { RichText } from "../../src/richText";
@@ -257,6 +261,8 @@ export default function ReplayScreen() {
   const endMs = room?.recording_ended_at ?? room?.ended_at ?? null;
   const durationLabel = startMs && endMs ? fmtDurationLong(new Date(endMs).getTime() - new Date(startMs).getTime()) : null;
   const when = room ? room.ended_at ?? room.started_at ?? room.created_at : null;
+  /* The count read with the room, until this watch's bump brings the new total. */
+  const shownViews = views ?? room?.replay_views ?? null;
   const hasTranscript = lines.length > 0;
   /* The transcript waits behind its row, as on YouTube, unless there's no video — then it is the page. */
   const showTranscript = transcriptOpen ?? (!recorded && hasTranscript);
@@ -316,6 +322,13 @@ export default function ReplayScreen() {
           <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 22, lineHeight: 28, letterSpacing: -0.3 }}>{room.motion || "Discussion"}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 6, marginTop: 10 }}>
+              {/* Views and when it went up come first, the way a video
+                  says it; the exact day is what a screen reader hears. */}
+              {when && (
+                <Text style={metaText} accessibilityLabel={`${recorded && shownViews !== null ? `${fmtViews(shownViews)}, ` : ""}${new Date(when).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" })}`}>
+                  {recorded && shownViews !== null ? `${fmtViews(shownViews)} · ` : ""}{fmtAgo(when)}
+                </Text>
+              )}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: recorded ? "#9a9aa6" : "#6b6b78" }} />
                 <Text style={metaText}>{recorded ? "Past discussion" : "Ended · no recording"}</Text>
@@ -326,17 +339,10 @@ export default function ReplayScreen() {
                   <Text style={{ color: "#c9c9d4", fontFamily: fonts.body, fontSize: 12 }}>{topic.label}</Text>
                 </View>
               )}
-              {when && <Text style={metaText}>{new Date(when).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}</Text>}
               {durationLabel && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   {recorded && <Ionicons name="videocam-outline" size={13} color="#9a9aa6" />}
                   <Text style={metaText}>{recorded ? `Recorded · ${durationLabel}` : `Lasted ${durationLabel}`}</Text>
-                </View>
-              )}
-              {!!views && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Ionicons name="eye-outline" size={13} color="#9a9aa6" />
-                  <Text style={metaText}>{fmtCount(views)} view{views === 1 ? "" : "s"}</Text>
                 </View>
               )}
               {!!room.viewer_count && <Text style={metaText}>{room.viewer_count} watched live</Text>}
@@ -350,7 +356,10 @@ export default function ReplayScreen() {
                   return (
                     <Pressable key={p.id} onPress={() => router.push({ pathname: "/u/[username]", params: { username: p.username } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5, paddingLeft: 6, paddingRight: 12, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", backgroundColor: pressed ? "#1f1f26" : "#15151b" })}>
                       <Avatar url={p.avatar_url} name={p.username} size={22} />
-                      <Text style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 13 }}>{nameOf(p)}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Text style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 13 }}>{nameOf(p)}</Text>
+                        <VerifiedMark id={p.id} username={p.username} size={13} />
+                      </View>
                       <Text style={{ color: side === "pro" ? "#4ade80" : side === "con" ? "#f87171" : "#8b8b94", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 1 }}>{role.toUpperCase()}</Text>
                     </Pressable>
                   );
@@ -415,7 +424,11 @@ export default function ReplayScreen() {
                       >
                         <Avatar url={l.avatar_url} name={l.username} size={24} />
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={{ color: "#c9c9d4", fontFamily: fonts.semi, fontSize: 12, marginBottom: 2 }}>{nameOf(l)}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                            <Text numberOfLines={1} style={{ flexShrink: 1, color: "#c9c9d4", fontFamily: fonts.semi, fontSize: 12 }}>{nameOf(l)}</Text>
+                            {/* A line with no one behind it (a polished line's "Speaker") isn't looked up by name. */}
+                            <VerifiedMark id={l.user_id} username={l.user_id ? l.username : null} size={12} />
+                          </View>
                           <Marked text={l.content} query={query} style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20 }} />
                         </View>
                         <Text style={{ color: "#6b6b78", fontFamily: fonts.body, fontSize: 11, paddingTop: 2, fontVariant: ["tabular-nums"] }}>
@@ -463,6 +476,7 @@ export default function ReplayScreen() {
                         <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author_username } })} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
                           <Avatar url={avatars.get(c.author_id ?? "") ?? null} name={c.author_username} size={24} />
                           <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }}>@{c.author_username}</Text>
+                          <VerifiedMark id={c.author_id} username={c.author_username} size={12} style={{ marginLeft: -3 }} />
                         </Pressable>
                         <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
                       </View>
@@ -495,26 +509,8 @@ export default function ReplayScreen() {
             {more.length > 0 && (
               <View style={{ marginTop: 28 }}>
                 <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 17 }}>More past discussions</Text>
-                <Text style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 12.5, marginTop: 2 }}>Recent ones to watch next</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 12 }}>
-                  {more.map((m) => {
-                    const w = (width - 40 - 14) / 2;
-                    const img = m.thumbnail_url || m.host?.avatar_url || null;
-                    const dur = roomDuration(m.started_at, m.ended_at);
-                    return (
-                      <Pressable key={m.id} onPress={() => router.push({ pathname: "/replay/[id]", params: { id: m.id } })} style={({ pressed }) => ({ width: w, opacity: pressed ? 0.85 : 1 })}>
-                        <View style={{ width: w, height: Math.round((w * 9) / 16), borderRadius: 10, overflow: "hidden", backgroundColor: "#15151c", borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", alignItems: "center", justifyContent: "center" }}>
-                          {img ? <Img uri={img} style={{ width: "100%", height: "100%" }} recyclingKey={m.id} /> : <Ionicons name="play" size={18} color="#4a4a54" />}
-                        </View>
-                        <Text numberOfLines={2} style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17, marginTop: 8 }}>{m.motion}</Text>
-                        <Text numberOfLines={1} style={{ color: "#8b8b94", fontFamily: fonts.body, fontSize: 11, marginTop: 2 }}>
-                          {m.host ? nameOf({ display_name: m.host.display_name, username: m.host.username }) : ""}
-                          {m.ended_at ? ` · ${new Date(m.ended_at).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
-                          {dur ? ` · ${dur}` : ""}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                  {more.map((m) => <ReplayCard key={m.id} room={m} width={(width - 40 - 14) / 2} onPress={() => router.push({ pathname: "/replay/[id]", params: { id: m.id } })} />)}
                 </View>
               </View>
             )}

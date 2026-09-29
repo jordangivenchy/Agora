@@ -36,6 +36,7 @@ import { CallSettingsSheet } from "./callSettings";
 import { EndedCard, HostButton, InviteCard, MediaErrorCard, NoteRequestSheet, QueuePill } from "./roomCards";
 import { BroadcastView } from "./broadcast";
 import { topicOf } from "./topics";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export interface RoomBodyProps {
@@ -223,6 +224,7 @@ export function RoomBody(p: RoomBodyProps) {
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: hostUser.username! } })} accessibilityLabel="The host's profile" style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingLeft: 3, paddingRight: 10, borderRadius: 999, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33", maxWidth: 150 }}>
               <Avatar url={hostUser.avatar_url} name={hostUser.display_name || hostUser.username} size={22} />
               <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 11.5, flexShrink: 1 }}>{hostUser.display_name?.trim() || hostUser.username}</Text>
+              <VerifiedMark id={room.host_id} username={hostUser.username} size={12} style={{ marginLeft: -2 }} />
             </Pressable>
           )}
           {!isHostViewer && (
@@ -300,7 +302,7 @@ export function RoomBody(p: RoomBodyProps) {
       <View pointerEvents="box-none" style={{ position: "absolute", left: 10, right: 10, bottom: controlsBand + 8, gap: 8 }}>
         {p.ended && <EndedCard room={room} onWatch={p.onWatchReplay} onHome={p.onHome} />}
         {call.mediaError && <MediaErrorCard message={call.mediaError} settings={call.mediaErrorSettings} onDismiss={call.clearMediaError} />}
-        {p.invite && <InviteCard inviterName={p.invite.inviterName} busy={p.inviteBusy} onJoin={() => p.onRespondInvite(true)} onDecline={() => p.onRespondInvite(false)} />}
+        {p.invite && <InviteCard inviterName={p.invite.inviterName} inviterId={p.invite.inviterId} busy={p.inviteBusy} onJoin={() => p.onRespondInvite(true)} onDecline={() => p.onRespondInvite(false)} />}
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
           {meId ? <QueuePill amMicHolder={amMicHolder} position={myQueuePos} /> : <View />}
           {canManage && <HostButton requests={requests.length} onPress={() => setHostOpen(true)} />}
@@ -340,6 +342,7 @@ export function RoomBody(p: RoomBodyProps) {
         open={topMenu}
         title={room.motion}
         sub={hostUser ? `Hosted by ${hostUser.display_name?.trim() || `@${hostUser.username}`}` : undefined}
+        subPerson={hostUser ? { id: room.host_id, username: hostUser.username } : null}
         onClose={() => setTopMenu(false)}
         actions={[
           { label: "Share room", onPress: shareRoom },
@@ -349,7 +352,7 @@ export function RoomBody(p: RoomBodyProps) {
           { label: "Report something else", onPress: reportHost, danger: true },
         ]}
       />
-      <ActionSheet open={!!tileSheet} title={tileSheet ? seatName(tileSheet.seat) : ""} sub={tileSheet ? ROLE_LABEL[tileSheet.role] : undefined} actions={tileActions} onClose={() => setTileSheet(null)} />
+      <ActionSheet open={!!tileSheet} title={tileSheet ? seatName(tileSheet.seat) : ""} titlePerson={tileSheet ? { id: tileSheet.seat.user_id, username: seatUser(tileSheet.seat)?.username } : null} sub={tileSheet ? ROLE_LABEL[tileSheet.role] : undefined} actions={tileActions} onClose={() => setTileSheet(null)} />
 
     </View>
   );

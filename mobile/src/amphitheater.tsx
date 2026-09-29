@@ -20,6 +20,7 @@ import AmphitheaterScene from "./amphitheaterScene";
 import { Avatar } from "./avatar";
 import { Tile, type StageTile } from "./roomTiles";
 import type { StageRole } from "./stageModel";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export interface AmphiPerson { id: string; name: string; handle: string | null; avatarUrl: string | null }
@@ -55,7 +56,8 @@ const Scene = memo(
 
 /* One person on the discussion strip (Amphitheater.tsx StripChip,
    agora.css .ag-strip-chip): the face with a role ring — gold for the host,
-   silver for a co-host — the crown, the yellow ring while they talk. */
+   silver for a co-host — the crown, the yellow ring while they talk, and
+   the name with its verified mark. */
 function StripChip({ person, speaking, onPress }: { person: AmphiStagePerson; speaking: boolean; onPress: () => void }) {
   const ring = person.role === "host" ? "#e2b96b" : person.role === "cohost" ? "#b9c2d0" : "rgba(255,255,255,0.25)";
   return (
@@ -68,7 +70,10 @@ function StripChip({ person, speaking, onPress }: { person: AmphiStagePerson; sp
           </View>
         )}
       </View>
-      <Text numberOfLines={1} style={{ color: "#cfd3dc", fontFamily: fonts.semi, fontSize: 10.5, maxWidth: 64 }}>{person.name}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 64 }}>
+        <Text numberOfLines={1} style={{ flexShrink: 1, color: "#cfd3dc", fontFamily: fonts.semi, fontSize: 10.5 }}>{person.name}</Text>
+        <VerifiedMark id={person.id} username={person.handle} size={10} />
+      </View>
     </Pressable>
   );
 }

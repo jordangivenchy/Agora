@@ -49,6 +49,8 @@ export interface TrendingRoom {
   replay_views: number | null;
   started_at: string | null;
   ended_at: string | null;
+  recording_started_at: string | null;
+  recording_ended_at: string | null;
   status: string;
   created_at: string;
   thumbnail_url: string | null;
@@ -61,7 +63,7 @@ export interface TrendingRoom {
 export async function fetchTrendingRooms(supabase: SupabaseClient): Promise<TrendingRoom[]> {
   const { data, error } = await supabase
     .from("debate_rooms")
-    .select("id, motion, topic_key, viewer_count, replay_views, status, created_at, started_at, ended_at, thumbnail_url, recording_url, host:users!host_id(id, username, display_name, avatar_url)")
+    .select("id, motion, topic_key, viewer_count, replay_views, status, created_at, started_at, ended_at, recording_started_at, recording_ended_at, thumbnail_url, recording_url, host:users!host_id(id, username, display_name, avatar_url)")
     .in("status", ["live", "created", "ended"])
     .eq("is_private", false)
     .or("status.neq.ended,recording_url.not.is.null")
@@ -89,13 +91,6 @@ export function agoDays(iso: string): string {
   if (days === 1) return "yesterday";
   if (days < 7) return `${days} days ago`;
   return `${Math.floor(days / 7)} week${days >= 14 ? "s" : ""} ago`;
-}
-
-export function roomDuration(start: string | null, end: string | null): string | null {
-  if (!start || !end) return null;
-  const mins = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
-  if (mins < 1) return null;
-  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m`;
 }
 
 /* NewsData timestamps arrive as "YYYY-MM-DD HH:MM:SS" in UTC. */

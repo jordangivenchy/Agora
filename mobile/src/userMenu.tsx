@@ -14,6 +14,8 @@ import { useMe } from "./me";
 import { apiFetch, SITE } from "./api";
 import { showToast } from "./toast";
 import { ReportSheet, type ReportTarget } from "./report";
+import { VerifiedMark } from "./verifiedMark";
+import { refreshVerified } from "./verified";
 import { colors, fonts } from "./theme";
 
 export type MenuActionId =
@@ -275,7 +277,7 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
         const was = !!opts.verify?.verified;
         const { error } = await supabase.rpc("set_user_verified", { p_user: target.userId, p_value: !was });
         showToast(error ? "Failed: " + (error.message.includes("not_authorized") ? "only site moderators can verify accounts" : error.message) : was ? `Removed @${target.username}'s verified badge` : `Verified @${target.username}`);
-        if (!error) opts.verify?.onChanged?.();
+        if (!error) { refreshVerified(); opts.verify?.onChanged?.(); }
         break;
       }
       case "mod_panel":
@@ -350,6 +352,7 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
         onClose={close}
         name={targetName?.trim() || (menu ? `@${menu.target.username}` : "")}
         sub={targetName?.trim() && menu ? `@${menu.target.username}` : undefined}
+        who={menu ? { id: menu.target.userId, username: menu.target.username } : null}
         sections={sections}
         rowLabel={rowLabel}
         rowDisabled={rowDisabled}
@@ -361,7 +364,7 @@ export function UserMenuProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function MenuSheet({ open, onClose, name, sub, sections, rowLabel, rowDisabled, onRun }: { open: boolean; onClose: () => void; name: string; sub?: string; sections: Sections | null; rowLabel: (id: MenuActionId) => string; rowDisabled: (id: MenuActionId) => boolean; onRun: (id: MenuActionId) => void }) {
+function MenuSheet({ open, onClose, name, sub, who, sections, rowLabel, rowDisabled, onRun }: { open: boolean; onClose: () => void; name: string; sub?: string; who: { id: string; username: string } | null; sections: Sections | null; rowLabel: (id: MenuActionId) => string; rowDisabled: (id: MenuActionId) => boolean; onRun: (id: MenuActionId) => void }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const row = (id: MenuActionId) => {
@@ -380,7 +383,10 @@ function MenuSheet({ open, onClose, name, sub, sections, rowLabel, rowDisabled, 
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} />
       <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, paddingHorizontal: 10, paddingTop: 14, paddingBottom: 10 + insets.bottom, maxHeight: Math.round(height * 0.86) }}>
         <View style={{ paddingHorizontal: 12, paddingBottom: 10, borderBottomWidth: 1, borderColor: colors.hairline, marginBottom: 6 }}>
-          <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{name}</Text>
+            <VerifiedMark id={who?.id} username={who?.username} size={15} />
+          </View>
           {!!sub && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 1 }}>{sub}</Text>}
         </View>
         <ScrollView bounces={false}>
@@ -431,7 +437,10 @@ function ModPanel({ target, onClose }: { target: MenuTarget; onClose: () => void
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} />
       <View style={{ backgroundColor: "#121215", borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16 + insets.bottom, maxHeight: Math.round(height * 0.86) }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <Text style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 17 }}>Moderation — @{target.username}</Text>
+          <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <Text style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.bold, fontSize: 17 }}>Moderation — @{target.username}</Text>
+            <VerifiedMark id={target.userId} username={target.username} size={17} />
+          </View>
           <Pressable onPress={onClose} hitSlop={8} style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }}>
             <Ionicons name="close" size={14} color={colors.muted} />
           </Pressable>
@@ -463,7 +472,7 @@ function ModPanel({ target, onClose }: { target: MenuTarget; onClose: () => void
               {title(`Moderation history & notes (${data.notes.length})`)}
               {data.notes.length === 0 ? <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12.5, marginBottom: 14 }}>No notes yet.</Text> : data.notes.slice(0, 15).map((n, i) => (
                 <Text key={i} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginBottom: 6 }}>
-                  <Text style={{ color: colors.faint }}>{new Date(n.created_at).toLocaleDateString()}{n.author ? ` · @${n.author}` : ""} — </Text>{n.note}
+                  <Text style={{ color: colors.faint }}>{new Date(n.created_at).toLocaleDateString()}{n.author ? <> · @{n.author}<VerifiedMark inline username={n.author} size={12} /></> : null} — </Text>{n.note}
                 </Text>
               ))}
               <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>

@@ -12,6 +12,7 @@ import { fetchFriends, searchPeople, setFavoriteFriend, type Friend } from "../s
 import { setFollowing } from "../src/profile";
 import { Avatar } from "../src/avatar";
 import { usePresence } from "../src/presence";
+import { VerifiedMark } from "../src/verifiedMark";
 import { colors, fonts } from "../src/theme";
 import { Note, Screen, Sub, Title, Button } from "../src/ui";
 
@@ -116,7 +117,10 @@ export default function Friends() {
                 {presence.has(u.id) && <View style={{ position: "absolute", right: -1, bottom: -1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: colors.bg, backgroundColor: presence.get(u.id)?.room_id ? colors.live : presence.get(u.id)?.queued ? colors.gold : colors.green }} />}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 14.5 }}>{name(u)}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 14.5 }}>{name(u)}</Text>
+                  <VerifiedMark id={u.id} username={u.username} size={14} />
+                </View>
                 <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>@{u.username}{item.kind === "friend" && u.since ? ` · friends since ${new Date(u.since).toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : ""}</Text>
               </View>
               {item.kind === "friend" ? (

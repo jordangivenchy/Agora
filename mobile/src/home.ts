@@ -127,8 +127,9 @@ export async function fetchFeatured(supabase: SupabaseClient): Promise<FeaturedP
 }
 
 /* ── The hero's rooms: live ones, the most watched first ── */
-/* One side's speaker, with the colour the hero draws their initial on. */
-export interface HeroSpeaker { name: string; color: string; open: boolean }
+/* One side's speaker, with the colour the hero draws their initial on,
+   and who they are for their verified mark. */
+export interface HeroSpeaker { name: string; color: string; open: boolean; id?: string | null; username?: string | null }
 
 export interface HeroRoom {
   id: string;
@@ -177,7 +178,7 @@ const safeColor = (c: string | null | undefined) => (c && /^#[0-9a-fA-F]{3,8}$/.
 export async function fetchHeroRooms(supabase: SupabaseClient): Promise<HeroRoom[]> {
   const { data } = await supabase
     .from("debate_rooms")
-    .select("id, motion, topic_key, secondary_topics, format, language, community_id, viewer_count, thumbnail_url, started_at, created_at, host:users!host_id(id, username, display_name, avatar_url), participants:debate_participants(role, left_at, stance, user:users(username, display_name, avatar_url))")
+    .select("id, motion, topic_key, secondary_topics, format, language, community_id, viewer_count, thumbnail_url, started_at, created_at, host:users!host_id(id, username, display_name, avatar_url), participants:debate_participants(role, left_at, stance, user:users(id, username, display_name, avatar_url))")
     .eq("status", "live")
     .order("viewer_count", { ascending: false, nullsFirst: false })
     .limit(4);
@@ -196,8 +197,8 @@ export async function fetchHeroRooms(supabase: SupabaseClient): Promise<HeroRoom
     const side = (stance: string) => one(debaters.find((p) => p.stance === stance)?.user ?? null);
     const pro = side("PRO");
     const con = side("CON");
-    const speakers: HeroSpeaker[] = [{ name: pro ? personName(pro) : "Open seat", color: SPEAKER_PALETTE[i % SPEAKER_PALETTE.length], open: !pro }];
-    if (con) speakers.push({ name: personName(con), color: SPEAKER_PALETTE[(i + 3) % SPEAKER_PALETTE.length], open: false });
+    const speakers: HeroSpeaker[] = [{ name: pro ? personName(pro) : "Open seat", color: SPEAKER_PALETTE[i % SPEAKER_PALETTE.length], open: !pro, id: pro?.id ?? null, username: pro?.username ?? null }];
+    if (con) speakers.push({ name: personName(con), color: SPEAKER_PALETTE[(i + 3) % SPEAKER_PALETTE.length], open: false, id: con.id ?? null, username: con.username });
     const pick = r.thumbnail_url || host?.avatar_url || null;
     return {
       id: r.id,

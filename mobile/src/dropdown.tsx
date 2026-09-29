@@ -1,16 +1,17 @@
 /* The site's avatar dropdown (mvp-home.css .avatar-dropdown): a 230-wide
    near-black panel that drops from under the avatar, top right, with
-   your name up top, the items, a divider, and Log out in red. Tap
-   anywhere else to close. */
+   your name (and your verified mark) up top, the items, a divider, and
+   Log out in red. Tap anywhere else to close. */
 import { useEffect, useRef, type ComponentProps } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 export interface DropdownItem { label: string; icon: IconName; onPress: () => void; danger?: boolean; dividerAbove?: boolean }
 
-export function Dropdown({ open, onClose, top, right = 16, name, sub, items }: {
+export function Dropdown({ open, onClose, top, right = 16, name, sub, person, items }: {
   open: boolean;
   onClose: () => void;
   /** Where the panel's top edge sits, in points from the screen's top. */
@@ -18,6 +19,8 @@ export function Dropdown({ open, onClose, top, right = 16, name, sub, items }: {
   right?: number;
   name: string;
   sub?: string;
+  /** Who the name is, for the mark after it. */
+  person?: { id?: string | null; username?: string | null } | null;
   items: DropdownItem[];
 }) {
   const t = useRef(new Animated.Value(0)).current;
@@ -39,7 +42,10 @@ export function Dropdown({ open, onClose, top, right = 16, name, sub, items }: {
         }}
       >
         <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 11, borderBottomWidth: 1, borderColor: colors.hairline, marginBottom: 5 }}>
-          <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.title, fontSize: 13.5 }}>{name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.title, fontSize: 13.5 }}>{name}</Text>
+            {person && <VerifiedMark id={person.id} username={person.username} size={13} />}
+          </View>
           {!!sub && <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 1 }}>{sub}</Text>}
         </View>
         {items.map((it) => (

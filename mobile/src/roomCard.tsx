@@ -6,6 +6,7 @@ import { Img } from "./img";
 import { personName, type Person } from "./home";
 import { topicOf } from "./topics";
 import { whenLabel } from "./rooms";
+import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 const FORMAT_LABEL: Record<string, string> = { open: "Open", oxford: "Oxford", "1v1": "1v1", panel: "Panel" };
@@ -61,7 +62,10 @@ export function RoomSquare({ room: r, size = 168, onPress }: { room: SquareRoom;
                 <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.8)", fontFamily: fonts.body, fontSize: 10.5 }}>{community.name}</Text>
               </View>
             ) : (
-              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.8)", fontFamily: fonts.body, fontSize: 10.5 }}>{personName(host)}</Text>
+              <>
+                <Text numberOfLines={1} style={{ flexShrink: 1, color: "rgba(255,255,255,0.8)", fontFamily: fonts.body, fontSize: 10.5 }}>{personName(host)}</Text>
+                <VerifiedMark id={host?.id} username={host?.username} size={11} />
+              </>
             )}
           </View>
         )}
