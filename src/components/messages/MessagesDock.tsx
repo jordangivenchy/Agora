@@ -36,6 +36,7 @@ import GroupTile from "./GroupTile";
 import NewGroupModal from "./NewGroupModal";
 import { groupPreview, type GroupRow } from "./groups";
 import { sessionUser } from "@/lib/session";
+import VerifiedMark from "@/components/VerifiedMark";
 
 const WIDE_MIN = 760;
 const LIST_WIDTH = 230;
@@ -463,6 +464,7 @@ export default function MessagesDock() {
                   }}
                 >
                   {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
+                  <VerifiedMark id={t.peer_id} username={t.peer_username} />
                 </p>
                 <span style={{ color: active ? "rgba(26,14,0,0.7)" : "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
               </div>

@@ -15,6 +15,7 @@ import UserAvatar from "@/components/UserAvatar";
 import { roomPath, userPath } from "@/lib/urls";
 import { progressOnClick } from "@/lib/progress";
 import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface LiveRoom {
   id: string;
@@ -158,7 +159,9 @@ export default function FeedRail({ userId }: { userId: string | null }) {
               <span className="min-w-0 flex-1">
                 <span className="block text-[12.5px] truncate" style={{ color: "#eeeef5" }}>{r.motion}</span>
                 <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
-                  {r.host?.display_name || r.host?.username}{r.viewer_count ? ` · ${r.viewer_count} watching` : ""}
+                  {r.host?.display_name || r.host?.username}
+                  <VerifiedMark id={r.host?.id} username={r.host?.username} />
+                  {r.viewer_count ? ` · ${r.viewer_count} watching` : ""}
                 </span>
               </span>
               <Icon name="play" size={12} style={{ color: "#e84040", flexShrink: 0 }} />
@@ -178,6 +181,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
               <span className="min-w-0 flex-1">
                 <Link onClick={progressOnClick} href={userPath(p.username)} className="block text-[12.5px] truncate no-underline" style={{ color: "#eeeef5" }}>
                   {p.display_name || p.username}
+                  <VerifiedMark id={p.id} username={p.username} />
                 </Link>
                 <span className="block text-[10px] truncate" style={{ color: "rgba(238,238,245,0.32)" }}>{p.reason}</span>
               </span>

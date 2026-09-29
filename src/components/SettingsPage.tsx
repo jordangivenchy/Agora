@@ -22,6 +22,7 @@ import DataAndCoachPanel from "@/components/DataAndCoachPanel";
 import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
 import { PREF_GROUPS } from "@/lib/notifications";
+import VerifiedMark from "@/components/VerifiedMark";
 
 /* ── types ─────────────────────────────────────────────────── */
 
@@ -513,6 +514,7 @@ export default function SettingsPage({ initial }: {
               <div className="flex-1 min-w-0">
                 <p className="m-0 text-[14px]" style={{ color: "#f5f5f0" }}>
                   {displayName(profile)}
+                  <VerifiedMark username={profile.username} />
                 </p>
                 <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>@{profile.username}</p>
                 {profile.bio && (
@@ -894,7 +896,8 @@ export default function SettingsPage({ initial }: {
                       : displayName(u).charAt(0).toUpperCase()}
                   </span>
                   <span className="flex-1 text-[13px]" style={{ color: "#f5f5f0" }}>
-                    {displayName(u)}{" "}
+                    {displayName(u)}
+                    <VerifiedMark id={u.id} username={u.username} />{" "}
                     <span className="text-[11px]" style={{ color: "#8b8b94" }}>@{u.username}</span>
                   </span>
                   <button style={btnGhost} onClick={() => unblock(u)} disabled={unblockBusy === u.id}>

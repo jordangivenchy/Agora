@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import UserAvatar from "../UserAvatar";
+import VerifiedMark from "@/components/VerifiedMark";
 
 /* ---------- shared bits ---------- */
 
@@ -132,6 +133,7 @@ export function BansPanel({
             <UserAvatar size={24} username={b.user?.username ?? "?"} avatarUrl={b.user?.avatar_url ?? null} seed={b.user_id} />
             <span className="flex-1 min-w-0 truncate text-[12px]" style={{ color: "rgba(238,238,245,0.88)" }}>
               {nameOf(b.user)}
+              <VerifiedMark id={b.user_id} username={b.user?.username} />
             </span>
             <span className="text-[10px] shrink-0" style={dimText}>{timeAgo(b.created_at)}</span>
             <button
@@ -167,7 +169,7 @@ const amber = "#e2b96b";
 /* One human-readable phrase per action; role_change embeds its target. */
 function actionPhrase(row: ModLogRow): React.ReactNode {
   const target = row.target_user ? (
-    <span style={{ color: amber }}>{nameOf(row.target)}</span>
+    <span style={{ color: amber }}>{nameOf(row.target)}<VerifiedMark id={row.target_user} username={row.target?.username} /></span>
   ) : null;
   switch (row.action) {
     case "ban":
@@ -269,7 +271,7 @@ export function ModLogPanel({
             <div key={r.id} className="flex items-baseline gap-2 py-0.5" style={{ fontSize: 11 }}>
               <span className="shrink-0" style={{ ...dimText, minWidth: 30 }}>{timeAgo(r.created_at)}</span>
               <span className="min-w-0" style={{ color: "rgba(238,238,245,0.65)" }}>
-                <span style={{ color: "#eeeef5" }}>{nameOf(r.actor)}</span>{" "}
+                <span style={{ color: "#eeeef5" }}>{nameOf(r.actor)}<VerifiedMark username={r.actor?.username} /></span>{" "}
                 {actionPhrase(r)}
               </span>
             </div>

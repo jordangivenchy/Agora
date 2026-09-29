@@ -9,6 +9,7 @@ import { openRoom } from "@/lib/enterRoom";
 import { displayName } from "@/lib/names";
 import UserAvatar from "./UserAvatar";
 import { useUserMenu } from "./userMenuContext";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export interface RoomCardRoom {
   id: string;
@@ -142,6 +143,7 @@ export default function RoomCard({ room: r, size = 168 }: { room: RoomCardRoom; 
               >
                 <UserAvatar size={13} username={r.host.username} avatarUrl={r.host.avatar_url} seed={r.host.id} />
                 {displayName(r.host)}
+                <VerifiedMark id={r.host.id} username={r.host.username} spaced={false} />
               </span>
             ) : null}
           </p>

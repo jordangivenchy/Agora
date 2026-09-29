@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface Candidate {
   id: string;
@@ -97,6 +98,7 @@ export default function InviteFriends({ communityId, communityName, isPrivate }:
               <span style={{ minWidth: 0, flex: 1 }}>
                 <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {c.display_name?.trim() || c.username}
+                  <VerifiedMark id={c.id} username={c.username} />
                 </span>
                 <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>@{c.username}</span>
               </span>

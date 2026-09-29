@@ -41,6 +41,7 @@ import {
 } from "./DmThread";
 import GroupTile from "./GroupTile";
 import GroupInfoModal from "./GroupInfoModal";
+import VerifiedMark from "@/components/VerifiedMark";
 import {
   GROUP_MSG_SELECT,
   groupErrorText,
@@ -639,6 +640,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
               {!mine && startsRun && (
                 <div style={{ alignSelf: "flex-start", marginLeft: 34, marginTop: 10, marginBottom: -2, lineHeight: 1.2, fontSize: 11.5, color: "rgba(238,238,245,0.5)" }}>
                   {displayName(sender)}
+                  <VerifiedMark id={sender.id} username={sender.username} />
                 </div>
               )}
               <div

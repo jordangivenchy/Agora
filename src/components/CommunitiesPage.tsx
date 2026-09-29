@@ -56,6 +56,7 @@ import { useCoarsePointer } from "@/lib/pointer";
 import { useIsClient, useMediaQuery } from "@/lib/media";
 import { readNavUser } from "@/lib/navUserCache";
 import { BODY_MIN, NAME_MIN, cleanTextError } from "@/lib/cleanText";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface Props {
   /** Always open as a route; false only when hosted as an overlay. */
@@ -268,9 +269,10 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
         {authorLabel(dn, username)}
+        <VerifiedMark id={authorId} username={username} spaced={false} />
       </span>
     ) : (
-      <>{authorLabel(dn, username)}</>
+      <>{authorLabel(dn, username)}<VerifiedMark username={username} /></>
     );
 
   const [supabase] = useState(() => createClient());
@@ -1550,7 +1552,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
       >
         <p className="m-0 text-[10px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.5)" }}>
           <Icon name="repeat" size={11} /> from <span style={{ color: "#e2b96b" }}>{p.orig_community_name ?? "a community"}</span>
-          {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}</>}
+          {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}<VerifiedMark username={p.orig_author_username} spaced={false} /></>}
         </p>
         <p className="m-0 text-[12.5px] font-medium" style={{ color: "rgba(238,238,245,0.88)", marginTop: 5 }}>
           <RichText text={p.orig_title ?? ""} inline />
@@ -1986,7 +1988,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
       <CommentSheet
         context={<>
           <UserAvatar size={20} username={replyTarget.author_username} avatarUrl={avatars[replyTarget.author_id ?? ""] ?? null} seed={replyTarget.author_id ?? replyTarget.author_username} />
-          <b>@{replyTarget.author_username}</b>
+          <b>@{replyTarget.author_username}</b><VerifiedMark id={replyTarget.author_id} username={replyTarget.author_username} spaced={false} />
           <span className="cm-sheet-snippet">{firstLine(replyTarget.body)}</span>
         </>}
         placeholder={`Your reply to @${replyTarget.author_username}`}
@@ -2261,6 +2263,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                             <UserAvatar size={20} username={m.user?.username ?? "?"} avatarUrl={m.user?.avatar_url ?? null} seed={m.user_id} />
                             <span className="flex-1 min-w-0 truncate text-[11.5px]" style={{ color: "rgba(238,238,245,0.8)" }}>
                               {m.user?.display_name?.trim() || `@${m.user?.username ?? "unknown"}`}
+                              <VerifiedMark id={m.user_id} username={m.user?.username} />
                               {m.role === "owner" && (
                                 <span className="text-[8.5px] font-bold ml-1.5" style={{ color: "#e2b96b", letterSpacing: "0.04em" }}>OWNER</span>
                               )}
@@ -3075,8 +3078,9 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       const personRow = (uid: string, u: Member["user"], right: React.ReactNode) => (
                         <div key={uid} className="flex items-center gap-2.5 py-1.5">
                           <UserAvatar size={24} username={u?.username ?? "?"} avatarUrl={u?.avatar_url ?? null} seed={uid} />
-                          <span className="flex-1 min-w-0 truncate text-[12px]" style={{ color: "rgba(238,238,245,0.88)" }}>
-                            {u?.display_name?.trim() || `@${u?.username ?? "unknown"}`}
+                          <span className="flex-1 min-w-0 flex items-center gap-1 text-[12px]" style={{ color: "rgba(238,238,245,0.88)" }}>
+                            <span className="truncate">{u?.display_name?.trim() || `@${u?.username ?? "unknown"}`}</span>
+                            <VerifiedMark id={uid} username={u?.username} spaced={false} />
                           </span>
                           {right}
                         </div>

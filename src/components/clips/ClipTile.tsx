@@ -8,6 +8,7 @@
 
 import UserAvatar from "@/components/UserAvatar";
 import { Icon } from "@/components/icons";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export type ClipTileData = {
   id: string;
@@ -74,6 +75,7 @@ export default function ClipTile({ clip }: { clip: ClipTileData }) {
           <>
             <UserAvatar size={16} username={clip.uploader.username} avatarUrl={clip.uploader.avatar_url} />
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{who}</span>
+            <VerifiedMark username={clip.uploader.username} spaced={false} style={{ marginLeft: -3 }} />
             <span style={{ color: "#3a3a42" }}>·</span>
           </>
         )}

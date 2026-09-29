@@ -10,6 +10,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
+import ActorText from "./ActorText";
 import {
   actorLabel, notifDetail, notifHref, notifIcon, notifText, timeAgo, type NotifRow,
 } from "@/lib/notifications";
@@ -110,9 +111,12 @@ export default function NotificationsPanel({
         </span>
         <span className="notif-row-main">
           <span className="notif-row-text">
-            {n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)
-              ? `${actorLabel(n)} started following you`
-              : notifText(n)}
+            <ActorText
+              n={n}
+              text={n.type === "new_follower" && n.actor_id && followedBack.has(n.actor_id)
+                ? `${actorLabel(n)} started following you`
+                : notifText(n)}
+            />
           </span>
           {detail && <span className="notif-row-detail">“{detail}”</span>}
           {pendingFollow && (

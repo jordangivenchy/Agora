@@ -12,6 +12,7 @@ import UserAvatar from "@/components/UserAvatar";
 import { displayName } from "@/lib/names";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { YELLOW, YELLOW_INK } from "./DmThread";
+import VerifiedMark from "@/components/VerifiedMark";
 import {
   GROUP_NAME_MAX,
   errorNote,
@@ -196,6 +197,7 @@ export default function NewGroupModal({
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {displayName(f)}
+                    <VerifiedMark id={f.id} username={f.username} />
                   </span>
                   <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>@{f.username}</span>
                 </span>

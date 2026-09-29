@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import { useUserMenu } from "./userMenuContext";
 import { sessionUser } from "@/lib/session";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export type SidebarView = "home" | "explore" | "following";
 
@@ -376,6 +377,7 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard }: P
                     }}
                   >
                     {f.username}
+                    <VerifiedMark id={f.id} username={f.username} />
                   </span>
                   <span
                     style={{

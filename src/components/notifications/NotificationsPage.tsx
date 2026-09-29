@@ -20,6 +20,7 @@ import {
 } from "@/lib/notifications";
 import { sessionUser } from "@/lib/session";
 import { navigateTo, progressOnClick } from "@/lib/progress";
+import ActorText from "./ActorText";
 
 const PAGE = NOTIF_PAGE;
 
@@ -282,7 +283,7 @@ export default function NotificationsPage({ initial }: {
                     </span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-[13.5px]" style={{ color: unreadRow ? "#f5f5f0" : "#c9c9d1", lineHeight: 1.45 }}>
-                        {n.type === "new_follower" ? `${actorLabel(n)} wants to be your friend` : notifText(n)}
+                        <ActorText n={n} text={n.type === "new_follower" ? `${actorLabel(n)} wants to be your friend` : notifText(n)} />
                       </span>
                       {detail && (
                         <span className="block mt-1 text-[12px] truncate" style={{ color: "#8b8b94" }}>

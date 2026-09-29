@@ -10,6 +10,7 @@ import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import UserAvatar from "../UserAvatar";
 import { displayName } from "@/lib/names";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export interface FriendUser {
   id: string;
@@ -308,6 +309,7 @@ export function FriendRow({
           }}
         >
           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{displayName(user)}</span>
+          <VerifiedMark id={user.id} username={user.username} spaced={false} />
           {favorite && (
             <Icon name="star" size={11} style={{ color: FRIENDS_UI.gold, fill: "currentColor", flexShrink: 0 }} />
           )}

@@ -27,6 +27,7 @@ import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import ClipTile, { formatClipDuration, formatViews, type ClipTileData } from "@/components/clips/ClipTile";
 import { sessionUser } from "@/lib/session";
 import { navigateTo } from "@/lib/progress";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface ClipRow {
   id: string;
@@ -300,6 +301,7 @@ export default function ClipPage({ params }: { params: Promise<{ id: string }> }
                     <a href={`/@${clip.uploader.username}`} style={{ color: "#c9c9d2", textDecoration: "none", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}>
                       <UserAvatar size={16} username={clip.uploader.username} avatarUrl={clip.uploader.avatar_url} />
                       @{clip.uploader.username}
+                      <VerifiedMark username={clip.uploader.username} spaced={false} />
                     </a>
                     <span style={{ color: "#3a3a42" }}>·</span>
                   </>

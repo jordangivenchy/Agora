@@ -74,7 +74,7 @@ const FORMAT_LABEL: Record<string, string> = {
   panel: "Panel",
 };
 
-type Participant = { left_at: string | null; role: string; stance: string | null; user: { username?: string | null; display_name?: string | null } | null };
+type Participant = { user_id: string; left_at: string | null; role: string; stance: string | null; user: { username?: string | null; display_name?: string | null } | null };
 type RoomRow = {
   id: string;
   motion: string;
@@ -135,6 +135,9 @@ export async function fetchHeroRooms(supabase: SupabaseClient): Promise<HeroRoom
         // "Open seat" rather than an empty string: the panel shows its initial.
         debater1: proD?.user ? displayName(proD.user) : "Open seat",
         debater2: conD?.user ? displayName(conD.user) : "Open seat",
+        // Who holds each side, for the verified mark beside the name.
+        debater1Id: proD?.user_id ?? null,
+        debater2Id: conD?.user_id ?? null,
         color1: PALETTE[i % PALETTE.length],
         color2: PALETTE[(i + 3) % PALETTE.length],
         gradient: GRADIENTS[i % GRADIENTS.length],

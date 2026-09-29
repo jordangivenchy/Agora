@@ -21,6 +21,7 @@ import { readNavUser, writeNavUser } from "@/lib/navUserCache";
 import { userPath } from "@/lib/urls";
 import { sessionUser } from "@/lib/session";
 import { navigateTo } from "@/lib/progress";
+import VerifiedMark from "@/components/VerifiedMark";
 
 const SearchPage = dynamic(() => import("@/components/search/SearchPage"), { ssr: false });
 
@@ -227,7 +228,7 @@ export default function SiteNavbar({ onLogo, ownSearch = true }: {
               </button>
               <div className={`avatar-dropdown${menuOpen ? " open" : ""}`} role="menu">
                 <div className="avatar-menu-head">
-                  <span className="avatar-menu-head-name">{user.display_name || user.username}</span>
+                  <span className="avatar-menu-head-name">{user.display_name || user.username}<VerifiedMark id={user.id} username={user.username} /></span>
                   <span className="avatar-menu-head-sub">@{user.username}</span>
                 </div>
                 <a

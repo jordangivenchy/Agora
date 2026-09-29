@@ -22,6 +22,7 @@ import RichText from "./RichText";
 import { clipIdInBody, stripClipLink } from "./ClipEmbed";
 import { openImage } from "@/lib/lightbox";
 import PostTopicQueue from "./PostTopicQueue";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export type PostRow = {
   id: string;
@@ -200,7 +201,7 @@ export function RepostEmbed({ post: p, onOpenOriginal }: { post: PostRow; onOpen
     >
       <p className="m-0 text-[10px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.5)" }}>
         <Icon name="repeat" size={11} /> from <span style={{ color: "#e2b96b" }}>{p.orig_community_name ?? "a community"}</span>
-        {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}</>}
+        {p.orig_author_username && <> · {authorLabel(p.orig_author_display_name, p.orig_author_username)}<VerifiedMark username={p.orig_author_username} spaced={false} /></>}
       </p>
       <p className="m-0 text-[12.5px] font-medium" style={{ color: "rgba(238,238,245,0.88)", marginTop: 5 }}>
         <RichText text={p.orig_title ?? ""} inline />

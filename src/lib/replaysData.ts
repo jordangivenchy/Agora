@@ -28,8 +28,10 @@ export interface ReplayListItem {
   thumbnail_url: string | null;
   started_at: string | null;
   ended_at: string | null;
+  recording_started_at: string | null;
+  recording_ended_at: string | null;
   replay_views: number | null;
-  host: { username: string; display_name: string | null; avatar_url: string | null } | null;
+  host: { id: string; username: string; display_name: string | null; avatar_url: string | null } | null;
 }
 
 /** One page of past discussions, newest first. Only rooms with something
@@ -40,7 +42,7 @@ export async function fetchReplays(
 ): Promise<ReplayListItem[]> {
   let q = supabase
     .from("debate_rooms")
-    .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, replay_views, host:users!host_id(username, display_name, avatar_url)")
+    .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, recording_started_at, recording_ended_at, replay_views, host:users!host_id(id, username, display_name, avatar_url)")
     .eq("status", "ended")
     .eq("is_private", false)
     .not("recording_url", "is", null)

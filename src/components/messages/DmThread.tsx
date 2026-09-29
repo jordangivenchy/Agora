@@ -45,6 +45,7 @@ import Link from "next/link";
 import { userPath } from "@/lib/urls";
 import { progressOnClick } from "@/lib/progress";
 import { goTo } from "@/lib/softNav";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export interface Dm {
   id: string;
@@ -866,6 +867,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               }}
             >
               {displayName(hydratedPeer)}
+              <VerifiedMark id={peer.id} username={peer.username} />
             </span>
             <span style={{ display: "block", color: "#8b8b94", fontSize: page ? 12.5 : 12, lineHeight: 1.2 }}>
               @{peer.username}
@@ -975,6 +977,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               {!mine && (i === 0 || msgs[i - 1].sender_id !== m.sender_id || !!m.community_id || !!msgs[i - 1].community_id) && (
                 <div style={{ alignSelf: "flex-start", marginLeft: 34, marginTop: 10, marginBottom: -2, lineHeight: 1.2, fontSize: 11.5, color: "rgba(238,238,245,0.5)" }}>
                   {displayName(hydratedPeer)}
+                  <VerifiedMark id={peer.id} username={peer.username} />
                 </div>
               )}
               <div

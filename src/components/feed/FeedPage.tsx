@@ -21,7 +21,8 @@ import { TOPICS } from "@/types/database";
 import RoomCard, { type RoomCardRoom } from "@/components/RoomCard";
 import UserAvatar from "@/components/UserAvatar";
 import PostCard, { RepostEmbed, TagChip, authorLabel, timeAgo, type PostRow } from "@/components/community/PostCard";
-import { fmtDay, roomDuration } from "@/lib/duration";
+import { fmtAgo, fmtViews, replayLength } from "@/lib/duration";
+import VerifiedMark from "@/components/VerifiedMark";
 import { useRoomTimes } from "@/lib/useRoomTimes";
 import PeopleSuggestions from "@/components/people/PeopleSuggestions";
 import FeedRail from "@/components/feed/FeedRail";
@@ -243,8 +244,9 @@ export default function FeedPage({ open = true, onClose }: Props) {
       >
         {withAvatar && <UserAvatar size={14} username={username} avatarUrl={avatar ?? null} seed={id} />}
         {label ?? authorLabel(dn, username)}
+        <VerifiedMark id={id} username={username} spaced={false} />
       </span>
-    ) : <>{label ?? authorLabel(dn, username)}</>;
+    ) : <>{label ?? authorLabel(dn, username)}<VerifiedMark username={username} /></>;
 
   const openPost = (id: string) => navigateTo(router, pathFor.post(id));
 
@@ -337,6 +339,9 @@ export default function FeedPage({ open = true, onClose }: Props) {
                 <Icon name="play" size={13} style={{ fill: "#fff", marginLeft: 2 }} />
               </span>
             </span>
+            {replayLength(roomTimes[r.id]) && (
+              <span className="rp-length">{replayLength(roomTimes[r.id])}</span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <Reason text={it.reason} />
@@ -354,11 +359,11 @@ export default function FeedPage({ open = true, onClose }: Props) {
               </span>
               {(() => {
                 const tm = roomTimes[r.id];
-                const day = fmtDay(tm?.ended_at ?? it.created_at);
-                const run = roomDuration(tm?.started_at, tm?.ended_at);
-                return (day || run) ? (
-                  <span style={{ color: "rgba(238,238,245,0.5)" }}>{[day, run].filter(Boolean).join(" · ")}</span>
-                ) : null;
+                return (
+                  <span style={{ color: "rgba(238,238,245,0.5)" }}>
+                    {tm ? `${fmtViews(tm.replay_views)} · ` : ""}{fmtAgo(tm?.ended_at ?? it.created_at)}
+                  </span>
+                );
               })()}
               {topic && (
                 <TagChip name={topic.label} color={topic.color} small />

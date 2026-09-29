@@ -34,6 +34,7 @@ import { Icon } from "@/components/icons";
 import { roomPath } from "@/lib/urls";
 import { enterRoom } from "@/lib/enterRoom";
 import NewsTicker, { type TickerStory } from "./NewsTicker";
+import VerifiedMark from "@/components/VerifiedMark";
 
 /** A live room as the page's data pass shapes it (the shell's keys). */
 export type HeroRoom = {
@@ -41,6 +42,8 @@ export type HeroRoom = {
   motion: string;
   debater1: string;
   debater2: string;
+  debater1Id?: string | null;
+  debater2Id?: string | null;
   color1: string;
   color2: string;
   gradient: string;
@@ -456,12 +459,12 @@ function RoomSlide({ room: c, i, total, thumb, onThumbBroken, onWatch }: {
         <div className="room-panel-speakers">
           <div className="room-panel-speaker">
             <div className="panel-avatar small" style={{ background: c.color1 }}>{initial(c.debater1)}</div>
-            <div className="room-panel-speaker-name">{c.debater1}</div>
+            <div className="room-panel-speaker-name">{c.debater1}<VerifiedMark id={c.debater1Id} /></div>
           </div>
           {c.debater2 && c.debater2 !== "Open seat" && (
             <div className="room-panel-speaker">
               <div className="panel-avatar small" style={{ background: c.color2 || "#4a9eff" }}>{initial(c.debater2)}</div>
-              <div className="room-panel-speaker-name">{c.debater2}</div>
+              <div className="room-panel-speaker-name">{c.debater2}<VerifiedMark id={c.debater2Id} /></div>
             </div>
           )}
         </div>

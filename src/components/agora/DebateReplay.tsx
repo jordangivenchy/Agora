@@ -25,7 +25,8 @@ import { sessionUser } from "@/lib/session";
 import { navigateTo } from "@/lib/progress";
 import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import { useCoarsePointer } from "@/lib/pointer";
-import { fmtDay, roomDuration } from "@/lib/duration";
+import { fmtAgo, fmtViews, replayLength } from "@/lib/duration";
+import VerifiedMark from "@/components/VerifiedMark";
 import { parseTimeline, videoTime, type TimelineSpan } from "./hlsTimeline";
 import RichEditor from "@/components/community/RichEditor";
 import RichText from "@/components/community/RichText";
@@ -280,6 +281,8 @@ export default function DebateReplay({
   const [lines, setLines] = useState<Line[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
+  /* Views: read with the page, then the total the view bump returns. */
+  const [replayViews, setReplayViews] = useState<number | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   /* A finger has no ⌘↩: the composer keeps the hint for a keyboard. */
   const coarse = useCoarsePointer();
@@ -304,11 +307,14 @@ export default function DebateReplay({
         .getUser()
         .then(({ data }) => setSignedIn(!!data.user))
         .catch(() => setSignedIn(false));
-      const [{ data: replay, error: rErr }, { data: tx }, { data: polishedRow }] = await Promise.all([
+      const [{ data: replay, error: rErr }, { data: tx }, { data: polishedRow }, { data: viewsRow }] = await Promise.all([
         supabase.rpc("get_debate_replay", { p_room: roomId }),
         supabase.rpc("get_debate_transcript", { p_room: roomId, p_limit: 2000 }),
         supabase.from("replay_transcripts").select("status, lines").eq("room_id", roomId).maybeSingle(),
+        supabase.from("debate_rooms").select("replay_views").eq("id", roomId).maybeSingle(),
       ]);
+      const views = (viewsRow as { replay_views?: number | null } | null)?.replay_views;
+      if (typeof views === "number") setReplayViews((cur) => cur ?? views);
       let r = (replay as ReplayRoom | null) ?? null;
       let txLines = (tx as Line[] | null) ?? [];
       /* The post-run Gemini transcript (full coverage, punctuation,
@@ -385,7 +391,6 @@ export default function DebateReplay({
   /* Replay views are raw counts — every watch increments, repeats and
      signed-out viewers included. Bumped once per page load (ref-guarded
      against StrictMode double-effects); the RPC returns the new total. */
-  const [replayViews, setReplayViews] = useState<number | null>(null);
   /* Likes, the way a video is liked: one per account, toggled
      (replay_like_state / toggle_replay_like). */
   const [likes, setLikes] = useState<{ count: number; liked: boolean } | null>(null);
@@ -604,7 +609,10 @@ export default function DebateReplay({
     thumbnail_url: string | null;
     started_at: string | null;
     ended_at: string | null;
-    host: { username: string; display_name: string | null; avatar_url: string | null } | null;
+    recording_started_at: string | null;
+    recording_ended_at: string | null;
+    replay_views: number | null;
+    host: { id: string; username: string; display_name: string | null; avatar_url: string | null } | null;
   };
   const [more, setMore] = useState<MoreReplay[]>([]);
   const selfId = room?.id ?? null;
@@ -614,7 +622,7 @@ export default function DebateReplay({
     let alive = true;
     supabase
       .from("debate_rooms")
-      .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+      .select("id, motion, topic_key, thumbnail_url, started_at, ended_at, recording_started_at, recording_ended_at, replay_views, host:users!debate_rooms_host_id_fkey(id, username, display_name, avatar_url)")
       .eq("status", "ended")
       .eq("is_private", false)
       .not("recording_url", "is", null)
@@ -719,6 +727,12 @@ export default function DebateReplay({
           <header className="dr-head">
             <h1 className="dr-motion">{motion}</h1>
             <div className="dr-meta">
+              {/* Views and when it went up come first, the way a video
+                  says it; the exact day is the tooltip. */}
+              <span className="dr-stats" title={new Date(when).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" })}>
+                {recorded && replayViews !== null ? `${fmtViews(replayViews)} · ` : ""}
+                {fmtAgo(when)}
+              </span>
               <span className="dr-tag">
                 <span className="dr-tag-dot" /> {recorded ? "Past discussion" : "Ended · no recording"}
               </span>
@@ -727,20 +741,12 @@ export default function DebateReplay({
                   <span aria-hidden>{topic.emoji}</span> {topic.label}
                 </span>
               )}
-              <span>
-                {new Date(when).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}
-              </span>
               {recorded && durationLabel && (
                 <span>
                   <Icon name="video" size={12} /> Recorded · {durationLabel}
                 </span>
               )}
               {!recorded && durationLabel && <span>Lasted {durationLabel}</span>}
-              {!!replayViews && (
-                <span>
-                  <Icon name="eye" size={12} /> {replayViews} view{replayViews === 1 ? "" : "s"}
-                </span>
-              )}
               {!!room.viewer_count && (
                 <span>{room.viewer_count} watched live</span>
               )}
@@ -750,7 +756,7 @@ export default function DebateReplay({
                 {room.speakers.map((p) => (
                   <a key={p.id} className="dr-person" href={userPath(p.username)}>
                     <UserAvatar username={p.username} avatarUrl={p.avatar_url} seed={p.id} size={22} />
-                    <span>{displayName(p)}</span>
+                    <span>{displayName(p)}<VerifiedMark id={p.id} username={p.username} /></span>
                     <span className={`dr-person-role ${p.side ?? ""}`}>
                       {p.role === "host" ? "Host" : p.role === "cohost" ? "Co-host" : p.side ? p.side : "Speaker"}
                     </span>
@@ -759,7 +765,7 @@ export default function DebateReplay({
                 {room.speakers.length === 0 && room.host && (
                   <a className="dr-person" href={userPath(room.host.username)}>
                     <UserAvatar username={room.host.username} avatarUrl={room.host.avatar_url} seed={room.host.id} size={22} />
-                    <span>{displayName(room.host)}</span>
+                    <span>{displayName(room.host)}<VerifiedMark id={room.host.id} username={room.host.username} /></span>
                     <span className="dr-person-role">Host</span>
                   </a>
                 )}
@@ -847,7 +853,7 @@ export default function DebateReplay({
                         <span className="cm-avatar">
                           <UserAvatar size={24} username={c.author_username} avatarUrl={avatars[c.author_id ?? ""] ?? null} seed={c.author_id ?? c.author_username} />
                         </span>
-                        <span className="cm-author">@{c.author_username}</span>
+                        <span className="cm-author">@{c.author_username}<VerifiedMark id={c.author_id} username={c.author_username} /></span>
                         <span className="cm-time">· {timeAgo(c.created_at)}</span>
                       </div>
                       <div className="cm-body"><RichText text={c.body} /></div>
@@ -909,7 +915,7 @@ export default function DebateReplay({
                     >
                       <UserAvatar username={l.username} avatarUrl={l.avatar_url} seed={l.user_id ?? l.username} size={24} />
                       <div>
-                        <div className="dr-line-name">{displayName(l)}</div>
+                        <div className="dr-line-name">{displayName(l)}<VerifiedMark id={l.user_id} username={l.username} /></div>
                         <div className="dr-line-text">{highlight(l.content, query.trim())}</div>
                       </div>
                       <span className="dr-line-time">
@@ -937,26 +943,33 @@ export default function DebateReplay({
                   </div>
                 </div>
                 <div className="dr-more-grid">
-                  {more.map((m) => (
-                    <a key={m.id} className="dr-more-card" href={replayPath(m)}>
-                      <div className="dr-more-thumb">
-                        {m.thumbnail_url || m.host?.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={(m.thumbnail_url || m.host?.avatar_url)!} alt="" />
-                        ) : (
-                          <span className="dr-more-thumb-fallback">
-                            <Icon name="play" size={18} />
-                          </span>
-                        )}
-                      </div>
-                      <div className="dr-more-motion">{m.motion}</div>
-                      <div className="dr-more-meta">
-                        {m.host ? displayName(m.host) : ""}
-                        {m.ended_at ? ` · ${fmtDay(m.ended_at)}` : ""}
-                        {roomDuration(m.started_at, m.ended_at) ? ` · ${roomDuration(m.started_at, m.ended_at)}` : ""}
-                      </div>
-                    </a>
-                  ))}
+                  {more.map((m) => {
+                    const length = replayLength(m);
+                    return (
+                      <a key={m.id} className="dr-more-card" href={replayPath(m)}>
+                        <div className="dr-more-thumb">
+                          {m.thumbnail_url || m.host?.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={(m.thumbnail_url || m.host?.avatar_url)!} alt="" />
+                          ) : (
+                            <span className="dr-more-thumb-fallback">
+                              <Icon name="play" size={18} />
+                            </span>
+                          )}
+                          {length && <span className="dr-more-length">{length}</span>}
+                        </div>
+                        <div className="dr-more-motion">{m.motion}</div>
+                        <div className="dr-more-meta">
+                          {m.host && (
+                            <span className="dr-more-host">
+                              {displayName(m.host)}<VerifiedMark id={m.host.id} username={m.host.username} />
+                            </span>
+                          )}
+                          <span>{fmtViews(m.replay_views)} · {fmtAgo(m.ended_at ?? m.started_at)}</span>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               </section>
             )}

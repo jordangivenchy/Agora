@@ -15,6 +15,7 @@ import GroupTile from "./GroupTile";
 import Link from "next/link";
 import { userPath } from "@/lib/urls";
 import { progressOnClick } from "@/lib/progress";
+import VerifiedMark from "@/components/VerifiedMark";
 import {
   GROUP_NAME_MAX,
   errorNote,
@@ -247,6 +248,7 @@ export default function GroupInfoModal({
                       <span style={{ minWidth: 0, flex: 1 }}>
                         <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {displayName(c)}
+                          <VerifiedMark id={c.id} username={c.username} />
                         </span>
                         <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>@{c.username}</span>
                       </span>
@@ -281,6 +283,7 @@ export default function GroupInfoModal({
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {displayName(m)}
+                        <VerifiedMark id={m.id} username={m.username} />
                         {isMe && <span style={{ fontWeight: 500, color: "rgba(238,238,245,0.45)" }}> · you</span>}
                       </span>
                       <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
 import { sessionUser } from "@/lib/session";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface Props {
   open: boolean;
@@ -228,6 +229,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
                 }}
               >
                 @{profile.username}
+                <VerifiedMark username={profile.username} />
               </p>
             </div>
           )}

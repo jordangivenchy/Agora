@@ -47,6 +47,7 @@ import { takeCoverScroll, useCallSlot } from "@/components/agora/CallSlot";
 import { softNavTarget } from "@/lib/softNav";
 import "@/app/agora/agora.css";
 import { sessionUser } from "@/lib/session";
+import VerifiedMark from "@/components/VerifiedMark";
 
 /* Phone breakpoint shared with agora.css: below it the chat rail is a
    bottom sheet driven by `chatOpen`, and the rail-collapse button closes
@@ -2062,7 +2063,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                 title="The host's profile"
               >
                 <UserAvatar size={24} username={hostUser.username} avatarUrl={hostUser.avatar_url ?? null} seed={room.host_id} />
-                <span>{displayName(hostUser)}</span>
+                <span>{displayName(hostUser)}<VerifiedMark id={room.host_id} username={hostUser.username} /></span>
               </a>
             )}
             {!isHostViewer && (

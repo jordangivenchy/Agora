@@ -14,7 +14,8 @@ import { displayName } from "@/lib/names";
 import { replayPath } from "@/lib/urls";
 import ReplayPlayer from "@/components/agora/ReplayPlayer";
 import UserAvatar from "@/components/UserAvatar";
-import { roomDuration } from "@/lib/duration";
+import { fmtAgo, fmtViews, replayLength } from "@/lib/duration";
+import VerifiedMark from "@/components/VerifiedMark";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { navigateTo } from "@/lib/progress";
@@ -44,11 +45,13 @@ type GridRoom = {
   replay_views?: number | null;
   started_at?: string | null;
   ended_at?: string | null;
+  recording_started_at?: string | null;
+  recording_ended_at?: string | null;
   status: string;
   created_at: string;
   thumbnail_url?: string | null;
   recording_url?: string | null;
-  host?: { username: string; display_name?: string | null; avatar_url?: string | null } | null;
+  host?: { id?: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
 };
 
 const CHIP_FILTERS = ["All", "Politics", "Economics", "Science & Tech", "Philosophy", "Culture"];
@@ -100,7 +103,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
     const [{ data: roomRows }, { data: clipRows }] = await Promise.all([
       supabase
         .from("debate_rooms")
-        .select("id, motion, viewer_count, replay_views, status, created_at, started_at, ended_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(username, display_name, avatar_url)")
+        .select("id, motion, viewer_count, replay_views, status, created_at, started_at, ended_at, recording_started_at, recording_ended_at, thumbnail_url, recording_url, host:users!debate_rooms_host_id_fkey(id, username, display_name, avatar_url)")
         .in("status", ["live", "created", "ended"])
         .eq("is_private", false)
         /* Ended rooms are only worth a tile when the replay exists —
@@ -519,10 +522,15 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                           ENDED
                         </span>
                       )}
-                      <span className="absolute bottom-2 right-2 text-[10px] px-2.5 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec" }}>
-                        <Icon name="eye" size={11} /> {fmt(r.status === "ended" ? (r.replay_views ?? 0) : (r.viewer_count ?? 0))}
-                        {r.status === "ended" && roomDuration(r.started_at, r.ended_at) ? ` · ${roomDuration(r.started_at, r.ended_at)}` : ""}
-                      </span>
+                      {/* A past discussion carries its length on the corner, as a
+                          video does; a live or open room, how many are there. */}
+                      {r.status === "ended" ? (
+                        replayLength(r) && <span className="rp-length">{replayLength(r)}</span>
+                      ) : (
+                        <span className="absolute bottom-2 right-2 text-[10px] px-2.5 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.55)", color: "#e5e5ec" }}>
+                          <Icon name="eye" size={11} /> {fmt(r.viewer_count ?? 0)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex gap-2.5">
                       <UserAvatar
@@ -533,8 +541,15 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                       <div>
                         <p className="text-[13px] m-0" style={{ color: "#f5f5f0", lineHeight: 1.35 }}>{r.motion}</p>
                         <p className="text-[11px] mt-0.5 m-0" style={{ color: "#8b8b94" }}>
-                          {displayName(r.host) || "Unknown"} · {r.status === "live" ? "watching now" : ago(r.created_at)}
+                          {displayName(r.host) || "Unknown"}
+                          <VerifiedMark id={r.host?.id} username={r.host?.username} />
+                          {r.status === "ended" ? null : ` · ${r.status === "live" ? "watching now" : ago(r.created_at)}`}
                         </p>
+                        {r.status === "ended" && (
+                          <p className="text-[11px] m-0" style={{ color: "#8b8b94" }}>
+                            {fmtViews(r.replay_views)} · {fmtAgo(r.ended_at ?? r.created_at)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </a>

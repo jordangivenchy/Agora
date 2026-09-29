@@ -11,7 +11,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase-server";
 import { countReplays, fetchReplays, fieldLabel, REPLAY_FIELDS } from "@/lib/replaysData";
 import { replayPath } from "@/lib/urls";
-import { fmtDay, roomDuration } from "@/lib/duration";
+import { fmtAgo, fmtViews, replayLength } from "@/lib/duration";
+import VerifiedMark from "@/components/VerifiedMark";
 import { displayName } from "@/lib/names";
 
 const PER_PAGE = 24;
@@ -79,7 +80,7 @@ export default async function ReplaysIndex({ searchParams }: Props) {
       ) : (
         <ul className="rp-grid">
           {rows.map((r) => {
-            const length = roomDuration(r.started_at, r.ended_at);
+            const length = replayLength(r);
             const who = r.host ? displayName(r.host) || r.host.username : null;
             return (
               <li key={r.id} className="rp-card">
@@ -102,9 +103,8 @@ export default async function ReplaysIndex({ searchParams }: Props) {
                   </span>
                   <span className="rp-motion">{r.motion || "Discussion"}</span>
                   <span className="rp-meta">
-                    {who && <span className="rp-host">{who}</span>}
-                    {r.ended_at && <span>{fmtDay(r.ended_at)}</span>}
-                    {!!r.replay_views && <span>{r.replay_views} {r.replay_views === 1 ? "view" : "views"}</span>}
+                    {who && <span className="rp-host">{who}<VerifiedMark id={r.host?.id} username={r.host?.username} /></span>}
+                    <span>{fmtViews(r.replay_views)} · {fmtAgo(r.ended_at ?? r.started_at)}</span>
                   </span>
                 </Link>
               </li>

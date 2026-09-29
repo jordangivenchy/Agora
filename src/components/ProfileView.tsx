@@ -22,7 +22,8 @@ import { fetchDebates, fetchProfile, type DebateRow, type Profile, type ProfileI
 import UserAvatar from "@/components/UserAvatar";
 import FeedRail from "@/components/feed/FeedRail";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { fmtDay, roomDuration } from "@/lib/duration";
+import VerifiedMark from "@/components/VerifiedMark";
+import { fmtAgo, fmtViews, replayLength } from "@/lib/duration";
 import { useRoomTimes } from "@/lib/useRoomTimes";
 import { openPostComposer } from "@/components/community/GlobalPostComposer";
 import { Icon, type IconName } from "@/components/icons";
@@ -457,6 +458,7 @@ export default function ProfileView({
       >
         <UserAvatar size={size} username={u.username} avatarUrl={u.avatar_url ?? null} seed={u.id ?? u.username} />
         <span className="truncate" style={{ fontSize: 12.5, fontWeight: 600 }}>{name}</span>
+        <VerifiedMark id={u.id} username={u.username} spaced={false} style={{ fontSize: 12.5 }} />
         {showHandle && <span className="truncate" style={{ color: "#8b8b94", fontSize: 11.5, fontWeight: 400 }}>@{u.username}</span>}
       </Link>
     );
@@ -1234,6 +1236,10 @@ export default function ProfileView({
                         >
                           {live ? "● LIVE" : (<><Icon name="play" size={10} style={{ fill: "currentColor" }} /> {hasReplay ? "Watch" : "Ended"}</>)}
                         </span>
+                        {/* How long it ran, on the corner, as a video's length is. */}
+                        {!live && replayLength(roomTimes[d.id]) && (
+                          <span className="rp-length">{replayLength(roomTimes[d.id])}</span>
+                        )}
                       </div>
                       {/* Body */}
                       <div className="flex flex-col" style={{ padding: "10px 12px 12px", gap: 5 }}>
@@ -1248,13 +1254,13 @@ export default function ProfileView({
                           {d.motion || "Untitled discussion"}
                         </p>
                         <p className="m-0" style={{ color: "#8b8b94", fontSize: 11 }}>
-                          {d.role === "host" ? "hosted" : `spoke · ${hostName}`}
+                          {d.role === "host" ? "hosted" : <>spoke · {hostName}<VerifiedMark id={d.host_id} username={d.host_username} /></>}
                           {topic ? ` · ${topic.label}` : ""}
                         </p>
                         <p className="m-0" style={{ color: "#6b6b74", fontSize: 10.5 }}>
                           {live
                             ? `${d.viewer_count ?? 0} watching`
-                            : [fmtDay(roomTimes[d.id]?.ended_at ?? d.created_at), roomDuration(roomTimes[d.id]?.started_at, roomTimes[d.id]?.ended_at)].filter(Boolean).join(" · ")}
+                            : [hasReplay ? fmtViews(d.replay_views) : null, fmtAgo(roomTimes[d.id]?.ended_at ?? d.created_at)].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                     </a>

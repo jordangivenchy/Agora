@@ -23,6 +23,7 @@ import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
 import { userPath } from "@/lib/urls";
 import type { GroupMember } from "./groups";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export interface PickedPeer {
   id: string;
@@ -199,6 +200,7 @@ export default function NewMessageMenu({ onClose, meId, onPick, onNewGroup }: {
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", color: "#f5f5f0", fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {displayName({ display_name: row.person.display_name, username: row.person.username })}
+                  <VerifiedMark id={row.person.id} username={row.person.username} />
                 </span>
                 <span style={{ display: "block", color: "#8b8b94", fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   @{row.person.username}{row.friend ? "" : " · follow each other to message"}

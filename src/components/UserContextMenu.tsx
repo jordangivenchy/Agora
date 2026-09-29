@@ -16,6 +16,7 @@ import { userPath } from "@/lib/urls";
 import { useRouter } from "next/navigation";
 import { displayName } from "@/lib/names";
 import { navigateTo } from "@/lib/progress";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export { useUserMenu } from "./userMenuContext";
 export type { MenuRoomContext, MenuChatContext, OpenMenuOptions } from "./userMenuContext";
@@ -462,6 +463,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
         >
           <div className="user-menu-header">
             {displayName({ display_name: targetDisplayName, username: menu.target.username })}
+            <VerifiedMark id={menu.target.userId} username={menu.target.username} />
             {targetDisplayName?.trim() && (
               <span style={{ display: "block", fontWeight: 400, fontSize: "0.85em", opacity: 0.6 }}>
                 @{menu.target.username}

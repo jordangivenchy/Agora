@@ -31,6 +31,7 @@ import NewMessageMenu from "./NewMessageMenu";
 import { groupPreview, type GroupRow } from "./groups";
 import type { MessagesInitial } from "@/lib/messagesData";
 import { sessionUser } from "@/lib/session";
+import VerifiedMark from "@/components/VerifiedMark";
 
 const WIDE_MIN = 900;
 
@@ -554,6 +555,7 @@ export default function MessagesPage({
                     }}
                   >
                     {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
+                    <VerifiedMark id={t.peer_id} username={t.peer_username} />
                   </p>
                   <span style={{ color: timeInk(active), fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
                 </div>

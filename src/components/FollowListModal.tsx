@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { displayName } from "@/lib/names";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface Props {
   open: boolean;
@@ -241,6 +242,7 @@ export default function FollowListModal({
                   }}
                 >
                   {displayName(r)}
+                  <VerifiedMark id={r.id} username={r.username} />
                 </div>
                 <div
                   className="truncate"

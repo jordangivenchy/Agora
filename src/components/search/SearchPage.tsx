@@ -38,6 +38,9 @@ import TopicIcon from "@/components/topicIcons";
 import { sessionUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { navigateTo } from "@/lib/progress";
+import { fmtAgo, fmtViews } from "@/lib/duration";
+import { useRoomTimes } from "@/lib/useRoomTimes";
+import VerifiedMark from "@/components/VerifiedMark";
 
 export type SearchKeyHandler = (e: KeyboardEvent, value: string) => boolean | void;
 
@@ -468,8 +471,12 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
         style={{ textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 2 }}
       >
         {authorLabel(dn, username)}
+        <VerifiedMark id={id} username={username} spaced={false} />
       </span>
-    ) : <>{authorLabel(dn, username)}</>;
+    ) : <>{authorLabel(dn, username)}<VerifiedMark username={username} /></>;
+
+  /* Past discussions say their views and when they went up. */
+  const roomTimes = useRoomTimes((rows ?? []).filter((r) => r.kind === "debate" && r.payload.status === "ended").map((r) => r.id));
 
   const counts = useMemo(() => {
     const c: Partial<Record<SearchKind, number>> = {};
@@ -486,7 +493,9 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
       <div key={r.id} className="shrink-0 relative">
         <RoomCard room={d} size={168} />
         <p className="m-0 mt-1 text-[10px] truncate" style={{ color: "rgba(238,238,245,0.38)", maxWidth: 168 }}>
-          {ended ? `Ended ${d.ended_at ? timeAgo(d.ended_at) + " ago" : ""}` : d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}
+          {ended
+            ? [roomTimes[r.id] ? fmtViews(roomTimes[r.id].replay_views) : null, fmtAgo(d.ended_at ?? roomTimes[r.id]?.ended_at)].filter(Boolean).join(" · ")
+            : d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}
         </p>
       </div>
     );

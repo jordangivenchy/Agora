@@ -24,6 +24,7 @@ import { displayName } from "@/lib/names";
 import { leaveQueue as leaveTopicQueue, openQueue, useQueue } from "@/lib/queue";
 import UserAvatar from "./UserAvatar";
 import { sessionUser } from "@/lib/session";
+import VerifiedMark from "@/components/VerifiedMark";
 
 interface Props {
   container: HTMLElement | null;
@@ -166,6 +167,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
       >
         <UserAvatar size={13} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
         {displayName(u)}
+        <VerifiedMark id={u.id} username={u.username} spaced={false} />
       </span>
     ) : null;
   /* Community-hosted rooms present the community as the host; clicking
