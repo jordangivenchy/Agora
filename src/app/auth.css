@@ -12,7 +12,9 @@
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  background: #0a0a0d;
+  /* True black, the site's own sky: a lifted near-black read as a blue
+     cast over the stars. */
+  background: #000;
   color: #f5f5f0;
   font-family: 'DM Sans', sans-serif;
   overflow: hidden;
@@ -157,4 +159,76 @@ a.auth-primary, a.auth-secondary { display: inline-flex; align-items: center; ju
   .auth-field { height: 44px; font-size: 16px; } /* 16px keeps iOS from zooming into the field */
   .auth-field.is-code { font-size: 22px; }
   .auth-primary, .auth-google { height: 46px; }
+}
+
+/* ── The closed-beta door (app/beta/page.tsx) ─────────────────────────
+   A label that says where you are, one clear line, the key field, the
+   yellow pill, and where to get a key. The card
+   rises in once; a wrong key shakes the field. */
+.auth-shell:has(.beta-form) .auth-main { animation: betaRise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes betaRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.auth-card:has(.beta-form) { padding: 30px 28px 26px; }
+
+.beta-form { display: flex; flex-direction: column; align-items: stretch; }
+.beta-pill {
+  align-self: center;
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 26px; padding: 0 12px; border-radius: 999px;
+  background: #18181d; border: 1px solid #2a2a33;
+  color: #d4d4dc; font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
+}
+.beta-pill i { width: 6px; height: 6px; border-radius: 50%; background: #ffb700; }
+.beta-title {
+  margin: 16px 0 0; text-align: center;
+  font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700;
+  letter-spacing: -0.025em; line-height: 1.15; color: #f5f5f0;
+}
+.beta-sub { margin: 8px auto 24px; max-width: 300px; text-align: center; font-size: 13.5px; line-height: 1.55; color: #8c8c98; }
+
+.beta-key {
+  display: flex; align-items: center; gap: 10px;
+  height: 50px; padding: 0 16px; border-radius: 12px;
+  border: 1px solid #2b2b34; background: #000; color: #6f6f7c;
+  cursor: text; transition: border-color 0.15s ease, color 0.15s ease;
+}
+.beta-key:focus-within { border-color: #4a9eff; color: #c9c9d2; }
+.beta-key.is-bad { border-color: #e5484d; color: #ff8a80; }
+.beta-key input {
+  flex: 1; min-width: 0; height: 100%; padding: 0;
+  border: 0; outline: none; background: none; color: #f5f5f0;
+  font-family: 'DM Mono', monospace; font-size: 15px; letter-spacing: 0.06em;
+}
+.beta-key input::placeholder { color: #4b4b55; }
+.beta-key.is-shake { animation: betaShake 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes betaShake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+.beta-error { display: flex; align-items: flex-start; gap: 7px; margin: 10px 2px 0; font-size: 12.5px; line-height: 1.5; color: #ff8a80; }
+.beta-error svg { flex-shrink: 0; margin-top: 2px; }
+
+.beta-go {
+  margin-top: 16px; height: 48px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 999px; border: 0; background: #ffb700; color: #1a0e00;
+  font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+.beta-go:hover:not(:disabled) { background: #ffc22e; }
+.beta-go:active:not(:disabled) { transform: scale(0.985); }
+/* Nothing typed yet: a solid quiet pill, not a faded yellow one. */
+.beta-go:disabled { background: #17171c; color: #5c5c66; cursor: default; }
+.beta-go.is-working { cursor: default; }
+.beta-spin {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid #1a0e00; border-right-color: #ffb700;
+  animation: betaSpin 0.7s linear infinite;
+}
+@keyframes betaSpin { to { transform: rotate(360deg); } }
+
+/* Only the word Discord is the link. */
+.beta-how { margin: 20px 0 0; text-align: center; font-size: 12.5px; line-height: 1.5; color: #8c8c98; }
+.beta-how a { color: #ffb700; font-weight: 600; text-decoration: none; }
+.beta-how a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.beta-fine { margin: 0; text-align: center; font-size: 11.5px; color: #55555f; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell:has(.beta-form) .auth-main, .beta-key.is-shake, .beta-spin { animation: none; }
 }

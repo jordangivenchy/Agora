@@ -219,8 +219,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const redeemKey = useCallback(async (code: string) => {
     const res = await apiFetch("/api/beta", {}, { method: "POST", body: JSON.stringify({ code: code.trim() }) }).catch(() => null);
     if (!res) return "Couldn't reach AgoraSphere. Check your connection.";
-    if (res.status === 401) return "That key isn't right, or it has been used.";
-    if (!res.ok) return "Something went wrong. Try again.";
+    if (res.status === 401) return "That key didn't work. Check for typos — keys work once and expire after 48 hours.";
+    if (!res.ok) return "Something went wrong on our end. Try again.";
     const body = (await res.json().catch(() => ({}))) as { pass?: string };
     const next = body.pass ?? null;
     setPass(next);
