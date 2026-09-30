@@ -1853,6 +1853,12 @@ export default function AgoraScene3D({
        moves; the CPU goes back to the call. */
     let still = false;
     let lastDraw = 0;
+    /* Something in the bowl is on the move (a queue member sliding, a
+       spawn glow fading) as of the last drawn frame. */
+    let queueBusy = false;
+    /* The stage anchor as last written to the anchored panes (see below). */
+    let castEl: HTMLElement | null = null;
+    let wroteAx = NaN, wroteGy = NaN, wroteScale = NaN;
     const stepDown = () => {
       quality -= 1;
       /* The first rung used to kill the holo panels' transmission; the
@@ -1896,8 +1902,14 @@ export default function AgoraScene3D({
       }
       /* Frames nobody needs: under a flat layout the scene is a backdrop
          (15 fps); on a machine that has stepped all the way down, 4 fps.
-         The glide's own clock still runs on real time (dt above). */
-      const budget = still ? 250 : backgroundRef.current && !movingRef.current ? 66 : 0;
+         At rest (the camera home, nothing sliding or stepping) the bowl
+         only breathes, and 30 fps draws that the same for half the work,
+         which a fanless laptop feels within minutes. A glide, a join or a
+         layout move gets every frame. The glide's own clock still runs on
+         real time (dt above). */
+      const home = CAMS[viewRef.current];
+      const atRest = !movingRef.current && !queueBusy && !crowdTickRef.current && camPos.distanceToSquared(home.pos) < 0.01;
+      const budget = still ? 250 : backgroundRef.current && !movingRef.current ? 66 : atRest ? 33 : 0;
       if (budget && now - lastDraw < budget) return;
       lastDraw = now;
       if (crowdTickRef.current?.(now)) crowdTickRef.current = null;
@@ -1938,26 +1950,45 @@ export default function AgoraScene3D({
       anchorG.set(0, 0.17, STAGE_ANCHOR.z).project(camera);
       if (anchorC.z < 1) {
         const ax = (anchorC.x * 0.5 + 0.5) * window.innerWidth;
-        const ay = (1 - (anchorC.y * 0.5 + 0.5)) * window.innerHeight;
         const gy = (1 - (anchorG.y * 0.5 + 0.5)) * window.innerHeight;
         const ex = (anchorE.x * 0.5 + 0.5) * window.innerWidth;
 
         const scale = Math.min(1.5, Math.max(0.12, (Math.abs(ex - ax) * 2) / 1000));
 
-        const rs = document.documentElement.style;
-        rs.setProperty("--ag-anchor-x", `${ax.toFixed(1)}px`);
-        rs.setProperty("--ag-anchor-y", `${ay.toFixed(1)}px`);
-        rs.setProperty("--ag-anchor-ground", `${gy.toFixed(1)}px`);
-        rs.setProperty("--ag-anchor-scale", scale.toFixed(4));
+        /* The panes that stand on the stage (.ag-cast--anchored) are the
+           only thing that reads the anchor, so it's written on them, not
+           the root: a change on the root restyled the whole page every
+           frame. Only when they're showing, and only when it has moved:
+           at rest the camera's slow bob moves it well under a pixel a
+           frame. A newly mounted pane gets it at once. */
+        if (!castEl?.isConnected || !castEl.classList.contains("ag-cast--anchored")) {
+          castEl = document.querySelector<HTMLElement>(".ag-cast--anchored");
+          wroteAx = NaN;
+        }
+        if (
+          castEl &&
+          (Number.isNaN(wroteAx) || Math.abs(ax - wroteAx) >= 0.25 ||
+            Math.abs(gy - wroteGy) >= 0.25 || Math.abs(scale - wroteScale) >= 0.0005)
+        ) {
+          wroteAx = ax; wroteGy = gy; wroteScale = scale;
+          castEl.style.setProperty("--ag-anchor-x", `${ax.toFixed(1)}px`);
+          castEl.style.setProperty("--ag-anchor-ground", `${gy.toFixed(1)}px`);
+          castEl.style.setProperty("--ag-anchor-scale", scale.toFixed(4));
+        }
       }
       /* Speaker queue: damp members toward their slots (advancing = a
          short slide, never a walk), fade spawn glows, pulse the mic. */
       const slideK = 1 - Math.exp(-6 * dt);
+      queueBusy = false;
       queueGroupRef.current?.children.forEach((g) => {
         const target = g.userData.target as THREE.Vector3 | undefined;
-        if (target) g.position.lerp(target, slideK);
+        if (target) {
+          g.position.lerp(target, slideK);
+          if (g.position.distanceToSquared(target) > 0.0004) queueBusy = true;
+        }
         const glow = g.userData.spawnGlow as THREE.Mesh | undefined;
         if (glow) {
+          queueBusy = true;
           const age = (performance.now() - (g.userData.spawnAt as number)) / 1000;
           const m = glow.material as THREE.MeshBasicMaterial;
           m.opacity = Math.max(0, 0.85 * (1 - age / 0.6));

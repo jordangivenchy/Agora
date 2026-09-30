@@ -234,11 +234,29 @@ export type IconProps = {
   title?: string;
 };
 
+/* One markup object per glyph (and title), reused across renders. React
+   rewrites innerHTML whenever it is handed a new dangerouslySetInnerHTML
+   object, so a fresh `{ __html }` each render tore down and rebuilt every
+   icon's paths on every re-render — once a second in a quiet room, many
+   times a second in a busy one. The same object is left alone. */
+const MARKUP = new Map<string, { __html: string }>();
+function markup(name: IconName, title?: string): { __html: string } {
+  const key = title ? `${name}\u0000${title}` : name;
+  let m = MARKUP.get(key);
+  if (!m) {
+    if (MARKUP.size > 2000) MARKUP.clear(); // titles can vary; keep it bounded
+    m = {
+      __html: title
+        ? `<title>${title.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</title>${ICON_PATH_STRINGS[name]}`
+        : ICON_PATH_STRINGS[name],
+    };
+    MARKUP.set(key, m);
+  }
+  return m;
+}
+
 export function Icon({ name, size = 16, strokeWidth = 2, className, style, title }: IconProps) {
   const fill = FILL_ICONS.has(name);
-  const inner = title
-    ? `<title>${title.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</title>${ICON_PATH_STRINGS[name]}`
-    : ICON_PATH_STRINGS[name];
   const a11y = title ? { role: "img" as const } : { "aria-hidden": true as const };
   return (
     <svg
@@ -253,7 +271,7 @@ export function Icon({ name, size = 16, strokeWidth = 2, className, style, title
       className={className}
       style={{ display: "inline-block", flexShrink: 0, verticalAlign: "-0.125em", ...style }}
       {...a11y}
-      dangerouslySetInnerHTML={{ __html: inner }}
+      dangerouslySetInnerHTML={markup(name, title)}
     />
   );
 }
