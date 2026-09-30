@@ -28,6 +28,8 @@ import {
   Track,
   VideoPresets,
   VideoQuality,
+  type ScreenShareCaptureOptions,
+  type TrackPublishOptions,
 } from "livekit-client";
 
 /* iOS unlocks audio without LiveKit's startAudio(). LiveKit's iOS path
@@ -57,6 +59,27 @@ function silentWavUrl(): string {
   silentWav = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
   return silentWav;
 }
+
+/* Screen shares: smooth first. LiveKit's defaults sent 1080p at 15 fps,
+   which stutters through every scroll and video. So: 1080p (all anyone
+   needs) at 30 fps, and when a connection tightens the encoder keeps the
+   frame rate and gives up sharpness instead (motion hint,
+   maintain-framerate). LiveKit adds a half-size copy at the same rate
+   for small tiles and weak connections; adaptive stream sends each
+   viewer the one their tile needs. Safari already captures at full
+   size, and a set size makes it capture small (a Safari 17 bug), so
+   Safari gets no size. */
+const SAFARI =
+  typeof navigator !== "undefined" &&
+  /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+const SCREEN_CAPTURE: ScreenShareCaptureOptions = {
+  ...(SAFARI ? {} : { resolution: { width: 1920, height: 1080, frameRate: 30 } }),
+  contentHint: "motion",
+};
+const SCREEN_PUBLISH: TrackPublishOptions = {
+  screenShareEncoding: { maxBitrate: 4_500_000, maxFramerate: 30 },
+  degradationPreference: "maintain-framerate",
+};
 
 /* Disconnects that are a verdict, not an accident — no automatic reconnect. */
 const NO_RECONNECT = new Set<DisconnectReason>([
@@ -604,7 +627,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     setMediaBusy(true);
     const next = !screenOn;
     try {
-      await room.localParticipant.setScreenShareEnabled(next);
+      await room.localParticipant.setScreenShareEnabled(next, next ? SCREEN_CAPTURE : undefined, next ? SCREEN_PUBLISH : undefined);
       setScreenOn(next);
       setMediaError(null);
       refreshTiles();
