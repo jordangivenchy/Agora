@@ -22,6 +22,7 @@ import {
   slotPosition,
 } from "./queueLayout";
 import { GROUND, LANTERN_ANGLES, SCREEN, SKY, STAGE_LIGHT, STARS, STONE } from "./sceneTokens";
+import { softwareWebGL } from "@/lib/stageQuality";
 
 export interface SeatedPerson {
   id: string;
@@ -1852,14 +1853,17 @@ export default function AgoraScene3D({
        software) draws four frames a second from then on. The bowl barely
        moves; the CPU goes back to the call. */
     let still = false;
-    let lastDraw = 0;
-    /* Something in the bowl is on the move (a queue member sliding, a
-       spawn glow fading) as of the last drawn frame. */
-    let queueBusy = false;
+    let lastDraw = t0;
     /* The stage anchor as last written to the anchored panes (see below). */
     let castEl: HTMLElement | null = null;
     let wroteAx = NaN, wroteGy = NaN, wroteScale = NaN;
+    /* The 4 fps floor is for a browser drawing WebGL in software (and the
+       recorder). A real graphics card never goes that low: one bad stretch
+       (another heavy tab, a hot laptop) used to leave an M3 at 4 fps for
+       the rest of the room, every glide a crawl. */
+    const canStill = performanceMode || softwareWebGL();
     const stepDown = () => {
+      if (quality <= 0 && !canStill) return;
       quality -= 1;
       /* The first rung used to kill the holo panels' transmission; the
          panels are gone (video is DOM now — see AgoraStage), so the
@@ -1884,14 +1888,18 @@ export default function AgoraScene3D({
         /* Nobody can see it. The clock keeps up, so the first frame back
            doesn't read the whole absence as one step. */
         lastFrame = performance.now();
+        lastDraw = lastFrame;
         return;
       }
       const now = performance.now();
-      const dt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
+      const tickDt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
       lastFrame = now;
       const t = (now - t0) / 1000;
-      if (quality >= 0) {
-        frameAcc += dt;
+      /* Judged only after the first seconds: shaders compiling, video
+         starting and the page settling hitch every machine once, and a
+         step down is for good. */
+      if (quality >= 0 && now - t0 > 6000) {
+        frameAcc += tickDt;
         frameN += 1;
         if (frameAcc >= 3) {
           const fps = frameN / frameAcc;
@@ -1902,15 +1910,20 @@ export default function AgoraScene3D({
       }
       /* Frames nobody needs: under a flat layout the scene is a backdrop
          (15 fps); on a machine that has stepped all the way down, 4 fps.
-         At rest (the camera home, nothing sliding or stepping) the bowl
-         only breathes, and 30 fps draws that the same for half the work,
-         which a fanless laptop feels within minutes. A glide, a join or a
-         layout move gets every frame. The glide's own clock still runs on
-         real time (dt above). */
-      const home = CAMS[viewRef.current];
-      const atRest = !movingRef.current && !queueBusy && !crowdTickRef.current && camPos.distanceToSquared(home.pos) < 0.01;
-      const budget = still ? 250 : backgroundRef.current && !movingRef.current ? 66 : atRest ? 33 : 0;
-      if (budget && now - lastDraw < budget) return;
+         On the stage it draws every frame: a 30 fps cap at rest was tried
+         and read as stutter. A glide between vantages draws every frame
+         too, backdrop or not (the floor keeps its 4). The wait is a few ms
+         short of its interval, because frame times jitter: a wait of
+         exactly 4 frames sometimes lands on the 5th, and the rhythm goes
+         4-5-4, a visible hitch. */
+      const gliding = camPos.distanceToSquared(CAMS[viewRef.current].pos) > 0.01;
+      const budget = still ? 250 : backgroundRef.current && !movingRef.current && !gliding ? 66 : 0;
+      if (budget && now - lastDraw < budget - 8) return;
+      /* Motion runs on the time since the last drawn frame. It used the
+         last tick's time instead, so whenever frames were skipped a glide
+         crawled: a quarter speed behind the gallery, a fifteenth at the
+         4 fps floor ("slow motion when switching views"). */
+      const dt = Math.min((now - lastDraw) / 1000, 0.3);
       lastDraw = now;
       if (crowdTickRef.current?.(now)) crowdTickRef.current = null;
       if (!stillMotion) {
@@ -1979,16 +1992,11 @@ export default function AgoraScene3D({
       /* Speaker queue: damp members toward their slots (advancing = a
          short slide, never a walk), fade spawn glows, pulse the mic. */
       const slideK = 1 - Math.exp(-6 * dt);
-      queueBusy = false;
       queueGroupRef.current?.children.forEach((g) => {
         const target = g.userData.target as THREE.Vector3 | undefined;
-        if (target) {
-          g.position.lerp(target, slideK);
-          if (g.position.distanceToSquared(target) > 0.0004) queueBusy = true;
-        }
+        if (target) g.position.lerp(target, slideK);
         const glow = g.userData.spawnGlow as THREE.Mesh | undefined;
         if (glow) {
-          queueBusy = true;
           const age = (performance.now() - (g.userData.spawnAt as number)) / 1000;
           const m = glow.material as THREE.MeshBasicMaterial;
           m.opacity = Math.max(0, 0.85 * (1 - age / 0.6));
