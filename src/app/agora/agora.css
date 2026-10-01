@@ -4038,10 +4038,10 @@
    The room lives in the root layout's call slot (CallSlot.tsx) and
    carries on while you browse. Leaving it for another page, it shrinks
    into the corner (.ag-call-frame.is-moving, animated from
-   AgoraRoomPage) and a card comes up there under it (.call-mini,
-   MiniCall.tsx); the room stays built, out of sight (.is-away), and
-   opening the card grows it back out of the corner. Solid surfaces,
-   like every new control on the site. */
+   AgoraRoomPage) and plays on there, live, in the window of a card that
+   comes up around it (.call-mini, MiniCall.tsx; the room sits in it as
+   .is-pip); opening the card grows it back out. Solid surfaces, like
+   every new control on the site. */
 
 /* No box of its own while the room is up — the room lays out exactly as
    it always has. */
@@ -4051,7 +4051,7 @@
    the card, and grown back over the page while the address catches up
    (the only one of the three you can use). */
 .ag-call-frame.is-moving,
-.ag-call-frame.is-away,
+.ag-call-frame.is-pip,
 .ag-call-frame.is-over {
   display: block;
   position: fixed;
@@ -4059,10 +4059,16 @@
   z-index: 945;
   overflow: hidden;
   transform-origin: 0 0;
-  will-change: transform, opacity;
+  will-change: transform;
 }
 .ag-call-frame.is-moving,
-.ag-call-frame.is-away { pointer-events: none; }
+.ag-call-frame.is-pip { pointer-events: none; }
+/* Moving and minimized, as wide as the window whether or not the page
+   beside it shows a scrollbar: the page is let go as the room lands, and
+   a room that changed width there would be laid out again under the
+   card, its stage redrawn. */
+.ag-call-frame.is-moving,
+.ag-call-frame.is-pip { right: auto; width: 100vw; }
 /* The page behind the moving room: dimmed while the room is large, lit
    as it folds away (its opacity is animated; black, never a tint). */
 .ag-call-scrim {
@@ -4074,23 +4080,19 @@
   pointer-events: none;
   will-change: opacity;
 }
-/* Hidden under the card without being taken apart: its layout and the
-   state of its animations are kept, so nothing replays when it comes
-   back (display: none would restart every entrance — the speaker panes
-   fading in again, the chips walking on), and its videos still count as
-   out of sight, so the call stops sending them. */
-.ag-call-frame.is-away { content-visibility: hidden; }
-@supports not (content-visibility: hidden) {
-  .ag-call-frame.is-away { display: none; }
-}
-/* A hand on the card: drawn again, still invisible — its videos count
-   as on screen, so they are flowing again before the room grows back. */
-.ag-call-frame.is-away.is-waking { content-visibility: visible; display: block; opacity: 0; }
 /* Lying over the page it was minimized from, which stays mounted
    underneath (CallSlot): the room's own night behind everything, so no
-   gap ever shows that page, and scrolling never reaches it. */
+   gap ever shows that page, and scrolling never reaches it. Minimized,
+   the same night fills the card's window wherever the room draws
+   nothing. (Where it sits there — its scale, place and the window cut
+   around it — is set on the element by AgoraRoomPage.) */
 .ag-call-frame.is-moving,
+.ag-call-frame.is-pip,
 .ag-call-frame.is-over { background: #05070f; }
+/* In the card's window, the stage without the room's own buttons over
+   it (they fade on the way in and out — AgoraRoomPage). */
+.ag-call-frame.is-pip .ag-switch-view,
+.ag-call-frame.is-pip .ag-notices { visibility: hidden; }
 /* At rest over the page, a plain box again: the room's screen-fixed
    parts (its backdrops, a phone's chat sheet waiting below the screen)
    hang from the screen, exactly as when the room is its own page — as
@@ -4102,19 +4104,27 @@
 /* The page underneath, held still while the room lies over it (the room
    makes up the width of a scrollbar it takes away, so nothing shifts). */
 html.agora-covered { overflow: hidden; }
+/* The page a minimized room gives way to fades in as it arrives
+   (fadeInArrivingPage in AgoraRoomPage), instead of popping in under the
+   card once the room has gone. */
+html.agora-page-arriving .site-chrome-content { opacity: 0; }
+.site-chrome-content { transition: opacity 0.28s ease-out; }
 
 .ag-minimize { display: grid; place-items: center; }
 .ag-minimize:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
 
+/* A fade only: the room in the card's window stays where it is. */
 @keyframes callMiniIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
+/* Above the room (.ag-call-frame is 945): the room shows through the
+   card's window, and the card's hairline and words lie over its edges. */
 .call-mini {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 940;
+  z-index: 950;
   width: 360px;
   max-width: calc(100vw - 32px);
   background: #0e0e11;
@@ -4130,8 +4140,20 @@ html.agora-covered { overflow: hidden; }
    move times the card's words to its own (AgoraRoomPage). */
 .call-mini.is-arriving, .call-mini.is-leaving { animation: none; }
 .call-mini.is-leaving { pointer-events: none; }
-.call-mini-video { aspect-ratio: 16 / 9; background: #000; }
-.call-mini-video > * { width: 100%; height: 100%; }
+/* The window: nothing of its own, so the room drawn under it shows (a
+   drop shadow is only ever painted outside a box, so the card's doesn't
+   darken it). The fill moves to the card's words. */
+.call-mini.has-screen { background: none; }
+.call-mini.has-screen .call-mini-row { background: #0e0e11; }
+.call-mini-screen {
+  display: block;
+  width: 100%;
+  height: 202px; /* 16:9 across the card */
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
 .call-mini-row {
   display: flex;
   align-items: center;
@@ -4207,7 +4229,9 @@ html.agora-covered { overflow: hidden; }
 .call-mini-btn.is-live { background: #34c759; border-color: #34c759; color: #04240f; }
 .call-mini-btn.is-leave { background: #ff3b30; border-color: #ff3b30; color: #fff; }
 .call-mini-btn.is-leave:hover { background: #ff5147; border-color: #ff5147; }
-/* On a phone the card spans the screen, just above the tab bar. */
+/* On a phone the card spans the screen, just above the tab bar, with
+   the window at the start of the bar, as tall as it is (the chevron goes:
+   the window and the words already take you back in). */
 @media (max-width: 639px) {
   .call-mini {
     left: 8px;
@@ -4216,6 +4240,10 @@ html.agora-covered { overflow: hidden; }
     max-width: none;
     bottom: calc(66px + env(safe-area-inset-bottom));
   }
+  .call-mini.has-screen { display: flex; }
+  .call-mini.has-screen .call-mini-screen { flex: none; width: 124px; height: auto; }
+  .call-mini.has-screen .call-mini-row { flex: 1; min-width: 0; }
+  .call-mini.has-screen .call-mini-expand { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .call-mini, .call-mini.is-arriving { animation: none; }

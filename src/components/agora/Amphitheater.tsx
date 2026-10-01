@@ -54,11 +54,11 @@ interface Props {
   micHolder?: SeatedPerson | null;
   /** Mic holder is actually speaking right now. */
   micLive?: boolean;
-  /** A flat layout's tiles are over the scene: draw it as a backdrop. */
+  /** A flat layout's tiles are over the scene, or the room is minimized
+      to the call card's window: draw it as a backdrop. */
   background?: boolean;
-  /** Out of sight under the call's card: the scene draws nothing. */
-  paused?: boolean;
-  /** Folding into the call's card or out of it: every frame drawn. */
+  /** Shrinking into the call card's window or growing out of it: every
+      frame drawn. */
   moving?: boolean;
 }
 
@@ -137,7 +137,6 @@ export default function Amphitheater({
   onViewSettled,
   flat = false,
   background = false,
-  paused = false,
   moving = false,
 }: Props) {
   const inSpeaker = view === "speaker";
@@ -167,7 +166,6 @@ export default function Amphitheater({
           micHolder={micHolder}
           micLive={micLive}
           background={background}
-          paused={paused}
           moving={moving}
         />
       )}

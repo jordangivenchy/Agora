@@ -7,7 +7,7 @@
    the raised-hand step). Hosts come from the room's configuration; the
    Host Controls panel is invisible to everyone else. */
 
-import { use, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { logRoomEvent, noteRoomAction, takeRoomAction } from "@/lib/roomDiag";
 import { useRouter } from "next/navigation";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -32,7 +32,7 @@ import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall, tileKey } from "@/components/agora/useAgoraCall";
 import { CallGallery, CallMultiSpeaker, type LayoutTile } from "@/components/agora/CallLayouts";
 import HostControls from "@/components/agora/HostControls";
-import { HlsBroadcastSurface } from "@/components/agora/HlsPlayer";
+import { HlsBroadcastSurface, turnSoundOn, useBroadcastSound } from "@/components/agora/HlsPlayer";
 import DebateReplay from "@/components/agora/DebateReplay";
 import SiteChrome from "@/components/SiteChrome";
 import { roomPath } from "@/lib/urls";
@@ -44,7 +44,7 @@ import { Icon } from "@/components/icons";
 import RoomFrame from "@/components/agora/RoomFrame";
 import MiniCall from "@/components/agora/MiniCall";
 import { takeCoverScroll, useCallSlot } from "@/components/agora/CallSlot";
-import { softNavTarget } from "@/lib/softNav";
+import { plainLinkUrl, pointsToRoom, softNavTarget } from "@/lib/softNav";
 import "@/app/agora/agora.css";
 import { sessionUser } from "@/lib/session";
 
@@ -54,69 +54,159 @@ import { sessionUser } from "@/lib/session";
 const isPhoneViewport = () =>
   typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
 
-/* ── The move between the room and its call card ────────────────────
-   The room doesn't shrink to a box and fade out beside the card: it
-   folds into the card's own rectangle. The window it is seen through
-   narrows from the whole screen to the card, while the room inside it
-   stays in proportion — scaled just enough to cover the card, the stage
-   kept in view — so what lands in the corner is the room itself, in the
-   card's shape, and the card's words come up over it. Coming back, the
-   card opens out into the room the same way. The room is only ever
-   scaled evenly (never stretched and unstretched, which makes the
-   browser redraw it at several times its size) and the window is a clip
-   around it; the browser runs both off the main thread. */
+/* ── The call, minimized: a live window in the corner ────────────────
+   Leaving the room for another page, the room itself shrinks into the
+   corner and keeps playing there, in the call card's window (above the
+   card's title, mic and Leave on a desktop; at the start of the bar on a
+   phone): the stage, and whoever is on it, without the room's own bars.
+   Opening the card grows it back out.
+
+   One move, one shape: the window the room is seen through closes from
+   the whole screen onto the card's window while the part of the room it
+   shows narrows onto the stage. The room is only ever scaled evenly
+   (never stretched and unstretched, which makes the browser redraw it at
+   several times its size), with the window a clip around it. Minimized,
+   it stays where the move left it — drawn, live, framed by the card. */
 type Box = { x: number; y: number; w: number; h: number };
 const clampTo = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/* A spring's progress (0 → 1) and how long it takes to settle: quick to
-   leave, soft to land, the way things move on a phone. Damping below 1
-   lets it run a hair past the end and settle back. It starts already
-   moving (`velocity`, in whole moves per second), as if the click had
-   pushed it: from rest a spring barely stirs for its first frames, and
-   that reads as a pause after the click. */
-function spring(damping: number, response: number, velocity: number) {
-  const w = (2 * Math.PI) / response;
-  const wd = w * Math.sqrt(1 - damping * damping);
-  const at = (t: number) =>
-    1 - Math.exp(-damping * w * t) * (Math.cos(wd * t) + ((damping * w - velocity) / wd) * Math.sin(wd * t));
-  return { at, settle: -Math.log(0.004) / (damping * w) };
+/* A cubic-bezier easing as a function of time (0 → 1) to progress
+   (0 → 1), solved the way CSS does it. The move uses one long, soft
+   ease-out (the curve iOS sheets move on): off at once, most of the way
+   early, then a gentle landing with no bounce. The spring it replaces
+   was pushed by the click and did most of its move in the first 100 ms,
+   which read as a lurch. */
+function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+  const bez = (t: number, a: number, b: number) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+  return (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let lo = 0, hi = 1, t = x;
+    for (let i = 0; i < 30; i++) {
+      t = (lo + hi) / 2;
+      if (bez(t, x1, x2) < x) lo = t; else hi = t;
+    }
+    return bez(t, y1, y2);
+  };
+}
+const FOLD_EASE = cubicBezier(0.32, 0.72, 0, 1);
+
+/* The page a minimized room gives way to usually comes from the server
+   after the room is already in the card. It fades in as it
+   arrives instead of appearing all at once (agora.css). Over a kept
+   page nothing arrives: history takes you back to it, already there. */
+function fadeInArrivingPage() {
+  const html = document.documentElement;
+  const arrived = () => (document.querySelector(".site-chrome-content")?.childElementCount ?? 0) > 0;
+  html.classList.add("agora-page-arriving");
+  let done = false;
+  const reveal = () => {
+    if (done) return;
+    done = true;
+    obs.disconnect();
+    window.clearTimeout(cap);
+    // A frame hidden first, so the fade runs even for a page already there.
+    requestAnimationFrame(() => requestAnimationFrame(() => html.classList.remove("agora-page-arriving")));
+  };
+  const obs = new MutationObserver(() => { if (arrived()) reveal(); });
+  obs.observe(document.body, { childList: true, subtree: true });
+  const cap = window.setTimeout(reveal, 4000); // never left hidden
 }
 
-/* Where the call card sits (its laid-out box, its own entrance aside) —
-   or, if it isn't there, where it would: bottom right on a desktop,
-   above the tab bar on a phone. */
-function callCardBox(vw: number, vh: number): Box {
-  const card = document.querySelector<HTMLElement>(".call-mini");
-  if (card && card.offsetWidth) return { x: card.offsetLeft, y: card.offsetTop, w: card.offsetWidth, h: card.offsetHeight };
-  if (isPhoneViewport()) return { x: 8, y: vh - 66 - 70, w: vw - 16, h: 70 };
-  return { x: vw - 20 - 360, y: vh - 20 - 70, w: 360, h: 70 };
+/* Where the minimized room sits: the card's window (the card lays it
+   out; the room follows), reaching a pixel under the card's hairline all
+   round so no seam shows at its edges. Before the card is up, where it
+   will be. */
+function pipWindow(vw: number, vh: number): Box {
+  const r = document.querySelector<HTMLElement>(".call-mini-screen")?.getBoundingClientRect();
+  if (r && r.width && r.height) return { x: r.left - 1, y: r.top - 1, w: r.width + 2, h: r.height + 2 };
+  if (isPhoneViewport()) return { x: 8, y: vh - 66 - 72, w: 128, h: 72 };
+  return { x: vw - 20 - 360, y: vh - 20 - 274, w: 360, h: 204 };
 }
 
-/* The fold at each sampled progress p (0 the whole screen, 1 the card):
-   the room's scale and place, and the window clipped around it (its
-   corners 16 px on screen at the card). */
-function foldKeyframes(card: Box, focus: { x: number; y: number }, vw: number, vh: number, ps: number[]) {
-  const uEnd = Math.max(card.w / vw, card.h / vh);
-  const bandW = card.w / uEnd, bandH = card.h / uEnd;
-  const bandX = clampTo(focus.x - bandW / 2, 0, vw - bandW);
-  const bandY = clampTo(focus.y - bandH / 2, 0, vh - bandH);
-  const move: Keyframe[] = [], clip: Keyframe[] = [];
-  ps.forEach((p, i) => {
-    const offset = i / (ps.length - 1);
-    /* The window on screen, and the room's own scale. */
-    const x = card.x * p, y = card.y * p;
-    const w = vw + (card.w - vw) * p, h = vh + (card.h - vh) * p;
-    const u = 1 + (uEnd - 1) * p;
-    /* The part of the room the window shows, in the room's own px: the
-       whole of it at first, drawing in on the stage. */
-    const bw = w / u, bh = h / u;
-    const bx = clampTo(bandX * p, 0, Math.max(0, vw - bw));
-    const by = clampTo(bandY * p, 0, Math.max(0, vh - bh));
-    const r = (16 * clampTo(p, 0, 1)) / u;
-    move.push({ offset, transform: `translate(${x - bx * u}px, ${y - by * u}px) scale(${u})` });
-    clip.push({ offset, clipPath: `inset(${by}px ${vw - bx - bw}px ${vh - by - bh}px ${bx}px round ${r}px)` });
-  });
-  return { move, clip };
+/* The part of the room that window shows, in the room's own pixels:
+   the stage — the room between its top bar and its controls, beside the
+   chat — framed on the speakers' pictures: all of them, with a little
+   room around, where they fit the window's shape (a desktop's, side by
+   side); else the first, filling the window (a phone stacks them, and
+   the middle of the stack would fall between two). With none up, as
+   much of the stage as the window holds. Never closer than the room's
+   own size: it is only ever made smaller. */
+function pipCrop(room: HTMLElement, win: Box, vw: number, vh: number): Box {
+  const aspect = win.w / win.h;
+  const box = (el: Element | null) => {
+    const r = el?.getBoundingClientRect();
+    return r && r.width && r.height ? r : null;
+  };
+  const at = (sel: string) => box(room.querySelector(sel));
+  const main = at(".ag-main");
+  const left = Math.max(0, main?.left ?? 0);
+  const right = Math.min(vw, main?.right ?? vw);
+  const top = Math.max(0, at(".ag-topbar")?.bottom ?? 0);
+  const bottom = Math.min(vh, main?.bottom ?? vh, at(".ag-controls")?.top ?? vh);
+  /* The widest the window can take in. */
+  const most = Math.min(Math.max(1, right - left), Math.max(1, bottom - top) * aspect);
+  let w = most;
+  let focus: { left: number; top: number; width: number; height: number } | null = at(".ag-cast") ?? at(".ag-strip");
+  const find = (sel: string) => [...room.querySelectorAll(sel)].map(box).filter((r): r is DOMRect => !!r);
+  let pics = find(".ag-cast .ag-lt, .ag-cast .ag-cast-pane, .ag-cast .ag-cast-main");
+  if (!pics.length) pics = find(".ag-cast .ag-lt-empty");
+  if (pics.length) {
+    const x0 = Math.min(...pics.map((r) => r.left)), y0 = Math.min(...pics.map((r) => r.top));
+    const all = { left: x0, top: y0, width: Math.max(...pics.map((r) => r.right)) - x0, height: Math.max(...pics.map((r) => r.bottom)) - y0 };
+    if (all.width <= most && all.height <= most / aspect) {
+      focus = all;
+      w = Math.max(all.width, all.height * aspect) * 1.08;
+    } else {
+      /* Its rounded corners just outside the window. */
+      focus = pics[0];
+      w = Math.min(focus.width, focus.height * aspect) * 0.94;
+    }
+    w = Math.min(most, Math.max(win.w, w));
+  }
+  const h = w / aspect;
+  const cx = focus ? focus.left + focus.width / 2 : (left + right) / 2;
+  const cy = focus ? focus.top + focus.height / 2 : (top + bottom) / 2;
+  return { x: clampTo(cx - w / 2, left, right - w), y: clampTo(cy - h / 2, top, bottom - h), w, h };
+}
+
+/* The minimized room's place: the card's window, the part of the room
+   it shows, the window's rounded corners (top left, top right, bottom
+   right, bottom left — the card's own, where the window meets its edge),
+   and the screen they were worked out for. */
+type Pip = { win: Box; crop: Box; radii: number[]; vw: number; vh: number };
+
+/* A rectangle with rounded corners (top left, top right, bottom right,
+   bottom left) as a clip path. A path rather than inset(… round …):
+   Chrome runs a path's changes off the main thread, where a rounded
+   inset() is redrawn on it — and fell behind the move, its edges
+   jumping, whenever the page underneath was busy arriving. Every corner
+   is at least a hair round, so each frame's path has the same parts. */
+function roundedRect(x: number, y: number, w: number, h: number, radii: number[]) {
+  const [a, b, c, d] = radii.map((r) => Math.max(0.01, Math.min(r, w / 2, h / 2)));
+  const n = (v: number) => +v.toFixed(2);
+  return (
+    `path('M ${n(x + a)} ${n(y)} H ${n(x + w - b)} A ${n(b)} ${n(b)} 0 0 1 ${n(x + w)} ${n(y + b)} ` +
+    `V ${n(y + h - c)} A ${n(c)} ${n(c)} 0 0 1 ${n(x + w - c)} ${n(y + h)} ` +
+    `H ${n(x + d)} A ${n(d)} ${n(d)} 0 0 1 ${n(x)} ${n(y + h - d)} ` +
+    `V ${n(y + a)} A ${n(a)} ${n(a)} 0 0 1 ${n(x + a)} ${n(y)} Z')`
+  );
+}
+
+/* The room at progress p along the move (0 the whole screen, 1 the
+   card's window): its even scale and place, and the window cut around
+   it, rounding as it goes in. */
+function pipFrame({ win, crop, radii, vw, vh }: Pip, p: number) {
+  /* On screen: the whole screen closing onto the card's window. */
+  const sx = win.x * p, sy = win.y * p, sw = vw + (win.w - vw) * p;
+  /* In the room: all of it narrowing onto the stage. */
+  const bx = crop.x * p, by = crop.y * p;
+  const bw = vw + (crop.w - vw) * p, bh = vh + (crop.h - vh) * p;
+  const u = sw / bw;
+  return {
+    transform: `translate(${sx - bx * u}px, ${sy - by * u}px) scale(${u})`,
+    clipPath: roundedRect(bx, by, bw, bh, radii.map((r) => (r * p) / u)),
+  };
 }
 
 function fmtElapsed(fromIso: string | null): string {
@@ -739,6 +829,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      connect effect re-requests a token with the new role — the server
      sees the stage row and hands out WebRTC. */
   const hlsAudience = !broadcast && !!call.hlsMode;
+  /* The broadcast's sound, for the call card's sound button: the picture
+     in its window is the room's, out of reach there. */
+  const broadcastSound = useBroadcastSound();
   /* The host's profile for the top bar, from their seat's row. */
   const hostUser = room ? participants.find((pp) => pp.user_id === room.host_id)?.user ?? null : null;
 
@@ -1468,16 +1561,18 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   /* ── Minimized: the call carries on while you browse ─────────────
      Another page showing (CallSlot keeps this room mounted through
-     in-app navigation): the room shrinks into the corner and becomes a
-     card there (MiniCall). Only a call is carried — a room with no call
-     up (a gate, a replay, one you never got into) just goes quiet.
+     in-app navigation): the room shrinks into the corner and plays on
+     there, in the window of a card (MiniCall) that carries its title,
+     who is talking, your mic and Leave. Only a call is carried — a room
+     with no call up (a gate, a replay, one you never got into) just goes
+     quiet.
 
-     The room itself stays built the whole time, out of sight under the
-     card with its stage paused, so opening the card again is only an
-     animation: the room grows back out of the card exactly as it went
-     in, with nothing to rebuild — no scene to set up, no pictures to
-     re-attach. `phase` is where it stands: "full" (the page), "shrinking"
-     into the corner, "mini" (the card), "growing" back out of it. */
+     The room itself stays built and live the whole time, so opening the
+     card again is only an animation: the room grows back out of the
+     card's window exactly as it went in, with nothing to rebuild — no
+     scene to set up, no pictures to re-attach. `phase` is where it
+     stands: "full" (the page), "shrinking" into the corner, "mini" (in
+     the card), "growing" back out of it. */
   const callLive = !broadcast && !!room && !(arrivedEnded || showReplay) && (call.connected || hlsAudience);
   const [wasInCall, setWasInCall] = useState(false);
   if (callLive && !wasInCall) setWasInCall(true);
@@ -1519,6 +1614,22 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      has grown to fill the screen, so the page you were on stays under it
      the whole way. */
   const expandWhenGrown = useRef<(() => void) | null>(null);
+  /* Where the minimized room sits (pipWindow, pipCrop): worked out as it
+     starts for the corner, with the room still whole, and again when the
+     screen changes size while it is there — always on the room as laid
+     out, not as it happens to be drawn. */
+  const pipRef = useRef<Pip | null>(null);
+  const measurePip = useCallback((el: HTMLElement): Pip => {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const win = pipWindow(vw, vh);
+    const drawn = el.style.transform;
+    el.style.transform = "";
+    const crop = pipCrop(el, win, vw, vh);
+    el.style.transform = drawn;
+    const pip = { win, crop, radii: isPhoneViewport() ? [16, 0, 0, 16] : [16, 16, 0, 0], vw, vh };
+    pipRef.current = pip;
+    return pip;
+  }, []);
   /* Started before the frame is painted (a layout effect), so the room
      is never seen for a frame at the wrong size. */
   useLayoutEffect(() => {
@@ -1550,54 +1661,39 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       };
     }
     const going = phase === "shrinking";
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const card = callCardBox(vw, vh);
-    /* The part of the room that stays in view as it folds into the card:
-       the speakers' pictures if there are any, else the speakers' strip,
-       else the lit ring of the stage (the middle of a phone's). Measured
-       now, before the move, with the room still whole. */
-    const at = (sel: string) => {
-      const r = el.querySelector<HTMLElement>(sel)?.getBoundingClientRect();
-      return r && r.width && r.height ? r : null;
-    };
-    const who = at(".ag-cast") ?? at(".ag-strip");
-    const theater = at(".ag-theater");
-    const focus = who
-      ? { x: who.left + who.width / 2, y: who.top + who.height / 2 }
-      : theater
-        ? { x: theater.left + theater.width / 2, y: theater.top + theater.height * (isPhoneViewport() ? 0.5 : 0.72) }
-        : { x: vw / 2, y: vh * 0.6 };
-    const sp = going ? spring(0.86, 0.42, 6) : spring(0.8, 0.44, 6);
-    const ms = Math.round(sp.settle * 1000);
+    /* Going, from the room as it stands; coming back, from where it sat. */
+    const pip = going || !pipRef.current ? measurePip(el) : pipRef.current;
+    const ms = going ? 460 : 420;
     const STEPS = 32;
     const ps = Array.from({ length: STEPS + 1 }, (_, i) => {
-      const v = sp.at((i / STEPS) * sp.settle);
+      const v = FOLD_EASE(i / STEPS);
       return going ? v : 1 - v;
     });
-    const k = foldKeyframes(card, focus, vw, vh, ps);
+    const frames = ps.map((p, i) => ({ offset: i / STEPS, ...pipFrame(pip, p) }));
     const timing: KeyframeAnimationOptions = { duration: ms, easing: "linear", fill: "forwards" };
-    const move = el.animate(k.move, timing);
-    const clip = el.animate(k.clip, timing);
-    /* The room and the card trade places where they meet, overlapping so
-       the corner is never dim: going, the card's words come up over the
-       room as it lands and the room goes beneath them; coming back, the
-       room is solid over the card within a few frames and the card goes
-       under it. */
-    const fade = el.animate(
-      going
-        ? [{ opacity: 1 }, { opacity: 1, offset: 0.45 }, { opacity: 0, offset: 0.8 }, { opacity: 0 }]
-        : [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1 }],
-      timing
+    /* The move (a transform) and the window (a clip path), each its own
+       animation: the browser runs both off the main thread, so neither
+       waits on the page arriving underneath. */
+    const move = el.animate(frames.map(({ offset, transform }) => ({ offset, transform })), timing);
+    const clip = el.animate(frames.map(({ offset, clipPath }) => ({ offset, clipPath })), timing);
+    /* The room's own buttons over the stage (the view switch, the notices
+       column) go early on the way in — the window shows the stage, not
+       buttons that can't be pressed there — and come back late on the
+       way out. Hidden in between (agora.css). */
+    const extras = [...el.querySelectorAll<HTMLElement>(".ag-switch-view, .ag-notices")].map((x) =>
+      x.animate(
+        going
+          ? [{ opacity: 1 }, { opacity: 0, offset: 0.3 }, { opacity: 0 }]
+          : [{ opacity: 0 }, { opacity: 0, offset: 0.55 }, { opacity: 1 }],
+        timing
+      )
     );
+    /* The card comes up around the room as it lands — its frame, its
+       words — and goes at once as the room grows back out of it. */
     const cardFade = document.querySelector<HTMLElement>(".call-mini")?.animate(
       going
-        ? [
-            { opacity: 0, transform: "scale(0.97)" },
-            { opacity: 0, transform: "scale(0.97)", offset: 0.3 },
-            { opacity: 1, transform: "scale(1)", offset: 0.6 },
-            { opacity: 1, transform: "scale(1)" },
-          ]
-        : [{ opacity: 1 }, { opacity: 1, offset: 0.1 }, { opacity: 0, offset: 0.3 }, { opacity: 0 }],
+        ? [{ opacity: 0 }, { opacity: 0, offset: 0.45 }, { opacity: 1, offset: 0.85 }, { opacity: 1 }]
+        : [{ opacity: 1 }, { opacity: 0, offset: 0.12 }, { opacity: 0 }],
       { duration: ms, easing: "linear", fill: "both" }
     );
     /* The page behind: dimmed while the room is large, lit as it goes. */
@@ -1616,18 +1712,63 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       window.clearTimeout(late);
       move.cancel();
       clip.cancel();
-      fade.cancel();
+      extras.forEach((a) => a.cancel());
       cardFade?.cancel();
       dim?.cancel();
     };
-  }, [phase]);
+  }, [phase, measurePip]);
+  /* Minimized: the room stays in the card's window, drawn and live (the
+     move's last frame, held), and is put back in it whenever the screen
+     changes size. */
+  useLayoutEffect(() => {
+    if (phase !== "mini") return;
+    const el = frameRef.current;
+    if (!el) return;
+    const put = (pip: Pip) => {
+      const f = pipFrame(pip, 1);
+      el.style.transform = f.transform;
+      el.style.clipPath = f.clipPath;
+    };
+    /* Where the move left it — unless the screen changed size on the way,
+       or the card moved (the page that arrived under it brought a
+       scrollbar). */
+    const last = pipRef.current;
+    const now = pipWindow(window.innerWidth, window.innerHeight);
+    const same =
+      !!last && last.vw === window.innerWidth && last.vh === window.innerHeight &&
+      Math.abs(last.win.x - now.x) < 0.5 && Math.abs(last.win.y - now.y) < 0.5 &&
+      Math.abs(last.win.w - now.w) < 0.5 && Math.abs(last.win.h - now.h) < 0.5;
+    put(same ? last : measurePip(el));
+    const onResize = () => put(measurePip(el));
+    window.addEventListener("resize", onResize);
+    /* And when the page's width changes under a window that didn't (a
+       scrollbar coming back as the page underneath is let go): the card
+       moves with the page, the room with the card. */
+    let pageW = document.documentElement.clientWidth;
+    const page = new ResizeObserver(() => {
+      const w = document.documentElement.clientWidth;
+      if (w === pageW) return;
+      pageW = w;
+      put(measurePip(el));
+    });
+    page.observe(document.documentElement);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      page.disconnect();
+      el.style.transform = "";
+      el.style.clipPath = "";
+    };
+  }, [phase, measurePip]);
   /* Minimize: the room starts for the corner at the click. The page it
      gives way to is already underneath if the room came back over it
      (history takes you there, nothing to load); otherwise it comes from
      the server and arrives underneath when it can — waiting for it first
      was the pause between the click and anything moving. */
   const minimizeNow = () => {
-    if (phase === "full" && callLive) setPhase("shrinking");
+    if (phase === "full" && callLive) {
+      setPhase("shrinking");
+      if (!slot.overPage) fadeInArrivingPage();
+    }
     slot.minimize();
   };
   /* Out of the card: the room is already built, so going back in is the
@@ -1646,23 +1787,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     else slot.expand(false);
     setPhase("growing");
   };
-  /* A hand on the card (a pointer over it, a press, focus): wake the
-     room out of sight — drawn but invisible, its stage turning, and its
-     pictures counted as on screen again, so the call resumes sending
-     them — and by the time the room has grown back, everything in it is
-     already moving. Asleep again a little after the hand leaves. */
-  const [waking, setWaking] = useState(false);
-  const sleepTimer = useRef(0);
-  const wake = useCallback(() => {
-    window.clearTimeout(sleepTimer.current);
-    setWaking(true);
-  }, []);
-  const sleep = useCallback(() => {
-    window.clearTimeout(sleepTimer.current);
-    sleepTimer.current = window.setTimeout(() => setWaking(false), 1500);
-  }, []);
-  useEffect(() => () => window.clearTimeout(sleepTimer.current), []);
-  const awake = waking && phase === "mini";
   /* Over the page it was minimized from (back from the card), the room
      lies on top of that page rather than replacing it: the page is kept
      out of reach underneath — no focus, no screen reader — until the
@@ -1693,17 +1817,36 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     };
   }, [holding]);
 
+  /* This room, opened again while you are in it — its card or a link to
+     it on the page you are browsing: back into it from its card, as the
+     card's own window does. Loading it would hang this call up and join
+     the room all over again. Already up, there is nothing to do. */
+  const openAgain = useEffectEvent((url: string) => {
+    if (!pointsToRoom(url, roomId, window.location.href)) return false;
+    if (phase === "mini") openFromCard();
+    return true;
+  });
   /* While a call is live, pages change in the app — a full page load
      would hang the call up. Next's own links already navigate in place;
      plain links are routed here (lib/softNav.ts), and code that means to
-     change page asks through window.__agoraSoftNav (goTo). */
+     change page asks through window.__agoraSoftNav (goTo). A way into
+     this room (a card's enterRoom, any link to it) asks
+     window.__agoraOpenCall first; links to it are caught before anything
+     else sees the click, Next's own included. */
   useEffect(() => {
     if (!callLive) return;
     const soft = (url: string) => {
       router.push(url);
       return true;
     };
+    const again = (url: string) => openAgain(url);
     window.__agoraSoftNav = soft;
+    window.__agoraOpenCall = again;
+    const onClickFirst = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      const url = a ? plainLinkUrl(a, e, window.location) : null;
+      if (url && openAgain(url.href)) e.preventDefault();
+    };
     const onClick = (e: MouseEvent) => {
       const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
       const to = a ? softNavTarget(a, e, window.location) : null;
@@ -1711,9 +1854,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       e.preventDefault();
       router.push(to);
     };
+    document.addEventListener("click", onClickFirst, true);
     document.addEventListener("click", onClick);
     return () => {
       if (window.__agoraSoftNav === soft) delete window.__agoraSoftNav;
+      if (window.__agoraOpenCall === again) delete window.__agoraOpenCall;
+      document.removeEventListener("click", onClickFirst, true);
       document.removeEventListener("click", onClick);
     };
   }, [callLive, router]);
@@ -1734,9 +1880,9 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       micOn={call.micOn}
       micReady={call.connected && !call.mediaBusy}
       onToggleMic={call.toggleMic}
-      audioBlocked={call.audioBlocked}
-      onEnableAudio={call.enableAudio}
-      hlsSrc={hlsAudience ? call.hlsMode!.url : null}
+      audioBlocked={call.audioBlocked || (hlsAudience && !broadcastSound)}
+      onEnableAudio={hlsAudience ? turnSoundOn : call.enableAudio}
+      screen={callLive}
       onLeave={() => {
         if (endedWhileAway) {
           vacateSeat();
@@ -1752,8 +1898,6 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         }
       }}
       onExpand={openFromCard}
-      onWake={wake}
-      onSleep={sleep}
     />
   ) : null;
   /* No call to keep drawn (it ended while you were away, or never came
@@ -1981,11 +2125,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   /* The frame: no box of its own while the room is the page; fixed over
      the page while it moves, and over it (in use) once it has come back
-     over the page it was minimized from; out of sight under the card —
-     or, with a hand on the card, drawn there but still invisible. */
+     over the page it was minimized from; in the card's window, minimized.
+     Out of reach whenever it isn't the page: the card takes the clicks. */
   const frameState =
     phase === "mini"
-      ? ` is-away${awake ? " is-waking" : ""}`
+      ? " is-pip"
       : phase !== "full"
         ? " is-moving"
         : slot.minimized || slot.overPage
@@ -1994,7 +2138,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   return (
     <>
     {(phase === "shrinking" || phase === "growing") && <div ref={scrimRef} className="ag-call-scrim" aria-hidden="true" />}
-    <div ref={frameRef} className={`ag-call-frame${frameState}`}>
+    <div ref={frameRef} className={`ag-call-frame${frameState}`} inert={phase !== "full"}>
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
       {entering !== "gone" && (
         <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
@@ -2162,11 +2306,10 @@ function AgoraRoom({ roomId }: { roomId: string }) {
             out of CPU ~20 s into every camera room (the replay kept only
             those seconds). Recordings get the phones' flat backdrop. */}
         <Amphitheater
-          paused={phase === "mini" && !awake}
           moving={phase === "shrinking" || phase === "growing" || railSliding}
           performanceMode={broadcast}
           flat={phone || broadcast || simpleStage.on}
-          background={layout !== "stage"}
+          background={layout !== "stage" || phase === "mini"}
           roomId={roomId}
           /* Flat layouts (gallery / multi) carry every picture themselves —
              the scene's 3D speaker panels and mic medallion would peek

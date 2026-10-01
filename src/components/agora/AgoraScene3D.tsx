@@ -51,15 +51,14 @@ interface Props {
   micHolder?: SeatedPerson | null;
   /** True while the mic holder is actually speaking (drives the mic glow). */
   micLive?: boolean;
-  /** A flat layout's tiles are over the scene: it is a backdrop now, and
-      draws at a quarter of the rate — the bowl barely moves. */
+  /** A flat layout's tiles are over the scene, or the room is minimized
+      to the call card's small window: it is a backdrop now, and draws at
+      a quarter of the rate — the bowl barely moves. */
   background?: boolean;
-  /** Out of sight (the call minimized to its card): draw nothing, and
-      keep the picture as it stands for when the room comes back. */
-  paused?: boolean;
-  /** The room folding into its card or out of it: draw every frame,
-      backdrop or not — the browser can drop the scene's picture while it
-      rebuilds the screen's layers, and it must be back within a frame. */
+  /** The room shrinking into the call card's window or growing out of
+      it: draw every frame, backdrop or not — the browser can drop the
+      scene's picture while it rebuilds the screen's layers, and it must
+      be back within a frame. */
   moving?: boolean;
 }
 
@@ -1478,7 +1477,6 @@ export default function AgoraScene3D({
   performanceMode = false,
   onViewSettled,
   background = false,
-  paused = false,
   moving = false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -1619,12 +1617,6 @@ export default function AgoraScene3D({
   useLayoutEffect(() => {
     movingRef.current = moving;
   }, [moving]);
-  const pausedRef = useRef(paused);
-  /* Before the browser paints: a room growing back out of its card draws
-     live from its first frame. */
-  useLayoutEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
   const viewerCountRef = useRef(viewerCount);
   viewerCountRef.current = viewerCount;
 
@@ -1846,6 +1838,9 @@ export default function AgoraScene3D({
        performanceMode (the egress compositor's software WebGL) starts at
        the floor: 1× buffer, no shadows — set at renderer init. */
     let quality = performanceMode ? 0 : 3;
+    /* The pixel ratio the page is drawn at (the ladder's first rung
+       lowers it); the card's window draws lower still (below). */
+    let pageRatio = dpr;
     let frameAcc = 0;
     let frameN = 0;
     /* The floor under the floor: a machine that can't hold 24 fps with
@@ -1854,6 +1849,10 @@ export default function AgoraScene3D({
        moves; the CPU goes back to the call. */
     let still = false;
     let lastDraw = t0;
+    /* When the room last moved, and whether it is being drawn small (both
+       below). */
+    let lastMoving = -Infinity;
+    let small = false;
     /* The stage anchor as last written to the anchored panes (see below). */
     let castEl: HTMLElement | null = null;
     let wroteAx = NaN, wroteGy = NaN, wroteScale = NaN;
@@ -1869,7 +1868,7 @@ export default function AgoraScene3D({
          panels are gone (video is DOM now — see AgoraStage), so the
          ladder starts at the pixel-ratio drop. */
       if (quality === 2) {
-        renderer.setPixelRatio(1);
+        pageRatio = 1;
       } else if (quality < 0) {
         still = true;
       } else {
@@ -1884,13 +1883,6 @@ export default function AgoraScene3D({
 
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      if (pausedRef.current) {
-        /* Nobody can see it. The clock keeps up, so the first frame back
-           doesn't read the whole absence as one step. */
-        lastFrame = performance.now();
-        lastDraw = lastFrame;
-        return;
-      }
       const now = performance.now();
       const tickDt = Math.min((now - lastFrame) / 1000, 0.1); // clamp tab-return spikes
       lastFrame = now;
@@ -1908,17 +1900,40 @@ export default function AgoraScene3D({
           frameN = 0;
         }
       }
-      /* Frames nobody needs: under a flat layout the scene is a backdrop
-         (15 fps); on a machine that has stepped all the way down, 4 fps.
-         On the stage it draws every frame: a 30 fps cap at rest was tried
-         and read as stutter. A glide between vantages draws every frame
-         too, backdrop or not (the floor keeps its 4). The wait is a few ms
-         short of its interval, because frame times jitter: a wait of
-         exactly 4 frames sometimes lands on the 5th, and the rhythm goes
-         4-5-4, a visible hitch. */
+      /* Frames nobody needs: under a flat layout, or minimized to the call
+         card's window, the scene is a backdrop (15 fps); on a machine that
+         has stepped all the way down, 4 fps. On the stage it draws every
+         frame: a 30 fps cap at rest was tried and read as stutter. A glide
+         between vantages draws every frame too, backdrop or not (the floor
+         keeps its 4), and so does the moment after the room moves into the
+         card or out of it: the browser rebuilds the page's layers as the
+         room lands (and as the page underneath is let go), which can drop
+         the scene's picture until its next draw — a backdrop's next draw
+         was 66 ms away, and that blank was the skip as the window landed.
+         The wait is a few ms short of its interval, because frame times
+         jitter: a wait of exactly 4 frames sometimes lands on the 5th, and
+         the rhythm goes 4-5-4, a visible hitch. */
+      if (movingRef.current) lastMoving = now;
       const gliding = camPos.distanceToSquared(CAMS[viewRef.current].pos) > 0.01;
-      const budget = still ? 250 : backgroundRef.current && !movingRef.current && !gliding ? 66 : 0;
+      const settling = now - lastMoving < 400;
+      const budget = still ? 250 : backgroundRef.current && !settling && !gliding ? 66 : 0;
       if (budget && now - lastDraw < budget - 8) return;
+      /* Drawn at about the size it is seen. On its way into the call
+         card's window the room passes 40% of its size early, while it moves
+         too fast for a change of sharpness to show; from there the scene
+         is drawn at 0.6 of a pixel per point (a sixth of the pixels on a
+         sharp screen), and at the page's ratio again once it passes half
+         size on the way back out. (Switched at the landing instead, the
+         sharpness changed at once in a window at rest.) Read before this
+         frame writes anything to the page, so it forces no extra layout. */
+      if (movingRef.current || backgroundRef.current) {
+        const el = renderer.domElement;
+        const seen = el.clientWidth ? el.getBoundingClientRect().width / el.clientWidth : 1;
+        if (seen < 0.4) small = true;
+        else if (seen > 0.5) small = false;
+      } else {
+        small = false;
+      }
       /* Motion runs on the time since the last drawn frame. It used the
          last tick's time instead, so whenever frames were skipped a glide
          crawled: a quarter speed behind the gallery, a fifteenth at the
@@ -2018,6 +2033,10 @@ export default function AgoraScene3D({
       }
 
       orchestraGlow.embers.visible = viewRef.current === "audience";
+      /* The resolution chosen above, set just before a draw: resizing
+         clears the canvas, and it is never shown cleared. */
+      const ratio = small ? Math.min(pageRatio, 0.6) : pageRatio;
+      if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
       renderer.render(scene, camera);
     };
     animate();

@@ -5,8 +5,11 @@ import { roomPath } from "@/lib/urls";
    the page you are on and carries across the page load into the room's
    own, one exposure from the click to the stage (lib/skySplash.ts).
    Anything else — a scheduled room, a past discussion — is a plain page
-   load, as before. */
+   load, as before. The room you are already in (minimized to its card)
+   is neither: it comes back up from the card, call and all (lib/softNav,
+   __agoraOpenCall), rather than being loaded and joined over again. */
 export function enterRoom(url: string): void {
+  if (window.__agoraOpenCall?.(url)) return;
   if (window.__agoraEnter) window.__agoraEnter(url);
   else window.location.href = url;
 }
@@ -32,6 +35,7 @@ export function skyForRoom(): () => void {
 
 export function openRoom(room: { id: string; motion?: string | null; status?: string | null }): void {
   const url = roomPath(room);
+  if (window.__agoraOpenCall?.(url)) return;
   if (room.status === "live") enterRoom(url);
   else window.location.href = url;
 }

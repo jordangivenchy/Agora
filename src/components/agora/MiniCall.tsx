@@ -3,20 +3,18 @@
 /* The call, minimized: a card in the corner of whatever page you are on
    (above the tab bar on a phone) while the room carries on in the call
    slot (CallSlot.tsx) — the way the app keeps a call going above its
-   tabs. The room's title, who is talking, your mic if you are on stage,
-   Leave; the rest of the card takes you back in.
+   tabs. A window with the room in it, live (on a phone, at the start of
+   the bar), then the room's title, who is talking, your mic if you are
+   on stage, Leave; the window and the rest of the card take you back in.
 
-   The card only appears and goes; the room does the moving
-   (AgoraRoomPage): it shrinks into this corner while the card comes up
-   under it, and grows back out of the card while the card fades under
-   it. An audience watching the broadcast (the biggest rooms) hears it
-   through the video, so for them the card carries that video along its
-   top. */
+   The window is only a place: the room itself is drawn there, under the
+   card's frame, and does all the moving (AgoraRoomPage) — it shrinks
+   into the window while the card comes up around it, and grows back out
+   of it while the card goes. */
 
 import { useState } from "react";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
-import { HlsBroadcastSurface } from "./HlsPlayer";
 
 export interface MiniSpeaker {
   id: string;
@@ -38,11 +36,9 @@ export default function MiniCall({
   onToggleMic,
   audioBlocked,
   onEnableAudio,
-  hlsSrc,
+  screen,
   onLeave,
   onExpand,
-  onWake,
-  onSleep,
 }: {
   /** The room is still shrinking into the corner: come up as it lands. */
   arriving: boolean;
@@ -61,15 +57,11 @@ export default function MiniCall({
   /** The browser is holding the sound back until a tap. */
   audioBlocked: boolean;
   onEnableAudio: () => void;
-  /** The broadcast, for an audience watching it rather than in the call. */
-  hlsSrc: string | null;
+  /** The room is drawn in the card's window (not once its call is over). */
+  screen: boolean;
   onLeave: () => void;
   /** Back into the room. */
   onExpand: () => void;
-  /** A hand is on the card (pointer, press, focus): get the room ready. */
-  onWake: () => void;
-  /** The hand has gone. */
-  onSleep: () => void;
 }) {
   /* Whether it came up under a room still landing: kept for the card's
      life, so its entrance isn't retimed when the room lands. */
@@ -85,22 +77,14 @@ export default function MiniCall({
 
   return (
     <div
-      className={`call-mini${lateEntrance ? " is-arriving" : ""}${leaving ? " is-leaving" : ""}`}
+      className={`call-mini${screen ? " has-screen" : ""}${lateEntrance ? " is-arriving" : ""}${leaving ? " is-leaving" : ""}`}
       role="region"
       aria-label="Call in progress"
       inert={leaving}
-      onPointerEnter={onWake}
-      onPointerDown={onWake}
-      onPointerLeave={onSleep}
-      onFocus={onWake}
-      onBlur={onSleep}
     >
-      {hlsSrc && !ended && (
-        <div className="call-mini-video">
-          {/* Pictures only: the room, kept under the card, carries the
-              broadcast's sound, so there is one voice, not two. */}
-          <HlsBroadcastSurface src={hlsSrc} compact silent />
-        </div>
+      {screen && (
+        /* Clear: the room shows through it, drawn underneath. */
+        <button type="button" className="call-mini-screen" onClick={onExpand} title="Back to the room" aria-label="Back to the room" />
       )}
       <div className="call-mini-row">
         <button type="button" className="call-mini-main" onClick={onExpand} title="Back to the room">
@@ -135,7 +119,7 @@ export default function MiniCall({
               <Icon name={micOn ? "mic" : "mic-off"} size={17} />
             </button>
           )}
-          <button type="button" className="call-mini-btn" onClick={onExpand} title="Back to the room" aria-label="Back to the room">
+          <button type="button" className="call-mini-btn call-mini-expand" onClick={onExpand} title="Back to the room" aria-label="Back to the room">
             <Icon name="chevron-up" size={18} />
           </button>
           <button

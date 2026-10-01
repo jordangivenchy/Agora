@@ -9,22 +9,21 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
 
 /* Whether the broadcast's sound is on, for the whole page: one tap on
-   any surface turns it on everywhere. The room keeps its own surface —
-   and so its sound — while it is minimized to the call card, and the
-   card shows the same broadcast silently beside it (`silent`), so there
-   is only ever one voice, whichever surface the tap came from. */
+   any surface (or the minimized call card's sound button) turns it on
+   everywhere, so there is only ever one voice, whichever surface the tap
+   came from. */
 let broadcastSound = false;
 const soundListeners = new Set<() => void>();
 function subscribeSound(fn: () => void) {
   soundListeners.add(fn);
   return () => { soundListeners.delete(fn); };
 }
-function turnSoundOn() {
+export function turnSoundOn() {
   if (broadcastSound) return;
   broadcastSound = true;
   soundListeners.forEach((fn) => fn());
 }
-function useBroadcastSound(): boolean {
+export function useBroadcastSound(): boolean {
   return useSyncExternalStore(subscribeSound, () => broadcastSound, () => false);
 }
 
@@ -81,17 +80,14 @@ export function useHlsSource(
    audience view). Autoplay must start muted to satisfy browser policy —
    a tap-to-unmute overlay does the gesture — and a small pill is honest
    about the segment delay so the ~15s lag never reads as "broken". */
-export function HlsBroadcastSurface({ src, compact = false, silent = false }: {
+export function HlsBroadcastSurface({ src, compact = false }: {
   src: string;
   compact?: boolean;
-  /** Pictures only — another surface carries the sound (the call card
-      beside the minimized room). Its unmute still turns that sound on. */
-  silent?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const { error } = useHlsSource(videoRef, src, { live: true });
   const sound = useBroadcastSound();
-  const muted = silent || !sound;
+  const muted = !sound;
 
   /* The sound turned on from another surface (or this one): follow it.
      Set on the element — React doesn't keep `muted` in step after mount. */
@@ -104,7 +100,7 @@ export function HlsBroadcastSurface({ src, compact = false, silent = false }: {
 
   const unmute = () => {
     const v = videoRef.current;
-    if (v && !silent) {
+    if (v) {
       v.muted = false;
       v.play().catch(() => {});
     }

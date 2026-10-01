@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
-import { goTo, softNavTarget } from "./softNav";
+import { goTo, pointsToRoom, softNavTarget } from "./softNav";
+import { enterRoom, openRoom } from "./enterRoom";
 
 /* While a call is live, which plain link clicks become in-app page
    changes (so the call carries on), and which the browser keeps. */
@@ -49,5 +50,52 @@ describe("goTo", () => {
   it("is a normal page load without one", () => {
     goTo("#no-call");
     expect(window.location.hash).toBe("#no-call");
+  });
+});
+
+/* Opening the room you are already in (minimized to its card) brings it
+   back up instead of loading it and joining it all over again. */
+describe("pointsToRoom", () => {
+  const id = "90dabdf2-c208-46c9-8417-b5070fba44a0";
+  const at = "https://agorasphere.net/explore";
+
+  it("knows the room by its pretty address, its short id or its full id", () => {
+    expect(pointsToRoom("/agora/should-the-agora-host-debates-90dabdf2", id, at)).toBe(true);
+    expect(pointsToRoom("https://agorasphere.net/agora/90dabdf2", id, at)).toBe(true);
+    expect(pointsToRoom(`/agora/${id}`, id, at)).toBe(true);
+    expect(pointsToRoom(`/agora/${id.toUpperCase()}`, id, at)).toBe(true);
+  });
+
+  it("tells other rooms, other pages and other sites apart", () => {
+    expect(pointsToRoom("/agora/some-room-1a2b3c4d", id, at)).toBe(false);
+    expect(pointsToRoom("/replays/should-the-agora-host-debates-90dabdf2", id, at)).toBe(false);
+    expect(pointsToRoom("/agora/should-the-agora-host-debates-90dabdf2/extra", id, at)).toBe(false);
+    expect(pointsToRoom("https://example.com/agora/90dabdf2", id, at)).toBe(false);
+  });
+});
+
+describe("entering a room", () => {
+  afterEach(() => {
+    delete window.__agoraOpenCall;
+    delete window.__agoraEnter;
+  });
+
+  it("brings the room you are in back up, and loads nothing", () => {
+    const opened: string[] = [];
+    let loaded = false;
+    window.__agoraOpenCall = (url) => { opened.push(url); return true; };
+    window.__agoraEnter = () => { loaded = true; };
+    enterRoom("/agora/should-the-agora-host-debates-90dabdf2");
+    openRoom({ id: "90dabdf2-c208-46c9-8417-b5070fba44a0", motion: "Should the Agora host debates", status: "live" });
+    expect(opened).toHaveLength(2);
+    expect(loaded).toBe(false);
+  });
+
+  it("enters any other room as before", () => {
+    let loaded = "";
+    window.__agoraOpenCall = () => false;
+    window.__agoraEnter = (url) => { loaded = url; };
+    enterRoom("/agora/some-room-1a2b3c4d");
+    expect(loaded).toBe("/agora/some-room-1a2b3c4d");
   });
 });
