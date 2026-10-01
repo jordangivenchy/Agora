@@ -23,7 +23,6 @@ import { displayName } from "@/lib/names";
 import type { RoomFraming } from "@/types/database";
 import { type StageParticipant, type StageRole, isHostRole } from "./stage";
 import { FRAME_MAX_LINES, frameIsEmpty, frameLength, frameLines, frameNewsKey } from "./frameModel";
-import VerifiedMark from "@/components/VerifiedMark";
 
 const ABOUT_MAX = 1200;
 
@@ -234,7 +233,6 @@ export default function RoomFrame({ room, participants, myRole, currentUserId, s
                 </div>
                 <div className="ag-frame-meta">
                   Written by {writerName}
-                  {writer && <VerifiedMark id={writer.user_id} username={writer.user?.username} />}
                   {framing?.about_at ? ` · ${timeAgo(framing.about_at)}` : ""}
                 </div>
               </>

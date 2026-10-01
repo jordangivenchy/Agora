@@ -25,7 +25,6 @@ import {
 import type { DebateRoom } from "@/types/database";
 import { displayName } from "@/lib/names";
 import { MAX_THUMB_BYTES, makeSquareThumb } from "@/lib/thumbs";
-import VerifiedMark from "@/components/VerifiedMark";
 
 interface Props {
   room: DebateRoom & {
@@ -597,7 +596,7 @@ function RowIdentity({ p, role }: { p: StageParticipant; role: StageRole }) {
     <span className="ag-host-id">
       <span className={`ag-host-avatar role-${role}`}>{name.charAt(0).toUpperCase()}</span>
       <span className="ag-host-name">
-        <span>{name}<VerifiedMark id={p.user_id} username={p.user?.username} /></span>
+        <span>{name}</span>
         <small>{ROLE_LABEL[role]}</small>
       </span>
     </span>

@@ -8,7 +8,6 @@ import { useEffect, useRef } from "react";
 import type { Track } from "livekit-client";
 import type { VideoTile } from "./useAgoraCall";
 import { useUserMenu } from "../userMenuContext";
-import VerifiedMark from "@/components/VerifiedMark";
 
 /* Tiles arrive labeled with the display name; the page attaches the raw
    handle when it knows the seated row, so the user menu keeps working. */
@@ -46,7 +45,6 @@ function Tile({ tile }: { tile: DockTile }) {
         }
       >
         {tile.local ? "You" : tile.username}
-        {!tile.local && <VerifiedMark id={tile.identity} username={tile.handle} />}
       </span>
     </div>
   );

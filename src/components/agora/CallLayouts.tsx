@@ -31,7 +31,6 @@ import { Icon } from "@/components/icons";
 import CameraOffFace, { type FaceSide } from "./CameraOffFace";
 import { planGrid, screenPlaces } from "./callGrid";
 import { planSlots, type SlotPerson } from "./gallerySlots";
-import VerifiedMark from "@/components/VerifiedMark";
 
 export interface LayoutTile {
   /** Stable key — identity:local:source, same recipe as tileKey(). */
@@ -157,7 +156,6 @@ const CallTile = memo(function CallTile({
           <span className="ag-lt-tag-ico"><Icon name="monitor" size={12} /></span>
         )}
         <span className="ag-lt-tag-name">{tile.username}</span>
-        <VerifiedMark id={tile.identity} username={tile.handle} spaced={false} />
         {tile.source !== "screen" && tile.micMuted && (
           <span className="ag-lt-muted" title="Muted"><Icon name="mic-off" size={12} /></span>
         )}
@@ -421,7 +419,7 @@ function MoreMenu({
         return (
           <button key={t.key} type="button" role="menuitem" className="ag-lgal-menu-item" onClick={() => onPick(t.key)}>
             <CameraOffFace name={t.username} avatarUrl={t.avatarUrl ?? null} side={t.side ?? null} size={26} />
-            <span className="ag-lgal-menu-name">{t.local ? "You" : t.username}{!t.local && <VerifiedMark id={t.identity} username={t.handle} />}</span>
+            <span className="ag-lgal-menu-name">{t.local ? "You" : t.username}</span>
             {(talking || t.track || t.mock) && (
               <span className={`ag-lgal-menu-state${talking ? " is-speaking" : ""}`} aria-label={talking ? "Talking" : "Camera on"}>
                 <Icon name={talking ? "mic" : "video"} size={14} />

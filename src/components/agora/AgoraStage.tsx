@@ -33,7 +33,6 @@ import type { VideoTile } from "./useAgoraCall";
 import { tileKey } from "./useAgoraCall";
 import { useUserMenu } from "../userMenuContext";
 import CameraOffFace from "./CameraOffFace";
-import VerifiedMark from "@/components/VerifiedMark";
 
 export interface StagePane {
   id: string;
@@ -128,17 +127,12 @@ function PaneFill({ pane, side }: { pane: StagePane | null; side: "pro" | "con" 
     and the room should read the same from every seat. */
 function Tag({
   name,
-  id,
-  handle,
   screen,
   small,
   muted,
   onName,
 }: {
   name: string;
-  /** Who it is, for the verified mark. */
-  id?: string;
-  handle?: string;
   screen?: boolean;
   small?: boolean;
   muted?: boolean;
@@ -156,7 +150,6 @@ function Tag({
       >
         {name}
       </span>
-      <VerifiedMark id={id} username={handle} spaced={false} />
       {muted && !screen && (
         <span className="ag-cast-tag-muted" title="Muted" aria-label="Muted">
           <Icon name="mic-off" size={11} />
@@ -327,8 +320,6 @@ export default function AgoraStage({ tiles, panes, view, speaking, anchored }: P
                 {item.tile ? <Surface tile={item.tile} /> : <PaneFill pane={item.pane} side={item.side} />}
                 <Tag
                   name={item.username}
-                  id={item.id}
-                  handle={item.handle}
                   screen={item.isScreen}
                   small
                   onName={nameMenu(item.id, item.handle ?? item.username, item.local)}
@@ -389,8 +380,6 @@ export default function AgoraStage({ tiles, panes, view, speaking, anchored }: P
               {pane && (
                 <Tag
                   name={pane.username}
-                  id={pane.id}
-                  handle={pane.handle}
                   muted={pane.micMuted}
                   onName={nameMenu(pane.id, pane.handle ?? pane.username, pane.local)}
                 />

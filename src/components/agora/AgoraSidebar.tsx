@@ -19,7 +19,6 @@ import CallSettings, { type CallSettingsProps } from "./CallSettings";
 import { displayName } from "@/lib/names";
 import { BODY_MIN, cleanTextError } from "@/lib/cleanText";
 import type { User } from "@supabase/supabase-js";
-import VerifiedMark from "@/components/VerifiedMark";
 
 interface Message {
   id: string;
@@ -201,7 +200,6 @@ export default function AgoraSidebar({
                     <div className="ag-chat-meta">
                       <button type="button" className="ag-chat-name" onClick={openMenu}>
                         {name}
-                        <VerifiedMark id={msg.user_id} username={msg.user?.username} />
                       </button>
                       <span className="ag-chat-time">{fmtTime(msg.created_at)}</span>
                     </div>
