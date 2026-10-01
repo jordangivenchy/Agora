@@ -10,6 +10,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/icons";
 import UserAvatar from "@/components/UserAvatar";
+import SideScroller from "@/components/SideScroller";
 import ActorText from "./ActorText";
 import {
   actorLabel, notifDetail, notifHref, notifIcon, notifText, timeAgo, type NotifRow,
@@ -43,7 +44,7 @@ const sectionLabel: CSSProperties = {
   fontWeight: 700,
   letterSpacing: "0.09em",
   textTransform: "uppercase",
-  color: "rgba(238,238,245,0.42)",
+  color: "#6b6b74",
 };
 
 export default function NotificationsPanel({
@@ -176,7 +177,7 @@ export default function NotificationsPanel({
           </span>
         </div>
 
-        <div className="notif-panel-body">
+        <SideScroller className="notif-panel-body">
           {visible.length === 0 && (
             <div className="notif-empty">
               <span className="notif-empty-glyph"><Icon name="bell" size={22} /></span>
@@ -196,7 +197,7 @@ export default function NotificationsPanel({
               {earlier.map(row)}
             </section>
           )}
-        </div>
+        </SideScroller>
 
         <div className="notif-foot">
           <a href="/notifications" className="notif-foot-link">See all notifications →</a>
