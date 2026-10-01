@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
       }
       /* Custom template: the compositor films our own broadcast page —
-         the stage over the flat backdrop (the 3D scene ran LiveKit's
-         recorders out of CPU), not a bare camera grid. Portrait preset
+         the speakers over a still of the stage (the live 3D scene ran
+         LiveKit's recorders out of CPU), not a bare camera grid. Portrait preset
          frames it for TikTok; 720p for the same reason as recordings. */
       const info = await egress.startRoomCompositeEgress(
         roomId,

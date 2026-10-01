@@ -3478,6 +3478,14 @@
   background: radial-gradient(120% 80% at 50% 100%, #14120c 0%, #070707 55%, #000 100%);
   pointer-events: none;
 }
+/* Behind the speakers in a recording: the amphitheatre's speaker view as
+   a still — the stars over the lit stage, rendered once on a machine with
+   a graphics card (public/recording-stage.jpg, 1920×1080) — so a replay
+   looks like the room without the recorder drawing the scene. Portrait
+   (the live stream's TikTok shape) shows its middle. */
+.ag-root--recording .ag-flat-backdrop {
+  background: #000 url("/recording-stage.jpg") center bottom / cover no-repeat;
+}
 
 /* The page as LiveKit's recorder films it (?token&url — see /api/egress):
    drawn in software, so nothing that makes the browser redraw what's

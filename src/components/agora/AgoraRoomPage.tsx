@@ -979,15 +979,36 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     return () => clearInterval(every);
   }, [hostRecording, recordingRoomId]);
 
+  /* The recording's backdrop, a still of the stage (agora.css), loaded
+     before filming starts so a replay never opens on black — at most 3 s. */
+  const [backdropReady, setBackdropReady] = useState(false);
+  useEffect(() => {
+    if (!broadcast) return;
+    let done = false;
+    const ready = () => {
+      if (done) return;
+      done = true;
+      setBackdropReady(true);
+    };
+    const img = new Image();
+    img.onload = ready;
+    img.onerror = ready;
+    img.src = "/recording-stage.jpg";
+    const cap = window.setTimeout(ready, 3000);
+    return () => {
+      done = true;
+      window.clearTimeout(cap);
+    };
+  }, [broadcast]);
   const recordingSignaledRef = useRef(false);
   useEffect(() => {
     if (!broadcast || recordingSignaledRef.current) return;
-    if (loaded && room && call.connected) {
+    if (loaded && room && call.connected && backdropReady) {
       recordingSignaledRef.current = true;
       // LiveKit egress template contract: filming begins on this log line.
       console.log("START_RECORDING");
     }
-  }, [broadcast, loaded, room, call.connected]);
+  }, [broadcast, loaded, room, call.connected, backdropReady]);
   const [reactOpen, setReactOpen] = useState(false);
 
   /* ── Stage composition ─────────────────────────────────────────────
@@ -2304,14 +2325,16 @@ function AgoraRoom({ roomId }: { roomId: string }) {
         )}
 
         {/* A browser drawing without its graphics card: say so, and how to
-            fix it — the room has already fallen back to the simple stage. */}
-        <GpuNotice />
+            fix it — the room has already fallen back to the simple stage.
+            Never in the recording: the recorder has no graphics card. */}
+        {!broadcast && <GpuNotice />}
 
         {/* ── Amphitheater ── */}
         {/* The recorder films this page in a browser on LiveKit's machines,
             with no graphics card: the 3D scene drawn in software ran them
             out of CPU ~20 s into every camera room (the replay kept only
-            those seconds). Recordings get the phones' flat backdrop. */}
+            those seconds). Recordings get the flat backdrop instead, with
+            a still of the stage on it (agora.css). */}
         <Amphitheater
           moving={phase === "shrinking" || phase === "growing" || railSliding}
           performanceMode={broadcast}
