@@ -33,17 +33,19 @@ const STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode
 /* The same, for a screen that only continues a sky: the one carried in
    from the page before, or one already live. With neither it marks the
    screen idle, and the screen stays out of sight. */
-const CARRY_STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode;if(!el||!window.__agoraSky)return;var c=el.querySelectorAll('canvas');var r=window.__agoraSky(c[0],c[1],null,{carry:true,only:true});if(r&&r.idle)el.setAttribute('data-idle','');})();`;
+const CARRY_STARTER = `(function(){var s=document.currentScript;var el=s&&s.parentNode;if(!el||!window.__agoraSky)return;var c=el.querySelectorAll('canvas');var r=window.__agoraSky(c[0],c[1],el.querySelector('.ld-center'),{carry:true,only:true});if(r&&r.idle)el.setAttribute('data-idle','');})();`;
 
 export default function LoadingScreen({ label, plain = false, carry = false }: {
   label?: string;
-  /** Just the stars turning: no mark, no words, no bar — entering a room. */
+  /** No bar — entering a room: the stars turning, and the mark and the
+      label at their centre (just the stars without a label). */
   plain?: boolean;
   /** Only continue a sky (carried in from the last page, or live now) —
       never start one; with none, the screen isn't shown. Implies plain. */
   carry?: boolean;
 }) {
   const bare = plain || carry;
+  const centre = !bare || !!label;
   /* The parse-time starter belongs to the server's HTML only: it is
      rendered on the server and through hydration (so the trees match),
      then dropped; a screen mounted in the browser never creates it —
@@ -80,12 +82,7 @@ export default function LoadingScreen({ label, plain = false, carry = false }: {
           centre before hydration; those attributes are meant to differ. */}
       <canvas ref={trailsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
       <canvas ref={headsRef} className="ld-sky" aria-hidden="true" suppressHydrationWarning />
-      {/* The sky starts as the HTML is parsed, before any bundle — a
-          server-rendered screen (a room's entry) is never a black frame
-          waiting for hydration. The effect above then leaves it be. The
-          boot splash's own starter handles the boot node. */}
-      {!client && <script dangerouslySetInnerHTML={{ __html: carry ? CARRY_STARTER : STARTER }} />}
-      {!bare && <div ref={centerRef} className="ld-center" suppressHydrationWarning>
+      {centre && <div ref={centerRef} className="ld-center" suppressHydrationWarning>
         {/* The A and the S, cut from the wordmark (public/as-mark.png). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/as-mark.png" alt="AgoraSphere" className="ld-mark" width={426} height={202} />
@@ -96,6 +93,13 @@ export default function LoadingScreen({ label, plain = false, carry = false }: {
           </p>
         )}
       </div>}
+      {/* The sky starts as the HTML is parsed, before any bundle — a
+          server-rendered screen (a room's entry) is never a black frame
+          waiting for hydration. The effect above then leaves it be. The
+          boot splash's own starter handles the boot node. Last, so the
+          centre is already parsed when it runs: placed before it, the
+          starter found no centre, and the words never came up. */}
+      {!client && <script dangerouslySetInnerHTML={{ __html: carry ? CARRY_STARTER : STARTER }} />}
     </div>
   );
 }

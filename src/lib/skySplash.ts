@@ -274,18 +274,24 @@ window.__agoraSkyTakeCarry = function () {
   return c;
 };
 
-/* The entry screen: a sky over everything on the page — no mark, no
-   words, no bar, just the stars turning. */
+/* The entry screen: a sky over everything on the page, and at its centre
+   the AS mark over "Entering the Agora", as the room's own screens carry
+   them on (LoadingScreen). No bar. */
 window.__agoraEnterScreen = function () {
   var el = document.createElement('div');
   el.className = 'ld-screen ld-enter';
   el.setAttribute('role', 'status');
-  el.setAttribute('aria-label', 'Entering the room');
+  el.setAttribute('aria-label', 'Entering the Agora');
   var a = document.createElement('canvas'), b = document.createElement('canvas');
   a.className = 'ld-sky';
   b.className = 'ld-sky';
   el.appendChild(a);
   el.appendChild(b);
+  var center = document.createElement('div');
+  center.className = 'ld-center';
+  center.innerHTML = '<img src="/as-mark.png" alt="AgoraSphere" class="ld-mark" width="426" height="202">' +
+    '<p class="ld-label">Entering the Agora<span class="ld-ellipsis" aria-hidden="true"><i></i><i></i><i></i></span></p>';
+  el.appendChild(center);
   document.body.appendChild(el);
   return el;
 };
@@ -300,7 +306,7 @@ window.__agoraEnter = function (url) {
   };
   if (!window.__agoraSky || document.querySelector('.ld-enter')) { go(); return; }
   var el = window.__agoraEnterScreen();
-  window.__agoraSky(el.children[0], el.children[1], null);
+  window.__agoraSky(el.children[0], el.children[1], el.querySelector('.ld-center'));
   // Two frames: the first starts the sky's clock, the second is on screen.
   requestAnimationFrame(function () { requestAnimationFrame(go); });
   // Back to this page from the cache: nothing is being entered any more.
@@ -316,7 +322,7 @@ window.__agoraSkyOver = function () {
   if (!window.__agoraSky || document.querySelector('.ld-enter')) return;
   var el = window.__agoraEnterScreen();
   el.setAttribute('data-over', '');
-  el.__agoraStop = window.__agoraSky(el.children[0], el.children[1], null).stop;
+  el.__agoraStop = window.__agoraSky(el.children[0], el.children[1], el.querySelector('.ld-center')).stop;
   el.__agoraTimer = setTimeout(function () { window.__agoraSkyOverEnd(el, true); }, 15000);
 };
 window.__agoraSkyOverEnd = function (el, fade) {
@@ -430,7 +436,7 @@ declare global {
     __agoraLeave?: () => void;
     /** Into a live room through the sky, carried across the page load (see skySplash.ts). */
     __agoraEnter?: (url: string) => void;
-    /** The entry screen (two sky canvases), appended to the body. */
+    /** The entry screen (two sky canvases and its centre), appended to the body. */
     __agoraEnterScreen?: () => HTMLDivElement;
     /** The entry sky over this page, for a room opened in the app; the room's own screens take it over. */
     __agoraSkyOver?: () => void;

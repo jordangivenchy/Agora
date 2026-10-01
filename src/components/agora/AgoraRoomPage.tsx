@@ -190,7 +190,7 @@ function RoomWait() {
   return (
     <>
       <RouteLoading />
-      <LoadingScreen carry />
+      <LoadingScreen carry label="Entering the Agora" />
     </>
   );
 }
@@ -776,9 +776,11 @@ function AgoraRoom({ roomId }: { roomId: string }) {
      The loading screen that brought us here stays over the stage until
      the call is up (or the broadcast view is): its sky continues the
      entry screen's, so arriving in a room is one unbroken exposure that
-     ends on the stage. Just the stars — no mark, no words, no bar. At least a beat, so it never flashes; at most
-     twelve seconds, so a stalled connection can't trap anyone behind
-     it — the stage's own "Connecting…" and retry take over then. */
+     ends on the stage: the stars, and at their centre the mark over
+     "Entering the Agora" (no bar). At least a beat, so it never
+     flashes; at most twelve seconds, so a stalled connection can't trap
+     anyone behind it — the stage's own "Connecting…" and retry take
+     over then. */
   const callUp = call.connected || hlsAudience;
   const [entering, setEntering] = useState<"up" | "leaving" | "gone">("up");
   const enteredAt = useRef<number | null>(null);
@@ -1997,7 +1999,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
       {entering !== "gone" && (
         <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
-          <LoadingScreen plain />
+          <LoadingScreen plain label="Entering the Agora" />
         </div>
       )}
       <div className="ag-main">
