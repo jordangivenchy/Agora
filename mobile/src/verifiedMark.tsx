@@ -1,8 +1,9 @@
 /* The verification mark, drawn as the site draws it
-   (components/VerifiedBadge.tsx): the seal in the brand yellow with the
-   check in ink. VerifiedBadge always draws, for a screen that already
-   has the flag; VerifiedMark goes right after any name, asks the shared
-   list (verified.ts) by id or username, and draws nothing for everyone
+   (components/VerifiedBadge.tsx, which says how the outline is built):
+   the seal in the brand yellow with the check in ink. Not in a call.
+   VerifiedBadge always draws, for a screen that already has the flag;
+   VerifiedMark goes right after any name, asks the shared list
+   (verified.ts) by id or username, and draws nothing for everyone
    else. Size it to the name's own type; it never shrinks, so a long name
    gives way first. For a name inside a sentence, `inline` sets it on the
    line like a word — a space before it, lowered a touch as the site's
@@ -28,10 +29,10 @@ export function VerifiedBadge({ size = 15, style }: { size?: number; style?: Sty
       style={StyleSheet.flatten([{ flexShrink: 0 }, style])}
     >
       <Path
-        d="M12 1.8l2.3 2 3-.4 1.2 2.8 2.8 1.2-.4 3 2 2.3-2 2.3.4 3-2.8 1.2-1.2 2.8-3-.4-2.3 2-2.3-2-3 .4-1.2-2.8L2.7 17l.4-3-2-2.3 2-2.3-.4-3 2.8-1.2L6.7 2.4l3 .4z"
+        d="M8.25 2.94A4.6 4.6 0 0 1 15.75 2.94A4.6 4.6 0 0 1 21.06 8.25A4.6 4.6 0 0 1 21.06 15.75A4.6 4.6 0 0 1 15.75 21.06A4.6 4.6 0 0 1 8.25 21.06A4.6 4.6 0 0 1 2.94 15.75A4.6 4.6 0 0 1 2.94 8.25A4.6 4.6 0 0 1 8.25 2.94Z"
         fill="#ffb700"
       />
-      <Path d="M8.3 12.4l2.5 2.5 5-5.3" stroke="#1a0e00" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M7.6 12.05L10.6 14.95L16.4 9.05" stroke="#1a0e00" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }

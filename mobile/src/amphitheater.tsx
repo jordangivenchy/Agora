@@ -20,7 +20,6 @@ import AmphitheaterScene from "./amphitheaterScene";
 import { Avatar } from "./avatar";
 import { Tile, type StageTile } from "./roomTiles";
 import type { StageRole } from "./stageModel";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export interface AmphiPerson { id: string; name: string; handle: string | null; avatarUrl: string | null }
@@ -72,7 +71,6 @@ function StripChip({ person, speaking, onPress }: { person: AmphiStagePerson; sp
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 64 }}>
         <Text numberOfLines={1} style={{ flexShrink: 1, color: "#cfd3dc", fontFamily: fonts.semi, fontSize: 10.5 }}>{person.name}</Text>
-        <VerifiedMark id={person.id} username={person.handle} size={10} />
       </View>
     </Pressable>
   );

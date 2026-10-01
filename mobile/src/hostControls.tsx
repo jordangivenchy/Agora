@@ -18,7 +18,6 @@ import { pickImage } from "./postImages";
 import { uploadRoomThumbnail } from "./roomThumbnail";
 import { advanceQueue, egress, endDiscussion, muteAllSpeakers, removeFromRoom, sendInvite, setAutoAdvance, setSeatMuted, type RoomDetail } from "./roomData";
 import { ROLE_LABEL, deriveStageRole, isHostRole, onStage, seatName, seatUser, sortRequests, type Seat, type StageRole } from "./stageModel";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 type Tab = "requests" | "audience" | "stage" | "room";
@@ -41,7 +40,6 @@ function Row({ seat, role, children }: { seat: Seat; role: StageRole; children: 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: 12.5 }}>{seatName(seat)}</Text>
-          <VerifiedMark id={seat.user_id} username={u?.username} size={12} />
         </View>
         <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 10.5 }}>{ROLE_LABEL[role]}</Text>
       </View>
