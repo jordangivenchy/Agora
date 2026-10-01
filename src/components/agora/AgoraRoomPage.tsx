@@ -1557,7 +1557,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   const menuUp = moreOpen || topMenuOpen || micMenuOpen || camMenuOpen || reactOpen;
 
   const topic = TOPICS.find((t) => t.key === room?.topic_key);
-  const audienceCount = Math.max(room?.viewer_count ?? 0, audience.length);
+  /* Who is listening now: everyone in the room who isn't on the stage or
+     at the mic — a raised hand is still listening. (viewer_count is
+     everyone who has been in the room while it was live, the host and the
+     speakers among them, so on its own a host read as their own audience;
+     it still sizes the amphitheatre's crowd.) */
+  const audienceCount = room
+    ? participants.filter((p) => !p.left_at && deriveStageRole(p, room) === "audience" && p.user_id !== room.mic_user_id).length
+    : 0;
 
   /* ── Minimized: the call carries on while you browse ─────────────
      Another page showing (CallSlot keeps this room mounted through

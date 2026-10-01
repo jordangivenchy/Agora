@@ -121,7 +121,12 @@ export function RoomBody(p: RoomBodyProps) {
 
   const withRole = useMemo(() => seats.filter((s) => !s.left_at).map((s) => ({ s, role: deriveStageRole(s, room.host_id) })), [seats, room.host_id]);
   const stageSeats = useMemo(() => withRole.filter((x) => onStage(x.role)).sort((a, b) => rank(a.role) - rank(b.role) || a.s.joined_at.localeCompare(b.s.joined_at)), [withRole]);
-  const audienceCount = Math.max(room.viewer_count ?? 0, withRole.filter((x) => !onStage(x.role) && !x.s.hand_raised_at && x.s.user_id !== room.mic_user_id).length);
+  /* Who is listening now: everyone in the room who isn't on the stage or
+     at the mic — a raised hand is still listening. (viewer_count is
+     everyone who has been in the room while it was live, the host and the
+     speakers among them, so a host read as their own audience; it still
+     sizes the amphitheatre's crowd.) */
+  const audienceCount = withRole.filter((x) => !onStage(x.role) && x.s.user_id !== room.mic_user_id).length;
   const requests = useMemo(() => sortRequests(withRole.filter((x) => !onStage(x.role) && !!x.s.hand_raised_at).map((x) => x.s)), [withRole]);
   const queue = useMemo(() => sortRequests(withRole.filter((x) => !!x.s.hand_raised_at && x.s.user_id !== room.mic_user_id && !isHostRole(x.role)).map((x) => x.s)), [withRole, room.mic_user_id]);
   const amMicHolder = !!meId && room.mic_user_id === meId;
