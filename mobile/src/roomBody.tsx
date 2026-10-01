@@ -12,7 +12,7 @@
    face, are the whole room. Under both: the queue pill and the host's
    button, the cards, the control pill; the sheets hang off it. */
 import { useEffect, useMemo, useState } from "react";
-import { LayoutAnimation, Pressable, Share, Text, View, useWindowDimensions } from "react-native";
+import { LayoutAnimation, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,7 +36,6 @@ import { CallSettingsSheet } from "./callSettings";
 import { EndedCard, HostButton, InviteCard, MediaErrorCard, NoteRequestSheet, QueuePill } from "./roomCards";
 import { BroadcastView } from "./broadcast";
 import { topicOf } from "./topics";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export interface RoomBodyProps {
@@ -95,6 +94,9 @@ export function RoomBody(p: RoomBodyProps) {
     setView((v) => (v === "audience" ? "speaker" : "audience"));
   };
   const [areaH, setAreaH] = useState(0);
+  /* The top bar's height: it floats over the top of the room, which runs
+     behind it to the top of the screen. */
+  const [headerH, setHeaderH] = useState(0);
   const messages = useRoomChat(room.id);
   useEffect(() => { if (chatOpen) setSeenChat(messages.length); }, [chatOpen, messages.length]);
   const chatBadge = chatOpen ? 0 : Math.max(0, messages.length - seenChat);
@@ -216,10 +218,60 @@ export function RoomBody(p: RoomBodyProps) {
 
   return (
     <View style={{ flex: 1, backgroundColor: SKY }}>
-      {/* ── Top bar: on the scene's own night (its sky's colour at the top),
-          not a black strip laid over it — the buttons one family of pills,
-          the title first and the room's state in one line under it. ── */}
-      <View style={{ paddingTop: insets.top + 4, paddingHorizontal: 10 }}>
+      {/* ── The room: the amphitheater and its two vantages, or a duel's two
+          pictures — the whole screen, under the top bar. ── */}
+      <View style={StyleSheet.absoluteFill} onLayout={(e) => setAreaH(Math.round(e.nativeEvent.layout.height))}>
+        {areaH > 0 && headerH > 0 && (p.duel ? (
+          <View style={{ position: "absolute", left: 10, top: headerH + 8 }}>
+            {hlsAudience ? (
+              <BroadcastView url={call.hls!.url} height={Math.round(((width - 20) * 9) / 16)} />
+            ) : (
+              <StageTiles tiles={tiles} speaking={call.speaking} layout="gallery" pinned={pinned} onPin={setPinned} width={width - 20} height={Math.max(160, areaH - headerH - amphiInset - 16)} onPressTile={onPressTile} />
+            )}
+          </View>
+        ) : (
+          <Amphitheater
+            width={width}
+            height={areaH}
+            topInset={headerH}
+            view={view}
+            onSwitchView={switchView}
+            speakerLayout={(area) =>
+              hlsAudience ? (
+                <View style={{ flex: 1, justifyContent: "center" }}>
+                  <BroadcastView url={call.hls!.url} height={Math.round((area.width * 9) / 16)} />
+                </View>
+              ) : (
+                <StageTiles tiles={tiles} speaking={call.speaking} layout={layout} pinned={pinned} onPin={setPinned} width={area.width} height={area.height} onPressTile={onPressTile} />
+              )
+            }
+            bottomInset={amphiInset}
+            roomId={room.id}
+            audience={seatedPeople}
+            viewerCount={room.viewer_count ?? 0}
+            queue={linePeople}
+            micHolder={micSeat ? asPerson(micSeat) : null}
+            micLive={!!room.mic_user_id && call.speaking.has(room.mic_user_id)}
+            strip={strip}
+            dock={dock}
+            speaking={call.speaking}
+            broadcast={hlsAudience ? <BroadcastView url={call.hls!.url} height={72} /> : undefined}
+            onPressTile={onPressTile}
+            onPressStrip={onPressStrip}
+          />
+        ))}
+        <ReactionOverlay reactions={call.reactions} />
+      </View>
+
+      {/* ── Top bar: over the room's own sky — the scene runs behind it to the
+          top of the screen, so there is no strip and no edge where the
+          scene begins; the buttons one family of pills, the title first and
+          the room's state in one line under it. ── */}
+      <View
+        pointerEvents="box-none"
+        onLayout={(e) => setHeaderH(Math.round(e.nativeEvent.layout.height))}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: insets.top + 4, paddingHorizontal: 10, paddingBottom: 6 }}
+      >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Pressable onPress={() => (router.canGoBack() ? router.back() : router.navigate("/"))} hitSlop={8} accessibilityLabel="Back" style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center", marginLeft: -6 }}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -229,7 +281,6 @@ export function RoomBody(p: RoomBodyProps) {
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: hostUser.username! } })} accessibilityLabel="The host's profile" style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingLeft: 3, paddingRight: 10, borderRadius: 999, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33", maxWidth: 150 }}>
               <Avatar url={hostUser.avatar_url} name={hostUser.display_name || hostUser.username} size={22} />
               <Text numberOfLines={1} style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 11.5, flexShrink: 1 }}>{hostUser.display_name?.trim() || hostUser.username}</Text>
-              <VerifiedMark id={room.host_id} username={hostUser.username} size={12} style={{ marginLeft: -2 }} />
             </Pressable>
           )}
           {!isHostViewer && (
@@ -260,54 +311,11 @@ export function RoomBody(p: RoomBodyProps) {
         </View>
       </View>
 
-      {/* ── The room: the amphitheater and its two vantages, or a duel's two pictures ── */}
-      <View style={{ flex: 1 }} onLayout={(e) => setAreaH(Math.round(e.nativeEvent.layout.height))}>
-        {areaH > 0 && (p.duel ? (
-          <View style={{ position: "absolute", left: 10, top: 8 }}>
-            {hlsAudience ? (
-              <BroadcastView url={call.hls!.url} height={Math.round(((width - 20) * 9) / 16)} />
-            ) : (
-              <StageTiles tiles={tiles} speaking={call.speaking} layout="gallery" pinned={pinned} onPin={setPinned} width={width - 20} height={Math.max(160, areaH - amphiInset - 16)} onPressTile={onPressTile} />
-            )}
-          </View>
-        ) : (
-          <Amphitheater
-            width={width}
-            height={areaH}
-            view={view}
-            onSwitchView={switchView}
-            speakerLayout={(area) =>
-              hlsAudience ? (
-                <View style={{ flex: 1, justifyContent: "center" }}>
-                  <BroadcastView url={call.hls!.url} height={Math.round((area.width * 9) / 16)} />
-                </View>
-              ) : (
-                <StageTiles tiles={tiles} speaking={call.speaking} layout={layout} pinned={pinned} onPin={setPinned} width={area.width} height={area.height} onPressTile={onPressTile} />
-              )
-            }
-            bottomInset={amphiInset}
-            roomId={room.id}
-            audience={seatedPeople}
-            viewerCount={room.viewer_count ?? 0}
-            queue={linePeople}
-            micHolder={micSeat ? asPerson(micSeat) : null}
-            micLive={!!room.mic_user_id && call.speaking.has(room.mic_user_id)}
-            strip={strip}
-            dock={dock}
-            speaking={call.speaking}
-            broadcast={hlsAudience ? <BroadcastView url={call.hls!.url} height={72} /> : undefined}
-            onPressTile={onPressTile}
-            onPressStrip={onPressStrip}
-          />
-        ))}
-        <ReactionOverlay reactions={call.reactions} />
-      </View>
-
       {/* ── Band A: the pill and the host's button; the cards ── */}
       <View pointerEvents="box-none" style={{ position: "absolute", left: 10, right: 10, bottom: controlsBand + 8, gap: 8 }}>
         {p.ended && <EndedCard room={room} onWatch={p.onWatchReplay} onHome={p.onHome} />}
         {call.mediaError && <MediaErrorCard message={call.mediaError} settings={call.mediaErrorSettings} onDismiss={call.clearMediaError} />}
-        {p.invite && <InviteCard inviterName={p.invite.inviterName} inviterId={p.invite.inviterId} busy={p.inviteBusy} onJoin={() => p.onRespondInvite(true)} onDecline={() => p.onRespondInvite(false)} />}
+        {p.invite && <InviteCard inviterName={p.invite.inviterName} busy={p.inviteBusy} onJoin={() => p.onRespondInvite(true)} onDecline={() => p.onRespondInvite(false)} />}
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
           {meId ? <QueuePill amMicHolder={amMicHolder} position={myQueuePos} /> : <View />}
           {canManage && <HostButton requests={requests.length} onPress={() => setHostOpen(true)} />}

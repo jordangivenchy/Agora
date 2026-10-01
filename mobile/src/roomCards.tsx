@@ -10,7 +10,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { openAppSettings } from "./liveRoom";
 import { gateCopy, joinWithCode, requestCommunityNote, type Gate, type RoomDetail } from "./roomData";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 import { LoadingLine } from "./sky";
 
@@ -24,12 +23,11 @@ function Btn({ label, onPress, primary, danger, disabled }: { label: string; onP
   );
 }
 
-export function InviteCard({ inviterName, inviterId, busy, onJoin, onDecline }: { inviterName: string; inviterId?: string; busy: boolean; onJoin: () => void; onDecline: () => void }) {
+export function InviteCard({ inviterName, busy, onJoin, onDecline }: { inviterName: string; busy: boolean; onJoin: () => void; onDecline: () => void }) {
   return (
     <View style={[CARD, { padding: 12, gap: 10 }]} accessibilityRole="alert">
       <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>
-        <Text style={{ fontFamily: fonts.bold }}>{inviterName}</Text>
-        <VerifiedMark inline id={inviterId} size={13} /> has invited you to join the discussion.
+        <Text style={{ fontFamily: fonts.bold }}>{inviterName}</Text> has invited you to join the discussion.
       </Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Btn label="Join the stage" primary disabled={busy} onPress={onJoin} />

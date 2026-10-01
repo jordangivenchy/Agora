@@ -20,7 +20,6 @@ import type { CallTile } from "./roomCall";
 import { planGrid } from "../../src/components/agora/callGrid";
 import { planSlots, type SlotPerson } from "../../src/components/agora/gallerySlots";
 import { ItemSheet } from "./itemSheet";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 export type Layout = "gallery" | "multi";
@@ -63,7 +62,6 @@ export function Tile({ tile, speaking, small, featured, size, onPress, onLongPre
           <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.semi, fontSize: small ? 9.5 : 11.5 }}>
             {tile.local ? "You" : tile.username}
           </Text>
-          {!tile.local && <VerifiedMark id={tile.identity} username={tile.handle} size={small ? 10 : 12} />}
           {screen && <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: small ? 9.5 : 11.5 }}>· screen</Text>}
           {!small && !screen && <Text style={{ color: speaking ? colors.yellow : colors.muted, fontFamily: fonts.body, fontSize: 10 }}>· {speaking ? "Speaking" : tile.roleLabel}</Text>}
         </View>

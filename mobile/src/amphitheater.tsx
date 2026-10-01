@@ -108,6 +108,10 @@ export function Amphitheater(p: {
   speakerLayout: (area: { width: number; height: number }) => ReactNode;
   /** Room the overlays at the foot of the room take (the queue pill, the host's button, the controls). */
   bottomInset: number;
+  /** Room the top bar takes over the top of the room: the scene runs on
+      behind it (its sky up to the top of the screen), the speaker view's
+      pictures start below it. */
+  topInset?: number;
   roomId: string;
   /** In their seats: listeners not in the line and not on the mic. */
   audience: AmphiPerson[];
@@ -127,6 +131,7 @@ export function Amphitheater(p: {
   onPressStrip: (person: AmphiStagePerson) => void;
 }) {
   const { width, height, bottomInset, view } = p;
+  const topInset = p.topInset ?? 0;
   /* Where the camera has landed. The pictures wait for the speaker vantage
      (the site holds its stage back the same way); the fallback covers a
      report lost over the bridge. */
@@ -172,8 +177,8 @@ export function Amphitheater(p: {
 
       {/* The speaker view: the call layout over the dimmed scene, once the camera has landed. */}
       {inSpeaker && (
-        <Animated.View pointerEvents={picturesUp ? "box-none" : "none"} style={{ position: "absolute", left: 10, top: 8, width: width - 20, height: Math.max(120, switchTop - 18), opacity: shown }}>
-          {picturesUp && p.speakerLayout({ width: width - 20, height: Math.max(120, switchTop - 18) })}
+        <Animated.View pointerEvents={picturesUp ? "box-none" : "none"} style={{ position: "absolute", left: 10, top: topInset + 8, width: width - 20, height: Math.max(120, switchTop - 18 - topInset), opacity: shown }}>
+          {picturesUp && p.speakerLayout({ width: width - 20, height: Math.max(120, switchTop - 18 - topInset) })}
         </Animated.View>
       )}
 

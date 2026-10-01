@@ -10,7 +10,6 @@ import { RichText } from "./richText";
 import { BODY_MIN, cleanTextError } from "./cleanText";
 import { ABOUT_MAX, FRAME_MAX_LINES, frameLength, frameLines, setRoomFrame, type RoomDetail, type RoomFraming } from "./roomData";
 import { isHostRole, seatName, seatUser, type Seat, type StageRole } from "./stageModel";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 function timeAgo(iso: string): string {
@@ -97,7 +96,7 @@ export function RoomFrameSheet({ open, onClose, room, seats, myRole, onChange }:
               <View>
                 <RichText text={serverAbout} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20 }} />
                 <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, marginTop: 6 }}>
-                  Written by {writer}{writerSeat && <VerifiedMark inline id={writerSeat.user_id} username={seatUser(writerSeat)?.username} size={11} />}{framing?.about_at ? ` · ${timeAgo(framing.about_at)}` : ""}
+                  Written by {writer}{framing?.about_at ? ` · ${timeAgo(framing.about_at)}` : ""}
                 </Text>
               </View>
             ) : (

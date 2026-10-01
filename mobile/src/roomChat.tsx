@@ -12,7 +12,6 @@ import { supabase } from "./supabase";
 import { useUserMenu } from "./userMenu";
 import { BODY_MIN, cleanTextError } from "./cleanText";
 import { LinkedText } from "./linkText";
-import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
 
 interface Message {
@@ -138,11 +137,7 @@ export function RoomChatSheet({ open, onClose, roomId, meId, messages }: { open:
                   </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-                      {/* The name and its mark as one piece, so the row still lines up on the name's baseline. */}
-                      <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Text onPress={() => person(m)} numberOfLines={1} style={{ color: userColor(m.user_id), fontFamily: fonts.semi, fontSize: 12.5, flexShrink: 1 }}>{name}</Text>
-                        <VerifiedMark id={m.user_id} username={u?.username} size={12} />
-                      </View>
+                      <Text onPress={() => person(m)} numberOfLines={1} style={{ color: userColor(m.user_id), fontFamily: fonts.semi, fontSize: 12.5, flexShrink: 1 }}>{name}</Text>
                       <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 10 }}>{fmtTime(m.created_at)}</Text>
                     </View>
                     <LinkedText text={m.content} beforeOpen={onClose} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }} />
