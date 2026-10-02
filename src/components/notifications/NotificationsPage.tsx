@@ -160,7 +160,7 @@ export default function NotificationsPage({ initial }: {
           style={{ minHeight: "60vh", fontFamily: "'DM Sans', sans-serif" }}
         >
           <p className="m-0" style={{ color: "#8b8b94" }}>Sign in to see your notifications.</p>
-          <Link onClick={progressOnClick} href="/login" style={{ color: "#9cc4f0", fontSize: 14 }}>Sign in →</Link>
+          <Link onClick={progressOnClick} href="/login" style={{ color: "#ffb700", fontSize: 14 }}>Sign in →</Link>
         </main>
       </>
     );
@@ -175,7 +175,7 @@ export default function NotificationsPage({ initial }: {
             <p className="m-0 mt-1 text-[12.5px]" style={{ color: "#8b8b94" }}>
               {unread > 0 ? `${unread} unread` : "You're all caught up"}
               {" · "}
-              <Link onClick={progressOnClick} href="/settings" style={{ color: "#9cc4f0", textDecoration: "none" }}>Preferences</Link>
+              <Link onClick={progressOnClick} href="/settings" style={{ color: "#ffb700", textDecoration: "none" }}>Preferences</Link>
             </p>
           </div>
           <button
@@ -183,8 +183,8 @@ export default function NotificationsPage({ initial }: {
             disabled={unread === 0}
             className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg cursor-pointer"
             style={{
-              background: unread > 0 ? "rgba(255,255,255,0.07)" : "transparent",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: unread > 0 ? "#111114" : "transparent",
+              border: `1px solid ${unread > 0 ? "#26262e" : "#1c1c22"}`,
               color: unread > 0 ? "#e8e8ee" : "#55555e",
               fontFamily: "inherit",
             }}
@@ -202,9 +202,9 @@ export default function NotificationsPage({ initial }: {
                 onClick={() => setFilter(f.id)}
                 className="text-[12.5px] px-3.5 py-1.5 rounded-full cursor-pointer"
                 style={{
-                  background: on ? "rgba(226,185,107,0.16)" : "rgba(255,255,255,0.05)",
-                  border: `1px solid ${on ? "rgba(226,185,107,0.45)" : "rgba(255,255,255,0.1)"}`,
-                  color: on ? "#f4d47c" : "#b8b8c2",
+                  background: on ? "#ffb700" : "#0b0b0d",
+                  border: `1px solid ${on ? "#ffb700" : "#222229"}`,
+                  color: on ? "#1a0e00" : "#b8b8c2",
                   fontWeight: on ? 600 : 500,
                   fontFamily: "inherit",
                 }}
@@ -224,9 +224,9 @@ export default function NotificationsPage({ initial }: {
         {!loading && visible.length === 0 && (
           <div
             className="py-16 px-6 text-center"
-            style={{ background: "rgba(18,18,24,0.92)", border: "0.5px solid #2e2e38", borderRadius: 14 }}
+            style={{ background: "#000", border: "1px solid #222229", borderRadius: 14 }}
           >
-            <span className="inline-flex items-center justify-center mb-3" style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.06)", color: "#8b8b94" }}>
+            <span className="inline-flex items-center justify-center mb-3" style={{ width: 44, height: 44, borderRadius: 14, background: "#111114", border: "1px solid #222229", color: "#ffb700" }}>
               <Icon name="bell" size={20} />
             </span>
             <p className="m-0 text-[14px]" style={{ color: "#d5d5dc" }}>
@@ -243,7 +243,7 @@ export default function NotificationsPage({ initial }: {
             <p className="m-0 mb-2 text-[11px] uppercase tracking-wider" style={{ color: "#6b6b74", fontWeight: 600 }}>
               {g.label}
             </p>
-            <div style={{ background: "rgba(18,18,24,0.92)", border: "0.5px solid #2e2e38", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ background: "#000", border: "1px solid #222229", borderRadius: 14, overflow: "hidden" }}>
               {g.rows.map((n, i) => {
                 const href = notifHref(n);
                 const detail = notifDetail(n);
@@ -254,9 +254,9 @@ export default function NotificationsPage({ initial }: {
                     onClick={() => open(n)}
                     className="w-full text-left px-4 py-3.5 flex items-start gap-3"
                     style={{
-                      background: unreadRow ? "rgba(226,185,107,0.05)" : "transparent",
+                      background: unreadRow ? "#09090b" : "transparent",
                       border: "none",
-                      borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                      borderTop: i === 0 ? "none" : "1px solid #141418",
                       cursor: href ? "pointer" : "default",
                       fontFamily: "inherit",
                     }}
@@ -265,7 +265,7 @@ export default function NotificationsPage({ initial }: {
                       {n.actor_id ? (
                         <UserAvatar username={n.actor_username ?? "?"} avatarUrl={n.actor_avatar_url} size={36} />
                       ) : (
-                        <span className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 12, background: "rgba(255,255,255,0.06)", color: "#c0c0c8" }}>
+                        <span className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 12, background: "#111114", border: "1px solid #222229", color: unreadRow ? "#ffb700" : "#c0c0c8" }}>
                           <Icon name={notifIcon(n.type)} size={16} />
                         </span>
                       )}
@@ -273,9 +273,9 @@ export default function NotificationsPage({ initial }: {
                         className="absolute flex items-center justify-center"
                         style={{
                           right: -5, bottom: -5, width: 18, height: 18, borderRadius: 6,
-                          background: unreadRow ? "#e2b96b" : "#2a2a33",
-                          color: unreadRow ? "#2a1a00" : "#a0a0aa",
-                          border: "2px solid #121218",
+                          background: unreadRow ? "#ffb700" : "#1c1c22",
+                          color: unreadRow ? "#1a0e00" : "#a0a0aa",
+                          border: "2px solid #000",
                         }}
                       >
                         <Icon name={notifIcon(n.type)} size={9} strokeWidth={2.5} />
@@ -296,7 +296,7 @@ export default function NotificationsPage({ initial }: {
                     </span>
                     <span className="shrink-0 flex items-center gap-2 text-[11px]" style={{ color: "#6b6b74", marginTop: 3 }}>
                       {timeAgo(n.created_at)}
-                      {unreadRow && <span style={{ width: 7, height: 7, borderRadius: 4, background: "#f4d47c" }} />}
+                      {unreadRow && <span style={{ width: 7, height: 7, borderRadius: 4, background: "#ffb700" }} />}
                     </span>
                   </button>
                 );
@@ -312,7 +312,7 @@ export default function NotificationsPage({ initial }: {
               onClick={loadMore}
               disabled={busyMore}
               className="text-[12.5px] px-4 py-2 rounded-lg cursor-pointer"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#d5d5dc", fontFamily: "inherit" }}
+              style={{ background: "#111114", border: "1px solid #26262e", color: "#d5d5dc", fontFamily: "inherit" }}
             >
               {busyMore ? "Loading…" : "Load more"}
             </button>

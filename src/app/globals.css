@@ -2118,20 +2118,21 @@ html.reduce-motion .nav-sparkle {
 
 /* ── Notifications popover (NotificationsPanel.tsx, portaled to body) ──
    Desktop: a card under the bell. Phones: a sheet under the top bar
-   (see the phone block). The call card's family: a solid near-black
-   body, hairlines, the brand yellow for what's new and for the one
-   thing to do, ink on yellow — no glass, no tinted washes. Its list
-   scrolls on the site's own side scroller (SideScroller.tsx). */
+   (see the phone block). Black, like the pages it opens over: solid
+   fills a shade or two off black, hairlines, the brand yellow for
+   what's new and for the one thing to do, ink on yellow — no glass, no
+   tinted washes. Its list scrolls on the site's own side scroller
+   (SideScroller.tsx). */
 .notif-scrim { position: fixed; inset: 0; z-index: 299; background: transparent; }
 .notif-panel {
   position: fixed; z-index: 300;
   width: 350px;
   max-height: min(540px, calc(100vh - 90px));
   display: flex; flex-direction: column;
-  background: #0e0e11;
-  border: 1px solid #2a2a33;
+  background: #000;
+  border: 1px solid #222229;
   border-radius: 16px;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5);
   overflow: hidden;
   font-family: 'DM Sans', sans-serif;
   opacity: 0;
@@ -2142,7 +2143,7 @@ html.reduce-motion .nav-sparkle {
 .notif-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 12px 12px 10px 16px;
-  border-bottom: 1px solid #1f1f26;
+  border-bottom: 1px solid #16161b;
 }
 .notif-title {
   margin: 0; display: inline-flex; align-items: center; gap: 8px;
@@ -2158,7 +2159,7 @@ html.reduce-motion .nav-sparkle {
   width: 32px; height: 32px; border-radius: 50%;
   background: transparent; border: 0; color: #9aa0ac; cursor: pointer; padding: 0;
 }
-.notif-close:hover { background: #1a1a21; color: #fff; }
+.notif-close:hover { background: #121216; color: #fff; }
 /* The list: the side scroller's box takes the space between the head
    and the foot, and the list scrolls inside it. */
 .notif-panel > .side-scroller { flex: 1 1 auto; }
@@ -2169,22 +2170,22 @@ html.reduce-motion .nav-sparkle {
   padding: 10px 16px;
   transition: background 80ms ease;
 }
-.notif-row:hover, .notif-row:focus-visible { background: #17171c; outline: none; }
-/* New: lifted a shade, with the yellow dot at the end. */
-.notif-row.is-unread { background: #131317; }
-.notif-row.is-unread:hover, .notif-row.is-unread:focus-visible { background: #1b1b21; }
+.notif-row:hover, .notif-row:focus-visible { background: #0e0e12; outline: none; }
+/* New: lifted a shade off black, with the yellow dot at the end. */
+.notif-row.is-unread { background: #09090b; }
+.notif-row.is-unread:hover, .notif-row.is-unread:focus-visible { background: #111115; }
 .notif-row-avatar { position: relative; flex-shrink: 0; width: 34px; height: 34px; }
 .notif-row-tile {
   display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 11px;
-  background: #1a1a21; color: #b8b8c2; border: 1px solid #2a2a33;
+  background: #111114; color: #b8b8c2; border: 1px solid #222229;
 }
 .notif-row.is-unread .notif-row-tile { color: #ffb700; }
 .notif-row-kind {
   position: absolute; right: -4px; bottom: -4px;
   display: inline-flex; align-items: center; justify-content: center;
   width: 16px; height: 16px; border-radius: 50%;
-  background: #1a1a21; color: #d5d5dc; border: 1.5px solid #0e0e11;
+  background: #111114; color: #d5d5dc; border: 1.5px solid #000;
 }
 .notif-row.is-unread .notif-row-kind { color: #ffb700; }
 .notif-row-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -2198,25 +2199,25 @@ html.reduce-motion .nav-sparkle {
   display: inline-flex; align-items: center; gap: 5px;
   font-family: inherit; font-size: 11.5px; font-weight: 600;
   padding: 5px 11px; border-radius: 999px; cursor: pointer;
-  background: #1a1a21; border: 1px solid #2a2a33; color: #e7e9ee;
+  background: #111114; border: 1px solid #26262e; color: #e7e9ee;
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.notif-btn:hover { background: #24242d; border-color: #3a3a45; color: #fff; }
+.notif-btn:hover { background: #18181d; border-color: #33333c; color: #fff; }
 .notif-btn:disabled { opacity: 0.4; cursor: default; }
 .notif-btn--primary { background: #ffb700; border-color: #ffb700; color: #1a0e00; }
 .notif-btn--primary:hover { background: #ffc633; border-color: #ffc633; color: #1a0e00; }
 .notif-btn--quiet { background: transparent; border-color: transparent; color: #9aa0ac; }
-.notif-btn--quiet:hover { background: #1a1a21; border-color: transparent; color: #f5f5f0; }
+.notif-btn--quiet:hover { background: #111114; border-color: transparent; color: #f5f5f0; }
 .notif-btn--quiet:disabled:hover { background: transparent; color: #9aa0ac; }
 .notif-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 34px 20px 28px; }
 .notif-empty-glyph {
   display: inline-flex; align-items: center; justify-content: center;
   width: 54px; height: 54px; border-radius: 50%; margin-bottom: 12px;
-  background: #1a1a21; color: #ffb700; border: 1px solid #2a2a33;
+  background: #111114; color: #ffb700; border: 1px solid #222229;
 }
 .notif-empty-title { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #f5f5f0; }
 .notif-empty-sub { margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: #8b8b94; max-width: 280px; }
-.notif-foot { border-top: 1px solid #1f1f26; padding: 4px 0 6px; }
+.notif-foot { border-top: 1px solid #16161b; padding: 4px 0 6px; }
 .notif-foot-link { display: block; padding: 9px 16px; font-size: 12.5px; font-weight: 600; color: #ffb700; text-decoration: none; }
 .notif-foot-link:hover { color: #ffc633; }
 .notif-push {
@@ -2229,7 +2230,7 @@ html.reduce-motion .nav-sparkle {
 .notif-push-label { display: inline-flex; align-items: center; gap: 7px; }
 .notif-switch {
   position: relative; flex-shrink: 0; width: 34px; height: 20px; border-radius: 999px;
-  background: #2a2a33; transition: background 0.15s ease;
+  background: #26262e; transition: background 0.15s ease;
 }
 .notif-switch-knob {
   position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
@@ -2258,7 +2259,7 @@ html.reduce-motion .nav-sparkle {
 .side-scroller.is-fits > .side-scroller-rail { display: none; }
 .side-scroller-thumb {
   position: absolute; top: 0; right: 4px; width: 5px; border-radius: 999px;
-  background: #3a3a45;
+  background: #2e2e36;
   transition: width 0.15s ease, right 0.15s ease, background 0.15s ease;
 }
 .side-scroller-rail:hover > .side-scroller-thumb { width: 8px; right: 3px; background: #5a5a66; }

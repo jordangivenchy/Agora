@@ -4135,10 +4135,11 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
   z-index: 950;
   width: 360px;
   max-width: calc(100vw - 32px);
-  background: #0e0e11;
-  border: 1px solid #2a2a33;
+  /* Black, like the notifications and the pages it sits on. */
+  background: #000;
+  border: 1px solid #222229;
   border-radius: 16px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
   color: #f5f5f0;
   font-family: 'DM Sans', system-ui, sans-serif;
   overflow: hidden;
@@ -4152,7 +4153,7 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
    drop shadow is only ever painted outside a box, so the card's doesn't
    darken it). The fill moves to the card's words. */
 .call-mini.has-screen { background: none; }
-.call-mini.has-screen .call-mini-row { background: #0e0e11; }
+.call-mini.has-screen .call-mini-row { background: #000; }
 .call-mini-screen {
   display: block;
   width: 100%;
@@ -4225,13 +4226,13 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #1a1a21;
-  border: 1px solid #2a2a33;
+  background: #111114;
+  border: 1px solid #26262e;
   color: #e7e9ee;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
-.call-mini-btn:hover { background: #24242d; border-color: #3a3a45; }
+.call-mini-btn:hover { background: #18181d; border-color: #33333c; }
 .call-mini-btn:active { transform: scale(0.95); }
 .call-mini-btn:disabled { opacity: 0.45; cursor: default; }
 .call-mini-btn.is-live { background: #34c759; border-color: #34c759; color: #04240f; }

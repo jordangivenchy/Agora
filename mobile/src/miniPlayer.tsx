@@ -15,7 +15,7 @@ export function MiniPlayer() {
       onPress={() => router.push({ pathname: "/room/[id]", params: { id: active.roomId } })}
       style={{
         flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 10, marginBottom: 6, padding: 10, paddingLeft: 12,
-        borderRadius: 14, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
+        borderRadius: 14, backgroundColor: "#000", borderWidth: 1, borderColor: "#222229",
       }}
     >
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.red }} />
@@ -24,7 +24,7 @@ export function MiniPlayer() {
         <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11.5 }}>Listening · {active.hostName}</Text>
       </View>
       <MicButton compact />
-      <Pressable onPress={leave} hitSlop={8} style={{ paddingHorizontal: 12, height: 34, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.red }}>
+      <Pressable onPress={leave} hitSlop={8} style={{ paddingHorizontal: 12, height: 34, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#111114", borderWidth: 1, borderColor: colors.red }}>
         <Text style={{ color: colors.text, fontSize: 12.5, fontWeight: "700" }}>Leave</Text>
       </Pressable>
     </Pressable>

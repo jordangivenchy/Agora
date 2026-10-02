@@ -242,9 +242,9 @@ export default function NotificationsBell({ container }: Props) {
           width: 36,
           height: 36,
           borderRadius: "50%",
-          background: open ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.05)",
-          border: "1px solid " + (unread > 0 ? "rgba(226,185,107,0.5)" : "rgba(255,255,255,0.12)"),
-          color: unread > 0 ? "#f4d47c" : "#c0c0c8",
+          background: open ? "#18181c" : "#0b0b0d",
+          border: "1px solid " + (unread > 0 ? "#ffb700" : "#26262c"),
+          color: unread > 0 ? "#ffb700" : "#c0c0c8",
         }}
       >
         <Icon name="bell" size={16} />
