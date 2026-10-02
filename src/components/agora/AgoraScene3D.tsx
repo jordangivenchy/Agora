@@ -1228,9 +1228,13 @@ function buildGround(scene: THREE.Scene) {
   const ctx = canvas.getContext("2d")!;
   const c = size / 2;
   const grad = ctx.createRadialGradient(c, c, 0, c, c, c);
+  /* The falloff is set in world units (lit olive out to ~20, night by
+     ~54), whatever the ground's size: it runs on far past that, into the
+     fog, so its edge is never seen. */
+  const reach = (units: number) => Math.min(1, units / GROUND.radius);
   grad.addColorStop(0, GROUND.lit);
-  grad.addColorStop(0.22, GROUND.mid);
-  grad.addColorStop(0.6, GROUND.far);
+  grad.addColorStop(reach(20), GROUND.mid);
+  grad.addColorStop(reach(54), GROUND.far);
   grad.addColorStop(1, GROUND.far);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
@@ -1425,7 +1429,11 @@ function buildSky(scene: THREE.Scene): THREE.PointsMaterial[] {
           // of the dome stays genuinely dark. The exponent is the band's
           // height: 3.0 let the blue arc climb behind the stage boxes,
           // 5.0 still read as a dome; 8.0 is a whisper at the skyline.
-          float t = pow(clamp(1.0 - abs(vH), 0.0, 1.0), 8.0);
+          // Below the skyline it stays the horizon's colour — the fog's,
+          // which the far ground has faded into by its edge — instead of
+          // darkening again: from up in the seats a tall phone frame looks
+          // past the ground, and the world ended there in a hard arc.
+          float t = vH < 0.0 ? 1.0 : pow(clamp(1.0 - vH, 0.0, 1.0), 8.0);
           gl_FragColor = vec4(mix(zenith, horizon, t), 1.0);
         }`,
     })

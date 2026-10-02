@@ -44,7 +44,10 @@ export const GROUND = {
   mid: "#101a12",
   /** Far edge — effectively the night itself. */
   far: "#070b09",
-  radius: 90,
+  /** Far enough out that its edge is lost in the fog from every vantage,
+      a tall phone frame looking down from the seats included; inside
+      the sky dome (SKY.radius). */
+  radius: 140,
   /** Radial-gradient texture resolution. One 512² canvas, no tiling. */
   textureSize: 512,
 } as const;
