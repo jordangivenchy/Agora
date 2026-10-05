@@ -10,7 +10,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AdminClient = SupabaseClient<any, "public", any>;
 
-export type PushPayload = { title: string; body: string; url: string };
+/* What public/push-sw.js shows: the words, where a click goes, and —
+   when there is one — the notification's key (notifTag: the same thing
+   from an open tab and from here is one notification), a picture (the
+   person's; the site's mark otherwise), the row it's about (read once
+   it's opened) and when it happened. */
+export type PushPayload = {
+  title: string;
+  body: string;
+  url: string;
+  tag?: string;
+  icon?: string;
+  id?: string;
+  ts?: number;
+};
 
 export function pushConfigured(cfg: Record<string, string>): boolean {
   return Boolean(cfg.vapid_public_key && cfg.vapid_private_key);

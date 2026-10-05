@@ -25,6 +25,7 @@ const BETA_EXEMPT = [
   "/auth",
   "/app/open", // the phone app handing its login to the website inside it
   "/logo.png",
+  "/push-sw.js", // the notifications worker: the browser refetches it to update, pass or no pass
 ];
 
 export async function proxy(request: NextRequest) {

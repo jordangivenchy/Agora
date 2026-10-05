@@ -2242,6 +2242,73 @@ html.reduce-motion .nav-sparkle {
   .notif-panel { transition: opacity 1ms linear; transform: none; }
 }
 
+/* ── A notification's pop-up (notifications/NotificationToasts.tsx) ──
+   A row of the list as a card of its own, for one that lands while
+   you're here: under the bell on desktop (placed by the component, as
+   the panel is), across the top of a phone. The same black and hairline
+   as the panel, its kind in yellow (it's new), and a yellow line along
+   its foot running down the time it has left. Over the page and the
+   bars, under the room (.ag-call-frame is 945): a room over the page
+   holds them back. */
+.notif-toasts {
+  position: fixed; z-index: 920;
+  top: calc(var(--nav-height, 60px) + 10px); right: 16px;
+  width: 350px; max-width: calc(100vw - 16px);
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.notif-toast-slot { pointer-events: auto; }
+.notif-toast {
+  position: relative; overflow: hidden;
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 40px 13px 14px;
+  background: #000;
+  border: 1px solid #222229;
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.5);
+  animation: notifToastIn 280ms cubic-bezier(.2,.7,.2,1) both;
+  transition: background 80ms ease, border-color 80ms ease;
+}
+.notif-toast:hover, .notif-toast:focus-visible { background: #0b0b0e; border-color: #2e2e37; outline: none; }
+.notif-toast.is-leaving { animation: notifToastOut 180ms ease forwards; pointer-events: none; }
+.notif-toast .notif-row-tile, .notif-toast .notif-row-kind { color: #ffb700; }
+.notif-toast-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif-toast-text {
+  font-size: 13px; line-height: 1.4; color: #f5f5f0;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.notif-toast-detail { font-size: 12px; color: #8b8b94; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-toast-close {
+  position: absolute; top: 8px; right: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; padding: 0;
+  background: transparent; border: 0; color: #6b6b74; cursor: pointer;
+}
+.notif-toast-close:hover { background: #18181d; color: #fff; }
+.notif-toast-timer {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: #ffb700; transform-origin: 0 50%;
+  animation: notifToastTimer 6s linear forwards;
+}
+/* Held, all of them, while the pointer or focus is on any: none goes
+   from beside one you're reading, and none slides under the pointer. */
+.notif-toasts:hover .notif-toast-timer,
+.notif-toasts:focus-within .notif-toast-timer { animation-play-state: paused; }
+@keyframes notifToastIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes notifToastOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+@keyframes notifToastDrop { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+@keyframes notifToastLift { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-16px); } }
+@keyframes notifToastFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes notifToastFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes notifToastTimer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .notif-toast { animation-name: notifToastFade; }
+  .notif-toast.is-leaving { animation-name: notifToastFadeOut; }
+  /* Still timed, just not drawn running down. */
+  .notif-toast-timer { opacity: 0; }
+}
+
 /* ── The side scroller (components/SideScroller.tsx) ─────────────────
    The browser's own bar hidden; a slim solid thumb at the right in the
    site's colours, up while the list moves or a pointer is over it,
@@ -3226,6 +3293,23 @@ html.reduce-motion .nav-sparkle {
   .notif-foot { padding-bottom: 10px; }
   @media (prefers-reduced-motion: reduce) {
     .notif-panel.is-open .notif-panel-body { animation: none; }
+  }
+  /* A notification's pop-up: across the top of the screen, over the
+     top bar, the way the phone's own come down. */
+  .notif-toasts {
+    top: calc(env(safe-area-inset-top) + 8px) !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  .notif-toast { animation-name: notifToastDrop; }
+  .notif-toast.is-leaving { animation-name: notifToastLift; }
+  .notif-toast-text { font-size: 14px; }
+  .notif-toast-detail { font-size: 12.5px; }
+  @media (prefers-reduced-motion: reduce) {
+    .notif-toast { animation-name: notifToastFade; }
+    .notif-toast.is-leaving { animation-name: notifToastFadeOut; }
   }
   /* Result filters scroll sideways in one row instead of wrapping into
      two ragged lines; rows get thumb-sized. */

@@ -4,6 +4,7 @@ import { getAppConfig } from "@/lib/appConfig";
 import { debateReminderEmail, emailConfigured, sendEmail } from "@/lib/email";
 import { roomPath } from "@/lib/urls";
 import { sendPushToUsers } from "@/lib/webPush";
+import { notifTag } from "@/lib/notifications";
 
 /* Email + web-push fanout for one scheduled debate whose doors just
    opened. Triggered by the pg_cron job (send_due_room_reminders → pg_net
@@ -66,6 +67,9 @@ export async function POST(request: NextRequest) {
       title: "Starting in 30 minutes",
       body: `“${room.motion}” — doors are open, take your seat.`,
       url: roomUrl,
+      /* One alert with the room_starting_soon row an open tab raises. */
+      tag: notifTag({ id: room.id, type: "room_starting_soon", room_id: room.id }),
+      ts: Date.now(),
     };
     const pushed = await sendPushToUsers(admin, cfg, users.map((s) => s.user_id), () => payload);
 

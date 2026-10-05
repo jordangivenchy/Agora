@@ -6,7 +6,8 @@ import { roomPath } from "@/lib/urls";
 import { sendPushToUsers } from "@/lib/webPush";
 import { displayName } from "@/lib/names";
 import { notificationBatchEmail } from "@/lib/email";
-import { notifDetail, notifHref, notifText } from "@/lib/notifications";
+import { notifDetail, notifHref, notifTag, notifText } from "@/lib/notifications";
+import type { PushPayload } from "@/lib/webPush";
 import {
   RAW_NOTIF_SELECT, emailEnabledFor, toNotifRow, unsubUrl,
   type EmailSettings, type RawNotif,
@@ -35,7 +36,7 @@ type Row = {
   type: PushType;
   meta: Record<string, unknown> | null;
   room: { id: string; motion: string; scheduled_start: string | null } | null;
-  actor: { username: string; display_name: string | null } | null;
+  actor: { username: string; display_name: string | null; avatar_url: string | null } | null;
   user: { email: string | null } | null;
 };
 
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     const { data } = await admin
       .from("notifications")
       .select(
-        "id, user_id, type, meta, room:debate_rooms(id, motion, scheduled_start), actor:users!notifications_actor_id_fkey(username, display_name), user:users!notifications_user_id_fkey(email)"
+        "id, user_id, type, meta, room:debate_rooms(id, motion, scheduled_start), actor:users!notifications_actor_id_fkey(username, display_name, avatar_url), user:users!notifications_user_id_fkey(email)"
       )
       .is("delivered_at", null)
       .in("type", [...PUSH_TYPES])
@@ -77,23 +78,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "nothing_pending", ...batch });
     }
 
-    const payloads = new Map<string, { title: string; body: string; url: string }>();
+    const payloads = new Map<string, PushPayload>();
     for (const r of rows) {
       if (!r.room) continue;
       const url = `${origin}${roomPath({ id: r.room.id, motion: r.room.motion })}`;
       const who = r.actor ? displayName(r.actor) || `@${r.actor.username}` : "Someone you follow";
       const motion = `“${r.room.motion}”`;
+      /* The same key, picture and row as the alert an open tab raises
+         for this row (NotificationsBell), so the two are one. */
+      const extra = {
+        tag: notifTag({ id: r.id, type: r.type, room_id: r.room.id }),
+        icon: r.actor?.avatar_url ?? undefined,
+        id: r.id,
+        ts: Date.now(),
+      };
       if (r.type === "followed_live") {
-        payloads.set(r.user_id, { title: `${who} is live`, body: `${motion} — join the amphitheater.`, url });
+        payloads.set(r.user_id, { title: `${who} is live`, body: `${motion} — join the amphitheater.`, url, ...extra });
       } else if (r.type === "followed_scheduled") {
         const when = whenLabel(r.room.scheduled_start);
         payloads.set(r.user_id, {
           title: `${who} scheduled a discussion`,
           body: `${motion}${when ? ` · ${when}` : ""}`,
           url,
+          ...extra,
         });
       } else {
-        payloads.set(r.user_id, { title: "Your recording is ready", body: `${motion} — watch it back.`, url });
+        payloads.set(r.user_id, { title: "Your replay is ready", body: `${motion} — watch it back.`, url, ...extra });
       }
     }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  actorPhrase, formatScheduledStart, matchesFilter, notifHref, notifIcon, notifText, timeAgo,
-  type NotifRow,
+  PREF_GROUPS, actorPhrase, formatScheduledStart, matchesFilter, notifAlert, notifHref, notifIcon,
+  notifTag, notifText, timeAgo, type NotifRow,
 } from "./notifications";
 
 function row(over: Partial<NotifRow>): NotifRow {
@@ -130,5 +130,60 @@ describe("timeAgo", () => {
     expect(timeAgo("2026-08-22T09:30:00Z", now)).toBe("30m");
     expect(timeAgo("2026-08-22T04:00:00Z", now)).toBe("6h");
     expect(timeAgo("2026-08-19T10:00:00Z", now)).toBe("3d");
+  });
+});
+
+describe("notifAlert (system notifications)", () => {
+  it("puts who and what in the title, the thing itself in the body", () => {
+    expect(notifAlert(row({ type: "followed_live", actor_display_name: "Ada L.", room_motion: "Tax the robots" })))
+      .toEqual({ title: "Ada L. is live", body: "“Tax the robots” — join the amphitheater." });
+    expect(notifAlert(row({ type: "post_comment", post_title: "Tax the robots", comment_excerpt: "Hard agree" })))
+      .toEqual({ title: "ada commented on your post", body: "“Hard agree”" });
+    expect(notifAlert(row({ type: "post_comment", post_title: "Tax the robots", meta: { count: 3 } })))
+      .toEqual({ title: "ada and 2 others commented on your post", body: "“Tax the robots”" });
+    expect(notifAlert(row({ type: "post_reply", post_title: "Tax the robots" })))
+      .toEqual({ title: "ada replied to your comment", body: "On “Tax the robots”" });
+    expect(notifAlert(row({ type: "post_upvotes", post_title: "Tax the robots", meta: { milestone: 25 } })))
+      .toEqual({ title: "Your post hit 25 upvotes", body: "“Tax the robots”" });
+    expect(notifAlert(row({ type: "community_post", community_name: "Economics", post_title: "Rent" })))
+      .toEqual({ title: "ada posted in Economics", body: "“Rent”" });
+    expect(notifAlert(row({ type: "join_approved", actor_id: null, meta: { community_name: "Economics" } })))
+      .toEqual({ title: "You're in", body: "Your application to Economics was approved" });
+  });
+  it("gives a friend request the handle when the title used the name", () => {
+    expect(notifAlert(row({ type: "new_follower", actor_display_name: "Ada L." })))
+      .toEqual({ title: "Ada L. wants to be your friend", body: "@ada" });
+    expect(notifAlert(row({ type: "new_follower" }))).toEqual({ title: "ada wants to be your friend", body: "" });
+  });
+  it("matches the pushed copy for the kinds the server pushes", () => {
+    expect(notifAlert(row({ type: "room_starting_soon", actor_id: null, room_motion: "Tax the robots" })))
+      .toEqual({ title: "Starting in 30 minutes", body: "“Tax the robots” — doors are open, take your seat." });
+    expect(notifAlert(row({ type: "debate_replay_ready", actor_id: null, room_motion: "Tax the robots" })))
+      .toEqual({ title: "Your replay is ready", body: "“Tax the robots” — watch it back." });
+  });
+  it("has words for every kind the preferences list", () => {
+    for (const g of PREF_GROUPS) for (const item of g.items) {
+      const a = notifAlert(row({ type: item.type, room_id: "r1", room_motion: "M", post_title: "P" }));
+      expect(a.title).not.toBe("AgoraSphere");
+      expect(a.title.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("notifTag", () => {
+  it("makes one alert per room for the room kinds, one per row otherwise", () => {
+    expect(notifTag(row({ id: "n1", type: "room_live", room_id: "r1" }))).toBe("live:r1");
+    expect(notifTag(row({ id: "n2", type: "followed_live", room_id: "r1" }))).toBe("live:r1");
+    expect(notifTag(row({ id: "n3", type: "room_starting_soon", room_id: "r1" }))).toBe("soon:r1");
+    expect(notifTag(row({ id: "n4", type: "debate_replay_ready", room_id: "r1" }))).toBe("replay:r1");
+    expect(notifTag(row({ id: "n5", type: "room_invite", room_id: "r1" }))).toBe("n:n5");
+    expect(notifTag(row({ id: "n6", type: "post_comment" }))).toBe("n:n6");
+  });
+});
+
+describe("preference labels", () => {
+  it("say community, never board", () => {
+    const words = PREF_GROUPS.flatMap((g) => [g.title, ...g.items.flatMap((i) => [i.label, i.sub])]).join(" ");
+    expect(words).not.toMatch(/\bboards?\b/i);
   });
 });

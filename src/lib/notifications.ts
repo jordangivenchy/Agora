@@ -169,6 +169,83 @@ export function notifText(n: NotifRow, now: Date = new Date()): string {
   }
 }
 
+/** A system notification (Chrome's own, outside the page): what
+    happened in a few words as the title, the thing it is about — the
+    discussion, the thread, the words of the comment — as the body. The
+    sentence the bell shows, split in two, so neither line repeats the
+    other. */
+export function notifAlert(n: NotifRow, now: Date = new Date()): { title: string; body: string } {
+  const who = actorLabel(n);
+  const motion = q(n.room_motion, "a discussion");
+  const post = q(n.post_title, "your post");
+  const community = n.community_name ?? (n.meta?.community_name as string | undefined);
+  const excerpt = notifDetail(n);
+  switch (n.type) {
+    case "new_follower":
+      return { title: `${who} wants to be your friend`, body: n.actor_display_name && n.actor_username ? `@${n.actor_username}` : "" };
+    case "friend_accepted":
+      return { title: `${who} accepted your friend request`, body: "You're now friends" };
+    case "room_live":
+      return { title: n.actor_id ? `${who} is live` : "Live now", body: `${motion} — join the amphitheater.` };
+    case "followed_live":
+      return { title: `${actorLabel(n, "Someone you follow")} is live`, body: `${motion} — join the amphitheater.` };
+    case "followed_scheduled": {
+      const when = formatScheduledStart(
+        (n.meta?.scheduled_start as string | undefined) ?? n.room_scheduled_start, now);
+      return { title: `${actorLabel(n, "Someone you follow")} scheduled a discussion`, body: `${motion}${when ? ` · ${when}` : ""}` };
+    }
+    case "room_starting_soon":
+      return { title: "Starting in 30 minutes", body: `${motion} — doors are open, take your seat.` };
+    case "room_invite":
+      return { title: `${actorLabel(n, "A friend")} invited you to a room`, body: q(n.room_motion, "Their room") };
+    case "debate_replay_ready":
+      return { title: "Your replay is ready", body: `${motion} — watch it back.` };
+    case "discussion_opened":
+      return { title: `${who} started the discussion`, body: `On ${motion}` };
+    case "community_post":
+      return { title: `${who} posted in ${community ?? "a community you joined"}`, body: q(n.post_title, "A new thread") };
+    case "community_debate":
+      return { title: `New discussion in ${community ?? "your community"}`, body: motion };
+    case "mention":
+      return { title: `${who} mentioned you`, body: `In ${q(n.post_title, "a thread")}` };
+    case "post_comment":
+      return { title: `${actorPhrase(n)} commented on your post`, body: excerpt ? `“${excerpt}”` : post };
+    case "post_reply":
+      return { title: `${actorPhrase(n)} replied to your comment`, body: excerpt ? `“${excerpt}”` : `On ${post}` };
+    case "post_upvotes": {
+      const m = metaMilestone(n);
+      return { title: `Your post hit ${m ?? "a new"} upvotes`, body: post };
+    }
+    case "comment_upvotes": {
+      const m = metaMilestone(n);
+      return { title: `Your comment hit ${m ?? "a new"} upvotes`, body: `On ${post}` };
+    }
+    case "repost":
+      return { title: `${actorPhrase(n)} reposted your post`, body: post };
+    case "join_request":
+      return { title: `${actorPhrase(n)} applied to join ${community ?? "your community"}`, body: "Waiting for your answer" };
+    case "join_approved":
+      return { title: "You're in", body: `Your application to ${community ?? "the community"} was approved` };
+    default:
+      return { title: "AgoraSphere", body: "New activity" };
+  }
+}
+
+/** One system notification per thing: the room kinds share a key per
+    room — two reasons to hear one room went live make one alert, and the
+    web push for it replaces the one the open page already raised — and
+    everything else is its own row (a grouped row that grows replaces
+    itself). */
+export function notifTag(n: Pick<NotifRow, "id" | "type" | "room_id">): string {
+  if (n.room_id) {
+    if (n.type === "room_live" || n.type === "followed_live") return `live:${n.room_id}`;
+    if (n.type === "followed_scheduled") return `scheduled:${n.room_id}`;
+    if (n.type === "room_starting_soon") return `soon:${n.room_id}`;
+    if (n.type === "debate_replay_ready") return `replay:${n.room_id}`;
+  }
+  return `n:${n.id}`;
+}
+
 /** Secondary line under the sentence, when there's something worth quoting. */
 export function notifDetail(n: NotifRow): string | null {
   if ((n.type === "post_comment" || n.type === "post_reply") && n.comment_excerpt && metaCount(n) === 1) {
@@ -255,8 +332,8 @@ export const PREF_GROUPS: PrefGroup[] = [
       { type: "post_upvotes", label: "Post milestones", sub: "When a post hits 5, 25 or 100 upvotes" },
       { type: "comment_upvotes", label: "Comment milestones", sub: "When a comment hits 5 or 25 upvotes" },
       { type: "repost", label: "Reposts", sub: "When someone shares your post to another community" },
-      { type: "join_request", label: "Applications", sub: "When someone applies to a board you moderate" },
-      { type: "join_approved", label: "Application approved", sub: "When a board you applied to lets you in" },
+      { type: "join_request", label: "Applications", sub: "When someone applies to a community you moderate" },
+      { type: "join_approved", label: "Application approved", sub: "When a community you applied to lets you in" },
     ],
   },
   {

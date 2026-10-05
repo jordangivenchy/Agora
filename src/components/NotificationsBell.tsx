@@ -10,18 +10,22 @@
    - <NotificationsBell container={el} />    → portal (MVP homepage navbar)
 
    Delivery: the dropdown lists the latest 30 with an unread badge;
-   opening it marks everything read. A realtime INSERT subscription keeps
-   the badge live and, when the user has granted permission (asked the
-   first time they open the bell), raises an OS notification so go-live
-   and starting-soon events reach them even in another tab. */
+   opening it marks everything read. A realtime subscription keeps the
+   badge live and announces what lands: while you're on the page, as a
+   pop-up under the bell (NotificationToasts); while you're away from it
+   — another tab, another app — as a system notification, once you've
+   allowed them (asked the first time you open the bell). Both say who
+   and what, and both open what they're about. */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
 import { notifHref, type NotifRow } from "@/lib/notifications";
+import { OPEN_NOTIFICATION, raiseSystemAlert } from "@/lib/notifAlerts";
 import NotificationsPanel, { type PushState } from "@/components/notifications/NotificationsPanel";
+import NotificationToasts, { type Toast } from "@/components/notifications/NotificationToasts";
 import { sessionUser } from "@/lib/session";
 import { goTo } from "@/lib/softNav";
 
@@ -36,29 +40,8 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-/* One-line OS-notification bodies per type (the realtime payload carries
-   no joined names, so these stay generic). */
-const OS_BODY: Record<string, string> = {
-  room_starting_soon: "A discussion you set a reminder for starts soon.",
-  room_live: "A discussion you set a reminder for just went live.",
-  followed_live: "Someone you follow just went live.",
-  followed_scheduled: "Someone you follow scheduled a discussion.",
-  debate_replay_ready: "Your replay is ready to watch.",
-  join_request: "Someone applied to join your community.",
-  join_approved: "Your community application was approved.",
-  discussion_opened: "Someone opened the comment thread on your discussion.",
-  friend_accepted: "Friend request accepted — you're now friends.",
-  room_invite: "A friend invited you to a room.",
-  community_post: "New post in a community you joined.",
-  community_debate: "A discussion was started in your community.",
-  mention: "Someone mentioned you in a thread.",
-  post_comment: "Someone commented on your post.",
-  post_reply: "Someone replied to your comment.",
-  post_upvotes: "Your post hit an upvote milestone.",
-  comment_upvotes: "Your comment hit an upvote milestone.",
-  repost: "Someone reposted your post.",
-  new_follower: "Someone wants to be your friend.",
-};
+/* Pop-ups up at once; another sends the oldest on its way. */
+const TOAST_LIMIT = 3;
 
 export default function NotificationsBell({ container }: Props) {
   const [supabase] = useState(() => createClient());
@@ -71,17 +54,23 @@ export default function NotificationsBell({ container }: Props) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   useEscapeClose(open, () => setOpen(false));
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toastAnchor, setToastAnchor] = useState<DOMRect | null>(null);
+  /* Each row as last seen, id → created_at: a grouped row that grows
+     ("… and 2 others") comes back unread with a new time. */
+  const seen = useRef(new Map<string, string>());
 
   const unread = items.filter((n) => !n.read_at).length;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<NotifRow[]> => {
     const { data: auth } = await sessionUser(supabase);
     const uid = auth?.user?.id ?? null;
     setUserId(uid);
-    if (!uid) return;
+    if (!uid) return [];
     const { data } = await supabase.rpc("get_notifications", { p_limit: 30, p_before: null });
     const rows = (data ?? []) as NotifRow[];
     setItems(rows);
+    for (const r of rows) seen.current.set(r.id, r.created_at);
     const actorIds = [...new Set(rows.filter((n) => n.type === "new_follower" && n.actor_id).map((n) => n.actor_id!))];
     if (actorIds.length) {
       const { data: follows } = await supabase
@@ -91,6 +80,7 @@ export default function NotificationsBell({ container }: Props) {
         .in("following_id", actorIds);
       setFollowedBack(new Set(((follows ?? []) as { following_id: string }[]).map((f) => f.following_id)));
     }
+    return rows;
   }, [supabase]);
 
   useEffect(() => { load(); }, [load]);
@@ -158,38 +148,121 @@ export default function NotificationsBell({ container }: Props) {
     }
   }, [pushState]);
 
-  /* Realtime: RLS scopes the stream to my own rows. Re-load on insert so
-     the actor/room names come joined; raise an OS notification when
-     permitted (delivery beyond the current tab). */
+  const markRead = useCallback(
+    (id: string) => {
+      setItems((xs) => xs.map((x) => (x.id === id && !x.read_at ? { ...x, read_at: new Date().toISOString() } : x)));
+      supabase.rpc("mark_notification_read", { p_id: id });
+    },
+    [supabase]
+  );
+
+  const openItem = useCallback(
+    (n: NotifRow) => {
+      const href = notifHref(n);
+      if (!n.read_at) markRead(n.id);
+      if (href) goTo(href);
+    },
+    [markRead]
+  );
+
+  const accept = useCallback(
+    async (n: NotifRow) => {
+      const { error } = await supabase.rpc("follow_user", { p_target: n.actor_id });
+      if (!error && n.actor_id) setFollowedBack((s) => new Set(s).add(n.actor_id!));
+    },
+    [supabase]
+  );
+
+  /* Pop-ups: a new one on top (a grouped row that grew takes its own
+     place again, its time started over); past the limit, the oldest
+     goes. Closing one lets it fade before it's taken away
+     (NotificationToasts). */
+  const showToast = useCallback((n: NotifRow) => {
+    setToastAnchor(wrapRef.current?.getBoundingClientRect() ?? null);
+    setToasts((ts) => {
+      if (ts.some((t) => t.n.id === n.id)) return ts.map((t) => (t.n.id === n.id ? { n, leaving: false } : t));
+      let kept = 0;
+      return [{ n, leaving: false }, ...ts].map((t) => (t.leaving || ++kept <= TOAST_LIMIT ? t : { ...t, leaving: true }));
+    });
+  }, []);
+  const closeToast = useCallback((id: string) => {
+    setToasts((ts) => ts.map((t) => (t.n.id === id ? { ...t, leaving: true } : t)));
+  }, []);
+  const dropToast = useCallback((id: string) => {
+    setToasts((ts) => ts.filter((t) => t.n.id !== id || !t.leaving));
+  }, []);
+  useEffect(() => {
+    if (!toasts.length) return;
+    const measure = () => setToastAnchor(wrapRef.current?.getBoundingClientRect() ?? null);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [toasts.length]);
+
+  /* Something new for you: a pop-up if you're looking at this page (not
+     with the list open — it's in there — nor with a room lying over the
+     page), a system notification if you're not (another tab, another
+     app in front). */
+  const announce = useEffectEvent((n: NotifRow) => {
+    const looking = document.visibilityState === "visible";
+    const roomOver = document.documentElement.classList.contains("agora-covered");
+    if (looking && !open && !roomOver) showToast(n);
+    if (!document.hasFocus()) void raiseSystemAlert(n, openItem);
+  });
+
+  /* Realtime: RLS scopes the stream to my own rows. Re-load on each
+     change so names come joined; announce rows that are new, and
+     grouped rows that grew (an update that moves an unread row's time —
+     not marking read, nor the push dispatcher stamping it sent). */
   useEffect(() => {
     if (!userId) return;
+    const arrived = async (id: string) => {
+      const rows = await load();
+      const n = rows.find((r) => r.id === id);
+      if (n && !n.read_at) announce(n);
+    };
     const channel = supabase
       .channel("notif-bell")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         (payload) => {
-          load();
-          const row = payload.new as { type?: string; room_id?: string; post_id?: string };
-          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            const body = OS_BODY[row.type ?? ""] ?? "New activity on AgoraSphere.";
-            const n = new Notification("AgoraSphere", { body });
-            n.onclick = () => {
-              window.focus();
-              if (row.post_id) goTo(`/posts/${row.post_id}`);
-              else if (row.room_id) window.location.href = `/agora/${row.room_id}`;
-            };
-          }
+          void arrived((payload.new as { id: string }).id);
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        () => { load(); }
+        (payload) => {
+          const row = payload.new as { id: string; read_at: string | null; created_at: string };
+          const was = seen.current.get(row.id);
+          if (!row.read_at && was !== undefined && was !== row.created_at) void arrived(row.id);
+          else load();
+        }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [userId, supabase, load]);
+
+  /* A click on a system notification, handed to this tab by the worker
+     (which waits to hear it was taken, or opens a tab of its own): there
+     in the page, so a call carries on minimized, and it's read. */
+  const openFromAlert = useEffectEvent((url: string | null, id: string | null) => {
+    if (id) markRead(id);
+    if (url) goTo(url);
+  });
+  useEffect(() => {
+    if (!userId || !("serviceWorker" in navigator)) return;
+    const sw = navigator.serviceWorker;
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as { type?: string; url?: string | null; id?: string | null } | null;
+      if (d?.type !== OPEN_NOTIFICATION) return;
+      e.ports[0]?.postMessage("opened");
+      openFromAlert(d.url ?? null, d.id ?? null);
+    };
+    sw.addEventListener("message", onMessage);
+    sw.startMessages();
+    return () => sw.removeEventListener("message", onMessage);
+  }, [userId]);
 
   /* The panel's scrim handles click-away; keep its anchor honest while
      the window resizes. */
@@ -205,6 +278,8 @@ export default function NotificationsBell({ container }: Props) {
     setAnchor(wrapRef.current?.getBoundingClientRect() ?? null);
     setOpen(next);
     if (!next) return;
+    /* The list has them all now. */
+    setToasts((ts) => ts.map((t) => (t.leaving ? t : { ...t, leaving: true })));
     // First open doubles as the browser-notification permission ask —
     // it's a user gesture, so the prompt is allowed.
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
@@ -217,18 +292,6 @@ export default function NotificationsBell({ container }: Props) {
     setItems((xs) => xs.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
     await supabase.rpc("mark_all_notifications_read");
   }, [unread, supabase]);
-
-  const openItem = useCallback(
-    (n: NotifRow) => {
-      const href = notifHref(n);
-      if (!n.read_at) {
-        setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
-        supabase.rpc("mark_notification_read", { p_id: n.id });
-      }
-      if (href) goTo(href);
-    },
-    [supabase]
-  );
 
   if (!userId) return null;
 
@@ -283,12 +346,19 @@ export default function NotificationsBell({ container }: Props) {
         onClose={() => setOpen(false)}
         onMarkAllRead={markAllRead}
         onOpen={openItem}
-        onAccept={async (n) => {
-          const { error } = await supabase.rpc("follow_user", { p_target: n.actor_id });
-          if (!error && n.actor_id) setFollowedBack((s) => new Set(s).add(n.actor_id!));
-        }}
+        onAccept={accept}
         onDismiss={(n) => setDismissed((s) => new Set(s).add(n.id))}
         onTogglePush={togglePush}
+      />
+
+      <NotificationToasts
+        toasts={toasts}
+        anchor={toastAnchor}
+        followedBack={followedBack}
+        onOpen={(n) => { closeToast(n.id); openItem(n); }}
+        onAccept={(n) => { closeToast(n.id); void accept(n); }}
+        onClose={closeToast}
+        onGone={dropToast}
       />
     </div>
   );
