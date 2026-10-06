@@ -40,10 +40,20 @@ export interface GlassProps extends ViewProps {
       own ("auto") and flip its icons dark — a jolt on the one screen
       everyone opens first. Dark unless a surface says otherwise. */
   scheme?: "auto" | "light" | "dark";
+  /** For a surface that comes and goes: whether its material is there.
+      Glass can't be faded — a view that has been at no opacity, or sat
+      in one that was, is left without the effect for good (Expo's
+      GlassView notes) — so the material is turned on and off instead,
+      which the system draws as its own materialise. Leave out for a
+      surface that is simply there. The fallback has no material to turn:
+      whoever shows it fades it as any view. */
+  present?: boolean;
+  /** How long the material takes to come or go. */
+  presentSeconds?: number;
   children?: ReactNode;
 }
 
-export function Glass({ fallback, fallbackStyle, clear = false, tint, interactive = false, scheme = "dark", style, children, ...rest }: GlassProps) {
+export function Glass({ fallback, fallbackStyle, clear = false, tint, interactive = false, scheme = "dark", present, presentSeconds = 0.2, style, children, ...rest }: GlassProps) {
   if (!glassAvailable) {
     return (
       <View style={[style, { backgroundColor: fallback }, fallbackStyle]} {...rest}>
@@ -51,8 +61,16 @@ export function Glass({ fallback, fallbackStyle, clear = false, tint, interactiv
       </View>
     );
   }
+  const material = clear ? "clear" : "regular";
   return (
-    <GlassView style={style} glassEffectStyle={clear ? "clear" : "regular"} tintColor={tint} isInteractive={interactive} colorScheme={scheme} {...rest}>
+    <GlassView
+      style={style}
+      glassEffectStyle={present === undefined ? material : { style: present ? material : "none", animate: true, animationDuration: presentSeconds }}
+      tintColor={tint}
+      isInteractive={interactive}
+      colorScheme={scheme}
+      {...rest}
+    >
       {children}
     </GlassView>
   );

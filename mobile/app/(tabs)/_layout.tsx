@@ -16,7 +16,7 @@ import { useSession } from "../../src/session";
 import { MiniPlayer } from "../../src/miniPlayer";
 import { QueueDock } from "../../src/queue";
 import { tabBarTop } from "../../src/tabBar";
-import { useCreate } from "../../src/create";
+import { CreateMenuHost, useCreate } from "../../src/create";
 import type { IconName } from "../../src/topics";
 import { colors } from "../../src/theme";
 import { Spinner } from "../../src/ui";
@@ -81,6 +81,8 @@ export default function TabsLayout() {
         <MiniPlayer />
       </View>
       <QueueDock bottom={aboveBar} />
+      {/* Over the bar it rises from, and over everything else here. */}
+      <CreateMenuHost />
     </View>
   );
 }

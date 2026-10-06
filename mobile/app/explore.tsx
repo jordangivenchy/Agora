@@ -9,6 +9,7 @@ import { fetchExploreRooms, fetchExploreStats, type ExploreRoom, type ExploreSta
 import { RoomSquare } from "../src/roomCard";
 import { TOPICS, darkInkOn } from "../src/topics";
 import { same, useFocusRefresh } from "../src/refresh";
+import { Starfield } from "../src/starfield";
 import { colors, fonts } from "../src/theme";
 import { Note } from "../src/ui";
 
@@ -85,6 +86,10 @@ export default function Explore() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
         ListHeaderComponent={
+          <View>
+          {/* The sky Home has, behind the page as it scrolls: this page
+              opens from Home now, and the stars went out on the way in. */}
+          <Starfield width={width} height={1100} />
           <View style={{ paddingHorizontal: 16 }}>
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 24, lineHeight: 36, letterSpacing: -0.3, marginTop: 8 }}>Explore discussions</Text>
             <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }}>Find a live room, join a queue, or sign up for one coming up</Text>
@@ -114,6 +119,7 @@ export default function Explore() {
             <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11.5, marginTop: 14, marginBottom: 10 }}>
               {list === null ? "Loading…" : `Showing ${list.length} discussion${list.length === 1 ? "" : "s"}`}
             </Text>
+          </View>
           </View>
         }
         renderItem={({ item }) => <RoomSquare room={item} size={size} onPress={() => router.push({ pathname: "/room/[id]", params: { id: item.id } })} />}

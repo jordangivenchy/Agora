@@ -5,12 +5,18 @@
    the formatting strip; the community's tags and, for a verified
    account, the conversation people can queue into; a clip riding along
    from its page. Typing @ offers people (search_mention_users, as the
-   site's editor does). The same sheet edits a post's text. */
+   site's editor does). The same sheet edits a post's text.
+
+   It comes and goes the way the app's other sheets do (sheetModal.tsx):
+   ComposerSheet is the composer as a sheet of its own; ComposerPanel is
+   the panel alone, for a sheet that shows something first and hands over
+   to it (Write a post, create.tsx: where it goes, then the composer). */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
+import { SheetModal } from "./sheetModal";
 import { EmojiPicker } from "./emojiPicker";
 import { GifPicker, giphyEnabled } from "./gifPicker";
 import { pickImage, uploadPostImage, type PickedImage } from "./postImages";
@@ -32,8 +38,7 @@ export interface ComposeClip { id: string; title: string; duration: string | nul
 
 type MentionUser = { id: string; username: string; display_name: string | null; avatar_url: string | null };
 
-export function ComposerSheet({ open, kind, initialBody, context, contextName, communityId, userId, canAttachTopic, clip, onClose, onSubmit }: {
-  open: boolean;
+export interface ComposerProps {
   /** "edit": a post's text only, prefilled, saved in place. */
   kind: "post" | "comment" | "edit";
   initialBody?: string;
@@ -50,11 +55,30 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
   onClose: () => void;
   /** Resolves to an error to show, or null when it went through. */
   onSubmit: (input: ComposerResult) => Promise<string | null>;
-}) {
+}
+
+export function ComposerSheet({ open, ...props }: ComposerProps & { open: boolean }) {
+  /* Empty fields at every opening, even one that catches the last still leaving. */
+  const [run, setRun] = useState({ open, n: 0 });
+  if (run.open !== open) setRun({ open, n: open ? run.n + 1 : run.n });
+  /* What it showed stays while it leaves: callers clear what it answers as they close it. */
+  const held = useRef(props);
+  if (open) held.current = props;
+  return (
+    <SheetModal open={open} onClose={props.onClose}>
+      <ComposerPanel key={run.n} {...(open ? props : held.current)} />
+    </SheetModal>
+  );
+}
+
+/* The panel fills the sheet's space from the foot up, so the keyboard can
+   be measured against the screen and the panel kept clear of it (and of
+   the status bar, giving up height before it would run under either). */
+export function ComposerPanel({ kind, initialBody, context, contextName, communityId, userId, canAttachTopic, clip, onClose, onSubmit }: ComposerProps) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [title, setTitle] = useState(clip?.title ?? "");
+  const [body, setBody] = useState(initialBody ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attach, setAttach] = useState<PickedImage | null>(null);
@@ -67,9 +91,6 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
   const [sel, setSel] = useState({ start: 0, end: 0 });
   const bodyRef = useRef<TextInput>(null);
   const [mentions, setMentions] = useState<MentionUser[]>([]);
-  useEffect(() => {
-    if (open) { setTitle(clip?.title ?? ""); setBody(initialBody ?? ""); setError(null); setBusy(false); setAttach(null); setGif(null); setPicker(null); setFormat(false); setTagId(null); setTopic(EMPTY_TOPIC); setMentions([]); }
-  }, [open, clip?.title, initialBody]);
 
   /* The @name being typed right before the caret, as the site's editor
      finds it: at the start or after anything but a word character or a
@@ -100,9 +121,9 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
     requestAnimationFrame(() => bodyRef.current?.setSelection(caret, caret));
   };
   useEffect(() => {
-    if (!open || kind !== "post" || !communityId) { setTags([]); return; }
+    if (kind !== "post" || !communityId) { setTags([]); return; }
     void fetchTags(supabase, communityId).then(setTags);
-  }, [open, kind, communityId]);
+  }, [kind, communityId]);
 
   const max = kind === "comment" ? 4000 : POST_BODY_MAX;
   const canSend = !busy && (kind === "post" ? !!title.trim() : kind === "edit" ? true : !!body.trim() || !!attach || !!gif) && body.length <= max;
@@ -142,10 +163,9 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
   );
 
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)" }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={{ backgroundColor: colors.surface2, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: "#23232b", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 + insets.bottom, maxHeight: Math.round(height * 0.86) }}>
+    <>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} pointerEvents="box-none" style={{ flex: 1, justifyContent: "flex-end", paddingTop: insets.top }}>
+        <View style={{ backgroundColor: colors.surface2, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: "#23232b", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 + insets.bottom, maxHeight: Math.round(height * 0.86), flexShrink: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 36 }}>
             <Pressable onPress={onClose} hitSlop={8}><Text style={{ color: "#c3c3ce", fontFamily: fonts.body, fontSize: 15 }}>Cancel</Text></Pressable>
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{kind === "post" ? (clip ? "Post clip" : "New post") : kind === "edit" ? "Edit post" : "Comment"}</Text>
@@ -257,6 +277,6 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
       </KeyboardAvoidingView>
       <EmojiPicker open={picker === "emoji"} onClose={() => setPicker(null)} onPick={(e) => { insert(e); setPicker(null); }} />
       <GifPicker open={picker === "gif"} onClose={() => setPicker(null)} onPick={(u) => { setGif(u); setAttach(null); }} />
-    </Modal>
+    </>
   );
 }
