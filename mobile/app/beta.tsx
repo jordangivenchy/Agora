@@ -9,13 +9,13 @@ import {
   ActivityIndicator, Animated, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View,
   useWindowDimensions,
 } from "react-native";
-import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../src/session";
 import { Starfield } from "../src/starfield";
 import { useReduceMotion } from "../src/motion";
 import { DISCORD_INVITE } from "../src/links";
 import { colors, fonts } from "../src/theme";
+import { goHome } from "../src/goHome";
 
 const LOGO_RATIO = 2039 / 274;
 /* The key reads best in a fixed-width face; the phone's own. */
@@ -44,7 +44,7 @@ export default function Beta() {
     setError(null);
     const err = await redeemKey(code);
     setBusy(false);
-    if (!err) { router.replace("/"); return; }
+    if (!err) { goHome(); return; }
     setError(err);
     if (!reduce) {
       shake.setValue(0);
@@ -94,7 +94,7 @@ export default function Beta() {
                   onBlur={() => setFocused(false)}
                   onSubmitEditing={submit}
                   placeholder="AGORA-XXXX-XXXX"
-                  placeholderTextColor="#4b4b55"
+                  placeholderTextColor="#7f7f89"
                   accessibilityLabel="Beta key"
                   autoCapitalize="characters"
                   autoCorrect={false}
@@ -136,7 +136,7 @@ export default function Beta() {
                 <Text onPress={() => void Linking.openURL(DISCORD_INVITE)} accessibilityRole="link" style={{ color: colors.yellow, fontFamily: fonts.semi }}>Discord</Text>.
               </Text>
             </View>
-            <Text style={{ marginTop: 18, textAlign: "center", color: "#55555f", fontFamily: fonts.body, fontSize: 11.5 }}>Each key lets one device in for 30 days.</Text>
+            <Text style={{ marginTop: 18, textAlign: "center", color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>Each key lets one device in for 30 days.</Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

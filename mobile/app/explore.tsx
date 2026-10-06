@@ -4,14 +4,13 @@ import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../../src/supabase";
-import { fetchExploreRooms, fetchExploreStats, type ExploreRoom, type ExploreStats } from "../../src/discover";
-import { RoomSquare } from "../../src/roomCard";
-import { TOPICS, darkInkOn } from "../../src/topics";
-import { HomeHeader } from "../../src/header";
-import { same, useFocusRefresh } from "../../src/refresh";
-import { colors, fonts } from "../../src/theme";
-import { Note } from "../../src/ui";
+import { supabase } from "../src/supabase";
+import { fetchExploreRooms, fetchExploreStats, type ExploreRoom, type ExploreStats } from "../src/discover";
+import { RoomSquare } from "../src/roomCard";
+import { TOPICS, darkInkOn } from "../src/topics";
+import { same, useFocusRefresh } from "../src/refresh";
+import { colors, fonts } from "../src/theme";
+import { Note } from "../src/ui";
 
 type StatusKey = "all" | "live" | "created" | "scheduled";
 const STATUS: { key: StatusKey; label: string }[] = [
@@ -77,13 +76,12 @@ export default function Explore() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <HomeHeader />
       <FlatList
         data={list ?? []}
         keyExtractor={(r) => r.id}
         numColumns={2}
         columnWrapperStyle={{ gap: 12, paddingHorizontal: 16, marginBottom: 12 }}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
         ListHeaderComponent={
@@ -94,13 +92,13 @@ export default function Explore() {
               {[["Active rooms", stats?.activeRooms], ["Members", stats?.members], ["Watching now", stats?.watching]].map(([label, value], i) => (
                 <View key={String(label)} style={{ flex: 1, flexDirection: "row", alignItems: "baseline", gap: 6, justifyContent: i === 0 ? "flex-start" : i === 1 ? "center" : "flex-end" }}>
                   <Text style={{ color: colors.yellow, fontFamily: fonts.title, fontSize: 20, letterSpacing: -0.5 }}>{value ?? "—"}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.45)", fontFamily: fonts.medium, fontSize: 10, letterSpacing: 0.7 }}>{String(label).toUpperCase()}</Text>
+                  <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.medium, fontSize: 10, letterSpacing: 0.7 }}>{String(label).toUpperCase()}</Text>
                 </View>
               ))}
             </View>
             <View style={{ marginTop: 12, height: 40, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", paddingLeft: 12 }}>
-              <Ionicons name="search-outline" size={15} color="rgba(255,255,255,0.3)" />
-              <TextInput value={query} onChangeText={setQuery} placeholder="Search topics, people, or keywords…" placeholderTextColor="rgba(255,255,255,0.25)" autoCorrect={false} style={{ flex: 1, height: 40, paddingHorizontal: 10, color: "rgba(255,255,255,0.85)", fontFamily: fonts.body, fontSize: 14 }} />
+              <Ionicons name="search-outline" size={15} color="rgba(255,255,255,0.5)" />
+              <TextInput value={query} onChangeText={setQuery} placeholder="Search topics, people, or keywords…" placeholderTextColor="rgba(255,255,255,0.5)" autoCorrect={false} style={{ flex: 1, height: 40, paddingHorizontal: 10, color: "rgba(255,255,255,0.85)", fontFamily: fonts.body, fontSize: 14 }} />
             </View>
             <Text style={label}>Category</Text>
             <View style={pills}>
@@ -125,5 +123,5 @@ export default function Explore() {
   );
 }
 
-const label = { color: "rgba(255,255,255,0.3)", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 0.9, marginTop: 12, marginBottom: 7 } as const;
+const label = { color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 0.9, marginTop: 12, marginBottom: 7 } as const;
 const pills = { flexDirection: "row", flexWrap: "wrap", gap: 5 } as const;

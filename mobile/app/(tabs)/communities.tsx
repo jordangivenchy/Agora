@@ -19,10 +19,11 @@ import { showToast } from "../../src/toast";
 import { useCreate } from "../../src/create";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
+import { lazyTab } from "../../src/tabBar";
 
 const SORTS: { key: PostSort; label: string }[] = [{ key: "best", label: "Best" }, { key: "new", label: "New" }, { key: "top", label: "Top" }];
 
-export default function Communities() {
+function Communities() {
   const { session } = useSession();
   const uid = session?.user.id ?? null;
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -111,7 +112,7 @@ export default function Communities() {
         <Text numberOfLines={1} style={{ color: "#eeeef5", fontFamily: fonts.body, fontSize: 12.5 }}>
           {c.is_private && <Ionicons name="lock-closed-outline" size={11} color="#eeeef5" />}{c.is_private ? " " : ""}{c.name}
         </Text>
-        <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 10 }}>{c.members} member{c.members === 1 ? "" : "s"}</Text>
+        <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 10 }}>{c.members} member{c.members === 1 ? "" : "s"}</Text>
       </View>
       {c.joined ? (
         <Pressable onPress={() => void favorite(c)} hitSlop={8} accessibilityLabel={c.favorite ? "Remove bookmark" : "Bookmark this community"}>
@@ -172,7 +173,7 @@ export default function Communities() {
         }}
         ListEmptyComponent={
           loading ? (
-            <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 32 }}>Loading…</Text>
+            <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 32 }}>Loading…</Text>
           ) : (
             <View style={[CARD, { padding: 32, alignItems: "center" }]}>
               <Text style={{ color: "#eeeef5", fontFamily: fonts.body, fontSize: 13 }}>No posts yet</Text>
@@ -208,5 +209,8 @@ export default function Communities() {
 }
 
 function Label({ children }: { children: string }) {
-  return <Text style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6 }}>{children.toUpperCase()}</Text>;
+  return <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6 }}>{children.toUpperCase()}</Text>;
 }
+
+/* Built when first opened, not at launch (src/tabBar.tsx). */
+export default lazyTab(Communities);

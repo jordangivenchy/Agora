@@ -48,7 +48,7 @@ function Row({ seat, role, children }: { seat: Seat; role: StageRole; children: 
   );
 }
 
-const Head = ({ t }: { t: string }) => <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 0.9, marginTop: 14, marginBottom: 6 }}>{t.toUpperCase()}</Text>;
+const Head = ({ t }: { t: string }) => <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 0.9, marginTop: 14, marginBottom: 6 }}>{t.toUpperCase()}</Text>;
 const Hint = ({ t }: { t: string }) => <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, lineHeight: 15, marginTop: 6 }}>{t}</Text>;
 
 export function HostControlsSheet({ open, onClose, room, seats, meId, myRole, onChanged }: { open: boolean; onClose: () => void; room: RoomDetail; seats: Seat[]; meId: string; myRole: StageRole; onChanged: () => void }) {

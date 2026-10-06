@@ -1,77 +1,42 @@
-/* The site's phone tab bar: Home, Feed, Explore, the yellow Create,
-   Communities, Trending, News. Icons only; the active one wears yellow. */
-import { Pressable, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { IconName } from "./topics";
+/* The tab bar is Apple's own (app/(tabs)/_layout.tsx): on iOS 26 the
+   Liquid Glass capsule, whose selection lifts into a lens under a press
+   and follows a finger dragged along it. What is left here is what the
+   rest of the app needs to know about a bar it no longer draws: how
+   much of the screen's foot it takes, and a tab that waits to be opened.
+
+   The system gives no way to measure its bar, so its place is written
+   down: the capsule on iOS 26 (the same on every iPhone with a home
+   indicator, a little lower without one), the classic bar before. */
+import { useState, type ComponentType } from "react";
+import { Platform, View } from "react-native";
+import { useIsFocused } from "expo-router";
 import { colors } from "./theme";
-import { Glass } from "./glass";
 
-export const TAB_BAR_HEIGHT = 58;
-/** The gap under the floating capsule, above the home indicator — and the
-    room the mini-player and the queue leave for it. */
-export const TAB_BAR_FLOAT = 8;
-const TAB_BAR_INSET = 14;
+const IOS_26 = Platform.OS === "ios" && parseInt(String(Platform.Version), 10) >= 26;
+/* The capsule's height, and how far its foot sits above the screen's:
+   measured on the iPhone 17 Pro (iOS 26.5). */
+const CAPSULE_HEIGHT = 62;
+const CAPSULE_FOOT = 21;
+const CAPSULE_FOOT_NO_INDICATOR = 8;
+const CLASSIC_BAR_HEIGHT = 49;
 
-export interface TabBarProps {
-  state: { index: number; routes: { key: string; name: string }[] };
-  navigation: { navigate: (name: string) => void };
-  onCreate: () => void;
+/** From the screen's bottom edge to the top of the tab bar: where
+    something that rides above the bar (the mini-player, the queue) puts
+    its foot. `bottomInset` is the window's, not a tab screen's. */
+export function tabBarTop(bottomInset: number): number {
+  if (IOS_26) return CAPSULE_HEIGHT + (bottomInset > 0 ? CAPSULE_FOOT : CAPSULE_FOOT_NO_INDICATOR);
+  return CLASSIC_BAR_HEIGHT + bottomInset;
 }
 
-type Slot = { name: string; icon: IconName; label: string } | { create: true };
-const SLOTS: Slot[] = [
-  { name: "index", icon: "home-outline", label: "Home" },
-  { name: "feed", icon: "sparkles-outline", label: "Feed" },
-  { name: "explore", icon: "compass-outline", label: "Explore" },
-  { create: true },
-  { name: "communities", icon: "people-outline", label: "Communities" },
-  { name: "trending", icon: "flame-outline", label: "Trending" },
-  { name: "news", icon: "newspaper-outline", label: "News" },
-];
-
-export function AppTabBar({ state, navigation, onCreate }: TabBarProps) {
-  const insets = useSafeAreaInsets();
-  const current = state.routes[state.index]?.name;
-  return (
-    /* A capsule floating above the home indicator, the way iOS 26's own
-       bar sits, with the content passing under it: every tab pads its
-       bottom past the bar, so the last row scrolls up from beneath the
-       glass. Where there is no glass, a solid pill with a hairline. */
-    <Glass
-      fallback="#0e0e11"
-      fallbackStyle={{ borderWidth: 1, borderColor: "#23232b" }}
-      style={{ position: "absolute", left: TAB_BAR_INSET, right: TAB_BAR_INSET, bottom: insets.bottom + TAB_BAR_FLOAT, height: TAB_BAR_HEIGHT, borderRadius: TAB_BAR_HEIGHT / 2, overflow: "hidden", flexDirection: "row", paddingHorizontal: 6 }}
-    >
-      {SLOTS.map((slot) =>
-        "create" in slot ? (
-          <Pressable key="create" onPress={onCreate} accessibilityLabel="Create" style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            {({ pressed }) => (
-              /* Rasterized: its glow is a shadow, drawn offscreen on every frame of a screen sliding past otherwise. */
-              <View
-                shouldRasterizeIOS
-                style={{
-                  width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: colors.yellow,
-                  transform: [{ scale: pressed ? 0.96 : 1 }], shadowColor: colors.yellow, shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
-                }}
-              >
-                <Ionicons name="add" size={28} color={colors.ink} />
-              </View>
-            )}
-          </Pressable>
-        ) : (
-          <Pressable
-            key={slot.name}
-            onPress={() => navigation.navigate(slot.name)}
-            accessibilityRole="tab"
-            accessibilityLabel={slot.label}
-            accessibilityState={{ selected: current === slot.name }}
-            style={{ flex: 1, height: TAB_BAR_HEIGHT, alignItems: "center", justifyContent: "center" }}
-          >
-            <Ionicons name={slot.icon} size={22} color={current === slot.name ? colors.yellow : "#8b8b94"} />
-          </Pressable>
-        ),
-      )}
-    </Glass>
-  );
+/** A tab that isn't built until it is first opened. The system's bar
+    keeps every tab's screen at hand, which here would mean all five
+    fetching and laying out behind the opening sky; a tab not yet seen is
+    an empty page instead, and from the first visit it stays. */
+export function lazyTab<P extends object>(Screen: ComponentType<P>): ComponentType<P> {
+  return function LazyTab(props: P) {
+    const focused = useIsFocused();
+    const [seen, setSeen] = useState(focused);
+    if (focused && !seen) setSeen(true);
+    return seen ? <Screen {...props} /> : <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  };
 }

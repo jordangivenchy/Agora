@@ -117,7 +117,7 @@ export default function Messages() {
                       <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: unread > 0 ? fonts.bold : fonts.medium, fontSize: 14.5 }}>{title}</Text>
                       {it.kind === "dm" && <VerifiedMark id={it.t.peer_id} username={it.t.peer_username} size={14} />}
                     </View>
-                    <Text style={{ color: "#6f6f7a", fontFamily: fonts.body, fontSize: 11 }}>{relTime(it.at)}</Text>
+                    <Text style={{ color: "#7f7f89", fontFamily: fonts.body, fontSize: 11 }}>{relTime(it.at)}</Text>
                   </View>
                   <Text numberOfLines={1} style={{ color: unread > 0 ? "#c9c9d4" : colors.muted, fontFamily: fonts.body, fontSize: 13 }}>{preview}</Text>
                 </View>

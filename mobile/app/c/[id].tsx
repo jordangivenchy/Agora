@@ -64,7 +64,7 @@ function Pill({ label, icon, tone, onPress }: { label: string; icon?: React.Comp
 function RailLabel({ children, right }: { children: string; right?: ReactNode }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 18, marginBottom: 8 }}>
-      <Text style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1 }}>{children.toUpperCase()}</Text>
+      <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1 }}>{children.toUpperCase()}</Text>
       {right}
     </View>
   );
@@ -360,7 +360,7 @@ export default function CommunityScreen() {
         )}
         ListEmptyComponent={
           loading ? (
-            <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 32 }}>Loading…</Text>
+            <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 32 }}>Loading…</Text>
           ) : lockedOut && c ? (
             <View style={[CARD, { padding: 28, marginHorizontal: 16, marginTop: 12, alignItems: "center" }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

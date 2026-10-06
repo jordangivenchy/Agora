@@ -204,7 +204,7 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
             )}
             {tags.length > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, paddingVertical: 6 }}>
-                <Text style={{ color: "rgba(238,238,245,0.35)", fontFamily: fonts.body, fontSize: 11 }}>Tag:</Text>
+                <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>Tag:</Text>
                 {tags.map((t) => <Pressable key={t.id} onPress={() => setTagId(tagId === t.id ? null : t.id)} style={{ opacity: tagId && tagId !== t.id ? 0.45 : 1 }}><TagChip name={t.name} color={t.color} /></Pressable>)}
               </View>
             )}
@@ -232,7 +232,7 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
               </View>
             )}
             {error && <Text style={{ color: "#ff9d92", fontFamily: fonts.body, fontSize: 12.5, marginTop: 4 }}>{error}</Text>}
-            {body.length > max * 0.9 && <Text style={{ color: body.length > max ? "#e26b6b" : "rgba(238,238,245,0.35)", fontFamily: fonts.body, fontSize: 11, marginTop: 4 }}>{body.length.toLocaleString()} / {max.toLocaleString()}</Text>}
+            {body.length > max * 0.9 && <Text style={{ color: body.length > max ? "#e26b6b" : "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11, marginTop: 4 }}>{body.length.toLocaleString()} / {max.toLocaleString()}</Text>}
           </ScrollView>
           {mentions.length > 0 && (
             <View accessibilityLabel="People to mention" style={{ paddingVertical: 4, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline }}>
@@ -241,7 +241,7 @@ export function ComposerSheet({ open, kind, initialBody, context, contextName, c
                   <Avatar url={u.avatar_url} name={u.username} size={22} />
                   <Text style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>@{u.username}</Text>
                   <VerifiedMark id={u.id} username={u.username} size={13} style={{ marginLeft: -4 }} />
-                  {!!u.display_name?.trim() && <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 12 }}>{u.display_name}</Text>}
+                  {!!u.display_name?.trim() && <Text numberOfLines={1} style={{ flex: 1, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12 }}>{u.display_name}</Text>}
                 </Pressable>
               ))}
             </View>

@@ -8,7 +8,7 @@ export const colors = {
   text: "#f5f5f0",
   soft: "#d6d6de",
   muted: "#8c8c98",
-  faint: "#6b6b74",
+  faint: "#7f7f89",
   yellow: "#ffb700",
   ink: "#1a0e00",
   blue: "#3b82f6",

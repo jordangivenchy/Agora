@@ -11,6 +11,7 @@ import { LoadingLine } from "../src/sky";
 import { VerifiedMark } from "../src/verifiedMark";
 import { colors, fonts } from "../src/theme";
 import { Screen } from "../src/ui";
+import { goHome } from "../src/goHome";
 
 interface Report {
   id: string; reason: string; context: string; description: string | null; message_content: string | null;
@@ -55,7 +56,7 @@ export default function Mod() {
     let on = true;
     void supabase.from("users").select("is_moderator").eq("id", uid).maybeSingle().then(({ data: row }) => {
       if (!on) return;
-      if (!(row as { is_moderator?: boolean } | null)?.is_moderator) { router.replace("/"); return; }
+      if (!(row as { is_moderator?: boolean } | null)?.is_moderator) { goHome(); return; }
       setChecked(true);
       void load();
     });

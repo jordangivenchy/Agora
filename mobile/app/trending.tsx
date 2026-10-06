@@ -2,23 +2,22 @@
    the rooms as wide tiles — live first, then open, then replays, which
    read like videos: how long it ran on the picture's corner, the host
    and "12 views · 3 days ago" under the motion. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
-import { Img } from "../../src/img";
+import { Img } from "../src/img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../../src/supabase";
-import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, type TrendingRoom } from "../../src/discover";
-import { personName } from "../../src/home";
-import { viewsAndAgo } from "../../src/duration";
-import { LengthPill } from "../../src/replayCard";
-import { VerifiedMark } from "../../src/verifiedMark";
-import { Avatar } from "../../src/avatar";
-import { HomeHeader } from "../../src/header";
-import { same, useFocusRefresh } from "../../src/refresh";
-import { useCreate } from "../../src/create";
-import { colors, fonts } from "../../src/theme";
-import { Note } from "../../src/ui";
+import { supabase } from "../src/supabase";
+import { TRENDING_CHIPS, agoDays, fetchTrendingRooms, fmtCount, type TrendingRoom } from "../src/discover";
+import { personName } from "../src/home";
+import { viewsAndAgo } from "../src/duration";
+import { LengthPill } from "../src/replayCard";
+import { VerifiedMark } from "../src/verifiedMark";
+import { Avatar } from "../src/avatar";
+import { same, useFocusRefresh } from "../src/refresh";
+import { useCreate } from "../src/create";
+import { colors, fonts } from "../src/theme";
+import { Note } from "../src/ui";
 
 const GRADIENT_STANDINS = ["#0d1b4b", "#0a2e1a", "#1a0a00", "#0d0a2e", "#2d0a1a", "#001e2e"];
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
@@ -40,21 +39,22 @@ export default function Trending() {
     }
   }, []);
   useFocusRefresh(load);
+  /* Named for this copy of the screen (see Home's). */
+  const channelId = useId();
   useEffect(() => {
-    const ch = supabase.channel("trending-rooms").on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();
+    const ch = supabase.channel(`trending-rooms-${channelId}`).on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [load]);
+  }, [load, channelId]);
 
   const shown = (rooms ?? []).filter((r) => !chip || r.topic_key === chip);
   const open = (r: TrendingRoom) => (r.status === "ended" ? router.push({ pathname: "/replay/[id]", params: { id: r.id } }) : router.push({ pathname: "/room/[id]", params: { id: r.id } }));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <HomeHeader />
       <FlatList
         data={shown}
         keyExtractor={(r) => r.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
         ListHeaderComponent={
           <View>

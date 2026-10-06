@@ -50,7 +50,7 @@ function Slider({ value, onChange }: { value: number; onChange: (v: number) => v
   );
 }
 
-const Label = ({ t }: { t: string }) => <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 0.9, marginTop: 10, marginBottom: 6 }}>{t.toUpperCase()}</Text>;
+const Label = ({ t }: { t: string }) => <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 10, letterSpacing: 0.9, marginTop: 10, marginBottom: 6 }}>{t.toUpperCase()}</Text>;
 const Body = ({ t }: { t: string }) => <Text style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>{t}</Text>;
 
 function Choice({ label, on, onPress, disabled }: { label: string; on: boolean; onPress: () => void; disabled?: boolean }) {

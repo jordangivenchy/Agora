@@ -48,11 +48,11 @@ export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { op
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 18 }}>New group</Text>
             <Pressable onPress={onClose} hitSlop={8} style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38" }}><Ionicons name="close" size={14} color="rgba(238,238,245,0.6)" /></Pressable>
           </View>
-          <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.7, marginBottom: 8 }}>NAME</Text>
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.7, marginBottom: 8 }}>NAME</Text>
           <TextInput value={name} onChangeText={(t) => setName(t.slice(0, GROUP_NAME_MAX))} placeholder="What's the group called?" placeholderTextColor={colors.faint} autoFocus style={{ height: 38, borderRadius: 10, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#0b0b0d", color: "#fff", fontFamily: fonts.body, fontSize: 13.5, paddingHorizontal: 12, marginBottom: 16 }} />
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.7 }}>FRIENDS</Text>
-            <Text style={{ color: picked.size ? colors.yellow : "rgba(238,238,245,0.4)", fontFamily: fonts.semi, fontSize: 11.5 }}>{picked.size ? `${picked.size} picked` : "Pick at least one"}</Text>
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.7 }}>FRIENDS</Text>
+            <Text style={{ color: picked.size ? colors.yellow : "rgba(238,238,245,0.5)", fontFamily: fonts.semi, fontSize: 11.5 }}>{picked.size ? `${picked.size} picked` : "Pick at least one"}</Text>
           </View>
           {friends !== null && friends.length > 4 && (
             <TextInput value={q} onChangeText={setQ} placeholder="Search friends" placeholderTextColor={colors.faint} autoCapitalize="none" style={{ height: 34, borderRadius: 10, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#0b0b0d", color: "#fff", fontFamily: fonts.body, fontSize: 13, paddingHorizontal: 12, marginBottom: 8 }} />
@@ -62,13 +62,13 @@ export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { op
             keyExtractor={(f) => f.id}
             style={{ maxHeight: 300 }}
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={friends === null ? <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 12, paddingVertical: 8 }}>Finding friends…</Text> : friends.length === 0 ? (
+            ListEmptyComponent={friends === null ? <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, paddingVertical: 8 }}>Finding friends…</Text> : friends.length === 0 ? (
               <View style={{ alignItems: "center", paddingVertical: 18, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#1f1f26" }}>
-                <Ionicons name="people-outline" size={18} color="rgba(238,238,245,0.4)" />
+                <Ionicons name="people-outline" size={18} color="rgba(238,238,245,0.5)" />
                 <Text style={{ color: "rgba(238,238,245,0.6)", fontFamily: fonts.body, fontSize: 12.5, marginTop: 6 }}>No friends to add yet.</Text>
-                <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 11.5, marginTop: 4, textAlign: "center", paddingHorizontal: 16 }}>Group chats are for people who follow each other. Follow someone back and they'll show up here.</Text>
+                <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5, marginTop: 4, textAlign: "center", paddingHorizontal: 16 }}>Group chats are for people who follow each other. Follow someone back and they'll show up here.</Text>
               </View>
-            ) : <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 12, paddingVertical: 8 }}>No matches.</Text>}
+            ) : <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, paddingVertical: 8 }}>No matches.</Text>}
             renderItem={({ item: f }) => {
               const on = picked.has(f.id);
               return (
@@ -79,7 +79,7 @@ export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { op
                       <Text numberOfLines={1} style={{ flexShrink: 1, color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{displayName(f)}</Text>
                       <VerifiedMark id={f.id} username={f.username} size={13} />
                     </View>
-                    <Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>@{f.username}</Text>
+                    <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>@{f.username}</Text>
                   </View>
                   <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.yellow : "#0b0b0d", borderWidth: 1, borderColor: on ? colors.yellow : "rgba(255,255,255,0.2)" }}>{on && <Ionicons name="checkmark" size={13} color={colors.ink} />}</View>
                 </Pressable>

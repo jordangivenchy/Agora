@@ -101,14 +101,14 @@ export default function Friends() {
         ListHeaderComponent={
           <View style={{ paddingTop: 12 }}>
             <View style={{ height: 40, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", paddingLeft: 12 }}>
-              <Ionicons name="person-add-outline" size={15} color="rgba(255,255,255,0.3)" />
-              <TextInput value={query} onChangeText={setQuery} placeholder="Add a friend by username" placeholderTextColor="rgba(255,255,255,0.25)" autoCapitalize="none" autoCorrect={false} style={{ flex: 1, height: 40, paddingHorizontal: 10, color: colors.text, fontFamily: fonts.body, fontSize: 14 }} />
+              <Ionicons name="person-add-outline" size={15} color="rgba(255,255,255,0.5)" />
+              <TextInput value={query} onChangeText={setQuery} placeholder="Add a friend by username" placeholderTextColor="rgba(255,255,255,0.5)" autoCapitalize="none" autoCorrect={false} style={{ flex: 1, height: 40, paddingHorizontal: 10, color: colors.text, fontFamily: fonts.body, fontSize: 14 }} />
             </View>
             {error && <Note tone="error">{error}</Note>}
           </View>
         }
         renderItem={({ item }) => {
-          if (item.kind === "label") return <Text style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, marginTop: 18, marginBottom: 6 }}>{item.text.toUpperCase()}</Text>;
+          if (item.kind === "label") return <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, marginTop: 18, marginBottom: 6 }}>{item.text.toUpperCase()}</Text>;
           const u = item.user;
           return (
             <Pressable onPress={() => router.push({ pathname: "/u/[username]", params: { username: u.username } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 9, paddingHorizontal: 8, borderRadius: 12, backgroundColor: pressed ? colors.surface2 : "transparent" })}>

@@ -147,7 +147,7 @@ export default function Search() {
   const people = (rows ?? []).filter((r): r is Extract<SearchRow, { kind: "person" }> => r.kind === "person");
   const others = (rows ?? []).filter((r) => r.kind !== "debate" && r.kind !== "person");
   const empty = !!query && rows !== null && rows.length === 0 && !loading && status === "ok";
-  const label = (t: string) => <Text style={{ color: "rgba(255,255,255,0.45)", fontFamily: fonts.title, fontSize: 11, letterSpacing: 0.7, marginBottom: 8 }}>{t.toUpperCase()}</Text>;
+  const label = (t: string) => <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.title, fontSize: 11, letterSpacing: 0.7, marginBottom: 8 }}>{t.toUpperCase()}</Text>;
   const card = { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: 14 } as const;
 
   const renderOther = (r: SearchRow) => {
@@ -189,7 +189,7 @@ export default function Search() {
               <Highlight text={c.name} query={query} style={{ color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13.5 }} />
               {c.is_private && <Ionicons name="lock-closed-outline" size={11} color={colors.muted} />}
             </View>
-            <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>{c.members} {c.members === 1 ? "member" : "members"}{c.description ? ` · ${c.description.slice(0, 120)}` : ""}</Text>
+            <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>{c.members} {c.members === 1 ? "member" : "members"}{c.description ? ` · ${c.description.slice(0, 120)}` : ""}</Text>
           </View>
           {/* A private community takes an application, which its page asks for; joining it directly would be refused. */}
           <Pressable onPress={() => (c.is_private && !c.joined ? router.push({ pathname: "/c/[id]", params: { id: c.id } }) : void toggleJoin(c))} disabled={joinBusy === c.id} style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: c.joined ? colors.surface2 : colors.blueText, borderWidth: c.joined ? 1 : 0, borderColor: colors.border, opacity: joinBusy === c.id ? 0.6 : 1 }}>
@@ -219,7 +219,7 @@ export default function Search() {
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {label("Recent")}
                   <View style={{ flex: 1 }} />
-                  <Pressable onPress={() => { setRecent([]); void clearRecent(supabase, uid); }}><Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11, marginBottom: 8 }}>Clear all</Text></Pressable>
+                  <Pressable onPress={() => { setRecent([]); void clearRecent(supabase, uid); }}><Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11, marginBottom: 8 }}>Clear all</Text></Pressable>
                 </View>
                 {recent.map((q) => (
                   <View key={q} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9 }}>
@@ -310,7 +310,7 @@ export default function Search() {
                         return (
                           <View key={r.id}>
                             <RoomSquare room={d} onPress={() => router.push({ pathname: "/room/[id]", params: { id: d.id } })} />
-                            <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.body, fontSize: 10, marginTop: 4, maxWidth: 168 }}>{d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}</Text>
+                            <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 10, marginTop: 4, maxWidth: 168 }}>{d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}</Text>
                           </View>
                         );
                       })}

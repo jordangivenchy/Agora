@@ -47,7 +47,7 @@ function RowBtn({ label, tone = "ghost", onPress, disabled }: { label: string; t
 }
 
 function Empty({ children }: { children: string }) {
-  return <Text style={{ color: "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 12.5, paddingHorizontal: 16, paddingVertical: 6 }}>{children}</Text>;
+  return <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12.5, paddingHorizontal: 16, paddingVertical: 6 }}>{children}</Text>;
 }
 
 export default function ModToolsScreen() {
@@ -148,7 +148,7 @@ export default function ModToolsScreen() {
     return (
       <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: on ? "#00b894" : "rgba(238,238,245,0.22)" }} />
-        <Text style={{ color: on ? "#00b894" : "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 11 }}>{on ? "Active" : "Offline"}</Text>
+        <Text style={{ color: on ? "#00b894" : "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>{on ? "Active" : "Offline"}</Text>
       </View>
     );
   };
@@ -238,7 +238,7 @@ export default function ModToolsScreen() {
           <SectionCard title={`Applications${requests.length ? ` · ${requests.length}` : ""}`} sub="People asking to join. Approving makes them members.">
             {requests.length === 0 ? <Empty>No pending applications.</Empty> : requests.map((r) => person(r.user_id, r.user, (
               <>
-                <Text style={{ color: "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 11 }}>{timeAgo(r.created_at)}</Text>
+                <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>{timeAgo(r.created_at)}</Text>
                 <RowBtn label="Approve" tone="ok" disabled={!!busy} onPress={() => void act(`ok:${r.user_id}`, () => approveJoinRequest(supabase, c.id, r.user_id, true), `Approved ${personName(r.user)}`)} />
                 <RowBtn label="Deny" tone="danger" disabled={!!busy} onPress={() => void act(`no:${r.user_id}`, () => approveJoinRequest(supabase, c.id, r.user_id, false), "Request denied")} />
               </>
@@ -271,7 +271,7 @@ export default function ModToolsScreen() {
         <SectionCard title={bans.length ? `Banned · ${bans.length}` : "Banned"}>
           {bans.length === 0 ? <Empty>No bans.</Empty> : bans.map((b) => person(b.user_id, b.user, (
             <>
-              <Text style={{ color: "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 11 }}>{timeAgo(b.created_at)}</Text>
+              <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>{timeAgo(b.created_at)}</Text>
               <RowBtn label="Unban" disabled={!!busy} onPress={() => void act(`unban:${b.user_id}`, () => unbanMember(supabase, c.id, b.user_id), `Unbanned ${personName(b.user)}`)} />
             </>
           ), b.reason?.trim() ? <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, marginTop: 3, marginLeft: 36 }}>{b.reason.trim()}</Text> : undefined))}
@@ -284,7 +284,7 @@ export default function ModToolsScreen() {
                 const p = logPhrase(r);
                 return (
                   <View key={r.id} style={{ flexDirection: "row", gap: 10, paddingVertical: 3 }}>
-                    <Text numberOfLines={1} style={{ width: 54, color: "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 11.5 }}>{timeAgo(r.created_at)}</Text>
+                    <Text numberOfLines={1} style={{ width: 54, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5 }}>{timeAgo(r.created_at)}</Text>
                     <Text style={{ flex: 1, color: "rgba(238,238,245,0.65)", fontFamily: fonts.body, fontSize: 12, lineHeight: 17 }}>
                       <Text style={{ color: "#eeeef5" }}>{personName(r.actor)}</Text>
                       <VerifiedMark inline id={r.actor_id} username={r.actor?.username} size={12} /> {p.verb}{p.target ? " " : ""}
@@ -325,11 +325,11 @@ export default function ModToolsScreen() {
             <Input value={draft.description} onChangeText={(t) => setDraft((d) => ({ ...d, description: t.slice(0, 500) }))} placeholder="Description (what is this community for?)" maxLength={500} />
             <Input value={draft.rules} onChangeText={(t) => setDraft((d) => ({ ...d, rules: t.slice(0, 4000) }))} placeholder={"Rules — one per line\nBe civil.\nStay on topic."} multiline maxLength={4000} style={{ minHeight: 90, textAlignVertical: "top" }} />
             <Input value={draft.bookmarks} onChangeText={(t) => setDraft((d) => ({ ...d, bookmarks: t.slice(0, 4000) }))} placeholder={"Community bookmarks — one per line\nDiscord | https://discord.gg/yourboard\n## Social Links\nX | https://x.com/yourboard"} multiline maxLength={4000} autoCapitalize="none" autoCorrect={false} style={{ minHeight: 100, textAlignVertical: "top", fontFamily: mono, fontSize: 12.5 }} />
-            <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>Bookmarks: Label | URL per line; a line starting with ## begins a dropdown group.</Text>
+            <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>Bookmarks: Label | URL per line; a line starting with ## begins a dropdown group.</Text>
             {(draft.isPrivate || c.is_private) && (
               <>
                 <Input value={draft.prompt} onChangeText={(t) => setDraft((d) => ({ ...d, prompt: t.slice(0, 1000) }))} placeholder={"Application questions — what should applicants tell you?\ne.g. What school are you from? Why do you want to join?"} multiline maxLength={1000} style={{ minHeight: 70, textAlignVertical: "top" }} />
-                <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>Shown to everyone who applies; when set, an application must answer it. Leave empty for a plain optional message.</Text>
+                <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16 }}>Shown to everyone who applies; when set, an application must answer it. Leave empty for a plain optional message.</Text>
               </>
             )}
           </Pad>
@@ -344,11 +344,11 @@ export default function ModToolsScreen() {
 
         <SectionCard title="Post tags" sub="Tags people can put on a post in this community.">
           <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 8 }}>
-            {tags.length === 0 ? <Text style={{ color: "rgba(238,238,245,0.36)", fontFamily: fonts.body, fontSize: 12.5 }}>No tags yet.</Text> : tags.map((t) => (
+            {tags.length === 0 ? <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12.5 }}>No tags yet.</Text> : tags.map((t) => (
               <View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <TagChip name={t.name} color={t.color} />
                 <Pressable onPress={() => void act(`tag:${t.id}`, () => removeCommunityTag(supabase, t.id), `Deleted ${t.name}`)} disabled={!!busy} hitSlop={8} accessibilityLabel={`Delete tag ${t.name}`}>
-                  <Ionicons name="close" size={14} color="rgba(238,238,245,0.45)" />
+                  <Ionicons name="close" size={14} color="rgba(238,238,245,0.5)" />
                 </Pressable>
               </View>
             ))}

@@ -2,7 +2,7 @@
    Popular; the live rooms across the top; then the stream — posts,
    reposts, comments, replays and what's coming up — with why each is
    here. A guest gets the way in. */
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Img } from "../../src/img";
 import { router } from "expo-router";
@@ -26,10 +26,11 @@ import { HomeHeader } from "../../src/header";
 import { same, useFocusRefresh } from "../../src/refresh";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
+import { lazyTab } from "../../src/tabBar";
 
 const card = { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline, borderRadius: 14 } as const;
 
-export default function Feed() {
+function Feed() {
   const { session } = useSession();
   const uid = session?.user.id ?? null;
   const [filter, setFilter] = useState<FeedFilter>("all");
@@ -56,11 +57,13 @@ export default function Feed() {
     }
   }, [uid, filter]);
   useFocusRefresh(load);
+  /* Named for this copy of the screen (see Home's). */
+  const channelId = useId();
   useEffect(() => {
     if (!uid) return;
-    const ch = supabase.channel("feed-rooms").on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();
+    const ch = supabase.channel(`feed-rooms-${channelId}`).on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load()).subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [uid, load]);
+  }, [uid, load, channelId]);
 
   const vote = (p: PostRow, v: number) => {
     setItems((its) => (its ?? []).map((it) => (it.kind === "post" || it.kind === "repost") && it.payload.id === p.id ? { ...it, payload: { ...it.payload, score: it.payload.score + (v - it.payload.my_vote), my_vote: v } } : it));
@@ -93,7 +96,7 @@ export default function Feed() {
   const stream = (items ?? []).filter((it) => it.kind !== "live");
 
   const renderItem = ({ item: it }: { item: FeedItem }): ReactNode => {
-    const reason = <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}><Ionicons name="sparkles-outline" size={11} color="rgba(238,238,245,0.38)" /><Text style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.body, fontSize: 10.5 }}>{it.reason}</Text></View>;
+    const reason = <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}><Ionicons name="sparkles-outline" size={11} color="rgba(238,238,245,0.5)" /><Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 10.5 }}>{it.reason}</Text></View>;
     if (it.kind === "post" || it.kind === "repost") {
       const p = it.payload;
       return (
@@ -122,7 +125,7 @@ export default function Feed() {
               <Avatar url={c.author.avatar_url} name={c.author.username} size={22} />
               <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }} onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author.username } })}>@{c.author.username}</Text>
               <VerifiedMark id={c.author.id} username={c.author.username} size={12} style={{ marginLeft: -3 }} />
-              <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
+              <Text style={{ color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
             </View>
             <RichText text={c.body} numberOfLines={3} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 6 }} />
             <Text numberOfLines={1} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginTop: 6 }}>on <Text style={{ color: "#c9c9d2", fontFamily: fonts.semi }}>{plainPreview(c.post_title)}</Text> · <Text style={{ color: colors.gold }}>{c.community_name}</Text></Text>
@@ -207,7 +210,7 @@ export default function Feed() {
                   {live.map((it) => it.kind === "live" && (
                     <View key={it.item_id} style={{ width: 168 }}>
                       <RoomSquare room={it.payload} onPress={() => router.push({ pathname: "/room/[id]", params: { id: it.payload.id } })} />
-                      <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.body, fontSize: 10, marginTop: 4 }}>{it.reason}</Text>
+                      <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 10, marginTop: 4 }}>{it.reason}</Text>
                     </View>
                   ))}
                 </ScrollView>
@@ -221,7 +224,7 @@ export default function Feed() {
             )}
             {uid && suggestions.length > 0 && stream.length < 5 && (
               <View style={{ marginBottom: 14 }}>
-                <Text style={{ color: "rgba(238,238,245,0.38)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, marginBottom: 8 }}>WHO TO FOLLOW</Text>
+                <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1, marginBottom: 8 }}>WHO TO FOLLOW</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
                   {suggestions.filter((s) => s.id !== uid).map((s) => (
                     <Pressable key={s.id} onPress={() => router.push({ pathname: "/u/[username]", params: { username: s.username } })} style={[card, { width: 150, padding: 12, alignItems: "center" }]}>
@@ -248,3 +251,6 @@ export default function Feed() {
     </View>
   );
 }
+
+/* Built when first opened, not at launch (src/tabBar.tsx). */
+export default lazyTab(Feed);

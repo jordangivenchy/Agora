@@ -18,11 +18,12 @@ import { openUrl } from "../../src/web";
 import { isQueuedForSource, openQueue } from "../../src/queue";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
+import { lazyTab } from "../../src/tabBar";
 
 const CARD = { backgroundColor: colors.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 12 } as const;
 type Row = { kind: "major"; story: NewsStory } | { kind: "label"; text: string } | { kind: "more"; story: NewsStory };
 
-export default function News() {
+function News() {
   const { session, pass } = useSession();
   const token = session?.access_token ?? null;
   const [stories, setStories] = useState<NewsStory[] | null>(null);
@@ -201,3 +202,6 @@ function Btn({ kind, label, onPress }: { kind: "read" | "discuss" | "queue"; lab
     </Pressable>
   );
 }
+
+/* Built when first opened, not at launch (src/tabBar.tsx). */
+export default lazyTab(News);

@@ -1,12 +1,14 @@
 /* Home: the website's phone home — the hero, the news strip and the
-   board of fields — under the site's header, above its tab bar. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+   board of fields — under the site's header, above the tab bar; and at
+   its top, the way to Explore and Trending. */
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AppState, RefreshControl, ScrollView, View, useWindowDimensions } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchBoard, fetchFeatured, fetchHeroRooms, fetchNews, type BoardRoom, type FeaturedPost, type HeroRoom, type NewsStory, type TopicRow } from "../../src/home";
 import { HomeHeader } from "../../src/header";
+import { HomeLinks } from "../../src/homeLinks";
 import { same, useFocusRefresh } from "../../src/refresh";
 import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
@@ -87,15 +89,19 @@ export default function Home() {
     }, [load]),
   );
 
-  /* A room going live shows up at once, as on the site. */
+  /* A room going live shows up at once, as on the site. The channel is
+     named for this copy of the screen: the client gives back the same
+     channel for the same name, and a second Home listening on the first
+     one's — it had already joined — brought the app down. */
+  const channelId = useId();
   useEffect(() => onQueueChanged(() => void load()), [load]);
   useEffect(() => {
     const ch = supabase
-      .channel("home-rooms")
+      .channel(`home-rooms-${channelId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "debate_rooms" }, () => void load())
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [load]);
+  }, [load, channelId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -107,6 +113,7 @@ export default function Home() {
       <HomeHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}>
         <Starfield width={width} height={1100} />
+        <HomeLinks />
         <HeroCarousel rooms={heroRooms} news={heroNews} onSettled={onHeroSettled} />
         <NewsTicker stories={tickerIn ? tickerNews : []} />
         {/* The team's note is a strip, not a slide: the hero is for rooms and the news. */}

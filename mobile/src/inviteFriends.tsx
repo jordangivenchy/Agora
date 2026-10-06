@@ -52,11 +52,11 @@ export function InviteFriends({ communityId, communityName, isPrivate }: { commu
         {isPrivate ? `Invites let friends into ${communityName} without applying. ` : `Friends you invite get a message with a one-tap join for ${communityName}. `}Friends are people who follow you back.
       </Text>
       {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: "#1a0b0b", borderWidth: 1, borderColor: "#5a2a2a" }}>{error}</Text>}
-      {rows === null ? <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 12 }}>Finding friends…</Text> : rows.length === 0 ? (
+      {rows === null ? <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12 }}>Finding friends…</Text> : rows.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 18, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2a2a34" }}>
-          <Ionicons name="people-outline" size={18} color="rgba(238,238,245,0.4)" />
+          <Ionicons name="people-outline" size={18} color="rgba(238,238,245,0.5)" />
           <Text style={{ color: "rgba(238,238,245,0.6)", fontFamily: fonts.body, fontSize: 12.5, marginTop: 6 }}>No one to invite yet.</Text>
-          <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 11.5, marginTop: 2 }}>Your friends who aren't members will show up here.</Text>
+          <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11.5, marginTop: 2 }}>Your friends who aren't members will show up here.</Text>
         </View>
       ) : rows.map((c) => (
         <View key={c.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2a2a34" }}>
@@ -66,7 +66,7 @@ export function InviteFriends({ communityId, communityName, isPrivate }: { commu
               <Text numberOfLines={1} style={{ flexShrink: 1, color: "#eeeef5", fontFamily: fonts.semi, fontSize: 13 }}>{c.display_name?.trim() || c.username}</Text>
               <VerifiedMark id={c.id} username={c.username} size={13} />
             </View>
-            <Text style={{ color: "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11 }}>@{c.username}</Text>
+            <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11 }}>@{c.username}</Text>
           </View>
           <Pressable onPress={() => !c.invited && void invite(c)} disabled={busy === c.id} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: c.invited ? "#0b0b0d" : colors.yellow, borderWidth: 1, borderColor: c.invited ? "#2e2e38" : colors.yellow }}>
             {c.invited && <Ionicons name="checkmark" size={12} color="#c9c9d2" />}

@@ -60,7 +60,7 @@ export function GifPicker({ open, onClose, onPick }: { open: boolean; onClose: (
             ListEmptyComponent={<Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 16 }}>{loading ? "Loading…" : "No GIFs found."}</Text>}
           />
         )}
-        <Text style={{ color: "rgba(238,238,245,0.25)", fontFamily: fonts.body, fontSize: 9, textAlign: "right", paddingHorizontal: 12 }}>Powered by GIPHY</Text>
+        <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 9, textAlign: "right", paddingHorizontal: 12 }}>Powered by GIPHY</Text>
       </View>
     </Modal>
   );

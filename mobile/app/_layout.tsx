@@ -102,6 +102,11 @@ export default function RootLayout() {
                     <Stack.Screen name="settings/[section]" options={{ title: "Settings", headerBackTitle: "Back" }} />
                     <Stack.Screen name="edit-profile" options={{ title: "Edit profile", headerBackTitle: "Back" }} />
                     <Stack.Screen name="mod" options={{ title: "Moderation", headerBackTitle: "Back" }} />
+                    {/* Explore and Trending open from the top of Home: Apple's tab
+                        bar holds five things, and these two gave up their places.
+                        Each page carries its own title. */}
+                    <Stack.Screen name="explore" options={{ title: "", headerBackTitle: "Back" }} />
+                    <Stack.Screen name="trending" options={{ title: "", headerBackTitle: "Back" }} />
                     <Stack.Screen name="search" options={{ title: "Search", headerBackTitle: "Back" }} />
                     <Stack.Screen name="notifications" options={{ title: "Notifications", headerBackTitle: "Back" }} />
                     <Stack.Screen name="messages/index" options={{ title: "Messages", headerBackTitle: "Back" }} />

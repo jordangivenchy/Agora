@@ -50,7 +50,7 @@ const LINE = "rgba(255,255,255,0.1)";
 const EDGE = "rgba(255,255,255,0.14)";
 const SEP = "rgba(255,255,255,0.06)";
 const FIELD = "#0b0b0d";
-const HINT = "rgba(238,238,245,0.42)";
+const HINT = "rgba(238,238,245,0.5)";
 
 /* The gate's last answer for the account, so the card opens on it while it asks again. */
 let knownGate: { uid: string; status: CreationStatus } | null = null;
@@ -285,7 +285,7 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
                           <View style={{ flex: 1, minWidth: 0 }}>
                             <Text numberOfLines={1} style={{ color: on ? INK : TEXT, fontFamily: fonts.semi, fontSize: 13 }}>{k.label}</Text>
                             {/* One line at rest, the whole hint on the chosen card. */}
-                            <Text numberOfLines={on ? 0 : 1} style={{ color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)", fontFamily: fonts.body, fontSize: 11, lineHeight: 15 }}>{k.hint}</Text>
+                            <Text numberOfLines={on ? 0 : 1} style={{ color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 11, lineHeight: 15 }}>{k.hint}</Text>
                           </View>
                         </Pressable>
                       );
@@ -375,7 +375,7 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
                   <View style={{ borderRadius: 12, borderWidth: 1, borderColor: LINE, backgroundColor: FIELD, overflow: "hidden" }}>
                     {([["Name", trimmed, 0], ["Type", kindMeta.label, 0], ["Description", description.trim() || "None", 0], ["Rules", rules.trim() ? `${rules.trim().split(/\n+/).filter(Boolean).length} rule${rules.trim().split(/\n+/).filter(Boolean).length === 1 ? "" : "s"}` : "None", 0], ["Look", `${avatar ? "Avatar" : "Initial"} · ${banner ? "banner" : "colour band"}`, 1], ["Access", isPrivate ? `Private — people apply${prompt.trim() ? ", with a question" : ""}` : "Public — anyone can join", 2]] as [string, string, number][]).map(([k, v, target], idx, arr) => (
                       <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: SEP }}>
-                        <Text style={{ width: 84, color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>{k.toUpperCase()}</Text>
+                        <Text style={{ width: 84, color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>{k.toUpperCase()}</Text>
                         <Text numberOfLines={1} style={{ flex: 1, color: TEXT, fontFamily: fonts.body, fontSize: 13 }}>{v}</Text>
                         <Pressable onPress={() => go(target)} hitSlop={8}><Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 12 }}>Edit</Text></Pressable>
                       </View>
@@ -397,7 +397,7 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderTopWidth: 1, borderTopColor: SEP }}>
             {created ? (
               <>
-                <Text style={{ flex: 1, color: "rgba(238,238,245,0.4)", fontFamily: fonts.body, fontSize: 12, lineHeight: 16 }}>You can invite more people from the community any time.</Text>
+                <Text style={{ flex: 1, color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, lineHeight: 16 }}>You can invite more people from the community any time.</Text>
                 <FootButton label="Done" primary onPress={() => { const id = created.id; onClose(); router.push({ pathname: "/c/[id]", params: { id } }); }} />
               </>
             ) : !gate ? (
@@ -437,9 +437,9 @@ function StepIn({ dir, children }: { dir: 1 | -1; children: ReactNode }) {
 
 function Label({ text, optional, tight }: { text: string; optional?: boolean; tight?: boolean }) {
   return (
-    <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: tight ? 2 : 8 }}>
+    <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: tight ? 2 : 8 }}>
       {text.toUpperCase()}
-      {optional && <Text style={{ color: "rgba(238,238,245,0.4)", fontFamily: fonts.body }}> (OPTIONAL)</Text>}
+      {optional && <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body }}> (OPTIONAL)</Text>}
     </Text>
   );
 }

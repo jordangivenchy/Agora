@@ -120,7 +120,7 @@ export function ChatThread(p: ChatThreadProps) {
   const renderItem = ({ item }: { item: Item }) => {
     const { m, newDay, startsRun, endsRun } = item;
     const mine = m.sender_id === p.me;
-    const day = newDay ? <Text style={{ alignSelf: "center", marginTop: 10, marginBottom: 2, color: "#6b6b74", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6 }}>{dayLabel(m.created_at).toUpperCase()}</Text> : null;
+    const day = newDay ? <Text style={{ alignSelf: "center", marginTop: 10, marginBottom: 2, color: "#7f7f89", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6 }}>{dayLabel(m.created_at).toUpperCase()}</Text> : null;
     if (m.kind === "system") {
       const actor = p.who(m.sender_id);
       return (

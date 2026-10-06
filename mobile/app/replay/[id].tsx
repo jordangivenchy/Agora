@@ -391,8 +391,8 @@ export default function ReplayScreen() {
                 <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, height: 34, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: "#2c2c34", backgroundColor: "#17171d" }}>
                     <Ionicons name="search" size={13} color="#9a9aa6" />
-                    <TextInput value={query} onChangeText={setQuery} placeholder="Search the transcript" placeholderTextColor="#6b6b78" accessibilityLabel="Search the transcript" autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={{ flex: 1, color: "#e5e5ec", fontFamily: fonts.body, fontSize: 12.5, paddingVertical: 0 }} />
-                    {!!query && <Pressable onPress={() => setQuery("")} hitSlop={8} accessibilityLabel="Clear the search"><Ionicons name="close-circle" size={14} color="#6b6b78" /></Pressable>}
+                    <TextInput value={query} onChangeText={setQuery} placeholder="Search the transcript" placeholderTextColor="#7f7f89" accessibilityLabel="Search the transcript" autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={{ flex: 1, color: "#e5e5ec", fontFamily: fonts.body, fontSize: 12.5, paddingVertical: 0 }} />
+                    {!!query && <Pressable onPress={() => setQuery("")} hitSlop={8} accessibilityLabel="Clear the search"><Ionicons name="close-circle" size={14} color="#7f7f89" /></Pressable>}
                   </View>
                 </View>
               )}
@@ -431,7 +431,7 @@ export default function ReplayScreen() {
                           </View>
                           <Marked text={l.content} query={query} style={{ color: "#e5e5ec", fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20 }} />
                         </View>
-                        <Text style={{ color: "#6b6b78", fontFamily: fonts.body, fontSize: 11, paddingTop: 2, fontVariant: ["tabular-nums"] }}>
+                        <Text style={{ color: "#7f7f89", fontFamily: fonts.body, fontSize: 11, paddingTop: 2, fontVariant: ["tabular-nums"] }}>
                           {l.offset_seconds !== null ? fmtClock(videoOffset(l.offset_seconds)) : l.created_at ? new Date(l.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}
                         </Text>
                       </Pressable>
@@ -478,7 +478,7 @@ export default function ReplayScreen() {
                           <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }}>@{c.author_username}</Text>
                           <VerifiedMark id={c.author_id} username={c.author_username} size={12} style={{ marginLeft: -3 }} />
                         </Pressable>
-                        <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
+                        <Text style={{ color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
                       </View>
                       <View style={{ marginTop: 3 }}>
                         <RichText text={c.body} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 20 }} />

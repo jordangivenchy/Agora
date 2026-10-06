@@ -16,6 +16,7 @@ import { friendlyProfileError, normalizeUsername, USERNAME_REGEX } from "../src/
 import { LoadingLine } from "../src/sky";
 import { colors, fonts } from "../src/theme";
 import { Button, Screen, Sub, Title } from "../src/ui";
+import { goHome } from "../src/goHome";
 
 const AVAILABILITY_DEBOUNCE_MS = 450;
 
@@ -71,7 +72,7 @@ export default function Welcome() {
 
   useEffect(() => {
     if (step !== "follow") return;
-    void fetchSuggestions(supabase, 8).then((rows) => { if (rows.length === 0) router.replace("/"); else setPeople(rows); });
+    void fetchSuggestions(supabase, 8).then((rows) => { if (rows.length === 0) goHome(); else setPeople(rows); });
   }, [step]);
 
   async function pickPhoto() {
@@ -149,8 +150,8 @@ export default function Welcome() {
                   </View>
                 ))}
                 <View style={{ height: 18 }} />
-                <Button onPress={() => router.replace("/")}>{followed.size > 0 ? `Continue (${followed.size} followed)` : "Continue"}</Button>
-                <Pressable onPress={() => router.replace("/")} style={{ marginTop: 16, alignSelf: "center" }}><Text style={{ color: colors.muted, fontFamily: fonts.medium, fontSize: 13 }}>Skip</Text></Pressable>
+                <Button onPress={goHome}>{followed.size > 0 ? `Continue (${followed.size} followed)` : "Continue"}</Button>
+                <Pressable onPress={goHome} style={{ marginTop: 16, alignSelf: "center" }}><Text style={{ color: colors.muted, fontFamily: fonts.medium, fontSize: 13 }}>Skip</Text></Pressable>
               </>
             ) : (
               <>
@@ -180,7 +181,7 @@ export default function Welcome() {
                     <Button onPress={() => void next()} disabled={!canContinue} busy={saving}>Continue</Button>
                   </>
                 )}
-                <Pressable onPress={() => router.replace("/")} style={{ marginTop: 16, alignSelf: "center" }}><Text style={{ color: colors.muted, fontFamily: fonts.medium, fontSize: 13 }}>Skip for now</Text></Pressable>
+                <Pressable onPress={goHome} style={{ marginTop: 16, alignSelf: "center" }}><Text style={{ color: colors.muted, fontFamily: fonts.medium, fontSize: 13 }}>Skip for now</Text></Pressable>
               </>
             )}
           </View>

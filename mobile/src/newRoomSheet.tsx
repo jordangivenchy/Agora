@@ -40,7 +40,7 @@ const LANGS = [
 const INK = "#1a0e00";
 const TEXT = "#f4f4f5";
 const MUTED = "rgba(244,244,245,0.55)";
-const DIM = "rgba(244,244,245,0.32)";
+const DIM = "rgba(244,244,245,0.5)";
 const LINE = "rgba(255,255,255,0.08)";
 const FIELD = "#0b0b0d";
 const BLUE = "#3b82f6";
@@ -308,7 +308,7 @@ export function NewRoomCard({ prefill, onClose, onCreateCommunity }: { prefill: 
                   <>
                     <Divider />
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>STARTS AT</Text>
+                      <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66 }}>STARTS AT</Text>
                       {hasDatePicker && <DateTimeField value={startAt} minimumDate={minimumStart} onChange={setStartAt} />}
                     </View>
                     {!hasDatePicker && (
@@ -349,7 +349,7 @@ export function NewRoomCard({ prefill, onClose, onCreateCommunity }: { prefill: 
                 {isPrivate && (
                   <>
                     <Divider />
-                    <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: 8 }}>WHO CAN ENTER</Text>
+                    <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: 8 }}>WHO CAN ENTER</Text>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                       {([["code", "Invite code"], ["followers", "My followers"], ["friends", "Friends only"], ...(community ? [["community", `${community.name} members`]] : [])] as [Access, string][]).map(([key, lab]) => (
                         <Pill key={key} on={access === key} fill="#2f7fe0" onPress={() => { animate(); setAccess(key); }}>
@@ -434,7 +434,7 @@ const CARD = { backgroundColor: "#000", borderRadius: 20, borderWidth: 1, border
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View>
-      <Text style={{ color: "rgba(255,255,255,0.4)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: 8 }}>{label.toUpperCase()}</Text>
+      <Text style={{ color: "rgba(255,255,255,0.5)", fontFamily: fonts.semi, fontSize: 11, letterSpacing: 0.66, marginBottom: 8 }}>{label.toUpperCase()}</Text>
       {children}
     </View>
   );

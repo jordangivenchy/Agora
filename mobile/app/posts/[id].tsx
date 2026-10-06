@@ -182,10 +182,10 @@ export default function ThreadScreen() {
               <VerifiedMark id={c.author_id} username={c.author_username} size={12} style={{ marginLeft: -3 }} />
             </Pressable>
             {isAuthor && <Text style={{ color: colors.yellow, fontFamily: fonts.bold, fontSize: 10.5 }}>author</Text>}
-            <Text style={{ color: "#71717e", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
+            <Text style={{ color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
             <RoleBadge role={c.author_role} />
             {c.pinned_at && <Badge label="PINNED" color={colors.blueText} icon="pin-outline" />}
-            {isCollapsed && hidden > 0 && <Text style={{ color: "#71717e", fontFamily: fonts.semi, fontSize: 11.5 }}>· {hidden} repl{hidden === 1 ? "y" : "ies"}</Text>}
+            {isCollapsed && hidden > 0 && <Text style={{ color: "#7f7f89", fontFamily: fonts.semi, fontSize: 11.5 }}>· {hidden} repl{hidden === 1 ? "y" : "ies"}</Text>}
           </View>
           {!isCollapsed && (
             <>
@@ -268,7 +268,7 @@ export default function ThreadScreen() {
               </View>
             )}
             {!loading && n === 0 && (
-              <Text style={{ color: "rgba(238,238,245,0.32)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 24 }}>No comments yet — start the discussion.</Text>
+              <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12, textAlign: "center", paddingVertical: 24 }}>No comments yet — start the discussion.</Text>
             )}
           </View>
         }

@@ -8,6 +8,7 @@ import { supabase } from "../src/supabase";
 import { isNewAccount, useSession } from "../src/session";
 import { colors, fonts } from "../src/theme";
 import { Button, Field, Note, Screen, Sub, Title } from "../src/ui";
+import { goHome } from "../src/goHome";
 
 type Mode = "signin" | "signup" | "2fa";
 
@@ -44,7 +45,7 @@ export default function SignIn() {
       return;
     }
     const { data } = await supabase.auth.getSession();
-    router.replace(isNewAccount(data.session) ? "/welcome" : "/");
+    if (isNewAccount(data.session)) router.replace("/welcome"); else goHome();
   }
 
   async function google() {
@@ -177,7 +178,7 @@ export default function SignIn() {
                 <View style={{ height: 4 }} />
                 <Button onPress={() => void submit()} disabled={!email.trim() || !password || (mode === "signup" && !username.trim())} busy={busy}>{mode === "signin" ? "Sign in" : "Create account"}</Button>
                 <View style={{ height: 10 }} />
-                <Button kind="secondary" onPress={() => { listenAsGuest(); router.replace("/"); }}>Browse discussions without signing in</Button>
+                <Button kind="secondary" onPress={() => { listenAsGuest(); goHome(); }}>Browse discussions without signing in</Button>
                 <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 16 }}>By continuing, you agree to AgoraSphere's Terms of Service and acknowledge our Privacy Policy.</Text>
               </>
             )}
