@@ -3,7 +3,13 @@
    10 s back, play/pause and 10 s forward in the middle; the seek bar with
    elapsed and total along the bottom, then speed (remembered, like the
    site's), AirPlay, picture in picture and full screen, which hands over
-   to the system player. While playing they fade after a few seconds. */
+   to the system player. While playing they fade after a few seconds.
+
+   The three in the middle are glass, and glass is never faded (glass.tsx,
+   `present`): under the layer's fade the discs were there when the replay
+   opened and bare icons on every tap after. So nothing above them fades.
+   The dim, the bottom row and the discs' icons do; the discs' material
+   is turned on a frame after they mount and off as the rest goes. */
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { Animated, Platform, Pressable, Text, View, type GestureResponderEvent } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -11,12 +17,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEvent } from "expo";
 import { VideoAirPlayButton, type VideoPlayer, type VideoView } from "expo-video";
 import { colors, fonts } from "./theme";
-import { Glass } from "./glass";
+import { Glass, glassAvailable } from "./glass";
 
 /* A tap on speed steps through these, from normal up and round again. */
 const RATES = [1, 1.25, 1.5, 1.75, 2, 0.5, 0.75];
 const RATE_KEY = "agora:replay-rate";
 const HIDE_AFTER_MS = 3000;
+/* How long they take to come and to go; the glass keeps the same time. */
+const IN_MS = 140;
+const OUT_MS = 260;
 
 function clock(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -48,21 +57,32 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
 
   /* Showing and fading. */
   const [shown, setShown] = useState(true);
+  /* Fading out: still on screen, the glass already on its way. */
+  const [leaving, setLeaving] = useState(false);
+  /* On screen and laid out: the glass can be turned on. */
+  const [ready, setReady] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const show = useCallback((keep = false) => {
     setShown(true);
-    Animated.timing(fade, { toValue: 1, duration: 140, useNativeDriver: true }).start();
+    setLeaving(false);
+    Animated.timing(fade, { toValue: 1, duration: IN_MS, useNativeDriver: true }).start();
     if (hideTimer.current) clearTimeout(hideTimer.current);
     if (!keep) {
       hideTimer.current = setTimeout(() => {
         if (!player.playing) return;
-        Animated.timing(fade, { toValue: 0, duration: 260, useNativeDriver: true }).start(({ finished }) => { if (finished) setShown(false); });
+        setLeaving(true);
+        Animated.timing(fade, { toValue: 0, duration: OUT_MS, useNativeDriver: true }).start(({ finished }) => { if (finished) { setShown(false); setLeaving(false); } });
       }, HIDE_AFTER_MS);
     }
   }, [fade, player]);
   useEffect(() => { show(!isPlaying); }, [isPlaying, show]);
   useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+  useEffect(() => {
+    if (!shown) return;
+    const frame = requestAnimationFrame(() => setReady(true));
+    return () => { cancelAnimationFrame(frame); setReady(false); };
+  }, [shown]);
 
   /* Speed, remembered on this phone. */
   const [rate, setRate] = useState(1);
@@ -93,33 +113,46 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
   const skip = (by: number) => { player.seekBy(by); onSeek?.(); show(); };
   const toggle = () => { if (player.playing) player.pause(); else player.play(); show(); };
   const round = (size: number) => ({ width: size, height: size, borderRadius: size / 2, alignItems: "center" as const, justifyContent: "center" as const });
+  const fill = { position: "absolute" as const, left: 0, right: 0, top: 0, bottom: 0 };
+  /* The fade is on the discs' icons where there is glass (which has its
+     own way in and out), and on the discs themselves where there isn't. */
+  const discsFade = glassAvailable ? 1 : fade;
+  const iconFade = glassAvailable ? fade : 1;
+  const glass = { clear: true, interactive: true, present: ready && !leaving, presentSeconds: (leaving ? OUT_MS : IN_MS) / 1000 };
 
   return (
-    <Pressable onPress={() => (shown ? (player.playing ? setShown(false) : show(true)) : show())} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} accessibilityLabel={shown ? "Hide the controls" : "Show the controls"}>
+    <Pressable onPress={() => (shown ? (player.playing ? setShown(false) : show(true)) : show())} style={fill} accessibilityLabel={shown ? "Hide the controls" : "Show the controls"}>
       {shown && (
-        <Animated.View pointerEvents="box-none" style={{ flex: 1, opacity: fade, backgroundColor: "rgba(0,0,0,0.38)", justifyContent: "flex-end" }}>
+        <View pointerEvents="box-none" style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Animated.View pointerEvents="none" style={[fill, { opacity: fade, backgroundColor: "rgba(0,0,0,0.38)" }]} />
           {/* Back, play and forward sit on the middle of the picture, not
               in what the bottom row leaves over. */}
-          <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 34 }}>
+          <Animated.View pointerEvents="box-none" style={[fill, { opacity: discsFade, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 34 }]}>
             <Pressable onPress={() => skip(-10)} hitSlop={10} accessibilityLabel="Back 10 seconds" style={round(44)}>
-              <Glass fallback="transparent" clear interactive style={[round(44), { overflow: "hidden" }]}>
-                <Ionicons name="play-back" size={24} color="#fff" />
-                <Text style={{ position: "absolute", bottom: 4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+              <Glass fallback="transparent" {...glass} style={[round(44), { overflow: "hidden" }]}>
+                <Animated.View style={[round(44), { opacity: iconFade }]}>
+                  <Ionicons name="play-back" size={24} color="#fff" />
+                  <Text style={{ position: "absolute", bottom: 4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+                </Animated.View>
               </Glass>
             </Pressable>
             <Pressable onPress={toggle} accessibilityLabel={isPlaying ? "Pause" : "Play"} style={round(58)}>
-              <Glass fallback="#0e0e11" fallbackStyle={{ borderWidth: 1, borderColor: "#2a2a33" }} clear interactive style={[round(58), { overflow: "hidden" }]}>
-                <Ionicons name={isPlaying ? "pause" : "play"} size={26} color="#fff" style={{ marginLeft: isPlaying ? 0 : 3 }} />
+              <Glass fallback="#0e0e11" fallbackStyle={{ borderWidth: 1, borderColor: "#2a2a33" }} {...glass} style={[round(58), { overflow: "hidden" }]}>
+                <Animated.View style={[round(58), { opacity: iconFade }]}>
+                  <Ionicons name={isPlaying ? "pause" : "play"} size={26} color="#fff" style={{ marginLeft: isPlaying ? 0 : 3 }} />
+                </Animated.View>
               </Glass>
             </Pressable>
             <Pressable onPress={() => skip(10)} hitSlop={10} accessibilityLabel="Forward 10 seconds" style={round(44)}>
-              <Glass fallback="transparent" clear interactive style={[round(44), { overflow: "hidden" }]}>
-                <Ionicons name="play-forward" size={24} color="#fff" />
-                <Text style={{ position: "absolute", bottom: 4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+              <Glass fallback="transparent" {...glass} style={[round(44), { overflow: "hidden" }]}>
+                <Animated.View style={[round(44), { opacity: iconFade }]}>
+                  <Ionicons name="play-forward" size={24} color="#fff" />
+                  <Text style={{ position: "absolute", bottom: 4, color: "#fff", fontFamily: fonts.semi, fontSize: 9 }}>10</Text>
+                </Animated.View>
               </Glass>
             </Pressable>
-          </View>
-          <View style={{ paddingLeft: 10 + (safeArea?.left ?? 0), paddingRight: 10 + (safeArea?.right ?? 0), paddingBottom: 6 + (safeArea?.bottom ?? 0) }}>
+          </Animated.View>
+          <Animated.View style={{ opacity: fade, paddingLeft: 10 + (safeArea?.left ?? 0), paddingRight: 10 + (safeArea?.right ?? 0), paddingBottom: 6 + (safeArea?.bottom ?? 0) }}>
             <View
               onLayout={(e) => setBarW(Math.max(1, e.nativeEvent.layout.width))}
               onStartShouldSetResponder={() => true}
@@ -158,8 +191,8 @@ export function ReplayControls({ player, viewRef, currentTime, onSeek, onFullscr
                 <Ionicons name={fullscreen ? "contract" : "expand"} size={19} color="#fff" />
               </Pressable>
             </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        </View>
       )}
     </Pressable>
   );
