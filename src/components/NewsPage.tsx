@@ -90,7 +90,7 @@ function Outlets({ sources, max = 3 }: { sources: Source[]; max?: number }) {
           <span className="text-[10.5px]" style={{ color: "#8b8b94" }}>{src.name}</span>
         </span>
       ))}
-      {sources.length > max && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>+{sources.length - max}</span>}
+      {sources.length > max && <span className="text-[10.5px]" style={{ color: "#7f7f89" }}>+{sources.length - max}</span>}
     </span>
   );
 }
@@ -354,7 +354,7 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
 
         {/* ── Major stories: image cards ── */}
         {stories === null ? (
-          <p className="text-[12px] px-1" style={{ color: "#6b6b74" }}>Loading headlines…</p>
+          <p className="text-[12px] px-1" style={{ color: "#7f7f89" }}>Loading headlines…</p>
         ) : stories.length === 0 ? (
           <div className="px-4 py-8 text-center" style={card}>
             <p className="m-0 mb-1 text-[13px]" style={{ color: "#f5f5f0" }}>No headlines right now</p>
@@ -393,7 +393,7 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
                         )}
                         <div className="flex items-center gap-2 flex-wrap mt-auto">
                           <Outlets sources={st.sources} />
-                          {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
+                          {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#7f7f89" }}>· {timeAgo(st.publishedAt)}</span>}
                         </div>
                         <div className="flex flex-col items-stretch gap-2 mt-1">
                           {st.url && (
@@ -450,7 +450,7 @@ export default function NewsPage({ open = true, onClose, onStartDebate: startDeb
                         <p className="m-0 text-[15px]" style={{ color: "#f5f5f0", fontWeight: 600, lineHeight: 1.35 }}>{st.headline}</p>
                         <p className="m-0 mt-0.5 flex items-center gap-2 flex-wrap">
                           <Outlets sources={st.sources} max={2} />
-                          {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#6b6b74" }}>· {timeAgo(st.publishedAt)}</span>}
+                          {st.publishedAt && <span className="text-[10.5px]" style={{ color: "#7f7f89" }}>· {timeAgo(st.publishedAt)}</span>}
                         </p>
                       </div>
                       <div className="flex flex-col items-stretch gap-2 shrink-0" style={{ width: 190 }}>

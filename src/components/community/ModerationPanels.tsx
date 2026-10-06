@@ -58,7 +58,7 @@ const ghostBtn: React.CSSProperties = {
   fontFamily: "inherit",
 };
 
-const dimText: React.CSSProperties = { color: "rgba(238,238,245,0.32)" };
+const dimText: React.CSSProperties = { color: "rgba(238,238,245,0.5)" };
 
 /* ---------- BansPanel ---------- */
 

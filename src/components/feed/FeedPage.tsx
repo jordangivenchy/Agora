@@ -100,7 +100,7 @@ function whenLabel(iso: string | null): string {
 
 function Reason({ text }: { text: string }) {
   return (
-    <p className="m-0 mb-1 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.38)" }}>
+    <p className="m-0 mb-1 text-[10.5px] inline-flex items-center gap-1" style={{ color: "rgba(238,238,245,0.5)" }}>
       <Icon name="sparkles" size={11} /> {text}
     </p>
   );
@@ -480,7 +480,7 @@ export default function FeedPage({ open = true, onClose }: Props) {
                   {live.map((it) => it.kind === "live" && (
                     <div key={it.item_id} className="shrink-0">
                       <RoomCard room={it.payload} size={168} />
-                      <p className="m-0 mt-1 text-[10px] truncate" style={{ color: "rgba(238,238,245,0.38)", maxWidth: 168 }}>{it.reason}</p>
+                      <p className="m-0 mt-1 text-[10px] truncate" style={{ color: "rgba(238,238,245,0.5)", maxWidth: 168 }}>{it.reason}</p>
                     </div>
                   ))}
                 </div>
@@ -488,7 +488,7 @@ export default function FeedPage({ open = true, onClose }: Props) {
             )}
 
             {loading && items === null && (
-              <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.32)" }}>Loading your feed…</p>
+              <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.5)" }}>Loading your feed…</p>
             )}
 
             {items !== null && items.length === 0 && !loading && !error && (
@@ -506,7 +506,7 @@ export default function FeedPage({ open = true, onClose }: Props) {
               <div className="mb-4">
                 <PeopleSuggestions limit={8} layout="row" onLoaded={setSuggestionCount} />
                 {suggestionCount === 0 && (
-                  <p className="m-0 text-[12px]" style={{ color: "rgba(238,238,245,0.4)" }}>No suggestions yet — check back once more people join.</p>
+                  <p className="m-0 text-[12px]" style={{ color: "rgba(238,238,245,0.5)" }}>No suggestions yet — check back once more people join.</p>
                 )}
                 <a
                   href={pathFor.community(null)}

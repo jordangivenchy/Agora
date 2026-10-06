@@ -107,7 +107,7 @@ export function PersonCard({
         <span className="truncate">{name}</span>
         {person.verified && <VerifiedBadge size={12} />}
       </p>
-      <p className="m-0 mt-0.5 text-[11px] truncate max-w-full" style={{ color: "rgba(238,238,245,0.45)" }}>@{person.username}</p>
+      <p className="m-0 mt-0.5 text-[11px] truncate max-w-full" style={{ color: "rgba(238,238,245,0.5)" }}>@{person.username}</p>
       <p className="m-0 text-[10.5px] leading-snug" style={{
         color: "rgba(238,238,245,0.5)", minHeight: 26,
         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",

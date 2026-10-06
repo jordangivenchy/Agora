@@ -120,7 +120,7 @@ export default function FollowListModal({
               color: "var(--text-primary)",
             }}
           >
-            {title} <span style={{ color: "rgba(255,255,255,0.4)" }}>({rows.length})</span>
+            {title} <span style={{ color: "rgba(255,255,255,0.5)" }}>({rows.length})</span>
           </h2>
           <button
             onClick={onClose}
@@ -249,7 +249,7 @@ export default function FollowListModal({
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
                     fontSize: 11.5,
-                    color: "rgba(255,255,255,0.45)",
+                    color: "rgba(255,255,255,0.5)",
                     marginTop: 2,
                   }}
                 >

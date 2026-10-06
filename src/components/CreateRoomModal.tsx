@@ -758,7 +758,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                         fontWeight: 600,
                         letterSpacing: "0.06em",
                         textTransform: "uppercase",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "rgba(255,255,255,0.5)",
                       }}
                     >
                       Starts at
@@ -912,7 +912,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                         fontWeight: 600,
                         letterSpacing: "0.06em",
                         textTransform: "uppercase",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "rgba(255,255,255,0.5)",
                       }}
                     >
                       Who can enter
@@ -1044,7 +1044,7 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
           fontWeight: 600,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: "rgba(255,255,255,0.4)",
+          color: "rgba(255,255,255,0.5)",
         }}
       >
         {label}

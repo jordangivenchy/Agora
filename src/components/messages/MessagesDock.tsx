@@ -385,7 +385,7 @@ export default function MessagesDock() {
                   >
                     {g.name}
                   </p>
-                  <span style={{ color: gActive ? "rgba(26,14,0,0.7)" : "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(g.last_at)}</span>
+                  <span style={{ color: gActive ? "rgba(26,14,0,0.7)" : "#7f7f89", fontSize: 11, flexShrink: 0 }}>{relTime(g.last_at)}</span>
                 </div>
                 <p
                   style={{
@@ -466,7 +466,7 @@ export default function MessagesDock() {
                   {displayName({ display_name: t.peer_display_name, username: t.peer_username })}
                   <VerifiedMark id={t.peer_id} username={t.peer_username} />
                 </p>
-                <span style={{ color: active ? "rgba(26,14,0,0.7)" : "#6f6f7a", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
+                <span style={{ color: active ? "rgba(26,14,0,0.7)" : "#7f7f89", fontSize: 11, flexShrink: 0 }}>{relTime(t.last_at)}</span>
               </div>
               <p
                 style={{
@@ -516,7 +516,7 @@ export default function MessagesDock() {
             left: 9,
             display: "inline-flex",
             alignItems: "center",
-            color: "rgba(255,255,255,0.4)",
+            color: "rgba(255,255,255,0.5)",
             pointerEvents: "none",
           }}
         >

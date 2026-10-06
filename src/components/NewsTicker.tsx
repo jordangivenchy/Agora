@@ -123,11 +123,11 @@ export default function NewsTicker({ stories }: { stories: TickerStory[] }) {
                       style={{ borderRadius: 3, opacity: 0.85 }}
                     />
                   )}
-                  <span style={{ fontSize: 10.5, color: "#6b6b74" }}>{src.name}</span>
+                  <span style={{ fontSize: 10.5, color: "#7f7f89" }}>{src.name}</span>
                 </span>
               ))}
               {s.sources.length > 3 && (
-                <span style={{ fontSize: 10.5, color: "#6b6b74" }}>+{s.sources.length - 3}</span>
+                <span style={{ fontSize: 10.5, color: "#7f7f89" }}>+{s.sources.length - 3}</span>
               )}
             </span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: "#f4d47c", whiteSpace: "nowrap" }}>

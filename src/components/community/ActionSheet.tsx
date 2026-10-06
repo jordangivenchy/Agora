@@ -61,7 +61,7 @@ export default function ActionSheet({
               margin: "0 0 6px",
               padding: "0 10px",
               fontSize: 12,
-              color: "rgba(238,238,245,0.45)",
+              color: "rgba(238,238,245,0.5)",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",

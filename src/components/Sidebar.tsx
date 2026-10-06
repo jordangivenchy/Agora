@@ -243,7 +243,7 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard }: P
               fontSize: "11px",
               fontWeight: 600,
               letterSpacing: "0.08em",
-              color: "rgba(255,255,255,0.4)",
+              color: "rgba(255,255,255,0.5)",
             }}
           >
             Friends
@@ -384,7 +384,7 @@ export default function Sidebar({ activeView, onChangeView, onOpenDashboard }: P
                       fontFamily: "'DM Sans', sans-serif",
                       fontSize: 11,
                       fontWeight: 500,
-                      color: "rgba(255,255,255,0.3)",
+                      color: "rgba(255,255,255,0.5)",
                     }}
                   >
                     Online

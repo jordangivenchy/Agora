@@ -233,7 +233,7 @@ export default function GroupInfoModal({
             {adding && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10, padding: 8, borderRadius: 14, border: "1px solid rgba(255,183,0,0.35)" }}>
                 {candidates === null && (
-                  <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.4)", padding: "4px 2px" }}>Finding friends…</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.5)", padding: "4px 2px" }}>Finding friends…</p>
                 )}
                 {candidates !== null && candidates.length === 0 && (
                   <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.5)", padding: "6px 2px", lineHeight: 1.45 }}>
@@ -250,7 +250,7 @@ export default function GroupInfoModal({
                           {displayName(c)}
                           <VerifiedMark id={c.id} username={c.username} />
                         </span>
-                        <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>@{c.username}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.5)" }}>@{c.username}</span>
                       </span>
                       <button
                         type="button"
@@ -284,9 +284,9 @@ export default function GroupInfoModal({
                       <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {displayName(m)}
                         <VerifiedMark id={m.id} username={m.username} />
-                        {isMe && <span style={{ fontWeight: 500, color: "rgba(238,238,245,0.45)" }}> · you</span>}
+                        {isMe && <span style={{ fontWeight: 500, color: "rgba(238,238,245,0.5)" }}> · you</span>}
                       </span>
-                      <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>
+                      <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.5)" }}>
                         @{m.username}
                         {m.is_owner && <span style={{ color: YELLOW, fontWeight: 700 }}> · owner</span>}
                       </span>

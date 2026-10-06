@@ -155,7 +155,7 @@ export default function CommunityPicker({
           {searchable && (
             <div style={{ padding: 8, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="relative flex items-center">
-                <span className="absolute left-2 flex items-center" style={{ color: "rgba(255,255,255,0.4)", pointerEvents: "none" }}>
+                <span className="absolute left-2 flex items-center" style={{ color: "rgba(255,255,255,0.5)", pointerEvents: "none" }}>
                   <Icon name="search" size={13} />
                 </span>
                 <input
@@ -178,7 +178,7 @@ export default function CommunityPicker({
             )}
             {groups.map(([key, xs]) => xs.length === 0 ? null : (
               <div key={key}>
-                <p className="m-0" style={{ padding: "8px 10px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#6b6b74" }}>
+                <p className="m-0" style={{ padding: "8px 10px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#7f7f89" }}>
                   {GROUP_LABEL[key].toUpperCase()}
                 </p>
                 {xs.map((c) => {

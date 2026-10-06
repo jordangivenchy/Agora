@@ -525,7 +525,7 @@ export default function SettingsPage({ initial }: {
                 Edit profile
               </button>
             </div>
-            <p className="mx-4 mb-3 mt-1 text-[10px]" style={{ color: "#6b6b74" }}>
+            <p className="mx-4 mb-3 mt-1 text-[10px]" style={{ color: "#7f7f89" }}>
               Username changes are limited to once every 7 days.
             </p>
           </SectionCard>
@@ -1024,7 +1024,7 @@ export default function SettingsPage({ initial }: {
                 <span className="block text-[13px]" style={{ color: s.key === "danger" ? "#fca5a5" : "#f5f5f0" }}>
                   {s.label}
                 </span>
-                <span className="block text-[10px] mt-0.5" style={{ color: "#6b6b74" }}>{s.sub}</span>
+                <span className="block text-[10px] mt-0.5" style={{ color: "#7f7f89" }}>{s.sub}</span>
               </button>
             ))}
             {/* Moderators get a link to the report queue; the /mod page and
@@ -1036,7 +1036,7 @@ export default function SettingsPage({ initial }: {
                 style={{ borderRadius: 10, border: "0.5px solid rgba(244,212,124,0.25)" }}
               >
                 <span className="block text-[13px]" style={{ color: "#f4d47c" }}>Moderation</span>
-                <span className="block text-[10px] mt-0.5" style={{ color: "#6b6b74" }}>Open the report queue</span>
+                <span className="block text-[10px] mt-0.5" style={{ color: "#7f7f89" }}>Open the report queue</span>
               </a>
             )}
           </nav>

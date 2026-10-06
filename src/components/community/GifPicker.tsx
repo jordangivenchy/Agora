@@ -121,7 +121,7 @@ export default function GifPicker({
         style={{ gridTemplateColumns: "1fr 1fr 1fr", maxHeight: 240, overflowY: "auto" }}
       >
         {loading && gifs.length === 0 && (
-          <p className="m-0 text-[11px] col-span-3 text-center py-4" style={{ color: "rgba(238,238,245,0.32)" }}>
+          <p className="m-0 text-[11px] col-span-3 text-center py-4" style={{ color: "rgba(238,238,245,0.5)" }}>
             Loading…
           </p>
         )}
@@ -140,12 +140,12 @@ export default function GifPicker({
           />
         ))}
         {!loading && !error && gifs.length === 0 && (
-          <p className="m-0 text-[11px] col-span-3 text-center py-4" style={{ color: "rgba(238,238,245,0.32)" }}>
+          <p className="m-0 text-[11px] col-span-3 text-center py-4" style={{ color: "rgba(238,238,245,0.5)" }}>
             No GIFs found.
           </p>
         )}
       </div>
-      <p className="m-0 px-2.5 pb-2 text-[9px] text-right" style={{ color: "rgba(238,238,245,0.25)" }}>
+      <p className="m-0 px-2.5 pb-2 text-[9px] text-right" style={{ color: "rgba(238,238,245,0.5)" }}>
         Powered by GIPHY
       </p>
     </div>

@@ -232,7 +232,7 @@ export default function NotificationsPage({ initial }: {
             <p className="m-0 text-[14px]" style={{ color: "#d5d5dc" }}>
               {filter === "all" ? "Nothing yet" : `No ${FILTERS.find((f) => f.id === filter)?.label.toLowerCase()} yet`}
             </p>
-            <p className="m-0 mt-1 text-[12.5px]" style={{ color: "#6b6b74" }}>
+            <p className="m-0 mt-1 text-[12.5px]" style={{ color: "#7f7f89" }}>
               Follow speakers, join communities and set reminders to hear when things happen.
             </p>
           </div>
@@ -240,7 +240,7 @@ export default function NotificationsPage({ initial }: {
 
         {groups.map((g) => (
           <section key={g.label} className="mb-5">
-            <p className="m-0 mb-2 text-[11px] uppercase tracking-wider" style={{ color: "#6b6b74", fontWeight: 600 }}>
+            <p className="m-0 mb-2 text-[11px] uppercase tracking-wider" style={{ color: "#7f7f89", fontWeight: 600 }}>
               {g.label}
             </p>
             <div style={{ background: "#000", border: "1px solid #222229", borderRadius: 14, overflow: "hidden" }}>
@@ -291,10 +291,10 @@ export default function NotificationsPage({ initial }: {
                         </span>
                       )}
                       {n.community_name && (n.type === "post_comment" || n.type === "post_reply" || n.type === "repost" || n.type === "post_upvotes") && (
-                        <span className="block mt-1 text-[11px]" style={{ color: "#6b6b74" }}>in {n.community_name}</span>
+                        <span className="block mt-1 text-[11px]" style={{ color: "#7f7f89" }}>in {n.community_name}</span>
                       )}
                     </span>
-                    <span className="shrink-0 flex items-center gap-2 text-[11px]" style={{ color: "#6b6b74", marginTop: 3 }}>
+                    <span className="shrink-0 flex items-center gap-2 text-[11px]" style={{ color: "#7f7f89", marginTop: 3 }}>
                       {timeAgo(n.created_at)}
                       {unreadRow && <span style={{ width: 7, height: 7, borderRadius: 4, background: "#ffb700" }} />}
                     </span>

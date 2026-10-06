@@ -41,7 +41,7 @@ export const FRIENDS_UI = {
   border: "1px solid rgba(255,255,255,0.10)",
   text: "#f5f5f0",
   secondary: "#8b8b94",
-  muted: "#6b6b74",
+  muted: "#7f7f89",
   gold: "#e2b96b",
   green: "#22c55e",
   live: "#e05a5a",
@@ -440,7 +440,7 @@ export function FriendsOverlay(p: FriendsOverlayProps) {
       {/* Search — mirrors the DM dock field */}
       <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-          <span style={{ position: "absolute", left: 9, display: "inline-flex", alignItems: "center", color: "rgba(255,255,255,0.4)", pointerEvents: "none" }}>
+          <span style={{ position: "absolute", left: 9, display: "inline-flex", alignItems: "center", color: "rgba(255,255,255,0.5)", pointerEvents: "none" }}>
             <Icon name="search" size={13} />
           </span>
           <input

@@ -613,7 +613,7 @@ export default function ProfileView({
     >
       {label}
       {count !== null && (
-        <span style={{ color: "#6b6b74", fontWeight: 400, marginLeft: 6 }}>{count}</span>
+        <span style={{ color: tab === key ? "#8b8b94" : "#7f7f89", fontWeight: 400, marginLeft: 6 }}>{count}</span>
       )}
     </button>
   );
@@ -937,7 +937,7 @@ export default function ProfileView({
                   {viewerIsMod && (
                     <>
                       <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "5px 6px" }} />
-                      <p className="m-0" style={{ padding: "3px 12px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#6b6b74" }}>
+                      <p className="m-0" style={{ padding: "3px 12px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#7f7f89" }}>
                         MODERATOR
                       </p>
                       <button
@@ -1074,7 +1074,7 @@ export default function ProfileView({
         {tab === "communities" && (
           <div className="flex flex-col gap-2.5">
             {myCommunities === null ? (
-              <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
+              <p style={{ color: "#7f7f89", fontSize: 13 }}>Loading…</p>
             ) : myCommunities.length === 0 ? (
               emptyState(
                 "users",
@@ -1127,7 +1127,7 @@ export default function ProfileView({
                         {c.member_count} member{c.member_count === 1 ? "" : "s"}
                       </p>
                     </div>
-                    <span style={{ color: "#6b6b74", fontSize: 12 }}>→</span>
+                    <span style={{ color: "#7f7f89", fontSize: 12 }}>→</span>
                   </>
                 );
                 /* Real link to the board. Inside the room drawer it opens in
@@ -1153,7 +1153,7 @@ export default function ProfileView({
         {tab === "debates" && (
           <div className="flex flex-col gap-2.5">
             {recordedDiscussions === null ? (
-              <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
+              <p style={{ color: "#7f7f89", fontSize: 13 }}>Loading…</p>
             ) : recordedDiscussions.length === 0 ? (
               emptyState(
                 "mic",
@@ -1257,7 +1257,7 @@ export default function ProfileView({
                           {d.role === "host" ? "hosted" : <>spoke · {hostName}<VerifiedMark id={d.host_id} username={d.host_username} /></>}
                           {topic ? ` · ${topic.label}` : ""}
                         </p>
-                        <p className="m-0" style={{ color: "#6b6b74", fontSize: 10.5 }}>
+                        <p className="m-0" style={{ color: "#7f7f89", fontSize: 10.5 }}>
                           {live
                             ? `${d.viewer_count ?? 0} watching`
                             : [hasReplay ? fmtViews(d.replay_views) : null, fmtAgo(roomTimes[d.id]?.ended_at ?? d.created_at)].filter(Boolean).join(" · ")}
@@ -1275,7 +1275,7 @@ export default function ProfileView({
         {tab === "scheduled" && (
           <div className="flex flex-col gap-2.5">
             {upcoming === null ? (
-              <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
+              <p style={{ color: "#7f7f89", fontSize: 13 }}>Loading…</p>
             ) : upcoming.length === 0 ? (
               emptyState(
                 "calendar",
@@ -1299,7 +1299,7 @@ export default function ProfileView({
                         {d.role === "host" || !d.host_username
                           ? identity(profile)
                           : identity({ id: d.host_id, username: d.host_username, display_name: d.host_display_name, avatar_url: d.host_avatar_url })}
-                        <span style={{ color: "#6b6b74", fontSize: 11 }}>· host</span>
+                        <span style={{ color: "#7f7f89", fontSize: 11 }}>· host</span>
                       </p>
                       <p className="m-0" style={{ fontSize: 14.5, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
                         <a href={roomPath({ id: d.id, motion: d.motion })} className="stretched-link no-underline" style={{ color: "#f5f5f0" }}>{d.motion || "Untitled discussion"}</a>
@@ -1406,7 +1406,7 @@ export default function ProfileView({
                     : "The original post was deleted."}
                 </p>
               )}
-              <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
+              <p className="m-0 mt-1.5" style={{ color: "#7f7f89", fontSize: 11 }}>
                 <Icon name="arrow-up" size={11} /> {p.score} · <Icon name="message-circle" size={11} /> {p.comment_count}
               </p>
             </div>
@@ -1414,7 +1414,7 @@ export default function ProfileView({
           return (
             <div className="flex flex-col gap-2.5">
               {rows === null ? (
-                <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
+                <p style={{ color: "#7f7f89", fontSize: 13 }}>Loading…</p>
               ) : rows.length === 0 ? (
                 emptyState(
                   tab === "posts" ? "pencil" : "repeat",
@@ -1441,7 +1441,7 @@ export default function ProfileView({
         {tab === "comments" && (
           <div className="flex flex-col gap-2.5">
             {comments === null ? (
-              <p style={{ color: "#6b6b74", fontSize: 13 }}>Loading…</p>
+              <p style={{ color: "#7f7f89", fontSize: 13 }}>Loading…</p>
             ) : comments.length === 0 ? (
               emptyState(
                 "message-circle",
@@ -1485,7 +1485,7 @@ export default function ProfileView({
                         style={{ maxHeight: 90, maxWidth: 140, objectFit: "cover" }}
                       />
                     )}
-                    <p className="m-0 mt-1.5" style={{ color: "#6b6b74", fontSize: 11 }}>
+                    <p className="m-0 mt-1.5" style={{ color: "#7f7f89", fontSize: 11 }}>
                       <Icon name="arrow-up" size={11} /> {c.score} · {timeAgo(c.created_at)} ago
                     </p>
                   </div>
@@ -1497,7 +1497,7 @@ export default function ProfileView({
                     className="cursor-pointer py-2.5"
                     style={{
                       ...card,
-                      color: commentsBusy ? "#6b6b74" : "#9cc4f0",
+                      color: commentsBusy ? "#7f7f89" : "#9cc4f0",
                       fontFamily: "inherit",
                       fontSize: 13,
                       fontWeight: 600,

@@ -123,7 +123,7 @@ export const modalLabel: CSSProperties = {
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
-  color: "rgba(255,255,255,0.4)",
+  color: "rgba(255,255,255,0.5)",
   marginBottom: 8,
 };
 export const fieldStyle: CSSProperties = {
@@ -179,7 +179,7 @@ export const pillQuiet: CSSProperties = {
   ...pillBase,
   background: "#0b0b0d",
   border: "1px solid rgba(255,255,255,0.08)",
-  color: "rgba(238,238,245,0.45)",
+  color: "rgba(238,238,245,0.5)",
   cursor: "default",
 };
 export const errorNote: CSSProperties = {

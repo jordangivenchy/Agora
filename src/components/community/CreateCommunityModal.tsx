@@ -89,10 +89,10 @@ const label: CSSProperties = {
   fontWeight: 600,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
-  color: "rgba(255,255,255,0.4)",
+  color: "rgba(255,255,255,0.5)",
   marginBottom: 8,
 };
-const hintStyle: CSSProperties = { fontSize: 11.5, color: "rgba(238,238,245,0.42)", marginTop: 5 };
+const hintStyle: CSSProperties = { fontSize: 11.5, color: "rgba(238,238,245,0.5)", marginTop: 5 };
 
 export default function CreateCommunityModal({ open, onClose, onCreated, onCreateDiscussion, switchPhase }: Props) {
   const [supabase] = useState(() => createClient());
@@ -322,7 +322,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
             )}
             <div className="flex items-center gap-2" style={{ marginTop: 8 }} aria-label={`Step ${activeStep + 1} of ${steps.length}`}>
               {steps.map((s, i) => (
-                <span key={s} className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, fontWeight: 600, color: i === activeStep ? "#ffb700" : i < activeStep ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.35)" }}>
+                <span key={s} className="inline-flex items-center gap-1.5" style={{ fontSize: 11.5, fontWeight: 600, color: i === activeStep ? "#ffb700" : i < activeStep ? "rgba(238,238,245,0.7)" : "rgba(238,238,245,0.5)" }}>
                   <span style={{ width: 18, height: 18, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, background: i === activeStep ? "#ffb700" : i < activeStep ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)", color: i === activeStep ? "#1a0e00" : "inherit" }}>
                     {i < activeStep ? <Icon name="check" size={10} /> : i + 1}
                   </span>
@@ -434,7 +434,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                         </span>
                         <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>{k.label}</span>
-                          <span className="ccm-kind-hint" style={{ display: "block", fontSize: 11, lineHeight: "15px", color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.45)" }}>{k.hint}</span>
+                          <span className="ccm-kind-hint" style={{ display: "block", fontSize: 11, lineHeight: "15px", color: on ? "rgba(26,14,0,0.7)" : "rgba(238,238,245,0.5)" }}>{k.hint}</span>
                         </span>
                       </button>
                     );
@@ -443,7 +443,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               </div>
 
               <div>
-                <label style={label} htmlFor="ccm-desc">Description <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></label>
+                <label style={label} htmlFor="ccm-desc">Description <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.5)" }}>(optional)</span></label>
                 <textarea
                   id="ccm-desc"
                   value={description}
@@ -455,7 +455,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                 <p style={{ ...hintStyle, textAlign: "right" }}>{description.length}/{DESC_MAX}</p>
               </div>
               <div>
-                <label style={label} htmlFor="ccm-rules">Rules <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></label>
+                <label style={label} htmlFor="ccm-rules">Rules <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.5)" }}>(optional)</span></label>
                 <textarea
                   id="ccm-rules"
                   value={rules}
@@ -502,7 +502,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                   ["banner", "Banner", "Wide, across the top of the community page.", banner, bannerInput, setBanner],
                 ] as const).map(([key, title, hint, file, ref, set]) => (
                   <div key={key} style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.14)", background: "#0b0b0d" }}>
-                    <span style={{ ...label, marginBottom: 2 }}>{title} <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></span>
+                    <span style={{ ...label, marginBottom: 2 }}>{title} <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.5)" }}>(optional)</span></span>
                     <p style={{ ...hintStyle, marginTop: 0, marginBottom: 10 }}>{hint}</p>
                     <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => set(e.target.files?.[0] ?? null)} />
                     <div className="flex items-center gap-2 flex-wrap">
@@ -557,7 +557,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               </div>
               {isPrivate && (
                 <div>
-                  <label style={label} htmlFor="ccm-prompt">Ask applicants <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.4)" }}>(optional)</span></label>
+                  <label style={label} htmlFor="ccm-prompt">Ask applicants <span style={{ fontWeight: 400, color: "rgba(238,238,245,0.5)" }}>(optional)</span></label>
                   <textarea
                     id="ccm-prompt"
                     value={prompt}
@@ -587,7 +587,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                     ["Access", isPrivate ? `Private — people apply${prompt.trim() ? ", with a question" : ""}` : "Public — anyone can join", 2],
                   ] as [string, string, number][]).map(([k, v, target], idx, arr) => (
                     <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderBottom: idx < arr.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
-                      <span style={{ width: 84, flexShrink: 0, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>{k}</span>
+                      <span style={{ width: 84, flexShrink: 0, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)" }}>{k}</span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: "#eeeef5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
                       <button type="button" onClick={() => go(target)} className="cursor-pointer" style={{ background: "transparent", border: "none", padding: "2px 0", fontSize: 12, color: "rgba(238,238,245,0.55)", fontFamily: "inherit" }}>Edit</button>
                     </div>
@@ -609,7 +609,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
         <div className="flex items-center gap-2 ccm-foot" style={{ padding: "12px 24px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
           {created ? (
             <>
-              <span style={{ fontSize: 12, color: "rgba(238,238,245,0.4)" }}>You can invite more people from the community any time.</span>
+              <span style={{ fontSize: 12, color: "rgba(238,238,245,0.5)" }}>You can invite more people from the community any time.</span>
               <span style={{ marginLeft: "auto" }} />
               <button type="button" onClick={onClose} className="cursor-pointer" style={{ fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }}>
                 Done

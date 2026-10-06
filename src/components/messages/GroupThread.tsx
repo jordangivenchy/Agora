@@ -614,7 +614,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
           const next = i < msgs.length - 1 ? msgs[i + 1] : null;
           const newDay = !prev || dayLabel(prev.created_at) !== dayLabel(m.created_at);
           const day = newDay && (
-            <div style={{ alignSelf: "center", margin: "10px 0 2px", fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "#6b6b74" }}>
+            <div style={{ alignSelf: "center", margin: "10px 0 2px", fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "#7f7f89" }}>
               {dayLabel(m.created_at)}
             </div>
           );

@@ -251,7 +251,7 @@ export default function HomeSidebar({ activeId, onNavigate }: Props) {
           <div className="friends-section" id="friendsSection" ref={friendsRef} />
           <div
             className="sidebar-footer"
-            style={{ paddingBottom: 12, fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center", margin: 0, paddingTop: 8 }}
+            style={{ paddingBottom: 12, fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "center", margin: 0, paddingTop: 8 }}
           >
             © 2026 AgoraSphere
           </div>

@@ -70,7 +70,7 @@ const MentionList = forwardRef<{ onKeyDown: (p: SuggestionKeyDownProps) => boole
             <UserAvatar size={20} username={u.username} avatarUrl={u.avatar_url} seed={u.id} />
             <span className="text-[12px]" style={{ color: "#eeeef5" }}>@{u.username}</span>
             {u.display_name?.trim() && (
-              <span className="text-[10.5px] truncate" style={{ color: "rgba(238,238,245,0.4)" }}>{u.display_name}</span>
+              <span className="text-[10.5px] truncate" style={{ color: "rgba(238,238,245,0.5)" }}>{u.display_name}</span>
             )}
           </div>
         ))}

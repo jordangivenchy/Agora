@@ -136,13 +136,13 @@ export default function NewGroupModal({
 
         <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
           <span style={{ ...modalLabel, marginBottom: 0 }}>Friends</span>
-          <span style={{ fontSize: 11.5, color: picked.size ? YELLOW : "rgba(238,238,245,0.4)", fontWeight: 600 }}>
+          <span style={{ fontSize: 11.5, color: picked.size ? YELLOW : "rgba(238,238,245,0.5)", fontWeight: 600 }}>
             {picked.size ? `${picked.size} picked` : "Pick at least one"}
           </span>
         </div>
         {friends !== null && friends.length > 4 && (
           <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ position: "absolute", left: 11, display: "inline-flex", color: "rgba(255,255,255,0.4)", pointerEvents: "none" }}>
+            <span style={{ position: "absolute", left: 11, display: "inline-flex", color: "rgba(255,255,255,0.5)", pointerEvents: "none" }}>
               <Icon name="search" size={13} />
             </span>
             <input
@@ -156,19 +156,19 @@ export default function NewGroupModal({
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "min(320px, 42vh)", overflowY: "auto" }}>
           {friends === null && (
-            <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.4)", padding: "8px 2px" }}>Finding friends…</p>
+            <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.5)", padding: "8px 2px" }}>Finding friends…</p>
           )}
           {friends !== null && friends.length === 0 && (
             <div style={{ padding: "18px 12px", textAlign: "center", borderRadius: 12, background: "#0b0b0d", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <Icon name="users" size={18} style={{ color: "rgba(238,238,245,0.4)" }} />
+              <Icon name="users" size={18} style={{ color: "rgba(238,238,245,0.5)" }} />
               <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "rgba(238,238,245,0.6)" }}>No friends to add yet.</p>
-              <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "rgba(238,238,245,0.4)", lineHeight: 1.45 }}>
+              <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "rgba(238,238,245,0.5)", lineHeight: 1.45 }}>
                 Group chats are for people who follow each other. Follow someone back and they&rsquo;ll show up here.
               </p>
             </div>
           )}
           {friends !== null && friends.length > 0 && shown.length === 0 && (
-            <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.4)", padding: "8px 2px" }}>No matches.</p>
+            <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.5)", padding: "8px 2px" }}>No matches.</p>
           )}
           {shown.map((f) => {
             const on = picked.has(f.id);
@@ -199,7 +199,7 @@ export default function NewGroupModal({
                     {displayName(f)}
                     <VerifiedMark id={f.id} username={f.username} />
                   </span>
-                  <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>@{f.username}</span>
+                  <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.5)" }}>@{f.username}</span>
                 </span>
                 <span
                   aria-hidden="true"

@@ -160,7 +160,7 @@ export default function EmojiPicker({
         fontWeight: 700,
         letterSpacing: "0.06em",
         textTransform: "uppercase",
-        color: "rgba(238,238,245,0.4)",
+        color: "rgba(238,238,245,0.5)",
       }}
     >
       {t}
@@ -225,7 +225,7 @@ export default function EmojiPicker({
           results.length ? (
             <div style={grid}>{results.map((en, i) => cell(en.e, `${en.e}-${i}`))}</div>
           ) : (
-            <p style={{ margin: 0, padding: "24px 0", textAlign: "center", fontSize: 11.5, color: "rgba(238,238,245,0.35)" }}>
+            <p style={{ margin: 0, padding: "24px 0", textAlign: "center", fontSize: 11.5, color: "rgba(238,238,245,0.5)" }}>
               No matches.
             </p>
           )

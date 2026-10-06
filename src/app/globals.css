@@ -22,7 +22,7 @@
   --con-color: #4a9eff;   /* Agora blue — CON */
   --text-primary: #f4f4f5;
   --text-muted: rgba(244,244,245,0.55);
-  --text-dim: rgba(244,244,245,0.32);
+  --text-dim: rgba(244,244,245,0.5);
   --border: rgba(255,255,255,0.08);
   --border-hover: rgba(255,255,255,0.16);
   --nav-height: 60px;
@@ -277,7 +277,7 @@ body {
   gap: 8px;
   font-size: 12px;
   font-weight: 400;
-  color: rgba(238,238,245,0.45);
+  color: rgba(238,238,245,0.5);
   flex-shrink: 0;
 }
 
@@ -449,7 +449,7 @@ body {
 .tile-role {
   font-size: 9px;
   font-weight: 400;
-  color: rgba(238,238,245,0.45);
+  color: rgba(238,238,245,0.5);
   font-family: 'DM Sans', sans-serif;
   letter-spacing: 0.04em;
 }
@@ -687,7 +687,7 @@ body {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(238,238,245,0.3);
+  color: rgba(238,238,245,0.5);
   flex-shrink: 0;
   margin-right: 4px;
 }
@@ -950,7 +950,7 @@ body {
 .hand-queue-wait {
   font-family: 'DM Sans', sans-serif;
   font-size: 9.5px;
-  color: rgba(238,238,245,0.4);
+  color: rgba(238,238,245,0.5);
 }
 
 .audience-more {
@@ -962,7 +962,7 @@ body {
   font-weight: 500;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(238,238,245,0.45);
+  color: rgba(238,238,245,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1008,7 +1008,7 @@ body {
 }
 .chat-close-btn {
   background: none; border: none;
-  color: rgba(238,238,245,0.32);
+  color: rgba(238,238,245,0.5);
   font-size: 18px; line-height: 1;
   cursor: pointer; padding: 2px 6px;
   border-radius: 6px;
@@ -1055,7 +1055,7 @@ body {
   transition: border-color 0.15s;
 }
 .chat-input:focus { border-color: rgba(108,92,231,0.45); }
-.chat-input::placeholder { color: rgba(238,238,245,0.18); }
+.chat-input::placeholder { color: rgba(238,238,245,0.5); }
 
 /* Chat open state on ctrl btn */
 .ctrl-btn.state-chat-open {
@@ -1155,7 +1155,7 @@ body {
 .notes-hint {
   font-family: 'DM Sans', sans-serif;
   font-size: 10px;
-  color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.5);
   letter-spacing: 0.04em;
 }
 
@@ -1261,7 +1261,7 @@ body {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(238,238,245,0.3);
+  color: rgba(238,238,245,0.5);
 }
 
 .queue-entry {
@@ -1308,7 +1308,7 @@ body {
 
 .join-meta {
   font-size: 12px;
-  color: rgba(238,238,245,0.35);
+  color: rgba(238,238,245,0.5);
   text-align: center;
 }
 
@@ -1373,7 +1373,7 @@ body {
 
 .join-btn-sub {
   font-size: 10px;
-  color: rgba(238,238,245,0.35);
+  color: rgba(238,238,245,0.5);
   font-family: 'DM Sans', sans-serif;
 }
 
@@ -1381,7 +1381,7 @@ body {
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 100px;
-  color: rgba(238,238,245,0.45);
+  color: rgba(238,238,245,0.5);
   font-size: 12px;
   font-weight: 500;
   padding: 8px 20px;
@@ -1875,7 +1875,7 @@ html.reduce-motion .nav-sparkle {
   background: none; border: none; border-radius: 0; flex: 1; min-height: 0; overflow-y: auto; font-size: 15px;
 }
 .rich-editor[data-frameless] .ProseMirror { min-height: 100%; max-height: none; padding: 4px 2px 16px; line-height: 1.5; overflow: visible; }
-.rich-editor[data-frameless] .ProseMirror p.is-editor-empty:first-child::before { color: rgba(238,238,245,0.38); }
+.rich-editor[data-frameless] .ProseMirror p.is-editor-empty:first-child::before { color: rgba(238,238,245,0.5); }
 .composer-sheet { display: flex; flex-direction: column; }
 @keyframes sheetUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .action-sheet { animation: sheetUp 0.18s ease-out both; }
@@ -1895,7 +1895,7 @@ html.reduce-motion .nav-sparkle {
 }
 .rich-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: rgba(238, 238, 245, 0.32);
+  color: rgba(238, 238, 245, 0.5);
   float: left;
   height: 0;
   pointer-events: none;
@@ -2193,7 +2193,7 @@ html.reduce-motion .nav-sparkle {
 .notif-row.is-unread .notif-row-text { color: #f5f5f0; }
 .notif-row-detail { font-size: 12px; color: #8b8b94; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .notif-row-actions { display: flex; gap: 8px; margin-top: 6px; }
-.notif-row-meta { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: #6b6b74; }
+.notif-row-meta { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: #7f7f89; }
 .notif-row-dot { width: 7px; height: 7px; border-radius: 50%; background: #ffb700; }
 .notif-btn {
   display: inline-flex; align-items: center; gap: 5px;
@@ -2283,7 +2283,7 @@ html.reduce-motion .nav-sparkle {
   position: absolute; top: 8px; right: 8px;
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; border-radius: 50%; padding: 0;
-  background: transparent; border: 0; color: #6b6b74; cursor: pointer;
+  background: transparent; border: 0; color: #7f7f89; cursor: pointer;
 }
 .notif-toast-close:hover { background: #18181d; color: #fff; }
 .notif-toast-timer {
@@ -2541,12 +2541,12 @@ html.reduce-motion .nav-sparkle {
   transition: background 80ms ease;
 }
 .search-recent-row:hover, .search-recent-row:focus-visible { background: rgba(255,255,255,0.06); outline: none; }
-.search-recent-icon { display: inline-flex; color: rgba(238,238,245,0.4); flex-shrink: 0; }
+.search-recent-icon { display: inline-flex; color: rgba(238,238,245,0.5); flex-shrink: 0; }
 .search-recent-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search-recent-remove {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-  background: transparent; border: 0; color: rgba(238,238,245,0.4); cursor: pointer; padding: 0;
+  background: transparent; border: 0; color: rgba(238,238,245,0.5); cursor: pointer; padding: 0;
 }
 .search-recent-remove:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .search-field-chip { padding: 7px 12px 7px 10px; }
@@ -2720,7 +2720,7 @@ html.reduce-motion .nav-sparkle {
 .qd-leave { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #2b2b34; background: #0b0b0d; color: #c9c9d2; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
 .qd-leave:hover:not(:disabled) { border-color: #3a3a45; color: #f5f5f0; }
 .qd-leave:disabled { opacity: 0.5; cursor: default; }
-.qd-note { margin: 12px 0 0; font-size: 11.5px; line-height: 1.45; color: #6f6f7c; }
+.qd-note { margin: 12px 0 0; font-size: 11.5px; line-height: 1.45; color: #7f7f89; }
 /* Picking the question, when the queue was opened from a headline. */
 .qd-motions { padding-bottom: 12px; }
 .qd-story { margin: 0 0 8px; display: flex; align-items: flex-start; gap: 6px; font-size: 11.5px; line-height: 1.4; color: #8c8c98; }
@@ -2805,7 +2805,7 @@ html.reduce-motion .nav-sparkle {
 /* The post's author: the word in yellow after the handle, where Reddit would pin "OP". */
 .cm-author-tag { font-size: 10.5px; font-weight: 700; color: #ffb700; }
 .cm-author { font-size: 12px; font-weight: 600; color: #c3c3ce; }
-.cm-time { font-size: 11.5px; color: #71717e; }
+.cm-time { font-size: 11.5px; color: #7f7f89; }
 .cm-body { margin-top: 3px; font-size: 13px; line-height: 1.55; color: #e6e6ee; }
 /* Votes on the left under the avatar column, as on the post cards; the rest to the right. */
 .cm-comment-actions { display: flex; align-items: center; gap: 14px; margin-top: 2px; }

@@ -220,7 +220,7 @@ export default function PostComposer({
             }}
           />
           {title.length > POST_TITLE_MAX - 40 && (
-            <span style={{ fontSize: 11, color: title.length >= POST_TITLE_MAX ? "#e26b6b" : "rgba(238,238,245,0.35)", flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: title.length >= POST_TITLE_MAX ? "#e26b6b" : "rgba(238,238,245,0.5)", flexShrink: 0 }}>
               {title.length} / {POST_TITLE_MAX}
             </span>
           )}
@@ -323,7 +323,7 @@ export default function PostComposer({
 
         {tags.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", padding: "10px 0 2px", flexShrink: 0 }}>
-            <span style={{ fontSize: 11, color: "rgba(238,238,245,0.35)" }}>Tag:</span>
+            <span style={{ fontSize: 11, color: "rgba(238,238,245,0.5)" }}>Tag:</span>
             {tags.map((t) => (
               <button
                 key={t.id}
@@ -376,7 +376,7 @@ export default function PostComposer({
         {!phone && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexShrink: 0 }}>
             {nearMax && (
-              <span style={{ fontSize: 11, color: body.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.35)" }}>
+              <span style={{ fontSize: 11, color: body.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.5)" }}>
                 {body.length.toLocaleString()} / {maxLength.toLocaleString()}
               </span>
             )}
@@ -388,7 +388,7 @@ export default function PostComposer({
           </div>
         )}
         {phone && nearMax && (
-          <span style={{ fontSize: 11, padding: "4px 0 8px", color: body.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.35)", flexShrink: 0 }}>
+          <span style={{ fontSize: 11, padding: "4px 0 8px", color: body.length > maxLength ? "#e26b6b" : "rgba(238,238,245,0.5)", flexShrink: 0 }}>
             {body.length.toLocaleString()} / {maxLength.toLocaleString()}
           </span>
         )}

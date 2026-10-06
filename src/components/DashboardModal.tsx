@@ -412,7 +412,7 @@ export default function DashboardModal({ open, onClose, onOpenDebates }: Props) 
           style={{
             fontFamily: "'DM Sans', sans-serif",
             fontSize: 11,
-            color: "rgba(255,255,255,0.35)",
+            color: "rgba(255,255,255,0.5)",
           }}
         >
           Click a node to open it · ESC to close

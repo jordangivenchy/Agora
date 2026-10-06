@@ -1258,7 +1258,7 @@
   border: 3px dashed rgba(255, 255, 255, 0.28);
   display: grid;
   place-items: center;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
   font-family: "Space Grotesk", "DM Sans", sans-serif;
   font-size: clamp(26px, 3.5vw, 46px);
   font-weight: 700;
@@ -1934,7 +1934,7 @@
 
 .ag-host-empty {
   text-align: center;
-  color: #6b7079;
+  color: #7a7f88;
   font-size: 12px;
   padding: 18px 0;
 }
@@ -2241,7 +2241,7 @@
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #6b7079;
+  color: #7a7f88;
   cursor: pointer;
   transition: color 0.15s;
 }
@@ -2296,7 +2296,7 @@
 
 .ag-empty {
   text-align: center;
-  color: #6b7079;
+  color: #7a7f88;
   font-size: 12px;
   padding: 28px 0;
 }
@@ -2328,7 +2328,7 @@
 }
 
 .ag-chat-name { font-size: 12.5px; font-weight: 700; color: #e7e9ee; }
-.ag-chat-time { font-size: 10.5px; color: #6b7079; }
+.ag-chat-time { font-size: 10.5px; color: #7a7f88; }
 
 .ag-chat-text {
   font-size: 12.5px;
@@ -3663,12 +3663,12 @@
 .ag-frame-empty {
   margin: 0;
   font-size: 13px;
-  color: #6f6c65;
+  color: #827f78;
 }
 
 .ag-frame-meta {
   font-size: 11.5px;
-  color: #6f6c65;
+  color: #827f78;
 }
 
 .ag-frame-text {
@@ -3700,7 +3700,7 @@
 
 .ag-frame-hint {
   font-size: 11.5px;
-  color: #6f6c65;
+  color: #827f78;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3759,7 +3759,7 @@
   overflow-wrap: anywhere;
 }
 
-.ag-frame-stance.none { color: #6f6c65; }
+.ag-frame-stance.none { color: #827f78; }
 
 .ag-frame-input {
   width: 100%;
@@ -4642,7 +4642,7 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
 .ag-rail-collapse:hover { background: var(--ag-solid-hover); color: #fff; }
 
 .ag-chat-scroll { padding: 10px 8px; gap: 2px; }
-.ag-empty { color: #6b6b74; font-size: 12.5px; }
+.ag-empty { color: #7f7f89; font-size: 12.5px; }
 .ag-chat-msg { gap: 10px; padding: 6px 8px; }
 .ag-chat-avatar {
   width: 28px;
@@ -4664,7 +4664,7 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
   cursor: pointer;
 }
 .ag-chat-name:hover { text-decoration: underline; }
-.ag-chat-time { color: #6b6b74; font-size: 11px; }
+.ag-chat-time { color: #7f7f89; font-size: 11px; }
 .ag-chat-text { color: #d4d6dd; font-size: 13px; line-height: 1.45; }
 
 /* The rules, then the one thing to do. */
@@ -4714,7 +4714,7 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
 .ag-chat-join:hover,
 .ag-chat-signin-btn:hover { background: #ffc22e; color: #1a0e00; }
 .ag-chat-signin .ag-chat-signin-btn { color: #1a0e00; }
-.ag-chat-gate-note { margin-top: 8px; color: #6b6b74; font-size: 11px; }
+.ag-chat-gate-note { margin-top: 8px; color: #7f7f89; font-size: 11px; }
 .ag-chat-signin { padding: 12px; border-top: 1px solid var(--ag-solid-line); }
 
 /* The Messages page's box: solid, and a yellow send. */
@@ -4733,7 +4733,7 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
   font-family: inherit;
   font-size: 13.5px;
 }
-.ag-chat-input::placeholder { color: #6b6b74; }
+.ag-chat-input::placeholder { color: #7f7f89; }
 .ag-chat-input:focus { border-color: var(--ag-solid-line-hi); }
 .ag-chat-send {
   flex: 0 0 36px;

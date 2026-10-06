@@ -15,7 +15,7 @@
   --con-color: #e84040;
   --text-primary: #eeeef5;
   --text-muted: rgba(238,238,245,0.5);
-  --text-dim: rgba(238,238,245,0.25);
+  --text-dim: rgba(238,238,245,0.5);
   --border: rgba(255,255,255,0.07);
   --border-hover: rgba(255,255,255,0.14);
   --nav-height: 60px;
@@ -938,7 +938,9 @@ a.carousel-watch-btn { text-decoration: none; }
 .carousel-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--text-dim);
+  /* The dots' own grey (they are marks, not words): what --text-dim was
+     before the dim text was brightened to read on black. */
+  background: rgba(244,244,245,0.32);
   cursor: pointer;
   transition: background 0.3s, width 0.3s;
 }
@@ -1723,7 +1725,7 @@ a.carousel-watch-btn { text-decoration: none; }
 .nav-search.agora-search-shell{max-width:480px;height:auto;background:none;border:none;box-shadow:none;border-radius:9999px}
 .nav-search.agora-search-shell input{flex:1;min-width:0;background:transparent!important;border:none!important;border-radius:0;box-shadow:none!important;height:32px;padding:0 .5rem 0 1rem;font-size:.84rem;color:white;width:auto}
 .nav-search.agora-search-shell input:focus{border:none!important;box-shadow:none!important}
-.nav-search.agora-search-shell input::placeholder{color:rgba(255,255,255,.45)}
+.nav-search.agora-search-shell input::placeholder{color:rgba(255,255,255,0.5)}
 .nav-search.agora-search-shell.has-query input{padding-left:1.75rem}
 .nav-search.agora-search-shell .search-active-indicator{left:18px}
 /* top -1px is optical: the button's inset top highlight + bottom drop
@@ -1834,8 +1836,8 @@ body { background: transparent; }
   --v5-glass-border:  rgba(255,255,255,0.07);
   --v5-divider:       rgba(255,255,255,0.05);
   --v5-text:          #eeeef5;
-  --v5-muted:         rgba(238,238,245,0.45);
-  --v5-dim:           rgba(238,238,245,0.22);
+  --v5-muted:         rgba(238,238,245,0.5);
+  --v5-dim:           rgba(238,238,245,0.5);
 }
 
 /* ── BROWSE PILLS — unified glass base + amber active ── */
@@ -1967,7 +1969,7 @@ body { background: transparent; }
   font-family: 'DM Sans', sans-serif;
   border: 1px solid rgba(255,255,255,0.09);
   background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.45); cursor: pointer;
+  color: rgba(255,255,255,0.5); cursor: pointer;
   transition: all 0.15s ease; user-select: none;
 }
 .pill:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
@@ -2070,7 +2072,7 @@ body { background: transparent; }
 
 .explore-subtitle {
   font-size: 13px;
-  color: rgba(255,255,255,0.32);
+  color: rgba(255,255,255,0.5);
   margin: 0;
 }
 
@@ -2090,7 +2092,7 @@ body { background: transparent; }
   0%   { transform: scale(1.22); filter: brightness(1.35); }
   100% { transform: none; filter: none; }
 }
-.explore-stat-label { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 3px; display: block; }
+.explore-stat-label { font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 3px; display: block; }
 @media (prefers-reduced-motion: reduce) { .explore-stat-val.is-pop { animation: none; } }
 
 /* Search bar */
@@ -2107,7 +2109,7 @@ body { background: transparent; }
   top: 50%;
   transform: translateY(-50%);
   font-size: 17px;
-  color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.5);
   pointer-events: none;
 }
 
@@ -2126,7 +2128,7 @@ body { background: transparent; }
   transition: border-color 0.18s;
 }
 .explore-search-input:focus { border-color: rgba(25,118,210,0.45); }
-.explore-search-input::placeholder { color: rgba(255,255,255,0.2); }
+.explore-search-input::placeholder { color: rgba(255,255,255,0.5); }
 
 /* Filter bar */
 .explore-filter-bar {
@@ -2139,7 +2141,7 @@ body { background: transparent; }
 .explore-filter-group-label {
   font-size: 10px; font-weight: 600;
   letter-spacing: 0.09em; text-transform: uppercase;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.5);
   display: block; margin-bottom: 7px;
 }
 
@@ -2181,7 +2183,7 @@ body { background: transparent; }
 /* Results */
 .explore-results-wrap { padding: 16px 0 48px; }
 
-.explore-results-meta { font-size: 12px; color: rgba(255,255,255,0.25); margin-bottom: 14px; }
+.explore-results-meta { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 14px; }
 
 .explore-results-grid {
   display: grid;
@@ -2201,7 +2203,7 @@ body { background: transparent; }
 
 .explore-empty {
   grid-column: 1 / -1; text-align: center;
-  padding: 60px 20px; color: rgba(255,255,255,0.2); font-size: 14px;
+  padding: 60px 20px; color: rgba(255,255,255,0.5); font-size: 14px;
 }
 
 /* ══════════════════════════════════════════════════
@@ -2560,7 +2562,7 @@ body { background: transparent; }
 .sidebar-footer {
   padding: 10px 16px !important;
   font-size: 10px !important;
-  color: rgba(238,238,245,0.18) !important;
+  color: rgba(238,238,245,0.5) !important;
   text-align: center !important;
   flex-shrink: 0 !important;
   margin-top: auto !important;
@@ -2750,7 +2752,7 @@ body { background: transparent; }
 
 /* ── Footer ──────────────────────────────────────────────────────── */
 .sidebar-footer {
-  color: rgba(255,255,255,0.16) !important;
+  color: rgba(255,255,255,0.5) !important;
   font-size: 10.5px !important;
   letter-spacing: 0.02em !important;
 }
@@ -3049,7 +3051,7 @@ body { background: transparent; }
   background: #0b0b0d;
 }
 .room-panel-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--chip); flex-shrink: 0; }
-.room-panel-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(238,238,245,0.4); margin-bottom: 8px; }
+.room-panel-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(238,238,245,0.5); margin-bottom: 8px; }
 .room-panel-speakers { display: flex; flex-direction: column; gap: 10px; }
 .room-panel-speaker { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .room-panel-speaker.open .panel-avatar.small { background: rgba(255,255,255,0.06) !important; border: 1px dashed rgba(255,255,255,0.35); color: rgba(255,255,255,0.75); }

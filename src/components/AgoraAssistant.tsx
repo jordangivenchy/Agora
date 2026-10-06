@@ -502,7 +502,7 @@ export default function AgoraAssistant({
                 width: 28, height: 28, borderRadius: "50%",
                 background: "rgba(20,20,26,0.85)",
                 border: voiceOut ? "0.5px solid #60a5fa" : "0.5px solid #34343c",
-                color: voiceOut ? "#9cc4f0" : "#5a5a66", fontSize: 12,
+                color: voiceOut ? "#9cc4f0" : "#7f7f89", fontSize: 12,
               }}
             >
               {voiceOut ? <Icon name="volume-2" size={14} /> : <Icon name="volume-x" size={14} />}

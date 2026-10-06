@@ -83,12 +83,12 @@ export default function InviteFriends({ communityId, communityName, isPrivate }:
         <p style={{ margin: 0, fontSize: 12, padding: "8px 10px", borderRadius: 10, background: "#1a0b0b", border: "1px solid rgba(239,68,68,0.35)", color: "#fca5a5" }}>{error}</p>
       )}
       {rows === null ? (
-        <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.4)" }}>Finding friends…</p>
+        <p style={{ margin: 0, fontSize: 12, color: "rgba(238,238,245,0.5)" }}>Finding friends…</p>
       ) : rows.length === 0 ? (
         <div style={{ ...row, justifyContent: "center", padding: "18px 12px", flexDirection: "column", gap: 6, textAlign: "center" }}>
-          <Icon name="users" size={18} style={{ color: "rgba(238,238,245,0.4)" }} />
+          <Icon name="users" size={18} style={{ color: "rgba(238,238,245,0.5)" }} />
           <span style={{ fontSize: 12.5, color: "rgba(238,238,245,0.6)" }}>No one to invite yet.</span>
-          <span style={{ fontSize: 11.5, color: "rgba(238,238,245,0.4)" }}>Your friends who aren&rsquo;t members will show up here.</span>
+          <span style={{ fontSize: 11.5, color: "rgba(238,238,245,0.5)" }}>Your friends who aren&rsquo;t members will show up here.</span>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 300, overflowY: "auto" }}>
@@ -100,7 +100,7 @@ export default function InviteFriends({ communityId, communityName, isPrivate }:
                   {c.display_name?.trim() || c.username}
                   <VerifiedMark id={c.id} username={c.username} />
                 </span>
-                <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.45)" }}>@{c.username}</span>
+                <span style={{ display: "block", fontSize: 11, color: "rgba(238,238,245,0.5)" }}>@{c.username}</span>
               </span>
               <button type="button" onClick={() => !c.invited && invite(c)} disabled={busy === c.id} style={pill(c.invited)} aria-pressed={c.invited}>
                 {c.invited ? <><Icon name="check" size={12} /> Invited</> : busy === c.id ? "Sending…" : "Invite"}

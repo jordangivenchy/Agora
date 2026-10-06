@@ -265,7 +265,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                   </button>
                 ))}
               </div>
-              <span className="text-[11px] ml-auto whitespace-nowrap" style={{ color: "#6b6b74" }}>
+              <span className="text-[11px] ml-auto whitespace-nowrap" style={{ color: "#7f7f89" }}>
                 <span className="feed-live-dot" aria-hidden="true" /> updated in real time
               </span>
             </>

@@ -1530,7 +1530,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
     if (!p.repost_of) {
       return (
         <p className="m-0 px-3 py-2 text-[11.5px] rounded-lg"
-          style={{ background: "rgba(255,255,255,0.03)", border: "0.5px dashed rgba(255,255,255,0.14)", color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
+          style={{ background: "rgba(255,255,255,0.03)", border: "0.5px dashed rgba(255,255,255,0.14)", color: "rgba(238,238,245,0.5)", marginTop: 10 }}>
           The original post was unavailable or deleted.
         </p>
       );
@@ -1852,7 +1852,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={replyGifUrl} alt="" className="rounded" style={{ height: 40 }} />
                         <button onClick={() => setReplyGifUrl(null)}
-                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                           remove
                         </button>
                       </span>
@@ -1862,7 +1862,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={replyImagePreview} alt="" className="rounded" style={{ height: 36 }} />
                         <button onClick={() => pickReplyImage(null)}
-                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                          className="cursor-pointer bg-transparent border-none p-0 text-[10.5px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                           remove
                         </button>
                       </span>
@@ -2144,7 +2144,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                 borderRadius: 12,
               }}>
                 <div className="px-3.5" style={{ paddingTop: 14, paddingBottom: 18 }}>
-                  <p className="m-0 text-[9.5px] font-bold flex items-center" style={{ color: "rgba(238,238,245,0.35)", letterSpacing: "0.09em", marginBottom: 10 }}>
+                  <p className="m-0 text-[9.5px] font-bold flex items-center" style={{ color: "rgba(238,238,245,0.5)", letterSpacing: "0.09em", marginBottom: 10 }}>
                     ABOUT COMMUNITY
                     {selectedCommunity.joined && (
                       <button
@@ -2176,7 +2176,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         {selectedCommunity.is_private && <Icon name="lock" size={11} style={{ marginRight: 4 }} />}
                         {selectedCommunity.name}
                       </span>
-                      <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.4)", marginTop: 1 }}>
+                      <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.5)", marginTop: 1 }}>
                         {selectedCommunity.members} member{selectedCommunity.members === 1 ? "" : "s"}
                         {selectedCommunity.is_private ? " · private" : " · public"}
                       </span>
@@ -2238,7 +2238,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         </button>
                       )}
                       <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0 10px" }} />
-                      <p className="m-0 text-[9.5px] font-bold flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.35)", letterSpacing: "0.09em", marginBottom: 8 }}>
+                      <p className="m-0 text-[9.5px] font-bold flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)", letterSpacing: "0.09em", marginBottom: 8 }}>
                         MODERATORS
                         {onlineCount > 0 && (
                           <span className="inline-flex items-center gap-1" style={{ color: "#00b894" }}>
@@ -2329,7 +2329,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       {c.is_private && <Icon name="lock" size={12} title="Private community" style={{ marginRight: 3 }} />}
                       {c.name}
                     </span>
-                    <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                    <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                       {c.members} member{c.members === 1 ? "" : "s"}
                     </span>
                   </span>
@@ -2339,7 +2339,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       title={c.favorite ? "Remove bookmark" : "Bookmark this community"}
                       aria-label={c.favorite ? "Remove bookmark" : "Bookmark this community"}
                       className="cursor-pointer shrink-0 flex items-center justify-center border-none bg-transparent"
-                      style={{ width: 22, height: 22, color: c.favorite ? "#e2b96b" : "rgba(238,238,245,0.28)", padding: 0 }}
+                      style={{ width: 22, height: 22, color: c.favorite ? "#e2b96b" : "rgba(238,238,245,0.5)", padding: 0 }}
                     >
                       <Icon name="bookmark" size={14} style={{ fill: c.favorite ? "currentColor" : "none" }} />
                     </button>
@@ -2363,7 +2363,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                 </div>
               );
               const sectionTitle = (label: string) => (
-                <p className="m-0 mt-3 mb-1 px-3.5 text-[10px] font-bold" style={{ color: "rgba(238,238,245,0.32)", letterSpacing: "0.08em" }}>
+                <p className="m-0 mt-3 mb-1 px-3.5 text-[10px] font-bold" style={{ color: "rgba(238,238,245,0.5)", letterSpacing: "0.08em" }}>
                   {label}
                 </p>
               );
@@ -2382,7 +2382,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     </>
                   )}
                   {communities.length === 0 && (
-                    <p className="px-3.5 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                    <p className="px-3.5 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                       No communities yet — create the first one.
                     </p>
                   )}
@@ -2698,7 +2698,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={commentImagePreview} alt="" className="rounded" style={{ height: 40 }} />
                       <button onClick={() => pickCommentImage(null)}
-                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                         remove
                       </button>
                     </span>
@@ -2708,7 +2708,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={commentGifUrl} alt="" className="rounded" style={{ height: 40 }} />
                       <button onClick={() => setCommentGifUrl(null)}
-                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                        className="cursor-pointer bg-transparent border-none p-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                         remove
                       </button>
                     </span>
@@ -2741,7 +2741,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                   </div>
                 )}
                 {commentTree.roots.length === 0 ? (
-                  <p className="text-[12px] text-center py-6" style={{ color: "rgba(238,238,245,0.32)" }}>
+                  <p className="text-[12px] text-center py-6" style={{ color: "rgba(238,238,245,0.5)" }}>
                     No comments yet — start the discussion.
                   </p>
                 ) : (
@@ -2885,7 +2885,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                           {selectedCommunity.is_private && <Icon name="lock" size={16} title="Private community" style={{ marginRight: 5 }} />}
                           {selectedCommunity.name}
                         </span>
-                        <span className="block text-[11px]" style={{ color: "rgba(238,238,245,0.4)", marginTop: 3, letterSpacing: "0.01em" }}>
+                        <span className="block text-[11px]" style={{ color: "rgba(238,238,245,0.5)", marginTop: 3, letterSpacing: "0.01em" }}>
                           {selectedCommunity.members} member{selectedCommunity.members === 1 ? "" : "s"}
                           {selectedCommunity.is_private ? " · private" : " · public"}
                           {selectedCommunity.my_role && ` · you're ${selectedCommunity.my_role === "owner" ? "the owner" : selectedCommunity.my_role === "moderator" ? "a moderator" : "a member"}`}
@@ -3065,7 +3065,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         const online = presence.has(uid);
                         return (
                           <span className="inline-flex items-center gap-1.5 text-[10px] shrink-0"
-                            style={{ color: online ? "#00b894" : "rgba(238,238,245,0.32)" }}>
+                            style={{ color: online ? "#00b894" : "rgba(238,238,245,0.5)" }}>
                             <span style={{
                               width: 7, height: 7, borderRadius: "50%",
                               background: online ? "#00b894" : "rgba(238,238,245,0.22)",
@@ -3093,7 +3093,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         <div style={panel}>
                           {panelLabel("MODERATORS")}
                           {modsList.length === 0 ? (
-                            <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>Loading…</p>
+                            <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>Loading…</p>
                           ) : modsList.map((m) => personRow(m.user_id, m.user, (
                             <>
                               {activePill(m.user_id)}
@@ -3112,7 +3112,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                         <div style={panel}>
                           {panelLabel(`MEMBERS${plainMembers.length ? ` · ${plainMembers.length}` : ""}`)}
                           {plainMembers.length === 0 ? (
-                            <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No members beyond the mod team yet.</p>
+                            <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>No members beyond the mod team yet.</p>
                           ) : plainMembers.map((m) => personRow(m.user_id, m.user, (
                             <>
                               {activePill(m.user_id)}
@@ -3142,12 +3142,12 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                           <div style={panel}>
                             {panelLabel(`APPLICATIONS${joinRequests.length ? ` · ${joinRequests.length}` : ""}`)}
                             {joinRequests.length === 0 ? (
-                              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No pending applications.</p>
+                              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>No pending applications.</p>
                             ) : joinRequests.map((r) => (
                               <div key={r.user_id} className="py-1">
                                 {personRow(r.user_id, r.user, (
                                   <>
-                                    <span className="text-[10px] shrink-0" style={{ color: "rgba(238,238,245,0.32)" }}>{timeAgo(r.created_at)}</span>
+                                    <span className="text-[10px] shrink-0" style={{ color: "rgba(238,238,245,0.5)" }}>{timeAgo(r.created_at)}</span>
                                     <button onClick={() => handleRequest(r.user_id, true)}
                                       className="cursor-pointer text-[10.5px] px-2.5 py-1 rounded-md"
                                       style={{ background: "transparent", border: "0.5px solid rgba(0,184,148,0.4)", color: "#00b894", fontFamily: "inherit" }}>
@@ -3197,7 +3197,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                             value={draftBookmarks}
                             onChange={(e) => setDraftBookmarks(e.target.value)}
                           />
-                          <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.38)" }}>
+                          <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                             Bookmarks: <code>Label | URL</code> per line; a line starting with <code>##</code> begins a dropdown group.
                           </p>
                           {(draftPrivate || selectedCommunity.is_private) && (
@@ -3210,7 +3210,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                                 value={draftAppPrompt}
                                 onChange={(e) => setDraftAppPrompt(e.target.value)}
                               />
-                              <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.38)" }}>
+                              <p className="m-0 mt-1 text-[10.5px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                                 Shown to everyone who applies; when set, an application must answer it. Leave empty for a plain optional message.
                               </p>
                             </>
@@ -3243,7 +3243,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                                 <button
                                   onClick={() => deleteTag(t)}
                                   className="cursor-pointer bg-transparent border-none p-0 text-[10px]"
-                                  style={{ color: "rgba(238,238,245,0.32)" }}
+                                  style={{ color: "rgba(238,238,245,0.5)" }}
                                   aria-label={`Delete tag ${t.name}`}
                                 >
                                   <Icon name="x" size={12} />
@@ -3251,7 +3251,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                               </span>
                             ))}
                             {(tagsByCommunity[selectedCommunity.id] ?? []).length === 0 && (
-                              <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.32)" }}>No tags yet.</span>
+                              <span className="text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>No tags yet.</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-2.5 flex-wrap">
@@ -3364,7 +3364,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                 )}
 
                 {loadingPosts && posts.length === 0 && (
-                  <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.32)" }}>Loading…</p>
+                  <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.5)" }}>Loading…</p>
                 )}
 
                 {!loadingPosts && visiblePosts.length === 0 && (

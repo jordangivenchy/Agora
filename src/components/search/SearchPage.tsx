@@ -146,7 +146,7 @@ const sectionLabel: React.CSSProperties = {
   fontWeight: 700,
   fontSize: 11,
   letterSpacing: "0.06em",
-  color: "rgba(255,255,255,0.45)",
+  color: "rgba(255,255,255,0.5)",
   margin: "0 0 8px",
 };
 
@@ -492,7 +492,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
     return (
       <div key={r.id} className="shrink-0 relative">
         <RoomCard room={d} size={168} />
-        <p className="m-0 mt-1 text-[10px] truncate" style={{ color: "rgba(238,238,245,0.38)", maxWidth: 168 }}>
+        <p className="m-0 mt-1 text-[10px] truncate" style={{ color: "rgba(238,238,245,0.5)", maxWidth: 168 }}>
           {ended
             ? [roomTimes[r.id] ? fmtViews(roomTimes[r.id].replay_views) : null, fmtAgo(d.ended_at ?? roomTimes[r.id]?.ended_at)].filter(Boolean).join(" · ")
             : d.status === "live" ? "Live now" : d.scheduled_start ? "Scheduled" : "Open"}
@@ -574,7 +574,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                 <Highlight text={c.name} query={query} />
                 {c.is_private && <Icon name="lock" size={11} />}
               </p>
-              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.45)" }}>
+              <p className="m-0 text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                 {c.members} {c.members === 1 ? "member" : "members"}
                 {c.description && <> · <span className="truncate"><Highlight text={c.description.slice(0, 120)} query={query} /></span></>}
               </p>
@@ -651,7 +651,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                 <section className="mb-5">
                   <div className="flex items-center mb-1">
                     <p style={sectionLabel} className="inline-flex items-center gap-1.5"><Icon name="clock" size={12} /> RECENT</p>
-                    <button onClick={clearRecent} className="ml-auto cursor-pointer text-[11px] mb-2" style={{ background: "none", border: 0, color: "rgba(238,238,245,0.45)", fontFamily: "inherit" }}>
+                    <button onClick={clearRecent} className="ml-auto cursor-pointer text-[11px] mb-2" style={{ background: "none", border: 0, color: "rgba(238,238,245,0.5)", fontFamily: "inherit" }}>
                       Clear all
                     </button>
                   </div>
@@ -763,7 +763,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                           : { background: "rgba(20,20,26,0.85)", border: "0.5px solid #34343c", color: "#c0c0c8" }
                       }
                     >
-                      {t.label}{n !== undefined && n > 0 ? <span style={{ opacity: 0.55 }}> {n}{hasMore && kind === t.id ? "+" : ""}</span> : null}
+                      {t.label}{n !== undefined && n > 0 ? <span style={{ opacity: 0.65 }}> {n}{hasMore && kind === t.id ? "+" : ""}</span> : null}
                     </button>
                   );
                 })}
@@ -797,7 +797,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
               )}
 
               {loading && rows === null && (
-                <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.32)" }}>Searching…</p>
+                <p className="text-[12px] text-center py-8" style={{ color: "rgba(238,238,245,0.5)" }}>Searching…</p>
               )}
 
               {empty && (

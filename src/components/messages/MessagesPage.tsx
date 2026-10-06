@@ -436,7 +436,7 @@ export default function MessagesPage({
               left: 10,
               display: "inline-flex",
               alignItems: "center",
-              color: "rgba(255,255,255,0.4)",
+              color: "rgba(255,255,255,0.5)",
               pointerEvents: "none",
             }}
           >

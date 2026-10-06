@@ -465,7 +465,7 @@ export default function UserMenuProvider({ children }: { children: React.ReactNo
             {displayName({ display_name: targetDisplayName, username: menu.target.username })}
             <VerifiedMark id={menu.target.userId} username={menu.target.username} />
             {targetDisplayName?.trim() && (
-              <span style={{ display: "block", fontWeight: 400, fontSize: "0.85em", opacity: 0.6 }}>
+              <span style={{ display: "block", fontWeight: 400, fontSize: "0.85em" }}>
                 @{menu.target.username}
               </span>
             )}
@@ -734,7 +734,7 @@ function ModerationPanel({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
       {children}
     </div>
   );

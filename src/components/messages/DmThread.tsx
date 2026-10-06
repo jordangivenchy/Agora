@@ -966,7 +966,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                     fontWeight: 700,
                     letterSpacing: 0.6,
                     textTransform: "uppercase",
-                    color: "#6b6b74",
+                    color: "#7f7f89",
                   }}
                 >
                   {dayLabel(m.created_at)}

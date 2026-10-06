@@ -44,7 +44,7 @@ const sectionLabel: CSSProperties = {
   fontWeight: 700,
   letterSpacing: "0.09em",
   textTransform: "uppercase",
-  color: "#6b6b74",
+  color: "#7f7f89",
 };
 
 export default function NotificationsPanel({

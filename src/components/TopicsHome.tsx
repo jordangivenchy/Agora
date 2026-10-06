@@ -509,7 +509,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         </div>
 
         {selRooms.length === 0 && (
-          <p className="m-0 text-[11px]" style={{ color: "#6b6b74" }}>
+          <p className="m-0 text-[11px]" style={{ color: "#7f7f89" }}>
             No open rooms in {selCat.label} yet.
           </p>
         )}
@@ -744,7 +744,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
               </span>
               <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
             </div>
-            <p className="m-0 text-[11px]" style={{ color: "#6b6b74" }}>
+            <p className="m-0 text-[11px]" style={{ color: "#7f7f89" }}>
               Nothing on the calendar in {selCat.label} yet.
             </p>
           </>
@@ -758,7 +758,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
             Daily topics
           </span>
           <span className="flex-1" style={{ height: 0.5, background: "#26262e" }} />
-          <span className="text-[11px] whitespace-nowrap inline-flex items-center gap-1.5" style={{ color: "#6b6b74" }}>
+          <span className="text-[11px] whitespace-nowrap inline-flex items-center gap-1.5" style={{ color: "#7f7f89" }}>
             <Icon name="refresh-cw" size={11} /> new topics in {fmtRotate(rotateLeft)}
           </span>
         </div>
@@ -815,7 +815,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                     </p>
                   </div>
                 ) : (
-                  <p className="m-0 mt-1 text-[11px]" style={{ color: "#6b6b74" }}>
+                  <p className="m-0 mt-1 text-[11px]" style={{ color: "#7f7f89" }}>
                     {t.queue_count > 0 ? (
                       <span style={{ color: "#97c459" }}>
                         {t.queue_count} waiting to talk
@@ -861,7 +861,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
         </div>
         {selRows.length > questionsShown && showMoreLine(selRows.length - questionsShown, showAllQuestions, () => setShowAllQuestions((v) => !v), "questions")}
         {selRows.length === 0 && (
-          <p className="m-0 text-[11.5px] px-1" style={{ color: "#6b6b74" }}>
+          <p className="m-0 text-[11.5px] px-1" style={{ color: "#7f7f89" }}>
             No standing questions in {selCat.label} yet.
           </p>
         )}

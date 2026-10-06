@@ -155,7 +155,7 @@ export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === 1 ? 0 : 1); }}
         className="cursor-pointer bg-transparent border-none px-1 inline-flex items-center justify-center"
-        style={{ color: post.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
+        style={{ color: post.my_vote === 1 ? "#e2b96b" : "rgba(238,238,245,0.5)", lineHeight: 1 }}
         aria-label="Upvote"
       >
         <Icon name="chevron-up" size={size + 5} />
@@ -166,7 +166,7 @@ export function VoteBox<P extends Pick<PostRow, "score" | "my_vote">>({
       <button
         onClick={(e) => { e.stopPropagation(); onVote(post, post.my_vote === -1 ? 0 : -1); }}
         className="cursor-pointer bg-transparent border-none px-1 inline-flex items-center justify-center"
-        style={{ color: post.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.32)", lineHeight: 1 }}
+        style={{ color: post.my_vote === -1 ? "#64B5F6" : "rgba(238,238,245,0.5)", lineHeight: 1 }}
         aria-label="Downvote"
       >
         <Icon name="chevron-down" size={size + 5} />
@@ -182,7 +182,7 @@ export function RepostEmbed({ post: p, onOpenOriginal }: { post: PostRow; onOpen
   if (!p.repost_of) {
     return (
       <p className="m-0 px-3 py-2 text-[11.5px] rounded-lg"
-        style={{ background: "rgba(255,255,255,0.03)", border: "0.5px dashed rgba(255,255,255,0.14)", color: "rgba(238,238,245,0.32)", marginTop: 10 }}>
+        style={{ background: "rgba(255,255,255,0.03)", border: "0.5px dashed rgba(255,255,255,0.14)", color: "rgba(238,238,245,0.5)", marginTop: 10 }}>
         The original post was unavailable or deleted.
       </p>
     );
@@ -312,13 +312,13 @@ export default function PostCard<P extends PostRow>({
                    The 4px on the right is the icon's usual distance from the text. */
                 width: 46, flexShrink: 0, boxSizing: "border-box", paddingRight: 4,
                 display: "inline-flex", alignItems: "center", justifyContent: "flex-end",
-                color: "rgba(238,238,245,0.38)", lineHeight: 0,
+                color: "rgba(238,238,245,0.5)", lineHeight: 0,
               }}
             >
               <Icon name="sparkles" size={11} />
             </span>
           )}
-          <p style={{ margin: 0, minWidth: 0, fontSize: 10.5, lineHeight: "16px", color: "rgba(238,238,245,0.38)" }}>
+          <p style={{ margin: 0, minWidth: 0, fontSize: 10.5, lineHeight: "16px", color: "rgba(238,238,245,0.5)" }}>
             {reason}
           </p>
         </div>

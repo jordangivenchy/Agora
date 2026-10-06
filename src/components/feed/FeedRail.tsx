@@ -48,7 +48,7 @@ interface Upcoming {
    Communities rail tints (red for live, faint white for scheduled). */
 function sectionLabel(text: string, accent?: React.ReactNode) {
   return (
-    <p className="m-0 mt-3 mb-1 px-3.5 text-[10px] font-bold flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.32)", letterSpacing: "0.08em" }}>
+    <p className="m-0 mt-3 mb-1 px-3.5 text-[10px] font-bold flex items-center gap-1.5" style={{ color: "rgba(238,238,245,0.5)", letterSpacing: "0.08em" }}>
       {accent}
       {text}
     </p>
@@ -158,7 +158,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
               <UserAvatar size={26} username={r.host?.username} avatarUrl={r.host?.avatar_url ?? null} seed={r.host?.id} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[12.5px] truncate" style={{ color: "#eeeef5" }}>{r.motion}</span>
-                <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                <span className="block text-[10px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                   {r.host?.display_name || r.host?.username}
                   <VerifiedMark id={r.host?.id} username={r.host?.username} />
                   {r.viewer_count ? ` · ${r.viewer_count} watching` : ""}
@@ -183,7 +183,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
                   {p.display_name || p.username}
                   <VerifiedMark id={p.id} username={p.username} />
                 </Link>
-                <span className="block text-[10px] truncate" style={{ color: "rgba(238,238,245,0.32)" }}>{p.reason}</span>
+                <span className="block text-[10px] truncate" style={{ color: "rgba(238,238,245,0.5)" }}>{p.reason}</span>
               </span>
               <button
                 onClick={() => follow(p)}
@@ -212,7 +212,7 @@ export default function FeedRail({ userId }: { userId: string | null }) {
                 }}>
                   {t.question}
                 </span>
-                <span className="block mt-0.5 text-[10px]" style={{ color: "rgba(238,238,245,0.32)" }}>
+                <span className="block mt-0.5 text-[10px]" style={{ color: "rgba(238,238,245,0.5)" }}>
                   {queue.entries.some((e) => e.topicId === t.id) ? "In line — waiting for a match…" : t.queue_count > 0 ? `${t.queue_count} waiting to talk` : "no one waiting yet"}
                 </span>
               </span>
