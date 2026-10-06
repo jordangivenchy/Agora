@@ -27,12 +27,37 @@ import { same, useFocusRefresh } from "../../src/refresh";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 import { lazyTab } from "../../src/tabBar";
+import { TrendingList } from "../../src/trendingList";
 
 const card = { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline, borderRadius: 14 } as const;
+
+/* The page's title is its switch: "Your feed" and "Trending" side by
+   side, the one you're on in full and underlined in yellow, the other
+   waiting, faint. Trending used to be a tab of its own; the bar became
+   Apple's and holds five things, and what's trending is the other half
+   of "what should I look at", so it lives here. */
+type FeedView = "feed" | "trending";
+function FeedSwitch({ view, onChange }: { view: FeedView; onChange: (v: FeedView) => void }) {
+  return (
+    <View accessibilityRole="tablist" style={{ flexDirection: "row", alignItems: "flex-start", gap: 20, marginTop: 8 }}>
+      {([["feed", "Your feed"], ["trending", "Trending"]] as const).map(([id, label]) => {
+        const on = id === view;
+        return (
+          <Pressable key={id} onPress={() => onChange(id)} accessibilityRole="tab" accessibilityState={{ selected: on }} hitSlop={6}>
+            <Text style={{ color: on ? colors.text : colors.faint, fontFamily: fonts.title, fontSize: 24, lineHeight: 36, letterSpacing: -0.3 }}>{label}</Text>
+            <View style={{ height: 3, borderRadius: 2, backgroundColor: on ? colors.yellow : "transparent" }} />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function Feed() {
   const { session } = useSession();
   const uid = session?.user.id ?? null;
+  /* Someone not signed in has no feed of their own: they start on what's trending. */
+  const [view, setView] = useState<FeedView>(uid ? "feed" : "trending");
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [items, setItems] = useState<FeedItem[] | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -171,6 +196,15 @@ function Feed() {
     );
   };
 
+  if (view === "trending") {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <HomeHeader />
+        <TrendingList bottomPad={120} top={<FeedSwitch view={view} onChange={setView} />} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <HomeHeader />
@@ -181,7 +215,7 @@ function Feed() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.yellow} />}
         ListHeaderComponent={
           <View>
-            <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 24, lineHeight: 36, letterSpacing: -0.3, marginTop: 8 }}>Your feed</Text>
+            <FeedSwitch view={view} onChange={setView} />
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8, marginBottom: 14 }}>
               {FEED_FILTERS.map((f) => {
                 const on = f.id === filter;

@@ -1,5 +1,6 @@
-/* The Create button, from anywhere: the site's Create menu (CreateMenu.tsx —
-   Create a Discussion, Write a post, New community); the Start a discussion
+/* The Create button, from anywhere: the Create menu (createMenu.tsx — a
+   small glass panel over the + in the tab bar: Create a Discussion, Write
+   a post, New community); the Start a discussion
    and Create a community cards (newRoomSheet.tsx, createCommunity.tsx),
    which share one modal and trade places from their Discussion | Community
    tabs as on the site (GlobalActions.tsx); and Write a post — pick a
@@ -11,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";
 import { useSession } from "./session";
-import { ItemSheet } from "./itemSheet";
+import { CreateMenu } from "./createMenu";
 import { ComposerSheet, type ComposeClip } from "./composer";
 import { attachPostTopic } from "./postTopic";
 import { CreateCommunityCard } from "./createCommunity";
@@ -67,9 +68,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <ItemSheet
+      <CreateMenu
         open={menu}
-        title="Create"
         onClose={() => setMenu(false)}
         items={[
           { icon: "sparkles-outline", label: "Create a Discussion", run: () => setCard({ open: true, which: "discussion", prefill: {} }) },

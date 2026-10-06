@@ -51,7 +51,9 @@ export function TopicBoard({ topics, rooms, onQueue }: { topics: TopicRow[]; roo
         ))}
       </ScrollView>
       <View style={{ paddingHorizontal: 20 }}>
-        <SectionHead title="Popular rooms" color={colors.blueText} right={popular.length > 2 ? "Explore all →" : undefined} onRight={() => router.navigate("/explore")} />
+        {/* Explore, on this line, where "Create a room" once was: it was a
+            tab until the bar became Apple's, which holds five things. */}
+        <SectionHead title="Popular rooms" color={colors.blueText} action={{ label: "Explore", icon: "compass-outline", onPress: () => router.push("/explore") }} />
         {popular.length === 0 ? <Empty>No open rooms in {sel.label} yet.</Empty> : <Strip>{popular.map((r) => <RoomTile key={r.id} room={r} />)}</Strip>}
         <SectionHead title="Scheduled" color={colors.purple} />
         {scheduled.length === 0 ? <Empty>Nothing on the calendar in {sel.label} yet.</Empty> : <Strip>{scheduled.map((r) => <RoomTile key={r.id} room={r} reminder={r.is_private ? undefined : reminders[r.id] ?? { count: 0, amSet: false }} onReminder={() => void toggleReminder(r.id)} reminderBusy={reminderBusy === r.id} />)}</Strip>}
@@ -108,11 +110,24 @@ function Chip({ cat, active, status, onPress }: { cat: Topic; active: boolean; s
   );
 }
 
-function SectionHead({ title, color, right, icon, onRight }: { title: string; color: string; right?: string; icon?: IconName; onRight?: () => void }) {
+function SectionHead({ title, color, right, icon, onRight, action }: { title: string; color: string; right?: string; icon?: IconName; onRight?: () => void; action?: { label: string; icon: IconName; onPress: () => void } }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16, marginBottom: 10 }}>
       <Text style={{ color, fontFamily: fonts.title, fontSize: 16, letterSpacing: -0.2 }}>{title}</Text>
       <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline }} />
+      {/* A button at the end of the line, in the section's colour. */}
+      {action && (
+        <Pressable
+          onPress={action.onPress}
+          accessibilityRole="link"
+          accessibilityLabel={action.label}
+          hitSlop={8}
+          style={({ pressed }) => ({ height: 28, paddingHorizontal: 12, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: pressed ? colors.surface2 : colors.surface, borderWidth: 1, borderColor: colors.border })}
+        >
+          <Ionicons name={action.icon} size={14} color={color} />
+          <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 12 }}>{action.label}</Text>
+        </Pressable>
+      )}
       {right && (
         <Pressable onPress={onRight} disabled={!onRight} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
           {icon && <Ionicons name={icon} size={11} color={colors.faint} />}

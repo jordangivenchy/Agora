@@ -1,6 +1,5 @@
 /* Home: the website's phone home — the hero, the news strip and the
-   board of fields — under the site's header, above the tab bar; and at
-   its top, the way to Explore and Trending. */
+   board of fields — under the site's header, above the tab bar. */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AppState, RefreshControl, ScrollView, View, useWindowDimensions } from "react-native";
 import { useFocusEffect } from "expo-router";
@@ -8,7 +7,6 @@ import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { fetchBoard, fetchFeatured, fetchHeroRooms, fetchNews, type BoardRoom, type FeaturedPost, type HeroRoom, type NewsStory, type TopicRow } from "../../src/home";
 import { HomeHeader } from "../../src/header";
-import { HomeLinks } from "../../src/homeLinks";
 import { same, useFocusRefresh } from "../../src/refresh";
 import { HeroCarousel } from "../../src/hero";
 import { NewsTicker } from "../../src/ticker";
@@ -113,7 +111,6 @@ export default function Home() {
       <HomeHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.yellow} />}>
         <Starfield width={width} height={1100} />
-        <HomeLinks />
         <HeroCarousel rooms={heroRooms} news={heroNews} onSettled={onHeroSettled} />
         <NewsTicker stories={tickerIn ? tickerNews : []} />
         {/* The team's note is a strip, not a slide: the hero is for rooms and the news. */}
