@@ -79,160 +79,65 @@ export default function AvatarCropModal({ open, src, onCancel, onApply }: Props)
     onCancel();
   }
 
+  /* The same solid pop-up as Edit profile, which it opens over (the
+     `.epm-*` rules in globals.css). */
   return (
-    <div
-      className="fixed inset-0 z-[990] flex items-center justify-center p-5"
-      style={{
-        background: "rgba(0,0,0,0.82)",
-        backdropFilter: "blur(4px)",
-        animation: "modalIn 0.2s ease",
-      }}
-      onClick={handleCancel}
-    >
+    <div className="epm-veil is-over" onClick={handleCancel}>
       <div
-        className="w-full"
-        style={{
-          maxWidth: 420,
-          background: "rgba(18,18,21,0.97)",
-          border: "1px solid var(--border)",
-          borderRadius: 20,
-          boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
-          padding: "20px 20px 18px",
-          animation: "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        }}
+        className="epm is-crop"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Adjust your photo"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "var(--text-primary)",
-            }}
-          >
-            Adjust your photo
-          </h2>
-          <button
-            onClick={handleCancel}
-            className="flex items-center justify-center cursor-pointer transition-all"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              color: "var(--text-muted)",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--border)",
-            }}
-          >
+        <div className="epm-head">
+          <h2 className="epm-title">Adjust your photo</h2>
+          <button type="button" className="epm-x" onClick={handleCancel} aria-label="Close">
             <Icon name="x" size={13} />
           </button>
         </div>
 
-        {error && (
-          <div
-            className="rounded-lg px-3 py-2 mb-3"
-            style={{
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "#fca5a5",
-              fontSize: 12.5,
-            }}
-          >
-            {error}
+        <div className="epm-body">
+          {error && <p className="stg-banner is-page" role="alert">{error}</p>}
+
+          {/* Crop area */}
+          <div className="epm-crop">
+            <Cropper
+              image={src}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
           </div>
-        )}
 
-        {/* Crop area */}
-        <div
-          className="relative w-full overflow-hidden"
-          style={{
-            height: 300,
-            borderRadius: 14,
-            background: "#000",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <Cropper
-            image={src}
-            crop={crop}
-            zoom={zoom}
-            aspect={1}
-            cropShape="round"
-            showGrid={false}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-          />
+          {/* Zoom slider */}
+          <div className="epm-zoom">
+            <Icon name="zoom-out" size={14} />
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              aria-label="Zoom"
+            />
+            <Icon name="zoom-in" size={16} />
+          </div>
+
+          <p className="epm-hint is-center">Drag to reposition · scroll or slide to zoom</p>
         </div>
 
-        {/* Zoom slider */}
-        <div className="flex items-center gap-3" style={{ margin: "16px 2px 18px" }}>
-          <Icon name="zoom-out" size={14} style={{ color: "var(--text-dim)" }} />
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.01}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 cursor-pointer"
-            style={{ accentColor: "var(--accent-blue)", height: 4 }}
-          />
-          <Icon name="zoom-in" size={16} style={{ color: "var(--text-dim)" }} />
-        </div>
-
-        <p
-          style={{
-            fontSize: 11.5,
-            color: "var(--text-dim)",
-            textAlign: "center",
-            marginBottom: 16,
-          }}
-        >
-          Drag to reposition · scroll or slide to zoom
-        </p>
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleCancel}
-            disabled={applying}
-            className="flex-1 cursor-pointer transition-all"
-            style={{
-              padding: "11px 16px",
-              borderRadius: 100,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--border)",
-              color: "var(--text-muted)",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13.5,
-              fontWeight: 600,
-            }}
-          >
+        <div className="epm-foot">
+          <button type="button" onClick={handleCancel} disabled={applying} className="stg-btn stg-btn--quiet">
             Cancel
           </button>
-          <button
-            onClick={handleApply}
-            disabled={applying}
-            className="flex-1 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              padding: "11px 16px",
-              borderRadius: 100,
-              background: "var(--accent-blue)",
-              border: "none",
-              color: "#fff",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13.5,
-              fontWeight: 600,
-            }}
-            onMouseEnter={(e) => {
-              if (!applying) e.currentTarget.style.background = "var(--accent-purple-light)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--accent-blue)";
-            }}
-          >
+          <button type="button" onClick={handleApply} disabled={applying} className="stg-btn stg-btn--primary">
             {applying ? "Saving…" : "Apply"}
           </button>
         </div>

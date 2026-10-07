@@ -3168,15 +3168,8 @@ html.reduce-motion .nav-sparkle {
   /* Settings */
   html .replay-beside-sidebar.settings-shell { padding-inline: 0 !important; padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
   .settings-inner { padding-inline: 12px !important; }
+  .settings-head { margin-bottom: 14px !important; }
   .settings-title { min-width: 0; flex: 1; font-size: 18px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .settings-inline-form { flex-wrap: wrap; }
-  .settings-inline-form input { width: 100% !important; flex-basis: 100%; }
-  .settings-profile-row { flex-wrap: wrap; }
-  .settings-profile-row > button { flex-basis: 100%; }
-  .settings-profile-row p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .settings-storage-head { flex-wrap: wrap; row-gap: 4px; }
-  .settings-storage-head > * { flex-basis: 100%; }
-  .settings-blocked-row > .flex-1 { min-width: 0; overflow-wrap: anywhere; }
   [role="switch"] { position: relative; }
   [role="switch"]::after { content: ""; position: absolute; inset: -8px -10px; }
 
@@ -3658,8 +3651,193 @@ html.reduce-motion .nav-sparkle {
    with a hairline; near-black tiles for what you press or type in, a
    brighter hairline under the pointer; the brand yellow for what is
    switched on and for the keyboard's focus; soft red for what destroys.
-   Nothing tinted, nothing see-through. (SettingsPage.tsx sets the cards
-   and switches inline; these are the parts that answer a pointer.) */
+   Nothing tinted, nothing see-through.
+
+   One set of numbers for every card, so no section drifts from the
+   next: 16px to each edge, 14px from a card's heading to what follows,
+   10px between the things in a form, and rows of one height with a
+   divider between them. Line heights are whole pixels, so a row is a
+   whole number of pixels tall and no divider lands between two. (These rules are not in a layer, so they win
+   over Tailwind's utilities: an element styled here takes its layout
+   from here alone.) */
+.stg-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stg-card { background: #000; border: 1px solid #222229; border-radius: 14px; overflow: hidden; }
+.stg-head { padding: 16px 16px 14px; }
+.stg-title {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+  color: #f5f5f0;
+}
+.stg-title.is-danger { color: #ff6b61; }
+.stg-sub { margin: 4px 0 0; font-size: 11px; line-height: 16px; color: #8b8b94; }
+/* A longer explanation: a size up from a one-line sub, and a little brighter. */
+.stg-text { margin: 0; font-size: 12px; line-height: 18px; color: #9a9aa2; }
+.stg-head > .stg-text { margin-top: 6px; }
+.stg-note { margin: 0; font-size: 11px; line-height: 16px; color: #8b8b94; }
+.stg-msg { margin: 0; font-size: 12px; line-height: 18px; }
+.stg-msg.is-ok { color: #97c459; }
+.stg-msg.is-err { color: #ff8a80; }
+
+/* What a card holds when it isn't rows: fields, a button, a paragraph. */
+.stg-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 16px; }
+.stg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.stg-body > .stg-actions:not(:first-child) { margin-top: 2px; }
+.stg-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid #16161b;
+}
+.stg-link { font-size: 12px; line-height: 18px; color: #8b8b94; text-decoration: none; }
+.stg-link:hover { color: #f5f5f0; }
+
+/* A row: words on the left, one control on the right. A switch row is
+   one button, so the whole line answers a press. */
+.stg-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin: 0;
+  padding: 13px 16px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid #16161b;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.stg-row { cursor: pointer; transition: background 0.15s ease; }
+button.stg-row:focus-visible { outline: 2px solid #ffb700; outline-offset: -2px; }
+button.stg-row:disabled { cursor: not-allowed; }
+button.stg-row:disabled > * { opacity: 0.5; }
+@media (hover: hover) {
+  button.stg-row:hover:not(:disabled) { background: #0b0b0d; }
+}
+.stg-row-text { flex: 1; min-width: 0; }
+.stg-row-label { display: block; font-size: 13px; line-height: 18px; color: #f5f5f0; }
+.stg-row-sub { display: block; margin-top: 2px; font-size: 11px; line-height: 16px; color: #8b8b94; }
+.stg-row.is-empty { font-size: 12px; line-height: 18px; color: #8b8b94; }
+/* Small print under a card's rows. */
+.stg-row.is-note { padding-block: 11px; font-size: 11px; line-height: 16px; color: #8b8b94; }
+/* Not here yet: the name steps back, a chip says so. */
+.stg-row.is-soon .stg-row-label { color: #9a9aa2; }
+/* A small heading inside a card, tied to the rows under it. */
+.stg-group {
+  margin: 0;
+  padding: 14px 16px 0;
+  border-top: 1px solid #16161b;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  color: #8b8b94;
+}
+.stg-group + .stg-row { border-top: 0; padding-top: 8px; }
+
+.stg-switch {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: #26262e;
+  transition: background 0.15s ease;
+}
+.stg-switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f5f5f0;
+  transition: left 0.15s ease, background 0.15s ease;
+}
+[aria-checked="true"] > .stg-switch { background: #ffb700; }
+[aria-checked="true"] > .stg-switch::before { left: 16px; background: #1a0e00; }
+.stg-chip {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #111114;
+  border: 1px solid #26262e;
+  color: #ffb700;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.stg-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 16px 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #111114;
+  border: 1px solid #26262e;
+  font-size: 12px;
+  line-height: 18px;
+  color: #f5f5f0;
+}
+.stg-banner.is-page { margin: 0 0 16px; color: #ff8a80; }
+.stg-banner button {
+  flex: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: #ffb700;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.stg-banner button:focus-visible { outline: 2px solid #ffb700; outline-offset: 3px; border-radius: 4px; }
+
+/* A person: a round picture, a name over an @username. */
+.stg-avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #111114;
+  border: 1px solid #26262e;
+  color: #f5f5f0;
+  font-size: 13px;
+  line-height: 1;
+}
+.stg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.stg-avatar.is-large { width: 52px; height: 52px; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; }
+.stg-person { display: flex; align-items: center; gap: 12px; }
+.stg-row > .stg-person { flex: 1; min-width: 0; }
+.stg-person.is-large { gap: 14px; }
+.stg-person-text { flex: 1; min-width: 0; }
+.stg-person-name { display: flex; align-items: center; margin: 0; font-size: 13px; line-height: 18px; color: #f5f5f0; }
+.stg-person.is-large .stg-person-name { font-size: 14px; line-height: 20px; }
+.stg-person-name > span,
+.stg-person-handle,
+.stg-person-bio { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-person-handle { margin: 2px 0 0; font-size: 11px; line-height: 16px; color: #8b8b94; }
+.stg-person-bio { margin: 4px 0 0; font-size: 11px; line-height: 16px; color: #9a9aa2; }
+
+/* Storage: the figure, the bar, the small print. */
+.stg-usage { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; font-size: 13px; line-height: 18px; color: #8b8b94; }
+.stg-usage strong { font-weight: 600; color: #f5f5f0; }
+.stg-meter { height: 6px; margin-top: -2px; overflow: hidden; border-radius: 3px; background: #1c1c22; }
+.stg-meter > span { display: block; height: 100%; border-radius: 3px; background: #ffb700; transition: width 0.3s ease; }
+.stg-meter.is-full > span { background: #ff6b61; }
+
 .stg-btn {
   display: inline-flex;
   align-items: center;
@@ -3673,6 +3851,7 @@ html.reduce-motion .nav-sparkle {
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1;
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
@@ -3680,10 +3859,12 @@ html.reduce-motion .nav-sparkle {
 }
 .stg-btn:hover:not(:disabled) { background: #18181d; border-color: #4a4a56; }
 .stg-btn:focus-visible,
-.stg-nav-item:focus-visible,
 .stg-crumb:focus-visible { outline: 2px solid #ffb700; outline-offset: 2px; }
 .stg-btn:disabled { background: #0b0b0d; border-color: #222229; color: #5d5d66; cursor: not-allowed; }
 .stg-btn--quiet { border-color: #26262e; color: #c9c9d2; }
+/* The one thing a pop-up is for (Save): the brand yellow, ink on it. */
+.stg-btn--primary { background: #ffb700; border-color: #ffb700; color: #1a0e00; }
+.stg-btn--primary:hover:not(:disabled) { background: #ffc533; border-color: #ffc533; }
 .stg-btn--danger { color: #ff6b61; }
 .stg-btn--danger:hover:not(:disabled) { color: #ff857c; }
 
@@ -3704,13 +3885,22 @@ html.reduce-motion .nav-sparkle {
 .stg-input::placeholder { color: #7f7f89; }
 .stg-input:hover { border-color: #33333c; }
 .stg-input:focus { border-color: #ffb700; }
+.stg-input.is-bad { border-color: #ff6b61; }
+.stg-input.is-mono { font-family: 'DM Mono', monospace; }
+.stg-input:disabled { opacity: 0.55; cursor: not-allowed; }
+textarea.stg-input { display: block; padding-block: 9px; line-height: 18px; resize: none; }
+/* A short field with its buttons beside it (a code, a password to confirm). */
+.stg-inline { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; }
+.stg-inline > .stg-input { flex: 0 1 200px; width: auto; }
+.stg-inline > .stg-input.is-code { flex-basis: 130px; text-align: center; letter-spacing: 0.2em; }
 
 /* The sections: a list down the side on a wide page, the one you're in
-   lit; on a phone, a card of rows to step into. */
+   lit, and it stays put while a long section scrolls; on a phone, a card
+   of rows to step into. */
 .stg-nav-item {
   display: block;
   width: 100%;
-  margin-bottom: 4px;
+  margin: 0;
   padding: 10px 14px;
   border-radius: 12px;
   background: transparent;
@@ -3721,16 +3911,33 @@ html.reduce-motion .nav-sparkle {
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.stg-nav-label { display: block; font-size: 13px; color: #f5f5f0; }
-.stg-nav-sub { display: block; margin-top: 2px; font-size: 11px; line-height: 1.35; color: #7f7f89; }
+.stg-nav-item:focus-visible { outline: 2px solid #ffb700; outline-offset: -2px; }
+.stg-nav-label { display: block; font-size: 13px; line-height: 18px; color: #f5f5f0; }
+.stg-nav-sub { display: block; margin-top: 2px; font-size: 11px; line-height: 16px; color: #7f7f89; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stg-nav-item.is-danger .stg-nav-label { color: #ff6b61; }
 .stg-nav-item.is-mod .stg-nav-label { color: #ffb700; }
 @media (min-width: 768px) {
+  .stg-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 24px; }
+  .stg-nav {
+    position: sticky;
+    top: calc(var(--nav-height, 60px) + var(--page-gap-top, 12px));
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: calc(100vh - var(--nav-height, 60px) - var(--page-gap-top, 12px) - 12px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #26262e transparent;
+  }
+  .stg-nav-item { flex: none; }
   .stg-nav-item:hover { background: #0b0b0d; border-color: #1c1c22; }
   .stg-nav-item.is-active,
   .stg-nav-item.is-active:hover { background: #111114; border-color: #26262e; }
 }
 @media (max-width: 767px) {
+  /* List, or the section you stepped into: never both. */
+  .stg-layout[data-panel="open"] > .stg-nav,
+  .stg-layout:not([data-panel="open"]) > .stg-main { display: none; }
   .stg-nav {
     background: #000;
     border: 1px solid #222229;
@@ -3739,22 +3946,24 @@ html.reduce-motion .nav-sparkle {
   }
   .stg-nav-item {
     position: relative;
-    margin: 0;
-    padding: 13px 34px 13px 14px;
+    padding: 13px 38px 13px 16px;
     border: 0;
     border-bottom: 1px solid #16161b;
     border-radius: 0;
   }
   .stg-nav-item:last-child { border-bottom: 0; }
+  /* A drawn chevron: the "›" glyph came out a different size in each font. */
   .stg-nav-item::after {
-    content: "›";
+    content: "";
     position: absolute;
-    right: 14px;
+    right: 18px;
     top: 50%;
-    transform: translateY(-50%);
-    color: #5d5d66;
-    font-size: 18px;
-    line-height: 1;
+    width: 7px;
+    height: 7px;
+    margin-top: -4px;
+    border-top: 1.5px solid #7f7f89;
+    border-right: 1.5px solid #7f7f89;
+    transform: rotate(45deg);
   }
   .stg-nav-item:active { background: #0e0e12; }
 }
@@ -3770,4 +3979,197 @@ html.reduce-motion .nav-sparkle {
   cursor: pointer;
 }
 .stg-crumb:hover { color: #f5f5f0; }
-.stg-crumb-sep { margin: 0 0.4em; color: #5d5d66; font-weight: 400; }
+/* The same drawn chevron as the list's rows. */
+.stg-crumb-sep {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 11px 2px 7px;
+  border-top: 2px solid #7f7f89;
+  border-right: 2px solid #7f7f89;
+  transform: rotate(45deg);
+}
+
+/* ── Edit profile: the pop-up from Settings and from your own profile ──
+   The same solid look, on the page's top layer. Its title and its two
+   buttons stay put; the fields between them scroll. */
+.epm-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.78);
+  animation: modalIn 0.2s ease;
+}
+.epm {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+  background: #000;
+  border: 1px solid #222229;
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  font-family: 'DM Sans', sans-serif;
+  animation: modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.epm-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 14px 20px;
+  border-bottom: 1px solid #16161b;
+}
+.epm-title { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; line-height: 22px; color: #f5f5f0; }
+.epm-x {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  background: #111114;
+  border: 1px solid #26262e;
+  color: #9a9aa2;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.epm-x:hover { background: #18181d; border-color: #33333c; color: #f5f5f0; }
+.epm-x.is-remove { width: 38px; height: 38px; border-radius: 10px; }
+.epm-x.is-remove:hover { color: #ff8a80; }
+.epm-x:focus-visible,
+.epm-avatar:focus-visible,
+.epm-banner:focus-visible,
+.epm-remove:focus-visible { outline: 2px solid #ffb700; outline-offset: 2px; }
+.epm-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #2e2e36 transparent;
+}
+.epm-body > * { flex: none; }
+.epm-body > .stg-banner { margin: 0; }
+.epm-foot { flex: none; display: flex; gap: 10px; padding: 14px 20px 16px; border-top: 1px solid #16161b; }
+.epm-foot > .stg-btn { flex: 1; min-height: 40px; font-size: 13px; }
+
+.epm-photo { display: flex; align-items: center; gap: 16px; }
+.epm-avatar { position: relative; flex: none; width: 72px; height: 72px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.epm-avatar > img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 1px solid #33333c; }
+.epm-avatar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #111114;
+  border: 1px dashed #4a4a56;
+  color: #8b8b94;
+}
+.epm-avatar-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ffb700;
+  border: 2.5px solid #000;
+  color: #1a0e00;
+}
+.epm-photo-text { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.epm-photo-lead { font-size: 13px; line-height: 18px; color: #f5f5f0; }
+.epm-hint { font-size: 11px; line-height: 16px; color: #8b8b94; }
+.epm-remove { padding: 0; background: none; border: 0; color: #ff8a80; font: inherit; font-size: 11px; font-weight: 600; line-height: 16px; cursor: pointer; }
+.epm-remove:hover { color: #ffa39b; }
+
+.epm-field { display: flex; flex-direction: column; min-width: 0; }
+.epm-label { display: block; margin: 0 0 6px; font-size: 12px; font-weight: 600; line-height: 16px; color: #f5f5f0; }
+.epm-label > span { font-weight: 400; color: #8b8b94; }
+/* Under a field: what is wrong on the left, how much is used on the right. */
+.epm-under {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 16px;
+  margin-top: 5px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #8b8b94;
+}
+.epm-under.is-bad { color: #ff8a80; }
+.epm-under.is-ok { color: #97c459; }
+.epm-under.is-limit { color: #ffb700; }
+.epm-banner {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #0b0b0d;
+  border: 1px dashed #4a4a56;
+  color: #8b8b94;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.epm-banner:hover { border-color: #5a5a66; color: #c9c9d2; }
+.epm-banner.has-image { border: 1px solid #26262e; }
+.epm-banner > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.epm-banner > span { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%; }
+.epm-handle { position: relative; }
+.epm-handle-at { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-family: 'DM Mono', monospace; font-size: 13px; color: #8b8b94; pointer-events: none; }
+.epm-handle > .stg-input { padding-left: 30px; }
+.epm-handle-lock { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; color: #8b8b94; }
+.epm-link { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.epm-link > .stg-input { flex: 1; min-width: 0; }
+/* The photo crop, which opens over Edit profile. */
+.epm-veil.is-over { z-index: 1210; background: rgba(0, 0, 0, 0.82); }
+.epm.is-crop { max-width: 420px; }
+.epm-crop { position: relative; width: 100%; height: 300px; overflow: hidden; border-radius: 12px; background: #000; border: 1px solid #26262e; }
+.epm-zoom { display: flex; align-items: center; gap: 12px; padding: 0 2px; color: #8b8b94; }
+.epm-zoom > input { flex: 1; min-width: 0; height: 4px; accent-color: #ffb700; cursor: pointer; }
+.epm-hint.is-center { margin: 0; text-align: center; }
+
+/* Phones: a touch tighter than the wide page, and fields tall enough for
+   the 16px type a phone's fields must have. (After the rules above, so
+   these are the ones that hold.) */
+@media (max-width: 639px) {
+  .stg-main { gap: 12px; }
+  .stg-input { min-height: 42px; }
+  .stg-btn { min-height: 36px; }
+  .stg-inline > .stg-input,
+  .stg-inline > .stg-input.is-code { flex: 1 1 100%; }
+  .stg-person.is-large { flex-wrap: wrap; }
+  .stg-person.is-large > .stg-btn { flex: 1 1 100%; }
+  /* The whole row is the switch here; it needs no wider reach. */
+  .stg-row[role="switch"]::after { content: none; }
+  .epm-veil { padding: 12px; }
+  .epm { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+  .epm-head { padding-left: 16px; }
+  .epm-body { padding: 16px 16px 18px; }
+  .epm-foot { padding: 12px 16px 14px; }
+  .epm-x.is-remove { width: 42px; height: 42px; }
+}

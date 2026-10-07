@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase-browser";
 import useEscapeClose from "@/lib/useEscapeClose";
@@ -285,532 +286,266 @@ export default function EditProfileModal({
     onClose();
   }
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const canSave =
     !saving && !uploading && !bannerUploading &&
     availability !== "taken" && availability !== "invalid" &&
     !displayNameBlocked && !bioBlocked;
 
-  const counterStyle = (n: number, max: number, blocked: boolean): React.CSSProperties => ({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    minHeight: 16,
-    marginTop: 5,
-    marginBottom: 14,
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 11,
-    color: blocked ? "#fca5a5" : n >= max ? "#fbbf24" : "var(--text-dim)",
-  });
+  /* The line under a field: what is wrong with it on the left, how much
+     of its length is used on the right. */
+  const under = (n: number, max: number, blocked: boolean) =>
+    `epm-under${blocked ? " is-bad" : n >= max ? " is-limit" : ""}`;
 
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 11.5,
-    fontWeight: 600,
-    letterSpacing: "0.02em",
-    color: "var(--text-muted)",
-    marginBottom: 6,
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 14px",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid var(--border)",
-    borderRadius: 10,
-    color: "var(--text-primary)",
-    fontFamily: "'DM Sans', sans-serif",
-    fontSize: 13.5,
-    outline: "none",
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[970] flex items-center justify-center p-5"
-      style={{
-        background: "rgba(0,0,0,0.78)",
-        backdropFilter: "blur(4px)",
-        animation: "modalIn 0.2s ease",
-      }}
-      onClick={onClose}
-    >
+  /* The site's solid look (the `.epm-*` and `.stg-*` rules in globals.css):
+     a black body with a hairline, near-black tiles to type in, yellow for
+     the keyboard's focus and for Save. The title and the two buttons stay
+     put; only the fields between them scroll, so Save is never below the
+     fold. Drawn on the page's top layer (a portal): the page's own layer
+     sits under the site's bar, which used to cover this title. */
+  return createPortal(
+    <div className="epm-veil" onClick={onClose}>
       <div
-        className="w-full overflow-y-auto"
-        style={{
-          maxWidth: 460,
-          maxHeight: "92vh",
-          background: "rgba(18,18,21,0.95)",
-          border: "1px solid var(--border)",
-          borderRadius: 20,
-          boxShadow: "0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)",
-          padding: "24px 24px 22px",
-          animation: "modalPanelIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        }}
+        className="epm"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit profile"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between mb-4">
-          <h2
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 17,
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "var(--text-primary)",
-            }}
-          >
-            Edit profile
-          </h2>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center cursor-pointer transition-all"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              color: "var(--text-muted)",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--border)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--text-primary)";
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--text-muted)";
-              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-            }}
-          >
+        <div className="epm-head">
+          <h2 className="epm-title">Edit profile</h2>
+          <button type="button" className="epm-x" onClick={onClose} aria-label="Close">
             <Icon name="x" size={13} />
           </button>
         </div>
 
-        {error && (
-          <div
-            className="rounded-lg px-3 py-2 mb-4"
-            style={{
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              color: "#fca5a5",
-              fontSize: 12.5,
-              lineHeight: 1.5,
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <div className="epm-body">
+          {error && <p className="stg-banner is-page" role="alert">{error}</p>}
 
-        {/* Avatar */}
-        <div className="flex items-center gap-4 mb-5">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="relative cursor-pointer shrink-0"
-            style={{ background: "none", border: "none", padding: 0 }}
-            title="Change photo"
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt="avatar preview"
-                className="rounded-full object-cover"
-                style={{ width: 72, height: 72, border: "2px solid var(--border-hover)" }}
-                referrerPolicy="no-referrer"
+          {/* Avatar */}
+          <div className="epm-photo">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="epm-avatar"
+              title="Change photo"
+            >
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="avatar preview" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="epm-avatar-empty">
+                  <Icon name="user" size={26} strokeWidth={1.5} />
+                </span>
+              )}
+              <span className="epm-avatar-badge">
+                <Icon name="camera" size={12} />
+              </span>
+            </button>
+            <div className="epm-photo-text">
+              <span className="epm-photo-lead">
+                {uploading ? "Uploading…" : "Click the photo to upload a new one"}
+              </span>
+              <span className="epm-hint">PNG, JPG, or WebP — 5 MB max</span>
+              {avatarUrl && (
+                <button type="button" onClick={() => setAvatarUrl("")} className="epm-remove">
+                  Remove photo
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleAvatarPick(f);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {/* Banner */}
+          <div className="epm-field">
+            <span className="epm-label">
+              Banner{" "}
+              <span>— shown across the top of your profile · 1500 × 500 recommended (3:1)</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={bannerUploading}
+              className={`epm-banner${bannerUrl ? " has-image" : ""}`}
+              title="Change banner"
+            >
+              {bannerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerUrl} alt="banner preview" referrerPolicy="no-referrer" />
+              ) : (
+                <span>
+                  <Icon name="image" size={16} />
+                  {bannerUploading ? "Uploading…" : "Click to upload a banner"}
+                </span>
+              )}
+            </button>
+            <div className="epm-under">
+              <span>{bannerUploading ? "Uploading…" : "PNG, JPG, or WebP — 5 MB max, resized to 1600px"}</span>
+              {bannerUrl && (
+                <button type="button" onClick={() => setBannerUrl("")} className="epm-remove">
+                  Remove banner
+                </button>
+              )}
+            </div>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleBannerPick(f);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {/* Display name */}
+          <div className="epm-field">
+            <label className="epm-label" htmlFor="epm-display-name">
+              Display name{" "}
+              <span>— shown next to your handle, change anytime</span>
+            </label>
+            <input
+              id="epm-display-name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value.slice(0, DISPLAY_NAME_MAX))}
+              onBlur={() => setDisplayName((v) => normalizeDisplayName(v))}
+              maxLength={DISPLAY_NAME_MAX}
+              placeholder="e.g. Jordan J."
+              className={`stg-input${displayNameBlocked ? " is-bad" : ""}`}
+            />
+            <div className={under(displayName.length, DISPLAY_NAME_MAX, displayNameBlocked)}>
+              <span>{displayNameBlocked ? "Display name contains a blocked term" : ""}</span>
+              <span>{displayName.length}/{DISPLAY_NAME_MAX}</span>
+            </div>
+          </div>
+
+          {/* Username */}
+          <div className="epm-field">
+            <label className="epm-label" htmlFor="epm-username">
+              Username{" "}
+              <span>— your @handle, once every 7 days</span>
+            </label>
+            <div className="epm-handle">
+              <span className="epm-handle-at" aria-hidden="true">@</span>
+              <input
+                id="epm-username"
+                value={username}
+                disabled={usernameLocked}
+                onChange={(e) =>
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))
+                }
+                placeholder="your_handle"
+                className="stg-input is-mono"
               />
-            ) : (
-              <div
-                className="rounded-full flex items-center justify-center"
-                style={{
-                  width: 72,
-                  height: 72,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "2px dashed var(--border-hover)",
-                  color: "var(--text-dim)",
-                }}
-              >
-                <Icon name="user" size={26} strokeWidth={1.5} />
+              {usernameLocked && (
+                <span className="epm-handle-lock">
+                  <Icon name="lock" size={13} />
+                </span>
+              )}
+            </div>
+            <div
+              className={`epm-under${
+                availability === "ok" ? " is-ok"
+                : availability === "taken" || availability === "invalid" ? " is-bad"
+                : ""}`}
+            >
+              <span>
+                {usernameLocked
+                  ? `Locked — you can change it again on ${cooldownUntil!.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`
+                  : availability === "checking" ? "Checking availability…"
+                  : availability === "ok" ? "✓ Available"
+                  : availability === "taken" ? "Already taken"
+                  : availability === "invalid" ? "3–20 chars: a–z, 0–9, underscores"
+                  : "3–20 chars: lowercase letters, numbers, underscores"}
+              </span>
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div className="epm-field">
+            <label className="epm-label" htmlFor="epm-bio">
+              Bio <span>(optional)</span>
+            </label>
+            <textarea
+              id="epm-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+              onBlur={() => setBio((v) => normalizeBio(v))}
+              maxLength={BIO_MAX}
+              placeholder="Tell the community something about you…"
+              rows={3}
+              className={`stg-input${bioBlocked ? " is-bad" : ""}`}
+            />
+            <div className={under(bio.length, BIO_MAX, bioBlocked)}>
+              <span>{bioBlocked ? "Bio contains a blocked term" : ""}</span>
+              <span>{bio.length}/{BIO_MAX}</span>
+            </div>
+          </div>
+
+          {/* Social links */}
+          <div className="epm-field">
+            <span className="epm-label">
+              Social links{" "}
+              <span>— up to {MAX_SOCIAL_LINKS}, https only</span>
+            </span>
+            {links.map((link, i) => {
+              const invalid = link.trim() !== "" && normalizeSocialLink(link) === null;
+              return (
+                <div key={i} className="epm-link">
+                  <input
+                    value={link}
+                    onChange={(e) =>
+                      setLinks((prev) => prev.map((l, j) => (j === i ? e.target.value.slice(0, 200) : l)))
+                    }
+                    placeholder="e.g. instagram.com/your_handle"
+                    aria-label={`Social link ${i + 1}`}
+                    className={`stg-input is-mono${invalid ? " is-bad" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
+                    className="epm-x is-remove"
+                    title="Remove link"
+                    aria-label={`Remove social link ${i + 1}`}
+                  >
+                    <Icon name="x" size={12} />
+                  </button>
+                </div>
+              );
+            })}
+            {links.length < MAX_SOCIAL_LINKS && (
+              <div className="stg-actions">
+                <button
+                  type="button"
+                  onClick={() => setLinks((prev) => [...prev, ""])}
+                  className="stg-btn stg-btn--quiet"
+                >
+                  + Add link
+                </button>
               </div>
             )}
-            <span
-              className="absolute flex items-center justify-center"
-              style={{
-                width: 26,
-                height: 26,
-                right: -2,
-                bottom: -2,
-                borderRadius: "50%",
-                background: "var(--accent-blue)",
-                border: "2.5px solid var(--bg-secondary)",
-                color: "#fff",
-              }}
-            >
-              <Icon name="camera" size={12} />
-            </span>
-          </button>
-          <div className="flex flex-col gap-1.5">
-            <span style={{ fontSize: 12.5, color: "var(--text-muted)", fontWeight: 500 }}>
-              {uploading ? "Uploading…" : "Click the photo to upload a new one"}
-            </span>
-            <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
-              PNG, JPG, or WebP — 5 MB max
-            </span>
-            {avatarUrl && (
-              <button
-                onClick={() => setAvatarUrl("")}
-                className="cursor-pointer text-left"
-                style={{
-                  padding: 0,
-                  background: "none",
-                  border: "none",
-                  color: "#fca5a5",
-                  fontSize: 11.5,
-                  fontWeight: 500,
-                }}
-              >
-                Remove photo
-              </button>
-            )}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleAvatarPick(f);
-              e.target.value = "";
-            }}
-          />
         </div>
 
-        {/* Banner */}
-        <label style={labelStyle}>
-          Banner{" "}
-          <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>
-            — shown across the top of your profile · 1500 × 500 recommended (3:1)
-          </span>
-        </label>
-        <button
-          onClick={() => bannerInputRef.current?.click()}
-          disabled={bannerUploading}
-          className="w-full cursor-pointer transition-all"
-          title="Change banner"
-          style={{
-            display: "block",
-            width: "100%",
-            aspectRatio: "3 / 1",
-            padding: 0,
-            marginBottom: 6,
-            borderRadius: 12,
-            overflow: "hidden",
-            background: "rgba(255,255,255,0.04)",
-            border: bannerUrl ? "1px solid var(--border)" : "2px dashed var(--border-hover)",
-          }}
-        >
-          {bannerUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={bannerUrl}
-              alt="banner preview"
-              className="object-cover"
-              style={{ width: "100%", height: "100%", display: "block" }}
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <span
-              className="flex items-center justify-center gap-2"
-              style={{ width: "100%", height: "100%", color: "var(--text-dim)", fontSize: 12 }}
-            >
-              <Icon name="image" size={16} />
-              {bannerUploading ? "Uploading…" : "Click to upload a banner"}
-            </span>
-          )}
-        </button>
-        <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-          <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
-            {bannerUploading ? "Uploading…" : "PNG, JPG, or WebP — 5 MB max, resized to 1600px"}
-          </span>
-          {bannerUrl && (
-            <button
-              onClick={() => setBannerUrl("")}
-              className="cursor-pointer"
-              style={{
-                padding: 0,
-                background: "none",
-                border: "none",
-                color: "#fca5a5",
-                fontSize: 11.5,
-                fontWeight: 500,
-              }}
-            >
-              Remove banner
-            </button>
-          )}
-        </div>
-        <input
-          ref={bannerInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleBannerPick(f);
-            e.target.value = "";
-          }}
-        />
-
-        {/* Display name */}
-        <label style={labelStyle}>
-          Display name{" "}
-          <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>
-            — shown next to your handle, change anytime
-          </span>
-        </label>
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value.slice(0, DISPLAY_NAME_MAX))}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = displayNameBlocked ? "rgba(239,68,68,0.45)" : "var(--border)";
-            setDisplayName((v) => normalizeDisplayName(v));
-          }}
-          maxLength={DISPLAY_NAME_MAX}
-          placeholder="e.g. Jordan J."
-          className="transition-all"
-          style={{ ...inputStyle, borderColor: displayNameBlocked ? "rgba(239,68,68,0.45)" : "var(--border)" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
-        />
-        <div style={counterStyle(displayName.length, DISPLAY_NAME_MAX, displayNameBlocked)}>
-          <span>{displayNameBlocked ? "Display name contains a blocked term" : ""}</span>
-          <span>{displayName.length}/{DISPLAY_NAME_MAX}</span>
-        </div>
-
-        {/* Username */}
-        <label style={labelStyle}>
-          Username{" "}
-          <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>
-            — your @handle, once every 7 days
-          </span>
-        </label>
-        <div className="relative mb-1">
-          <span
-            style={{
-              position: "absolute",
-              left: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "var(--text-dim)",
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 13,
-            }}
-          >
-            @
-          </span>
-          <input
-            value={username}
-            disabled={usernameLocked}
-            onChange={(e) =>
-              setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))
-            }
-            placeholder="your_handle"
-            className="transition-all"
-            style={{
-              ...inputStyle,
-              paddingLeft: 32,
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 13,
-              opacity: usernameLocked ? 0.55 : 1,
-              cursor: usernameLocked ? "not-allowed" : "text",
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
-          />
-          {usernameLocked && (
-            <span
-              className="absolute flex items-center"
-              style={{ right: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}
-            >
-              <Icon name="lock" size={13} />
-            </span>
-          )}
-        </div>
-        <div
-          style={{
-            minHeight: 18,
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 11.5,
-            marginBottom: 14,
-            color:
-              availability === "ok" ? "#22c55e"
-              : availability === "taken" || availability === "invalid" ? "#fca5a5"
-              : "var(--text-dim)",
-          }}
-        >
-          {usernameLocked
-            ? `Locked — you can change it again on ${cooldownUntil!.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`
-            : availability === "checking" ? "Checking availability…"
-            : availability === "ok" ? "✓ Available"
-            : availability === "taken" ? "Already taken"
-            : availability === "invalid" ? "3–20 chars: a–z, 0–9, underscores"
-            : "3–20 chars: lowercase letters, numbers, underscores"}
-        </div>
-
-        {/* Bio */}
-        <label style={labelStyle}>
-          Bio <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>(optional)</span>
-        </label>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = bioBlocked ? "rgba(239,68,68,0.45)" : "var(--border)";
-            setBio((v) => normalizeBio(v));
-          }}
-          maxLength={BIO_MAX}
-          placeholder="Tell the community something about you…"
-          rows={3}
-          className="w-full transition-all"
-          style={{ ...inputStyle, resize: "none", borderColor: bioBlocked ? "rgba(239,68,68,0.45)" : "var(--border)" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
-        />
-        <div style={counterStyle(bio.length, BIO_MAX, bioBlocked)}>
-          <span>{bioBlocked ? "Bio contains a blocked term" : ""}</span>
-          <span>{bio.length}/{BIO_MAX}</span>
-        </div>
-
-        {/* Social links */}
-        <label style={labelStyle}>
-          Social links{" "}
-          <span style={{ color: "var(--text-dim)", fontWeight: 400 }}>
-            — up to {MAX_SOCIAL_LINKS}, https only
-          </span>
-        </label>
-        {links.map((link, i) => {
-          const invalid = link.trim() !== "" && normalizeSocialLink(link) === null;
-          return (
-            <div key={i} className="flex items-center gap-2" style={{ marginBottom: 8 }}>
-              <input
-                value={link}
-                onChange={(e) =>
-                  setLinks((prev) => prev.map((l, j) => (j === i ? e.target.value.slice(0, 200) : l)))
-                }
-                placeholder="e.g. instagram.com/your_handle"
-                className="transition-all"
-                style={{
-                  ...inputStyle,
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 12.5,
-                  borderColor: invalid ? "rgba(239,68,68,0.45)" : "var(--border)",
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(59,130,246,0.55)"; }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = invalid ? "rgba(239,68,68,0.45)" : "var(--border)";
-                }}
-              />
-              <button
-                onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
-                className="flex items-center justify-center cursor-pointer shrink-0 transition-all"
-                title="Remove link"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 10,
-                  color: "var(--text-muted)",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid var(--border)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#fca5a5";
-                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "var(--text-muted)";
-                  e.currentTarget.style.borderColor = "var(--border)";
-                }}
-              >
-                <Icon name="x" size={12} />
-              </button>
-            </div>
-          );
-        })}
-        {links.length < MAX_SOCIAL_LINKS && (
-          <button
-            onClick={() => setLinks((prev) => [...prev, ""])}
-            className="cursor-pointer transition-all"
-            style={{
-              padding: "7px 12px",
-              marginBottom: 20,
-              borderRadius: 100,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--border)",
-              color: "var(--text-muted)",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--text-primary)";
-              e.currentTarget.style.borderColor = "var(--border-hover)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--text-muted)";
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
-          >
-            + Add link
-          </button>
-        )}
-        {links.length >= MAX_SOCIAL_LINKS && <div style={{ marginBottom: 12 }} />}
-
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="flex-1 cursor-pointer transition-all"
-            style={{
-              padding: "11px 16px",
-              borderRadius: 100,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--border)",
-              color: "var(--text-muted)",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13.5,
-              fontWeight: 600,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--text-primary)";
-              e.currentTarget.style.borderColor = "var(--border-hover)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--text-muted)";
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
-          >
+        <div className="epm-foot">
+          <button type="button" onClick={onClose} disabled={saving} className="stg-btn stg-btn--quiet">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
-            className="flex-1 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              padding: "11px 16px",
-              borderRadius: 100,
-              background: "var(--accent-blue)",
-              border: "none",
-              color: "#fff",
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13.5,
-              fontWeight: 600,
-            }}
-            onMouseEnter={(e) => {
-              if (canSave) e.currentTarget.style.background = "var(--accent-purple-light)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--accent-blue)";
-            }}
-          >
+          <button type="button" onClick={handleSave} disabled={!canSave} className="stg-btn stg-btn--primary">
             {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
@@ -822,6 +557,7 @@ export default function EditProfileModal({
         onCancel={closeCrop}
         onApply={handleCroppedUpload}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

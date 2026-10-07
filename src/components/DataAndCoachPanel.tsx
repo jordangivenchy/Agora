@@ -14,6 +14,7 @@ import { setCaptureEnabled } from "@/lib/capture/track";
 import type { ConsentCategory } from "@/lib/dataPlatform/contract";
 import { sessionUser } from "@/lib/session";
 import { AGORA_AI } from "@/lib/features";
+import { SectionCard, SwitchRow } from "@/components/SettingsParts";
 
 type Consent = Record<ConsentCategory, boolean>;
 
@@ -94,66 +95,53 @@ export default function DataAndCoachPanel() {
     }
   }, []);
 
-  if (!loaded) return null;
-
+  /* One card in the settings page's own shapes: the explanation under
+     the title, a row for each kind of data, then the two things you can
+     do with it. The card is there from the start, its switch waiting on
+     what the account has chosen, so nothing drops in late. */
   return (
-    <div style={{ maxWidth: 620, fontFamily: "'DM Sans', sans-serif", color: "#e5e5ec" }}>
-      <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, marginBottom: 4 }}>
-        Your Data &amp; Coach
-      </h2>
-      <p style={{ fontSize: 13, color: "#8b8b94", marginBottom: 20 }}>
-        {AGORA_AI ? (
-          <>
-            Agora builds your profile and coaching from how you use the app and
-            speak on stage. You can turn any of it off here, and download or delete
-            everything it derives &mdash; it&rsquo;s built to coach you, not to profile
-            you for anyone else.
-          </>
-        ) : (
-          <>
-            Agora&rsquo;s coach, the analysis of how you argue and the recommendations
-            built on it, is coming soon. Until then nothing of the kind is collected.
-            Activity analytics is the one thing that runs today; you can turn it off
-            here, and download or delete everything the app holds about you.
-          </>
-        )}
-      </p>
-
-      {/* Consent toggles */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 26 }}>
-        {CATEGORIES.map((cat) => (
-          <div key={cat.key} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 14, borderRadius: 14, background: "#000", border: "1px solid #222229", opacity: cat.ai && !AGORA_AI ? 0.62 : 1 }}>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>{cat.title}</p>
-              <p style={{ margin: "3px 0 0", fontSize: 11.5, color: "#8b8b94", lineHeight: 1.5 }}>{cat.blurb}</p>
-            </div>
-            {cat.ai && !AGORA_AI ? (
-              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", color: "#ffb700", background: "#111114", border: "1px solid #26262e", borderRadius: 999, padding: "4px 9px", whiteSpace: "nowrap" }}>
-                Coming soon
-              </span>
-            ) : (
-            <button
-              role="switch"
-              aria-checked={consent[cat.key]}
-              onClick={() => toggle(cat.key)}
-              style={{
-                width: 34, height: 20, borderRadius: 999, position: "relative", flexShrink: 0, border: "none", cursor: "pointer",
-                background: consent[cat.key] ? "#ffb700" : "#26262e",
-                transition: "background 0.2s",
-              }}
-            >
-              <span style={{ position: "absolute", top: 2, left: consent[cat.key] ? 16 : 2, width: 16, height: 16, borderRadius: "50%", background: consent[cat.key] ? "#1a0e00" : "#f5f5f0", transition: "left 0.2s" }} />
-            </button>
-            )}
+    <SectionCard
+      title="Data & Coach"
+      text={AGORA_AI ? (
+        <>
+          Agora builds your profile and coaching from how you use the app and
+          speak on stage. You can turn any of it off here, and download or delete
+          everything it derives &mdash; it&rsquo;s built to coach you, not to profile
+          you for anyone else.
+        </>
+      ) : (
+        <>
+          Agora&rsquo;s coach, the analysis of how you argue and the recommendations
+          built on it, is coming soon. Until then nothing of the kind is collected.
+          Activity analytics is the one thing that runs today; you can turn it off
+          here, and download or delete everything the app holds about you.
+        </>
+      )}
+    >
+      {CATEGORIES.map((cat) => (
+        cat.ai && !AGORA_AI ? (
+          <div key={cat.key} className="stg-row is-soon">
+            <span className="stg-row-text">
+              <span className="stg-row-label">{cat.title}</span>
+              <span className="stg-row-sub">{cat.blurb}</span>
+            </span>
+            <span className="stg-chip">Coming soon</span>
           </div>
-        ))}
+        ) : (
+          <SwitchRow
+            key={cat.key}
+            on={consent[cat.key]}
+            disabled={!loaded}
+            onChange={() => toggle(cat.key)}
+            label={cat.title}
+            sub={cat.blurb}
+          />
+        )
+      ))}
+      <div className="stg-foot">
+        <button type="button" onClick={download} disabled={busy || !loaded} className="stg-btn">Download my data</button>
+        <button type="button" onClick={erase} disabled={busy || !loaded} className="stg-btn stg-btn--danger">Delete my derived data</button>
       </div>
-
-      {/* Data rights */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-        <button onClick={download} disabled={busy} className="stg-btn">Download my data</button>
-        <button onClick={erase} disabled={busy} className="stg-btn stg-btn--danger">Delete my derived data</button>
-      </div>
-    </div>
+    </SectionCard>
   );
 }

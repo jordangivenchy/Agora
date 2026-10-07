@@ -19,6 +19,7 @@ import { validateNewPassword } from "@/lib/passwordPolicy";
 import RouteLoading from "@/components/RouteLoading";
 import EditProfileModal from "@/components/EditProfileModal";
 import DataAndCoachPanel from "@/components/DataAndCoachPanel";
+import { SectionCard, SwitchRow } from "@/components/SettingsParts";
 import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
 import { PREF_GROUPS } from "@/lib/notifications";
@@ -44,11 +45,11 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "profile",    label: "Profile",                sub: "Name, username, bio, avatar" },
   { key: "account",    label: "Account & security",     sub: "Email, password, sessions" },
   { key: "discussion", label: "Discussion defaults",    sub: "Mic and camera on join" },
-  { key: "recordings", label: "Recordings & storage",   sub: "VODs of your discussions, storage space" },
+  { key: "recordings", label: "Recordings & storage",   sub: "Recordings and storage space" },
   { key: "notifications", label: "Notifications",       sub: "What you get notified about" },
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
-  { key: "data",       label: "Data & Coach",           sub: "Your data controls; the coach is coming soon" },
+  { key: "data",       label: "Data & Coach",           sub: "Your data controls" },
   { key: "blocked",    label: "Blocked users",          sub: "Manage your block list" },
   { key: "danger",     label: "Danger zone",            sub: "Delete your account" },
 ];
@@ -59,65 +60,9 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
    the call card: black bodies with a hairline, near-black tiles for what
    you press or type in, and the brand yellow for what is switched on.
    Nothing tinted or see-through — the starfield behind the page showed
-   through the old cards. Buttons and fields are classes (`.stg-*`,
-   globals.css) so they can answer a pointer and the keyboard. */
-const card: React.CSSProperties = {
-  background: "#000",
-  border: "1px solid #222229",
-  borderRadius: 14,
-};
-
-function Toggle({
-  on, disabled, onChange, label, sub,
-}: {
-  on: boolean;
-  disabled?: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  sub: string;
-}) {
-  return (
-    <button
-      onClick={() => !disabled && onChange(!on)}
-      disabled={disabled}
-      className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left cursor-pointer bg-transparent border-none"
-      style={{ opacity: disabled ? 0.5 : 1, borderTop: "1px solid #16161b" }}
-      role="switch"
-      aria-checked={on}
-    >
-      <span>
-        <span className="block text-[13px]" style={{ color: "#f5f5f0" }}>{label}</span>
-        <span className="block text-[11px] mt-0.5" style={{ color: "#8b8b94" }}>{sub}</span>
-      </span>
-      <span
-        className="shrink-0 relative inline-block transition-colors"
-        style={{
-          width: 34, height: 20, borderRadius: 99,
-          background: on ? "#ffb700" : "#26262e",
-        }}
-      >
-        <span
-          className="absolute rounded-full transition-all"
-          style={{ top: 2, left: on ? 16 : 2, width: 16, height: 16, background: on ? "#1a0e00" : "#f5f5f0" }}
-        />
-      </span>
-    </button>
-  );
-}
-
-function SectionCard({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
-  return (
-    <div style={card} className="mb-4 overflow-hidden">
-      <div className="px-4 pt-4 pb-1">
-        <p className="m-0 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#f5f5f0" }}>
-          {title}
-        </p>
-        {sub && <p className="m-0 mt-0.5 text-[11px]" style={{ color: "#8b8b94" }}>{sub}</p>}
-      </div>
-      <div className="pb-1.5">{children}</div>
-    </div>
-  );
-}
+   through the old cards. The card and the switch row are
+   SettingsParts.tsx; every size and gap is a `.stg-*` rule in
+   globals.css, one set for the whole page. */
 
 /* ── page ──────────────────────────────────────────────────── */
 
@@ -488,33 +433,28 @@ export default function SettingsPage({ initial }: {
       case "profile":
         return (
           <SectionCard title="Profile" sub="How you appear across AgoraSphere.">
-            <div className="flex items-center gap-3.5 px-4 py-3 settings-profile-row">
-              <span
-                className="flex items-center justify-center shrink-0 overflow-hidden"
-                style={{ width: 52, height: 52, borderRadius: "50%", background: "#111114", border: "1px solid #26262e", color: "#f5f5f0", fontSize: 20, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
-              >
-                {profile.avatar_url
-                  ? // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : displayName(profile).charAt(0).toUpperCase()}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="m-0 text-[14px]" style={{ color: "#f5f5f0" }}>
-                  {displayName(profile)}
-                  <VerifiedMark username={profile.username} />
-                </p>
-                <p className="m-0 text-[11px]" style={{ color: "#8b8b94" }}>@{profile.username}</p>
-                {profile.bio && (
-                  <p className="m-0 mt-1 text-[11px] truncate" style={{ color: "#9a9aa2" }}>{profile.bio}</p>
-                )}
+            <div className="stg-row">
+              <div className="stg-person is-large">
+                <span className="stg-avatar is-large">
+                  {profile.avatar_url
+                    ? // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profile.avatar_url} alt="" />
+                    : displayName(profile).charAt(0).toUpperCase()}
+                </span>
+                <div className="stg-person-text">
+                  <p className="stg-person-name">
+                    <span>{displayName(profile)}</span>
+                    <VerifiedMark username={profile.username} />
+                  </p>
+                  <p className="stg-person-handle">@{profile.username}</p>
+                  {profile.bio && <p className="stg-person-bio">{profile.bio}</p>}
+                </div>
+                <button className="stg-btn" onClick={() => setEditProfileOpen(true)}>
+                  Edit profile
+                </button>
               </div>
-              <button className="stg-btn" onClick={() => setEditProfileOpen(true)}>
-                Edit profile
-              </button>
             </div>
-            <p className="mx-4 mb-3 mt-1 text-[11px]" style={{ color: "#7f7f89" }}>
-              Username changes are limited to once every 7 days.
-            </p>
+            <p className="stg-row is-note">Username changes are limited to once every 7 days.</p>
           </SectionCard>
         );
 
@@ -522,21 +462,18 @@ export default function SettingsPage({ initial }: {
         return (
           <>
             <SectionCard title="Email" sub={`Signed in as ${profile.email}`}>
-              <form onSubmit={changeEmail} className="px-4 pb-3.5 flex flex-col gap-2.5">
+              <form onSubmit={changeEmail} className="stg-body">
                 <input
                   className="stg-input"
                   type="email"
                   placeholder="New email address"
+                  aria-label="New email address"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   autoComplete="email"
                 />
-                {emailMsg && (
-                  <p className="m-0 text-[11px]" style={{ color: emailMsg.kind === "ok" ? "#97c459" : "#ff8a80" }}>
-                    {emailMsg.text}
-                  </p>
-                )}
-                <div>
+                {emailMsg && <p className={`stg-msg is-${emailMsg.kind}`}>{emailMsg.text}</p>}
+                <div className="stg-actions">
                   <button className="stg-btn" disabled={emailBusy || !newEmail.trim()} type="submit">
                     {emailBusy ? "Sending…" : "Change email"}
                   </button>
@@ -545,23 +482,19 @@ export default function SettingsPage({ initial }: {
             </SectionCard>
 
             <SectionCard title="Password" sub="Requires your current password.">
-              <form onSubmit={changePassword} className="px-4 pb-3.5 flex flex-col gap-2.5">
-                <input className="stg-input" type="password" placeholder="Current password"
+              <form onSubmit={changePassword} className="stg-body">
+                <input className="stg-input" type="password" placeholder="Current password" aria-label="Current password"
                   value={curPw} onChange={(e) => setCurPw(e.target.value)} autoComplete="current-password" />
-                <input className="stg-input" type="password" placeholder="New password"
+                <input className="stg-input" type="password" placeholder="New password" aria-label="New password"
                   value={newPw} onChange={(e) => setNewPw(e.target.value)} autoComplete="new-password" />
-                <input className="stg-input" type="password" placeholder="Confirm new password"
+                <input className="stg-input" type="password" placeholder="Confirm new password" aria-label="Confirm new password"
                   value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} autoComplete="new-password" />
-                {pwMsg && (
-                  <p className="m-0 text-[11px]" style={{ color: pwMsg.kind === "ok" ? "#97c459" : "#ff8a80" }}>
-                    {pwMsg.text}
-                  </p>
-                )}
-                <div className="flex items-center gap-3 settings-inline-form">
+                {pwMsg && <p className={`stg-msg is-${pwMsg.kind}`}>{pwMsg.text}</p>}
+                <div className="stg-actions">
                   <button className="stg-btn" disabled={pwBusy || !curPw || !newPw} type="submit">
                     {pwBusy ? "Updating…" : "Update password"}
                   </button>
-                  <a href="/forgot-password" className="text-[11px]" style={{ color: "#8b8b94" }}>
+                  <a href="/forgot-password" className="stg-link">
                     Forgot your password?
                   </a>
                 </div>
@@ -569,32 +502,37 @@ export default function SettingsPage({ initial }: {
             </SectionCard>
 
             <SectionCard title="Sessions" sub="Signs you out on every device, including this one.">
-              <div className="px-4 pb-3.5">
-                <button className="stg-btn stg-btn--quiet" onClick={signOutEverywhere} disabled={signoutBusy}>
-                  {signoutBusy ? "Signing out…" : "Sign out everywhere"}
-                </button>
+              <div className="stg-body">
+                <div className="stg-actions">
+                  <button className="stg-btn stg-btn--quiet" onClick={signOutEverywhere} disabled={signoutBusy}>
+                    {signoutBusy ? "Signing out…" : "Sign out everywhere"}
+                  </button>
+                </div>
               </div>
             </SectionCard>
 
             <SectionCard title="Two-factor authentication" sub="Enter an emailed code each time you sign in with your password.">
-              <div className="px-4 pb-3.5 flex flex-col gap-2.5">
+              <div className="stg-body">
+                {/* What just happened, or what to do next, reads before the
+                    field it is about ("we emailed you a code"). */}
+                {twoFactorMsg && <p className={`stg-msg is-${twoFactorMsg.kind}`}>{twoFactorMsg.text}</p>}
+
                 {!twoFactorEnabled && !enrollPending && (
-                  <button
-                    onClick={startEnrollFlow}
-                    disabled={twoFactorBusy}
-                    className="stg-btn self-start"
-                  >
-                    {twoFactorBusy ? "Sending code…" : "Enable 2FA"}
-                  </button>
+                  <div className="stg-actions">
+                    <button onClick={startEnrollFlow} disabled={twoFactorBusy} className="stg-btn">
+                      {twoFactorBusy ? "Sending code…" : "Enable 2FA"}
+                    </button>
+                  </div>
                 )}
 
                 {!twoFactorEnabled && enrollPending && (
-                  <form onSubmit={verifyEnroll} className="flex items-center gap-2.5 settings-inline-form">
+                  <form onSubmit={verifyEnroll} className="stg-inline">
                     <input
-                      className="stg-input" style={{ width: 130, textAlign: "center", letterSpacing: "0.2em" }}
+                      className="stg-input is-code"
                       type="text"
                       inputMode="numeric"
                       placeholder="000000"
+                      aria-label="6-digit code"
                       autoComplete="off"
                       value={enrollCode}
                       onChange={(e) => setEnrollCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -617,23 +555,24 @@ export default function SettingsPage({ initial }: {
                 )}
 
                 {twoFactorEnabled && !disableOpen && (
-                  <div className="flex items-center gap-3">
-                    <button className="stg-btn stg-btn--quiet self-start" onClick={() => setDisableOpen(true)}>
+                  <div className="stg-actions">
+                    <button className="stg-btn stg-btn--quiet" onClick={() => setDisableOpen(true)}>
                       Disable 2FA
                     </button>
-                    <p className="m-0 text-[11px]" style={{ color: "#97c459" }}>
+                    <p className="stg-msg is-ok">
                       ✓ Active — you&apos;ll be asked for an emailed code at sign-in.
                     </p>
                   </div>
                 )}
 
                 {twoFactorEnabled && disableOpen && (
-                  <form onSubmit={disable2fa} className="flex items-center gap-2.5 settings-inline-form">
+                  <form onSubmit={disable2fa} className="stg-inline">
                     {hasPasswordIdentity && (
                       <input
-                        className="stg-input" style={{ width: 200 }}
+                        className="stg-input"
                         type="password"
                         placeholder="Current password"
+                        aria-label="Current password"
                         autoComplete="current-password"
                         value={disablePw}
                         onChange={(e) => setDisablePw(e.target.value)}
@@ -659,12 +598,6 @@ export default function SettingsPage({ initial }: {
                     </button>
                   </form>
                 )}
-
-                {twoFactorMsg && (
-                  <p className="m-0 text-[11px]" style={{ color: twoFactorMsg.kind === "ok" ? "#97c459" : "#ff8a80" }}>
-                    {twoFactorMsg.text}
-                  </p>
-                )}
               </div>
             </SectionCard>
           </>
@@ -676,13 +609,13 @@ export default function SettingsPage({ initial }: {
             title="Joining a discussion"
             sub="Applied whenever you join as a speaker. You can always unmute or enable your camera in the room."
           >
-            <Toggle
+            <SwitchRow
               on={settings.join_muted}
               onChange={(v) => saveToggle("join_muted", v)}
               label="Join with microphone muted"
               sub="Your mic stays off until you turn it on yourself"
             />
-            <Toggle
+            <SwitchRow
               on={settings.join_camera_off}
               onChange={(v) => saveToggle("join_camera_off", v)}
               label="Join with camera off"
@@ -706,7 +639,7 @@ export default function SettingsPage({ initial }: {
               title="Discussion recordings (VODs)"
               sub="Recordings let people rewatch your ended discussions and let big audiences watch over the broadcast stream."
             >
-              <Toggle
+              <SwitchRow
                 on={settings.record_debates}
                 onChange={(v) => saveToggle("record_debates", v)}
                 label="Record discussions I host"
@@ -714,32 +647,35 @@ export default function SettingsPage({ initial }: {
               />
             </SectionCard>
             <SectionCard title="Storage" sub="Recordings of discussions you host count against your space.">
-              <div className="px-4 pb-3">
+              <div className="stg-body">
                 {recUsage ? (
                   <>
-                    <div className="flex items-baseline justify-between mb-1.5 settings-storage-head">
-                      <span className="text-[13px]" style={{ color: "#f5f5f0", fontWeight: 600 }}>
-                        {usedGb! < 0.1 && recUsage.used_bytes > 0 ? "<0.1" : usedGb!.toFixed(1)} GB
-                        <span style={{ color: "#8b8b94", fontWeight: 400 }}> of {limitGb!.toFixed(0)} GB used</span>
+                    <p className="stg-usage">
+                      <span>
+                        <strong>{usedGb! < 0.1 && recUsage.used_bytes > 0 ? "<0.1" : usedGb!.toFixed(1)} GB</strong>
+                        {" "}of {limitGb!.toFixed(0)} GB used
                       </span>
                       {full && (
-                        <span className="text-[11px]" style={{ color: "#ff8a80" }}>
+                        <span className="stg-msg is-err">
                           Storage full — new discussions aren&rsquo;t recorded
                         </span>
                       )}
-                    </div>
-                    <div className="overflow-hidden" style={{ height: 6, borderRadius: 3, background: "#1c1c22" }}>
-                      <div style={{
-                        width: `${pct}%`, height: "100%", borderRadius: 3,
-                        background: full ? "#ff6b61" : "#ffb700",
-                        transition: "width 0.3s ease",
-                      }} />
+                    </p>
+                    <div
+                      className={`stg-meter${full ? " is-full" : ""}`}
+                      role="progressbar"
+                      aria-label="Recording space used"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.round(pct)}
+                    >
+                      <span style={{ width: `${pct}%` }} />
                     </div>
                   </>
                 ) : (
-                  <p className="m-0 text-[12px]" style={{ color: "#8b8b94" }}>Loading your usage…</p>
+                  <p className="stg-text">Loading your usage…</p>
                 )}
-                <p className="m-0 mt-3 text-[11px]" style={{ color: "#8b8b94", lineHeight: 1.5 }}>
+                <p className="stg-note">
                   Every account includes 5 GB of recording space — roughly 2½ hours of discussion.
                   More storage is coming with AgoraSphere subscriptions.
                 </p>
@@ -761,7 +697,7 @@ export default function SettingsPage({ initial }: {
                   : undefined}
               >
                 {g.items.map((it) => (
-                  <Toggle
+                  <SwitchRow
                     key={it.type}
                     on={prefs?.[it.type] ?? true}
                     disabled={prefs === null}
@@ -773,10 +709,12 @@ export default function SettingsPage({ initial }: {
               </SectionCard>
             ))}
             <SectionCard title="Push" sub="Web push is enabled per browser from the bell menu.">
-              <p className="m-0 px-4 py-3.5 text-[12.5px]" style={{ color: "#8b8b94" }}>
-                Live, scheduled and replay-ready alerts from people you follow go out as push notifications
-                on every browser where you&apos;ve enabled them. Each one still respects the toggles above.
-              </p>
+              <div className="stg-body">
+                <p className="stg-text">
+                  Live, scheduled and replay-ready alerts from people you follow go out as push notifications
+                  on every browser where you&apos;ve enabled them. Each one still respects the toggles above.
+                </p>
+              </div>
             </SectionCard>
 
             <SectionCard
@@ -786,19 +724,14 @@ export default function SettingsPage({ initial }: {
                 : `Sent to ${profile?.email ?? "your address"}. Several at once are grouped into one message. Security emails always arrive.`}
             >
               {emailPrefs?.unsubscribed && (
-                <div className="mx-4 my-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2.5"
-                     style={{ background: "#111114", border: "1px solid #26262e" }}>
-                  <span className="text-[12.5px]" style={{ color: "#f5f5f0" }}>Unsubscribed from all email</span>
-                  <button
-                    onClick={() => saveEmailUnsub(false)}
-                    className="text-[12px] font-semibold cursor-pointer bg-transparent border-none"
-                    style={{ color: "#ffb700" }}
-                  >
+                <div className="stg-banner">
+                  <span>Unsubscribed from all email</span>
+                  <button type="button" onClick={() => saveEmailUnsub(false)}>
                     Resubscribe
                   </button>
                 </div>
               )}
-              <Toggle
+              <SwitchRow
                 on={emailPrefs?.digest === "weekly"}
                 disabled={emailPrefs === null || Boolean(emailPrefs?.unsubscribed)}
                 onChange={saveEmailDigest}
@@ -806,12 +739,10 @@ export default function SettingsPage({ initial }: {
                 sub="Saturday mornings: unread, upcoming discussions from people you follow, top posts in your communities"
               />
               {PREF_GROUPS.map((g) => (
-                <div key={g.title}>
-                  <p className="m-0 px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider" style={{ color: "#8b8b94" }}>
-                    {g.title}
-                  </p>
+                <div key={g.title} role="group" aria-label={`Email: ${g.title}`}>
+                  <p className="stg-group">{g.title}</p>
                   {g.items.map((it) => (
-                    <Toggle
+                    <SwitchRow
                       key={it.type}
                       on={emailPrefs?.types[it.type] ?? false}
                       disabled={emailPrefs === null || Boolean(emailPrefs?.unsubscribed) || prefs?.[it.type] === false}
@@ -829,7 +760,7 @@ export default function SettingsPage({ initial }: {
       case "appearance":
         return (
           <SectionCard title="Motion" sub="AgoraSphere uses a single dark theme by design.">
-            <Toggle
+            <SwitchRow
               on={settings.reduce_motion}
               onChange={(v) => saveToggle("reduce_motion", v)}
               label="Reduce motion"
@@ -839,18 +770,12 @@ export default function SettingsPage({ initial }: {
         );
 
       case "data":
-        return (
-          <SectionCard title="Data & Coach" sub="Your data, and the controls to turn tracking off, download it, or delete it. The coach is coming soon.">
-            <div className="px-4 py-4">
-              <DataAndCoachPanel />
-            </div>
-          </SectionCard>
-        );
+        return <DataAndCoachPanel />;
 
       case "privacy":
         return (
           <SectionCard title="Profile privacy" sub="Enforced on the server, not just hidden in the interface.">
-            <Toggle
+            <SwitchRow
               on={settings.show_debate_history}
               onChange={(v) => saveToggle("show_debate_history", v)}
               label="Show my discussions on my profile"
@@ -866,26 +791,25 @@ export default function SettingsPage({ initial }: {
             sub="Blocked users can't see your profile details or interact with you."
           >
             {blocked.length === 0 ? (
-              <p className="px-4 pb-4 pt-1 m-0 text-[12px]" style={{ color: "#8b8b94" }}>
-                You haven't blocked anyone.
-              </p>
+              <p className="stg-row is-empty">You haven&apos;t blocked anyone.</p>
             ) : (
               blocked.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 settings-blocked-row">
-                  <span
-                    className="flex items-center justify-center shrink-0 overflow-hidden"
-                    style={{ width: 32, height: 32, borderRadius: "50%", background: "#111114", border: "1px solid #26262e", color: "#f5f5f0", fontSize: 13 }}
-                  >
-                    {u.avatar_url
-                      ? // eslint-disable-next-line @next/next/no-img-element
-                        <img src={u.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : displayName(u).charAt(0).toUpperCase()}
-                  </span>
-                  <span className="flex-1 text-[13px]" style={{ color: "#f5f5f0" }}>
-                    {displayName(u)}
-                    <VerifiedMark id={u.id} username={u.username} />{" "}
-                    <span className="text-[11px]" style={{ color: "#8b8b94" }}>@{u.username}</span>
-                  </span>
+                <div key={u.id} className="stg-row">
+                  <div className="stg-person">
+                    <span className="stg-avatar">
+                      {u.avatar_url
+                        ? // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.avatar_url} alt="" />
+                        : displayName(u).charAt(0).toUpperCase()}
+                    </span>
+                    <div className="stg-person-text">
+                      <p className="stg-person-name">
+                        <span>{displayName(u)}</span>
+                        <VerifiedMark id={u.id} username={u.username} />
+                      </p>
+                      <p className="stg-person-handle">@{u.username}</p>
+                    </div>
+                  </div>
                   <button className="stg-btn stg-btn--quiet" onClick={() => unblock(u)} disabled={unblockBusy === u.id}>
                     {unblockBusy === u.id ? "Unblocking…" : "Unblock"}
                   </button>
@@ -897,27 +821,26 @@ export default function SettingsPage({ initial }: {
 
       case "danger":
         return (
-          <div style={card} className="mb-4 overflow-hidden">
-            <div className="px-4 pt-4 pb-1">
-              <p className="m-0 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#ff6b61" }}>
-                Delete account
-              </p>
-              <p className="m-0 mt-1 text-[11px] leading-relaxed" style={{ color: "#9a9aa2" }}>
-                Permanently removes your profile, sign-in credentials, follows, blocks, and settings, and signs
-                you out everywhere. Discussions you took part in are kept for the other participants, attributed
-                to an anonymous &ldquo;deleted&rdquo; identity. This cannot be undone.
-              </p>
-            </div>
-            <div className="px-4 py-3.5 flex flex-col gap-2.5">
+          <SectionCard
+            danger
+            title="Delete account"
+            text={<>
+              Permanently removes your profile, sign-in credentials, follows, blocks, and settings, and signs
+              you out everywhere. Discussions you took part in are kept for the other participants, attributed
+              to an anonymous &ldquo;deleted&rdquo; identity. This cannot be undone.
+            </>}
+          >
+            <div className="stg-body">
               <input
                 className="stg-input"
                 placeholder={`Type "${profile.username}" to confirm`}
+                aria-label={`Type ${profile.username} to confirm`}
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 autoComplete="off"
               />
-              {deleteErr && <p className="m-0 text-[11px]" style={{ color: "#ff8a80" }}>{deleteErr}</p>}
-              <div>
+              {deleteErr && <p className="stg-msg is-err">{deleteErr}</p>}
+              <div className="stg-actions">
                 <button
                   onClick={deleteAccount}
                   disabled={deleteBusy || deleteConfirm !== profile.username}
@@ -927,7 +850,7 @@ export default function SettingsPage({ initial }: {
                 </button>
               </div>
             </div>
-          </div>
+          </SectionCard>
         );
     }
   }
@@ -965,7 +888,7 @@ export default function SettingsPage({ initial }: {
                 <button type="button" className="stg-crumb" onClick={() => setMobilePanelOpen(false)} aria-label="Back to settings sections">
                   Settings
                 </button>
-                <span className="stg-crumb-sep" aria-hidden="true">›</span>
+                <span className="stg-crumb-sep" aria-hidden="true" />
                 {activeMeta?.label}
               </span>
             )}
@@ -979,20 +902,17 @@ export default function SettingsPage({ initial }: {
           </span>
         </div>
 
-        {toggleError && (
-          <p className="mb-4 px-4 py-2.5 rounded-lg text-[12px]"
-            style={{ background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
-            {toggleError}
-          </p>
-        )}
+        {toggleError && <p className="stg-banner is-page" role="alert">{toggleError}</p>}
 
-        <div className="md:grid md:gap-6" style={{ gridTemplateColumns: "230px 1fr" }}>
+        {/* Two columns on a wide page; on a phone the list, or the section
+            stepped into (`data-panel`), never both. */}
+        <div className="stg-layout" data-panel={mobilePanelOpen ? "open" : undefined}>
 
-          {/* section nav — full-width list on mobile (hidden once a panel is open) */}
-          <nav className={`stg-nav ${mobilePanelOpen ? "hidden md:block" : "block"}`}>
+          <nav className="stg-nav" aria-label="Settings sections">
             {SECTIONS.map((s) => (
               <button
                 key={s.key}
+                type="button"
                 onClick={() => { setActive(s.key); setMobilePanelOpen(true); }}
                 className={`stg-nav-item${active === s.key ? " is-active" : ""}${s.key === "danger" ? " is-danger" : ""}`}
                 aria-current={active === s.key ? "page" : undefined}
@@ -1011,8 +931,7 @@ export default function SettingsPage({ initial }: {
             )}
           </nav>
 
-          {/* active panel — hidden on mobile until a section is chosen */}
-          <main className={mobilePanelOpen ? "block" : "hidden md:block"}>
+          <main className="stg-main">
             {renderSection(active)}
           </main>
         </div>
