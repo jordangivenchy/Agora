@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planGrid, screenBlock, screenPlaces, type GridKind } from "./callGrid";
+import { planGrid, screenBlock, screenPlaces, type GridKind, planGridToFill } from "./callGrid";
 
 const cams = (n: number): GridKind[] => Array(n).fill("camera");
 /* Rows of window counts, top to bottom, e.g. [3, 3, 1]. */
@@ -100,5 +100,53 @@ describe("call gallery grid", () => {
     const cells = planGrid(cams(7), 420, 584, 6, 1).cells;
     const lone = cells[6];
     expect(Math.abs(lone.x + lone.w / 2 - 210)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("a frame of any shape (the host's own stream)", () => {
+  const SHAPES = [16 / 9, 4 / 3, 1];
+  /* The camera area of a 1080×1920 stream. */
+  const TALL = [950, 1340] as const;
+
+  it("stacks two people down a tall frame in windows taller than a screen's", () => {
+    const { cols, cells } = planGridToFill(cams(2), TALL[0], TALL[1], 12, SHAPES);
+    expect(cols).toBe(1);
+    for (const c of cells) expect(c.w / c.h).toBeLessThan(1.34);
+    expect(cells[1].y).toBeGreaterThan(cells[0].y + cells[0].h - 1);
+    /* Against the same two as screen-shaped windows: more of the frame is picture. */
+    const plain = planGrid(cams(2), TALL[0], TALL[1], 12, 16 / 9).cells;
+    const area = (list: { w: number; h: number }[]) => list.reduce((n, c) => n + c.w * c.h, 0);
+    expect(area(cells)).toBeGreaterThan(area(plain) * 1.1);
+  });
+
+  it("gives one person a square, not a strip, in a tall frame", () => {
+    const [c] = planGridToFill(cams(1), TALL[0], TALL[1], 12, SHAPES).cells;
+    expect(c.w).toBe(950);
+    expect(Math.abs(c.w / c.h - 1)).toBeLessThan(0.02);
+  });
+
+  it("keeps screen-shaped windows when they already fill a tall frame", () => {
+    const { cols, cells } = planGridToFill(cams(3), TALL[0], TALL[1], 12, SHAPES);
+    expect(cols).toBe(1);
+    for (const c of cells) expect(Math.abs(c.w / c.h - 16 / 9)).toBeLessThan(0.05);
+  });
+
+  it("sets four people two by two, in squares", () => {
+    const { cols, cells } = planGridToFill(cams(4), TALL[0], TALL[1], 12, SHAPES);
+    expect(cols).toBe(2);
+    for (const c of cells) expect(Math.abs(c.w / c.h - 1)).toBeLessThan(0.02);
+  });
+
+  it("never lets windows overlap or leave the frame, whatever the count", () => {
+    for (let n = 1; n <= 9; n++) {
+      const { cells } = planGridToFill(cams(n), TALL[0], TALL[1], 12, SHAPES);
+      expect(cells).toHaveLength(n);
+      for (const c of cells) {
+        expect(c.x).toBeGreaterThanOrEqual(0);
+        expect(c.y).toBeGreaterThanOrEqual(0);
+        expect(c.x + c.w).toBeLessThanOrEqual(TALL[0] + 1);
+        expect(c.y + c.h).toBeLessThanOrEqual(TALL[1] + 1);
+      }
+    }
   });
 });

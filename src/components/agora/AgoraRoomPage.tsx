@@ -22,6 +22,7 @@ import RouteLoading from "@/components/RouteLoading";
 import Amphitheater from "@/components/agora/Amphitheater";
 import type { AgoraView } from "@/components/agora/AgoraScene3D";
 import { setSimpleStage, useSimpleStage } from "@/lib/stageQuality";
+import { setCamerasTall, setSmallFaces, useCallView } from "@/lib/callView";
 import GpuNotice from "@/components/agora/GpuNotice";
 import AgoraSidebar from "@/components/agora/AgoraSidebar";
 import AgoraAssistant from "@/components/AgoraAssistant";
@@ -333,7 +334,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   );
   /* Egress compositor mode: LiveKit's headless browser loads this page with
      ?token&url appended — render the amphitheater alone (no chrome) and
-     signal readiness so the restream starts filming. */
+     signal readiness so the recorder starts filming. */
   const broadcastCreds = useMemo(() => {
     if (typeof window === "undefined") return null;
     const sp = new URLSearchParams(window.location.search);
@@ -342,6 +343,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     return token && serverUrl ? { token, serverUrl } : null;
   }, []);
   const broadcast = !!broadcastCreds;
+  /* The same view opened by a host's own streaming app (lib/ownStream,
+     `own` in the link) rather than LiveKit's recorder: a picture to be
+     watched as it is, in a frame of whatever shape they chose. */
+  const ownStream = useMemo(
+    () => broadcast && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("own"),
+    [broadcast]
+  );
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
@@ -359,6 +367,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   /* "Simple stage": no 3D scene — chosen in the call's settings, or
      decided for a browser drawing WebGL in software (lib/stageQuality). */
   const simpleStage = useSimpleStage();
+  /* The viewer's own arrangement of the cameras (lib/callView). */
+  const callView = useCallView();
   /* Phones run the room flat: no 3D scene, and the stage layout (which
      is the scene) isn't offered — gallery stands in for it. */
   const [phone, setPhone] = useState(false);
@@ -377,16 +387,34 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       /* private mode — default stands */
     }
   }, []);
+  /* Tall cameras: a column the shape of a phone, in the gallery. A phone
+     is that shape already, and the filmed views take theirs from the
+     frame. */
+  const tallCameras = callView.tall && !phone && !broadcast;
+  /* Tall cameras took the viewer off the 3D stage (it is a gallery
+     arrangement): turned off again, it gives the stage back. */
+  const tookFromStage = useRef(false);
   useEffect(() => {
-    if (!phone && !simpleStage.on) return;
+    if (!phone && !simpleStage.on && !ownStream && !tallCameras) {
+      if (tookFromStage.current) {
+        tookFromStage.current = false;
+        setLayout((l) => (l === "gallery" ? "stage" : l));
+      }
+      return;
+    }
     /* The tiles only exist in speaker view (audience view is the open
        amphitheater, which phones don't render) — so phones live there,
        and so does anyone on the simple stage: with no scene, the
        audience view is an empty backdrop and the vantage toggle that
        would leave it is hidden with the scene. */
     setView("speaker");
-    setLayout((l) => (l === "stage" ? "gallery" : l));
-  }, [phone, simpleStage.on]);
+    const onlyForTall = tallCameras && !phone && !simpleStage.on && !ownStream;
+    setLayout((l) => {
+      if (l !== "stage") return l;
+      if (onlyForTall) tookFromStage.current = true;
+      return "gallery";
+    });
+  }, [phone, simpleStage.on, ownStream, tallCameras]);
   const pickLayout = useCallback((l: "stage" | "gallery" | "multi") => {
     setLayout(l);
     try {
@@ -2167,7 +2195,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     <>
     {(phase === "shrinking" || phase === "growing") && <div ref={scrimRef} className="ag-call-scrim" aria-hidden="true" />}
     <div ref={frameRef} className={`ag-call-frame${frameState}`} inert={phase !== "full"}>
-    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}`}>
+    <div className={`ag-root${railCollapsed ? " rail-collapsed" : ""}${chatOpen ? " ag-chat-open" : ""}${broadcast ? " ag-root--recording" : ""}${ownStream ? " ag-root--own" : ""}`}>
       {entering !== "gone" && (
         <div className={`ld-page-wait${entering === "leaving" ? " is-leaving" : ""}`}>
           <LoadingScreen plain label="Entering the Agora" />
@@ -2187,7 +2215,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               zIndex: 60,
               fontFamily: "'Space Grotesk', sans-serif",
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: ownStream ? "max(15px, 2vmin)" : 15,
               color: "rgba(255,255,255,0.85)",
               textShadow: "0 1px 8px rgba(0,0,0,0.8)",
               pointerEvents: "none",
@@ -2432,7 +2460,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                lifecycle: same glide-in wait in speaker view, same anchored
                placement in audience view, vantage toggle untouched. */
             <div
-              className="ag-cast ag-layout-flat"
+              className={`ag-cast ag-layout-flat${tallCameras ? " ag-cast--tall" : ""}`}
               role="region"
               aria-label="Call layout"
             >
@@ -2441,7 +2469,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   tiles={layoutTiles}
                   speaking={call.speakingIds}
                   pinnedKey={layoutPin}
-                  gap={broadcast ? 0 : undefined}
+                  gap={broadcast && !ownStream ? 0 : undefined}
+                  fill={ownStream || tallCameras}
+                  /* Never while our recorder films: the clip maker reads
+                     its windows. A host's own stream always has them. */
+                  smallFaces={ownStream || (callView.smallFaces && !broadcast)}
+                  facesAtTopWhenTall={ownStream}
                   onKeepInView={setLayoutPin}
                   onPin={(key) => {
                     /* Duels stay in the two-pane gallery — EXCEPT a
@@ -2515,8 +2548,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                       .from("debate_rooms")
                       .update({ status: "ended", ended_at: new Date().toISOString() })
                       .eq("id", roomId);
-                    /* Kill any restream with the stage — an egress left running
-                       films a black page and bills LiveKit minutes. */
+                    /* Stop whatever is still filming with the stage — an egress
+                       left running films a black page and bills LiveKit minutes. */
                     fetch("/api/egress", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
@@ -3075,6 +3108,12 @@ function AgoraRoom({ roomId }: { roomId: string }) {
                   simpleStage: simpleStage.on,
                   simpleStageForced: simpleStage.forced,
                   onSimpleStage: setSimpleStage,
+                  smallFaces: callView.smallFaces,
+                  onSmallFaces: setSmallFaces,
+                  camerasTall: callView.tall,
+                  onCamerasTall: phone ? undefined : setCamerasTall,
+                  /* The room's own host (duels have none), while it is live. */
+                  restreamRoomId: currentUser && room && room.status === "live" && currentUser.id === room.host_id && !duel ? room.id : null,
                   onClose: () => setSettingsOpen(false),
                 }
               : null

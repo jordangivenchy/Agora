@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import Restream from "./Restream";
 
 export interface CallSettingsProps {
   cameras: MediaDeviceInfo[];
@@ -21,6 +22,17 @@ export interface CallSettingsProps {
   simpleStage?: boolean;
   simpleStageForced?: "software" | null;
   onSimpleStage?: (on: boolean) => void;
+  /** People without a camera sit small beside the pictures (lib/callView). */
+  smallFaces?: boolean;
+  onSmallFaces?: (on: boolean) => void;
+  /** The cameras stack in a phone-shaped column. Not offered on a phone,
+      which is that shape already. */
+  camerasTall?: boolean;
+  onCamerasTall?: (on: boolean) => void;
+  /** The room's host only: the link for sending the room out to TikTok,
+      Twitch or YouTube themselves (Restream.tsx). Absent, the section
+      isn't there. */
+  restreamRoomId?: string | null;
   onClose: () => void;
 }
 
@@ -62,38 +74,90 @@ function Meter({ level }: { level: number }) {
   );
 }
 
-function useMicLevel(enabled: boolean, getTrack: () => MediaStreamTrack | null) {
+/* Why a microphone test couldn't start, in words a person can act on. */
+function micTestError(e: unknown): string {
+  const name = e instanceof Error ? e.name : "";
+  if (name === "NotAllowedError") return "Mic access is blocked — allow it from your browser's address bar, then try again.";
+  if (name === "NotFoundError" || name === "OverconstrainedError") return "No microphone found on this device.";
+  if (name === "NotReadableError") return "Your microphone is in use by another app — close it and try again.";
+  return "Couldn't start the microphone.";
+}
+
+/* The microphone's level while a test runs. It listens to a copy of the
+   call's own microphone, switched on for itself: once you can speak, the
+   mic waits muted (useAgoraCall), so the call's track is silent until you
+   unmute — and a test that read it showed nothing at the very moment
+   people test. The copy is never sent anywhere; you stay muted in the
+   room. With no microphone in the call (in the audience), one is opened
+   for the length of the test. */
+function useMicLevel(
+  enabled: boolean,
+  getTrack: () => MediaStreamTrack | null,
+  deviceId: string | null,
+  onError: (message: string) => void,
+) {
   const [level, setLevel] = useState(0);
+  const failed = useRef(onError);
+  useEffect(() => {
+    failed.current = onError;
+  });
   useEffect(() => {
     if (!enabled) return;
-    const track = getTrack();
-    if (!track) return;
-    const ctx = new AudioContext();
-    const src = ctx.createMediaStreamSource(new MediaStream([track]));
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 512;
-    src.connect(analyser);
-    const buf = new Uint8Array(analyser.fftSize);
+    let cancelled = false;
     let raf = 0;
-    const tick = () => {
-      analyser.getByteTimeDomainData(buf);
-      let sum = 0;
-      for (let i = 0; i < buf.length; i++) {
-        const v = (buf[i] - 128) / 128;
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / buf.length);
-      setLevel(Math.min(1, rms * 4));
-      raf = requestAnimationFrame(tick);
+    let probe: MediaStreamTrack | null = null;
+    /* Made here, in the click that started the test: Safari leaves one
+       made any later asleep. */
+    const ctx = new AudioContext();
+    void ctx.resume().catch(() => undefined);
+    const listen = (track: MediaStreamTrack) => {
+      const src = ctx.createMediaStreamSource(new MediaStream([track]));
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      const tick = () => {
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) {
+          const v = (buf[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / buf.length);
+        setLevel(Math.min(1, rms * 4));
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
     };
-    tick();
+    const live = getTrack();
+    if (live && live.readyState === "live") {
+      probe = live.clone();
+      probe.enabled = true;
+      listen(probe);
+    } else {
+      navigator.mediaDevices
+        .getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true })
+        .then((stream) => {
+          const track = stream.getAudioTracks()[0];
+          if (cancelled || !track) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          probe = track;
+          listen(track);
+        })
+        .catch((e) => {
+          if (!cancelled) failed.current(micTestError(e));
+        });
+    }
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf);
-      src.disconnect();
-      ctx.close();
+      probe?.stop();
+      void ctx.close().catch(() => undefined);
       setLevel(0);
     };
-  }, [enabled, getTrack]);
+  }, [enabled, getTrack, deviceId]);
   return level;
 }
 
@@ -137,7 +201,7 @@ async function playTestTone(sinkId: string | null, onProgress: (p: number) => vo
   await ctx.close();
 }
 
-type Section = "video" | "audio" | "display" | "share" | "access";
+type Section = "video" | "audio" | "display" | "share" | "restream" | "access";
 
 const SECTIONS: { key: Section; label: string; icon: React.ReactNode }[] = [
   {
@@ -166,6 +230,13 @@ const SECTIONS: { key: Section; label: string; icon: React.ReactNode }[] = [
     label: "Share screen",
     icon: (
       <Icon name="monitor-up" size={18} />
+    ),
+  },
+  {
+    key: "restream",
+    label: "Restream",
+    icon: (
+      <Icon name="cast" size={18} />
     ),
   },
   {
@@ -226,12 +297,21 @@ export default function CallSettings({
   simpleStage = false,
   simpleStageForced = null,
   onSimpleStage,
+  smallFaces = true,
+  onSmallFaces,
+  camerasTall = false,
+  onCamerasTall,
+  restreamRoomId = null,
   onClose,
 }: CallSettingsProps) {
   const [open, setOpen] = useState<Section | null>("video");
   const [testingMic, setTestingMic] = useState(false);
+  const [micTestFailed, setMicTestFailed] = useState<string | null>(null);
   const [toneProgress, setToneProgress] = useState<number | null>(null);
-  const micLevel = useMicLevel(testingMic, getMicStreamTrack);
+  const micLevel = useMicLevel(testingMic, getMicStreamTrack, activeMicId, (message) => {
+    setTestingMic(false);
+    setMicTestFailed(message);
+  });
   const toneBusy = useRef(false);
 
   const body = (key: Section) => {
@@ -304,15 +384,22 @@ export default function CallSettings({
               />
               <button
                 className={`ag-set-testbtn${testingMic ? " is-on" : ""}`}
-                onClick={() => setTestingMic((v) => !v)}
-                disabled={!testingMic && !getMicStreamTrack()}
-                title={!getMicStreamTrack() ? "Unmute to test your microphone" : undefined}
+                onClick={() => {
+                  setMicTestFailed(null);
+                  setTestingMic((v) => !v);
+                }}
               >
                 <span className="ag-set-dot" aria-hidden /> {testingMic ? "Stop test" : "Test microphone"}
               </button>
               <Meter level={testingMic ? micLevel : 0} />
+              {micTestFailed && (
+                <div className="ag-set-text" role="alert">
+                  {micTestFailed}
+                </div>
+              )}
               <div className="ag-set-text">
-                Input level follows your system&apos;s microphone volume.
+                Only you see the test: nobody in the room hears it, and it doesn&apos;t unmute you. Input
+                level follows your system&apos;s microphone volume.
               </div>
             </div>
           </>
@@ -338,6 +425,37 @@ export default function CallSettings({
                 turn it on — it will be slow.
               </div>
             )}
+            {onSmallFaces && (
+              <label className="ag-set-row ag-set-row--switch">
+                <span>
+                  Small faces without a camera
+                  <small>
+                    When someone has a camera or screen on, people without one sit small beside it. Click a
+                    face to give it a window.
+                  </small>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={smallFaces}
+                  onChange={(e) => onSmallFaces(e.target.checked)}
+                />
+              </label>
+            )}
+            {onCamerasTall && (
+              <label className="ag-set-row ag-set-row--switch">
+                <span>
+                  Tall cameras
+                  <small>Stack the cameras in a phone-shaped column, the way a vertical stream shows them.</small>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={camerasTall}
+                  onChange={(e) => onCamerasTall(e.target.checked)}
+                />
+              </label>
+            )}
             <div className="ag-set-text">
               Switch between the amphitheater and the speaker vantage with the toggle above the controls.
               Collapse the chat with its corner button to run the stage full width.
@@ -351,6 +469,8 @@ export default function CallSettings({
             and click the main picture to let go.
           </div>
         );
+      case "restream":
+        return restreamRoomId ? <Restream roomId={restreamRoomId} /> : null;
       case "access":
         return (
           <div className="ag-set-text">
@@ -371,7 +491,7 @@ export default function CallSettings({
       </div>
 
       <div className="ag-set-sections">
-        {SECTIONS.map((s) => {
+        {SECTIONS.filter((s) => s.key !== "restream" || !!restreamRoomId).map((s) => {
           const isOpen = open === s.key;
           return (
             <div key={s.key} className={`ag-set-section${isOpen ? " is-open" : ""}`}>

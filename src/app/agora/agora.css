@@ -2937,6 +2937,62 @@
   line-height: 1;
 }
 
+/* People without a camera, beside the windows (quietFaces.ts): a row of
+   faces under the windows, ending at their right edge (the gallery sets
+   where). Whoever talks gets the speaking ring and their name. Solid,
+   like the room's other controls. */
+.ag-lgal-quiet {
+  position: absolute;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.ag-lgal-face {
+  flex: 0 0 auto;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #0e0e11;
+  color: #f5f5f0;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 1px #2a2a33;
+  transition: box-shadow 0.15s ease;
+}
+button.ag-lgal-face { cursor: pointer; }
+button.ag-lgal-face:hover { box-shadow: 0 0 0 1px #4a4a56; }
+.ag-lgal-face.is-speaking,
+button.ag-lgal-face.is-speaking:hover { box-shadow: 0 0 0 2px #e2b96b; }
+.ag-lgal-face .ag-pane-avatar { border-width: 2px; }
+.ag-lgal-face .ag-pane-initial { background: #1c1c22; }
+.ag-lgal-face-name {
+  max-width: 9em;
+  padding-right: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ag-lgal-face--more {
+  justify-content: center;
+  padding: 0 0.6em;
+  font-family: "Space Grotesk", "DM Sans", sans-serif;
+}
+.ag-layout-flat .ag-lgal-quiet { pointer-events: auto; }
+
+/* Tall cameras (the viewer's choice, lib/callView): the gallery keeps to a
+   column the shape of a phone in the middle of the stage, and its windows
+   stack to fill it. The room around it is as it was. */
+.ag-cast--tall .ag-lgal {
+  align-self: center;
+  width: min(100%, calc(100cqh * 9 / 16));
+}
+
 /* Everyone behind "+N": solid, not glass. */
 .ag-lgal-menu {
   position: absolute;
@@ -3505,13 +3561,44 @@
    and then two rims meet in the middle of a vertical clip and read as a
    seam across someone's waist. Filmed, the panels are just picture, and
    they touch. */
-.ag-root--recording .ag-lt,
-.ag-root--recording .ag-lt--speaking {
+.ag-root--recording:not(.ag-root--own) .ag-lt,
+.ag-root--recording:not(.ag-root--own) .ag-lt--speaking {
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
-.ag-root--recording .ag-lt::after { display: none; }
+.ag-root--recording:not(.ag-root--own) .ag-lt::after { display: none; }
+
+/* The same view in a host's own streaming app (lib/ownStream): watched as
+   it is, so the windows stay cards, and the frame is whatever shape they
+   set there. The cameras take the frame: nearly all of a wide one; of a
+   tall one, the part the phone apps leave clear — their own buttons and
+   chat sit over the top tenth and the bottom fifth. */
+.ag-root--own .ag-cast {
+  top: 5vh;
+  bottom: 9vh;
+  width: 94%;
+}
+@media (orientation: portrait) {
+  .ag-root--own .ag-cast {
+    top: 9vh;
+    bottom: 21vh;
+    width: 92%;
+  }
+}
+/* Names sized to the frame: the room's are set for a page read up close,
+   and would be specks in a 1080-wide picture watched on a phone. */
+.ag-root--own .ag-lt-tag {
+  left: max(9px, 1.4vmin);
+  bottom: max(7px, 1.2vmin);
+  gap: max(6px, 0.8vmin);
+  font-size: max(11.5px, 2vmin);
+}
+.ag-root--own .ag-lt-tag-ico svg,
+.ag-root--own .ag-lt-muted svg {
+  width: max(12px, 2vmin);
+  height: max(12px, 2vmin);
+}
 
 /* Phones: no backdrop blur anywhere in the room — every blurred layer
    over live video is another GPU surface Safari has to keep, and the
@@ -4559,16 +4646,21 @@ html.agora-page-arriving .site-chrome-content { opacity: 0; }
   object-fit: cover;
 }
 .ag-host-thumb-img.is-empty { border-style: dashed; border-color: var(--ag-solid-line-hi); }
-.ag-host-check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: #9aa0ac;
-  font-size: 12px;
-  cursor: pointer;
+/* A link shown to copy by hand, under the button that made it. */
+.ag-host-act + .ag-host-input { margin: 8px 0 0; }
+/* Steps in the call's settings (how to stream the room out yourself). */
+.ag-set-steps {
+  margin: 12px 0 10px;
+  padding-left: 1.5em;
+  display: grid;
+  gap: 6px;
+  list-style: decimal;
+  color: #cfd3dc;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
-.ag-host-check input { margin: 0; accent-color: #ffb700; }
+.ag-set-steps li::marker { color: #7f8595; font-weight: 700; }
+.ag-set-text + .ag-host-act.wide { margin-top: 10px; }
 .ag-host-err { margin-top: 6px; color: #f08a80; font-size: 11.5px; }
 .ag-host-finehint { padding: 6px 0 0; color: #7f8595; font-size: 11px; }
 .ag-host-roomctl > .ag-host-finehint { padding: 10px 10px 2px; }

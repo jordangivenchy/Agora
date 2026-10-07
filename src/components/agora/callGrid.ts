@@ -157,3 +157,23 @@ export function planGrid(kinds: GridKind[], width: number, height: number, gap: 
   }
   return { cols, size, width: blockW, height: blockH, cells };
 }
+
+/** For a frame that may be any shape — a stream's picture, set wide or
+    tall in the streaming app (lib/ownStream): the plan whose windows
+    cover the most of it, the windows' shape chosen from `ratios`. Three
+    people in a tall frame come out as three screen-shaped windows down
+    it; two, as two squares. Shapes within 2% of each other keep the
+    earlier one. */
+export function planGridToFill(kinds: GridKind[], width: number, height: number, gap: number, ratios: number[]): GridPlan {
+  let best: GridPlan | null = null;
+  let covered = 0;
+  for (const ratio of ratios) {
+    const plan = planGrid(kinds, width, height, gap, ratio);
+    const area = plan.cells.reduce((n, c) => n + c.w * c.h, 0);
+    if (!best || area > covered * 1.02) {
+      best = plan;
+      covered = area;
+    }
+  }
+  return best ?? planGrid(kinds, width, height, gap);
+}

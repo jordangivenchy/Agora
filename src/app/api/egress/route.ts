@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EncodingOptions, StreamOutput, StreamProtocol } from "livekit-server-sdk";
+import { AccessToken } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { checkRecording, egressClient, isRecording, readHlsEnv, startRecordingPart } from "@/lib/recordingEgress";
+import { OWN_STREAM_HOURS, ownStreamGrant, ownStreamIdentity, ownStreamLink } from "@/lib/ownStream";
 
 /* The live playlist dies with the stream; the recording (recording_url)
    stays so the ended room can be replayed. recording_ended_at only lands
@@ -23,19 +24,24 @@ async function markStreamStopped(
 }
 
 /**
- * Restream a room to an external RTMP destination (TikTok, Twitch,
- * YouTube…). LiveKit composites the room server-side and pushes RTMP;
- * the streamer supplies their platform's ingest URL + key. Host-only,
- * same authorization pattern as host-mute.
+ * What films a room, for its host: the recording (HLS, on our storage)
+ * and the host's own stream out to TikTok, Twitch or YouTube.
  *
- * POST { roomId, action: "start", rtmpUrl } → { egressId }
- * POST { roomId, action: "stop", egressId } → { ok }
- * POST { roomId, action: "status" }         → { egressId | null }
+ * POST { roomId, action: "start_hls" }       → { egressId, hlsUrl, part }
+ * POST { roomId, action: "check_recording" } → { state }
+ * POST { roomId, action: "stop", egressId }  → { ok }
+ * POST { roomId, action: "stop_all" }        → { ok, stopped }
+ * POST { roomId, action: "status" }          → { egressId | null, hlsConfigured }
+ * POST { roomId, action: "own_link" }        → { url, hours } — a link for
+ *   OBS or Streamlabs on the host's computer (lib/ownStream)
+ *
+ * Host-only, same authorization pattern as host-mute. We no longer
+ * restream ourselves (`start`, retired October 2026 — see below).
  */
 export async function POST(request: NextRequest) {
   try {
-    const { roomId, action, rtmpUrl, egressId, portrait } = await request.json();
-    if (!roomId || !["start", "start_hls", "stop", "stop_all", "status", "check_recording"].includes(action)) {
+    const { roomId, action, egressId } = await request.json();
+    if (!roomId || !["start", "start_hls", "stop", "stop_all", "status", "check_recording", "own_link"].includes(action)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
@@ -58,12 +64,41 @@ export async function POST(request: NextRequest) {
     if (!egress) {
       return NextResponse.json({ error: "LiveKit not configured" }, { status: 500 });
     }
+
+    /* The host's own restream: nothing starts here. They get a link to
+       the room's broadcast view with a watch-only, hidden pass in it, for
+       OBS on their own computer to film and send out (lib/ownStream). */
+    if (action === "own_link") {
+      const lkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+      const apiKey = process.env.LIVEKIT_API_KEY;
+      const apiSecret = process.env.LIVEKIT_API_SECRET;
+      if (!lkUrl || !apiKey || !apiSecret) {
+        return NextResponse.json({ error: "LiveKit not configured" }, { status: 500 });
+      }
+      if (room.status !== "live") {
+        return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
+      }
+      const pass = new AccessToken(apiKey, apiSecret, {
+        identity: ownStreamIdentity(crypto.randomUUID().slice(0, 8)),
+        name: "Stream",
+        ttl: `${OWN_STREAM_HOURS}h`,
+      });
+      pass.addGrant(ownStreamGrant(roomId));
+      return NextResponse.json({
+        url: ownStreamLink(request.nextUrl.origin, roomId, lkUrl, await pass.toJwt()),
+        hours: OWN_STREAM_HOURS,
+      });
+    }
     const hlsEnv = readHlsEnv();
     const hlsConfigured = !!hlsEnv && hasAdminCredentials();
 
     if (action === "status") {
+      /* Never the recorder: a recorded room has one running all along,
+         and reporting it made the old Restream box read LIVE in every
+         recorded room — with a Stop that ended the recording. (Only a
+         restream begun before they were retired can turn up here now.) */
       const active = await egress.listEgress({ roomName: roomId, active: true });
-      return NextResponse.json({ egressId: active[0]?.egressId ?? null, hlsConfigured });
+      return NextResponse.json({ egressId: active.find((e) => !isRecording(e))?.egressId ?? null, hlsConfigured });
     }
 
     /* The host's page asks every little while during a recorded call: a
@@ -129,7 +164,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ egressId: started.egressId, hlsUrl: started.hlsUrl, part: started.part });
     }
 
-    /* Closing the stage stops every restream with it — an egress left
+    /* Closing the stage stops everything filming it — an egress left
        running against an ended room films a black page and bills minutes. */
     if (action === "stop_all") {
       await markStreamStopped(supabase, roomId);
@@ -138,43 +173,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, stopped: active.length });
     }
 
+    /* Restreaming from our machines is gone: LiveKit filming the room and
+       pushing it to a pasted address cost us by the minute and topped out
+       at 720p. Hosts send it out themselves now (`own_link`). An app
+       build from before still has the button — it is told so in words. */
     if (action === "start") {
-      if (typeof rtmpUrl !== "string" || !/^rtmps?:\/\/.+/.test(rtmpUrl.trim())) {
-        return NextResponse.json(
-          { error: "Enter the full RTMP URL including your stream key (rtmp://…)" },
-          { status: 400 }
-        );
-      }
-      if (room.status !== "live") {
-        return NextResponse.json({ error: "Room isn't live" }, { status: 400 });
-      }
-      /* Custom template: the compositor films our own broadcast page —
-         the speakers over a still of the stage (the live 3D scene ran
-         LiveKit's recorders out of CPU), not a bare camera grid. Portrait preset
-         frames it for TikTok; 720p for the same reason as recordings. */
-      const info = await egress.startRoomCompositeEgress(
-        roomId,
-        { stream: new StreamOutput({ protocol: StreamProtocol.RTMP, urls: [rtmpUrl.trim()] }) },
-        {
-          layout: "speaker",
-          customBaseUrl: `${request.nextUrl.origin}/agora/${roomId}`,
-          encodingOptions: new EncodingOptions({
-            width: portrait ? 720 : 1280,
-            height: portrait ? 1280 : 720,
-            framerate: 30,
-            videoBitrate: 3500,
-            audioBitrate: 128,
-          }),
-        }
+      return NextResponse.json(
+        { error: "Restreaming from here has been retired. On a computer, open the call's Settings → Restream and use the stream link with OBS or Streamlabs." },
+        { status: 410 }
       );
-      return NextResponse.json({ egressId: info.egressId });
     }
 
     // stop
     if (typeof egressId !== "string" || !egressId) {
       return NextResponse.json({ error: "Missing egressId" }, { status: 400 });
     }
-    /* Stopping the restream alone leaves the recording (and hls_url) be.
+    /* Stopping something that isn't the recording (a restream begun
+       before they were retired) leaves the recording and hls_url be.
        Stopping the recording stops whichever part is filming now — a
        page can hold the id of a part that has since been replaced. */
     const target = (await egress.listEgress({ egressId }).catch(() => [])).find((e) => e.egressId === egressId);

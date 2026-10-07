@@ -48,12 +48,6 @@ export default function HostControls({ room, participants, currentUser, myRole, 
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("requests");
-  /* Restream (RTMP → TikTok/Twitch/YouTube) — primary host only. */
-  const [rtmpUrl, setRtmpUrl] = useState("");
-  const [egressId, setEgressId] = useState<string | null>(null);
-  const [egressBusy, setEgressBusy] = useState(false);
-  const [egressError, setEgressError] = useState<string | null>(null);
-  const [egressPortrait, setEgressPortrait] = useState(true);
   /* HLS broadcast for audience overflow — hidden until the S3 env exists. */
   const [hlsConfigured, setHlsConfigured] = useState(false);
   const [hlsEgressId, setHlsEgressId] = useState<string | null>(null);
@@ -62,8 +56,7 @@ export default function HostControls({ room, participants, currentUser, myRole, 
   const [hlsError, setHlsError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Resync on open: an egress started earlier (or from another tab)
-    // should show as running.
+    // On open: whether the HLS broadcast can be offered here.
     if (!open) return;
     fetch("/api/egress", {
       method: "POST",
@@ -72,41 +65,12 @@ export default function HostControls({ room, participants, currentUser, myRole, 
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d && typeof d.egressId !== "undefined") setEgressId(d.egressId);
         if (d && typeof d.hlsConfigured === "boolean") setHlsConfigured(d.hlsConfigured);
         setHlsLive(!!room.hls_url);
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, room.id]);
-
-  const toggleEgress = async () => {
-    setEgressBusy(true);
-    setEgressError(null);
-    try {
-      const body = egressId
-        ? { roomId: room.id, action: "stop", egressId }
-        : { roomId: room.id, action: "start", rtmpUrl, portrait: egressPortrait };
-      const res = await fetch("/api/egress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const d = await res.json();
-      if (!res.ok) {
-        setEgressError(d.error || "Restream failed");
-      } else if (egressId) {
-        setEgressId(null);
-      } else {
-        setEgressId(d.egressId);
-        setRtmpUrl("");
-      }
-    } catch {
-      setEgressError("Restream failed — try again.");
-    } finally {
-      setEgressBusy(false);
-    }
-  };
 
   const toggleHls = async () => {
     setHlsBusy(true);
@@ -517,44 +481,6 @@ export default function HostControls({ room, participants, currentUser, myRole, 
                     {thumbError && <div className="ag-host-err">{thumbError}</div>}
                     <div className="ag-host-finehint">
                       Square art shown on room cards. Center-cropped to 512px — 5MB max.
-                    </div>
-                  </div>
-                )}
-                {isPrimaryHost && (
-                  <div className="ag-host-sect">
-                    <div className="ag-host-sect-title">
-                      Restream {egressId && <span className="ag-host-live">● LIVE</span>}
-                    </div>
-                    {!egressId && (
-                      <input
-                        value={rtmpUrl}
-                        onChange={(e) => setRtmpUrl(e.target.value)}
-                        placeholder="rtmp://… ingest URL + stream key"
-                        spellCheck={false}
-                        className="ag-host-input"
-                      />
-                    )}
-                    {!egressId && (
-                      <label className="ag-host-check">
-                        <input
-                          type="checkbox"
-                          checked={egressPortrait}
-                          onChange={(e) => setEgressPortrait(e.target.checked)}
-                        />
-                        Portrait (TikTok) — uncheck for Twitch/YouTube
-                      </label>
-                    )}
-                    <button
-                      className={`ag-host-act wide${egressId ? " danger" : ""}`}
-                      disabled={egressBusy || (!egressId && !rtmpUrl.trim())}
-                      onClick={toggleEgress}
-                    >
-                      {egressBusy ? "…" : egressId ? "Stop restream" : "Go live on TikTok / RTMP"}
-                    </button>
-                    {egressError && <div className="ag-host-err">{egressError}</div>}
-                    <div className="ag-host-finehint">
-                      Paste the RTMP server URL with your stream key appended (from TikTok LIVE
-                      Studio, Twitch, or YouTube). The stage broadcasts until you stop it.
                     </div>
                   </div>
                 )}

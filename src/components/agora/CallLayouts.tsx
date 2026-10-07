@@ -29,7 +29,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Track } from "livekit-client";
 import { Icon } from "@/components/icons";
 import CameraOffFace, { type FaceSide } from "./CameraOffFace";
-import { planGrid, screenPlaces } from "./callGrid";
+import { quietFaceSize, quietFaces, splitQuiet } from "./quietFaces";
+import { planGrid, screenPlaces, planGridToFill } from "./callGrid";
 import { planSlots, type SlotPerson } from "./gallerySlots";
 
 export interface LayoutTile {
@@ -202,6 +203,9 @@ function useJoinOrder(tiles: LayoutTile[]) {
 const PLACES = 9;
 const GAP = 12;
 const RATIO = 16 / 9;
+/* How many faces sit beside the windows before the rest fold into "+N". */
+const QUIET_FACES = 5;
+const pictured = (t: LayoutTile) => t.source === "screen" || !!t.track || !!t.mock;
 
 export function CallGallery({
   tiles,
@@ -210,9 +214,24 @@ export function CallGallery({
   onPin,
   onKeepInView,
   gap = GAP,
+  fill = false,
+  smallFaces = false,
+  facesAtTopWhenTall = false,
 }: {
   tiles: LayoutTile[];
   speaking: ReadonlySet<string>;
+  /** People without a camera sit small beside the windows once anyone
+      has a picture (quietFaces.ts). The viewer's choice; never while our
+      recorder films, whose windows the clip maker reads. */
+  smallFaces?: boolean;
+  /** The faces go along the top of a tall frame instead of its foot: in
+      a vertical stream the phone apps' own buttons cover the bottom. */
+  facesAtTopWhenTall?: boolean;
+  /** The host's own stream (lib/ownStream): the frame is whatever shape
+      they set in their streaming app, so a tall one gets windows that
+      fill it — squares stacked for two — instead of screen-shaped
+      windows with the frame left empty above and below. */
+  fill?: boolean;
   /** Space between windows. Nil while filming: the recording is cut up
       into vertical clips, and a gap becomes a black line across them. */
   gap?: number;
@@ -236,14 +255,32 @@ export function CallGallery({
     return () => ro.disconnect();
   }, []);
 
-  const { shown, hidden } = useGallerySlots(tiles, speaking, pinnedKey);
-  const [menuOpen, setMenuOpen] = useState(false);
-  /* Nobody left behind "+N": the list has nothing to show. */
-  if (menuOpen && !hidden.length) setMenuOpen(false);
+  const arrival = useJoinOrder(tiles);
+  const split = splitQuiet(tiles, pictured, pinnedKey, smallFaces);
+  const { shown, hidden } = useGallerySlots(split.windows, speaking, pinnedKey);
+  const faces = quietFaces([...split.quiet].sort((x, y) => arrival(x.key) - arrival(y.key)), speaking, QUIET_FACES);
+  const [menu, setMenu] = useState<null | "more" | "quiet">(null);
+  /* Nobody left behind a "+N": its list has nothing to show. */
+  if ((menu === "more" && !hidden.length) || (menu === "quiet" && !faces.more.length)) setMenu(null);
+
+  /* The faces take a strip of the box; the windows are planned in the rest. */
+  const face = quietFaceSize(box.w, box.h);
+  const strip = split.quiet.length ? face + Math.max(gap, 8) : 0;
+  const facesOnTop = facesAtTopWhenTall && box.h > box.w;
+  const gridH = Math.max(0, box.h - strip);
+  const dy = facesOnTop ? strip : 0;
 
   const kinds = [...shown.map((t) => t.source), ...(hidden.length ? (["camera"] as const) : [])];
-  const plan = planGrid(kinds, box.w, box.h, gap, RATIO);
+  const plan = fill && gridH > box.w ? planGridToFill(kinds, box.w, gridH, gap, [RATIO, 4 / 3, 1]) : planGrid(kinds, box.w, gridH, gap, RATIO);
   const moreCell = hidden.length ? plan.cells.find((c) => c.index === shown.length) ?? null : null;
+  /* The faces keep to the windows: under their last row (over their
+     first, when on top), ending where the windows end on the right — one
+     group in the middle of the box, not a row adrift in its corner. */
+  const blockTop = Math.round((gridH - plan.height) / 2);
+  const facesAt = {
+    top: facesOnTop ? blockTop : blockTop + plan.height + (strip - face),
+    right: Math.max(0, box.w - (Math.round((box.w - plan.width) / 2) + plan.width)),
+  };
 
   return (
     <div className="ag-lgal" ref={boxRef}>
@@ -251,12 +288,12 @@ export function CallGallery({
         <EmptyState />
       ) : (
         plan.cells.map((cell) => {
-          const style = { left: cell.x, top: cell.y, width: cell.w, height: cell.h };
+          const style = { left: cell.x, top: cell.y + dy, width: cell.w, height: cell.h };
           const t = shown[cell.index];
           if (!t) {
             return (
               <div key="more" className="ag-lgal-cell" style={style}>
-                <MoreTile people={hidden} speaking={speaking} height={cell.h} open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} />
+                <MoreTile people={hidden} speaking={speaking} height={cell.h} open={menu === "more"} onToggle={() => setMenu((m) => (m === "more" ? null : "more"))} />
               </div>
             );
           }
@@ -282,17 +319,67 @@ export function CallGallery({
           );
         })
       )}
-      {menuOpen && moreCell && (
+      {split.quiet.length > 0 && (
+        <div className="ag-lgal-quiet" style={{ ...facesAt, height: face, gap: Math.round(face * 0.18) }} aria-label="On stage without a camera">
+          {faces.shown.map((t) => {
+            const talking = speaking.has(t.identity);
+            const who = t.local ? "You" : t.username;
+            const body = (
+              <>
+                <CameraOffFace name={t.username} avatarUrl={t.avatarUrl ?? null} side={t.side ?? null} size={face} />
+                {talking && (
+                  <span className="ag-lgal-face-name" style={{ fontSize: Math.round(Math.max(11, face * 0.3)) }}>{who}</span>
+                )}
+              </>
+            );
+            const cls = `ag-lgal-face${talking ? " is-speaking" : ""}`;
+            return onKeepInView ? (
+              <button key={t.key} type="button" className={cls} title={`${who} · camera off — click for a window`} onClick={() => onKeepInView(t.key)}>
+                {body}
+              </button>
+            ) : (
+              <span key={t.key} className={cls} title={who}>{body}</span>
+            );
+          })}
+          {faces.more.length > 0 && (
+            <button
+              type="button"
+              className={`ag-lgal-face ag-lgal-face--more${faces.more.some((t) => speaking.has(t.identity)) ? " is-speaking" : ""}`}
+              style={{ minWidth: face, fontSize: Math.round(Math.max(12, face * 0.34)) }}
+              aria-haspopup="menu"
+              aria-expanded={menu === "quiet"}
+              title={`${faces.more.length} more without a camera`}
+              onClick={() => setMenu((m) => (m === "quiet" ? null : "quiet"))}
+            >
+              +{faces.more.length}
+            </button>
+          )}
+        </div>
+      )}
+      {menu === "more" && moreCell && (
         <MoreMenu
           people={hidden}
           speaking={speaking}
-          anchor={moreCell}
+          anchor={{ ...moreCell, y: moreCell.y + dy }}
           box={box}
           onPick={(key) => {
-            setMenuOpen(false);
+            setMenu(null);
             onKeepInView?.(key);
           }}
-          onClose={() => setMenuOpen(false)}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {menu === "quiet" && faces.more.length > 0 && (
+        <MoreMenu
+          people={faces.more}
+          speaking={speaking}
+          anchor={{ x: box.w - facesAt.right - face, y: facesAt.top, w: face, h: face }}
+          box={box}
+          onPick={(key) => {
+            setMenu(null);
+            onKeepInView?.(key);
+          }}
+          onClose={() => setMenu(null)}
         />
       )}
     </div>
@@ -396,7 +483,7 @@ function MoreMenu({
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest?.(".ag-lt--more")) onClose();
+      if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest?.(".ag-lt--more, .ag-lgal-face--more")) onClose();
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("pointerdown", onDown);
