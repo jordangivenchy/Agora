@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTimeline, recordingOffset, videoTime } from "./hlsTimeline";
+import { parseTimeline, recordingOffset, videoTime, wallClock } from "./hlsTimeline";
 import { stitchPlaylists } from "../../lib/recordingParts";
 
 const STARTED = Date.parse("2026-09-14T18:59:07.381Z"); // recording_started_at (the request)
@@ -48,5 +48,30 @@ describe("recording timeline", () => {
     expect(videoTime(spans, STARTED, 12)).toBe(12);
     expect(videoTime(spans, STARTED, -3)).toBe(0);
     expect(recordingOffset(spans, STARTED, 12)).toBe(12);
+  });
+});
+
+describe("the recorder's own clock for a moment of video", () => {
+  it("is the stamp on that frame", () => {
+    const spans = parseTimeline(ONE);
+    expect(wallClock(spans, 0)).toBe(Date.parse("2026-09-14T18:59:15.533Z"));
+    expect(wallClock(spans, 3.25)).toBe(Date.parse("2026-09-14T18:59:18.783Z"));
+  });
+
+  it("skips the gap between the parts of a recording", () => {
+    const stitched = parseTimeline(stitchPlaylists([{ text: ONE, url: "https://x.test/r/index.m3u8" }, { text: TWO, url: "https://x.test/r/p2/index.m3u8" }], true));
+    // part 1 is six seconds of video; second seven is one second into part 2
+    expect(wallClock(stitched, 7)).toBe(Date.parse("2026-09-14T18:59:42.533Z"));
+  });
+
+  it("is unknown for a playlist without stamps", () => {
+    expect(wallClock(parseTimeline(["#EXTM3U", "#EXTINF:2.0,", "a.ts"].join("\n")), 1)).toBeNull();
+  });
+
+  it("is not moved by a stamp that looks wrong, unlike the transcript's offsets", () => {
+    const spans = parseTimeline(ONE);
+    const later = Date.parse("2026-09-14T19:05:00.000Z");
+    expect(recordingOffset(spans, later, 4)).toBeCloseTo(4, 6); // re-anchored to the stamp
+    expect(wallClock(spans, 4)).toBe(Date.parse("2026-09-14T18:59:19.533Z")); // the recorder's clock as it was
   });
 });

@@ -31,6 +31,7 @@ import AgoraVideoDock from "@/components/agora/AgoraVideoDock";
 import AgoraStage from "@/components/agora/AgoraStage";
 import ReactionOverlay from "@/components/agora/ReactionOverlay";
 import { useAgoraCall, tileKey } from "@/components/agora/useAgoraCall";
+import { useRecorderSpeech } from "@/components/agora/useRecorderSpeech";
 import { CallGallery, CallMultiSpeaker, type LayoutTile } from "@/components/agora/CallLayouts";
 import HostControls from "@/components/agora/HostControls";
 import { HlsBroadcastSurface, turnSoundOn, useBroadcastSound } from "@/components/agora/HlsPlayer";
@@ -350,6 +351,14 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     () => broadcast && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("own"),
     [broadcast]
   );
+  /* LiveKit's recorder alone carries a pass (`rk`) for noting who is
+     speaking, which is what names the lines of the replay's transcript
+     (useRecorderSpeech). A host's own stream link has none. */
+  const recorderPass = useMemo(() => {
+    if (!broadcast || ownStream || typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("rk");
+    return raw ? raw.split("?")[0] : null;
+  }, [broadcast, ownStream]);
   const [closingStage, setClosingStage] = useState(false);
   const [elapsed, setElapsed] = useState("00:00:00");
   const [view, setView] = useState<AgoraView>("audience");
@@ -1028,6 +1037,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       window.clearTimeout(cap);
     };
   }, [broadcast]);
+  useRecorderSpeech({ roomId, pass: recorderPass, connected: call.connected, speaking: call.speakingIds });
   const recordingSignaledRef = useRef(false);
   useEffect(() => {
     if (!broadcast || recordingSignaledRef.current) return;

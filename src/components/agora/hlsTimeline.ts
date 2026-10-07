@@ -83,6 +83,18 @@ export function videoTime(spans: TimelineSpan[], startedAtMs: number, offsetSeco
   return s.video + into;
 }
 
+/** Video seconds → the wall clock (epoch ms) the recorder stamped on that
+    frame — its own clock, untouched by `anchored` — or null for a
+    playlist without stamps. What the recorder noted against that clock
+    (who was speaking) lines up with the video through this. */
+export function wallClock(spans: TimelineSpan[], videoSeconds: number): number | null {
+  if (!spans.length) return null;
+  let i = 0;
+  for (let k = 0; k < spans.length; k++) if (spans[k].video <= videoSeconds) i = k;
+  const s = spans[i];
+  return s.wall + (videoSeconds - s.video) * 1000;
+}
+
 /** Video seconds → a transcript offset (seconds from recording_started_at). */
 export function recordingOffset(spans: TimelineSpan[], startedAtMs: number, videoSeconds: number): number {
   const a = anchored(spans, startedAtMs);

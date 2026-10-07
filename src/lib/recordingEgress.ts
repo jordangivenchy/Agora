@@ -18,6 +18,7 @@ import {
 import type { createAdminClient } from "@/lib/supabase-admin";
 import { partFiles, readParts, recordingUrlFor, replayKey, shouldRestart, stitchPlaylists } from "@/lib/recordingParts";
 import { signS3Request } from "@/lib/s3Sign";
+import { mintSpeechKey } from "@/lib/recordingSpeechKey";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -80,6 +81,12 @@ export async function startRecordingPart(opts: {
   if (!n) return null;
 
   const files = partFiles(roomId, n);
+  /* The page LiveKit films also notes who is speaking, for the replay's
+     transcript; `rk` is its pass to send that in (lib/recordingSpeechKey).
+     LiveKit adds its own layout, url and token to whatever the address
+     already carries. */
+  const speechSecret = process.env.LIVEKIT_API_SECRET;
+  const pageUrl = `${origin}/agora/${roomId}${speechSecret ? `?rk=${mintSpeechKey(roomId, speechSecret)}` : ""}`;
   let info: EgressInfo;
   try {
     info = await egress.startRoomCompositeEgress(
@@ -104,7 +111,7 @@ export async function startRecordingPart(opts: {
       },
       {
         layout: "speaker",
-        customBaseUrl: `${origin}/agora/${roomId}`,
+        customBaseUrl: pageUrl,
         encodingOptions: RECORDING_ENCODING(),
         /* The project webhook didn't bring this recorder's end in
            production; LiveKit sends a request's own webhooks too. */
