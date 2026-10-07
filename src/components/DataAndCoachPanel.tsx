@@ -122,13 +122,13 @@ export default function DataAndCoachPanel() {
       {/* Consent toggles */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 26 }}>
         {CATEGORIES.map((cat) => (
-          <div key={cat.key} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 14, borderRadius: 12, background: "rgba(20,20,26,0.7)", border: "0.5px solid #34343c", opacity: cat.ai && !AGORA_AI ? 0.62 : 1 }}>
+          <div key={cat.key} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: 14, borderRadius: 14, background: "#000", border: "1px solid #222229", opacity: cat.ai && !AGORA_AI ? 0.62 : 1 }}>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>{cat.title}</p>
               <p style={{ margin: "3px 0 0", fontSize: 11.5, color: "#8b8b94", lineHeight: 1.5 }}>{cat.blurb}</p>
             </div>
             {cat.ai && !AGORA_AI ? (
-              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", color: "#ffb700", background: "#141418", border: "1px solid #2e2e38", borderRadius: 999, padding: "4px 9px", whiteSpace: "nowrap" }}>
+              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", color: "#ffb700", background: "#111114", border: "1px solid #26262e", borderRadius: 999, padding: "4px 9px", whiteSpace: "nowrap" }}>
                 Coming soon
               </span>
             ) : (
@@ -137,12 +137,12 @@ export default function DataAndCoachPanel() {
               aria-checked={consent[cat.key]}
               onClick={() => toggle(cat.key)}
               style={{
-                width: 40, height: 23, borderRadius: 999, position: "relative", flexShrink: 0, border: "none", cursor: "pointer",
-                background: consent[cat.key] ? "linear-gradient(135deg,#60a5fa,#2563eb)" : "rgba(90,90,102,0.5)",
+                width: 34, height: 20, borderRadius: 999, position: "relative", flexShrink: 0, border: "none", cursor: "pointer",
+                background: consent[cat.key] ? "#ffb700" : "#26262e",
                 transition: "background 0.2s",
               }}
             >
-              <span style={{ position: "absolute", top: 2, left: consent[cat.key] ? 19 : 2, width: 19, height: 19, borderRadius: "50%", background: "#eff6ff", transition: "left 0.2s" }} />
+              <span style={{ position: "absolute", top: 2, left: consent[cat.key] ? 16 : 2, width: 16, height: 16, borderRadius: "50%", background: consent[cat.key] ? "#1a0e00" : "#f5f5f0", transition: "left 0.2s" }} />
             </button>
             )}
           </div>
@@ -151,17 +151,9 @@ export default function DataAndCoachPanel() {
 
       {/* Data rights */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-        <button onClick={download} disabled={busy} style={btn("#9cc4f0")}>Download my data</button>
-        <button onClick={erase} disabled={busy} style={btn("#f0605e")}>Delete my derived data</button>
+        <button onClick={download} disabled={busy} className="stg-btn">Download my data</button>
+        <button onClick={erase} disabled={busy} className="stg-btn stg-btn--danger">Delete my derived data</button>
       </div>
     </div>
   );
-}
-
-function btn(color: string): React.CSSProperties {
-  return {
-    fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color,
-    background: "rgba(20,20,26,0.85)", border: `0.5px solid ${color}55`, borderRadius: 999,
-    padding: "8px 14px", cursor: "pointer",
-  };
 }

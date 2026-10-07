@@ -55,10 +55,16 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
 
 /* ── small building blocks ─────────────────────────────────── */
 
+/* The site's solid look, the same values as the notifications page and
+   the call card: black bodies with a hairline, near-black tiles for what
+   you press or type in, and the brand yellow for what is switched on.
+   Nothing tinted or see-through — the starfield behind the page showed
+   through the old cards. Buttons and fields are classes (`.stg-*`,
+   globals.css) so they can answer a pointer and the keyboard. */
 const card: React.CSSProperties = {
-  background: "rgba(18,18,24,0.92)",
-  border: "0.5px solid #2e2e38",
-  borderRadius: 12,
+  background: "#000",
+  border: "1px solid #222229",
+  borderRadius: 14,
 };
 
 function Toggle({
@@ -75,7 +81,7 @@ function Toggle({
       onClick={() => !disabled && onChange(!on)}
       disabled={disabled}
       className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left cursor-pointer bg-transparent border-none"
-      style={{ opacity: disabled ? 0.5 : 1 }}
+      style={{ opacity: disabled ? 0.5 : 1, borderTop: "1px solid #16161b" }}
       role="switch"
       aria-checked={on}
     >
@@ -86,13 +92,13 @@ function Toggle({
       <span
         className="shrink-0 relative inline-block transition-colors"
         style={{
-          width: 36, height: 20, borderRadius: 99,
-          background: on ? "#1d9e75" : "#3a3a42",
+          width: 34, height: 20, borderRadius: 99,
+          background: on ? "#ffb700" : "#26262e",
         }}
       >
         <span
-          className="absolute rounded-full bg-white transition-all"
-          style={{ top: 3, left: on ? 19 : 3, width: 14, height: 14 }}
+          className="absolute rounded-full transition-all"
+          style={{ top: 2, left: on ? 16 : 2, width: 16, height: 16, background: on ? "#1a0e00" : "#f5f5f0" }}
         />
       </span>
     </button>
@@ -112,25 +118,6 @@ function SectionCard({ title, sub, children }: { title: string; sub?: string; ch
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%", boxSizing: "border-box",
-  background: "rgba(10,10,14,0.8)", border: "0.5px solid #34343c",
-  borderRadius: 9, color: "#f5f5f0", fontSize: 13,
-  padding: "9px 12px", outline: "none", fontFamily: "inherit",
-};
-
-const btnPrimary: React.CSSProperties = {
-  background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382",
-  color: "#9cc4f0", borderRadius: 9, padding: "8px 16px",
-  fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-};
-
-const btnGhost: React.CSSProperties = {
-  background: "transparent", border: "0.5px solid #3a3a42",
-  color: "#c0c0c8", borderRadius: 9, padding: "8px 16px",
-  fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-};
 
 /* ── page ──────────────────────────────────────────────────── */
 
@@ -504,7 +491,7 @@ export default function SettingsPage({ initial }: {
             <div className="flex items-center gap-3.5 px-4 py-3 settings-profile-row">
               <span
                 className="flex items-center justify-center shrink-0 overflow-hidden"
-                style={{ width: 52, height: 52, borderRadius: "50%", background: "#2c5382", color: "#fff", fontSize: 20, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
+                style={{ width: 52, height: 52, borderRadius: "50%", background: "#111114", border: "1px solid #26262e", color: "#f5f5f0", fontSize: 20, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
               >
                 {profile.avatar_url
                   ? // eslint-disable-next-line @next/next/no-img-element
@@ -521,11 +508,11 @@ export default function SettingsPage({ initial }: {
                   <p className="m-0 mt-1 text-[11px] truncate" style={{ color: "#9a9aa2" }}>{profile.bio}</p>
                 )}
               </div>
-              <button style={btnPrimary} onClick={() => setEditProfileOpen(true)}>
+              <button className="stg-btn" onClick={() => setEditProfileOpen(true)}>
                 Edit profile
               </button>
             </div>
-            <p className="mx-4 mb-3 mt-1 text-[10px]" style={{ color: "#7f7f89" }}>
+            <p className="mx-4 mb-3 mt-1 text-[11px]" style={{ color: "#7f7f89" }}>
               Username changes are limited to once every 7 days.
             </p>
           </SectionCard>
@@ -537,7 +524,7 @@ export default function SettingsPage({ initial }: {
             <SectionCard title="Email" sub={`Signed in as ${profile.email}`}>
               <form onSubmit={changeEmail} className="px-4 pb-3.5 flex flex-col gap-2.5">
                 <input
-                  style={inputStyle}
+                  className="stg-input"
                   type="email"
                   placeholder="New email address"
                   value={newEmail}
@@ -545,12 +532,12 @@ export default function SettingsPage({ initial }: {
                   autoComplete="email"
                 />
                 {emailMsg && (
-                  <p className="m-0 text-[11px]" style={{ color: emailMsg.kind === "ok" ? "#97c459" : "#fca5a5" }}>
+                  <p className="m-0 text-[11px]" style={{ color: emailMsg.kind === "ok" ? "#97c459" : "#ff8a80" }}>
                     {emailMsg.text}
                   </p>
                 )}
                 <div>
-                  <button style={btnPrimary} disabled={emailBusy || !newEmail.trim()} type="submit">
+                  <button className="stg-btn" disabled={emailBusy || !newEmail.trim()} type="submit">
                     {emailBusy ? "Sending…" : "Change email"}
                   </button>
                 </div>
@@ -559,19 +546,19 @@ export default function SettingsPage({ initial }: {
 
             <SectionCard title="Password" sub="Requires your current password.">
               <form onSubmit={changePassword} className="px-4 pb-3.5 flex flex-col gap-2.5">
-                <input style={inputStyle} type="password" placeholder="Current password"
+                <input className="stg-input" type="password" placeholder="Current password"
                   value={curPw} onChange={(e) => setCurPw(e.target.value)} autoComplete="current-password" />
-                <input style={inputStyle} type="password" placeholder="New password"
+                <input className="stg-input" type="password" placeholder="New password"
                   value={newPw} onChange={(e) => setNewPw(e.target.value)} autoComplete="new-password" />
-                <input style={inputStyle} type="password" placeholder="Confirm new password"
+                <input className="stg-input" type="password" placeholder="Confirm new password"
                   value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} autoComplete="new-password" />
                 {pwMsg && (
-                  <p className="m-0 text-[11px]" style={{ color: pwMsg.kind === "ok" ? "#97c459" : "#fca5a5" }}>
+                  <p className="m-0 text-[11px]" style={{ color: pwMsg.kind === "ok" ? "#97c459" : "#ff8a80" }}>
                     {pwMsg.text}
                   </p>
                 )}
                 <div className="flex items-center gap-3 settings-inline-form">
-                  <button style={btnPrimary} disabled={pwBusy || !curPw || !newPw} type="submit">
+                  <button className="stg-btn" disabled={pwBusy || !curPw || !newPw} type="submit">
                     {pwBusy ? "Updating…" : "Update password"}
                   </button>
                   <a href="/forgot-password" className="text-[11px]" style={{ color: "#8b8b94" }}>
@@ -583,7 +570,7 @@ export default function SettingsPage({ initial }: {
 
             <SectionCard title="Sessions" sub="Signs you out on every device, including this one.">
               <div className="px-4 pb-3.5">
-                <button style={btnGhost} onClick={signOutEverywhere} disabled={signoutBusy}>
+                <button className="stg-btn stg-btn--quiet" onClick={signOutEverywhere} disabled={signoutBusy}>
                   {signoutBusy ? "Signing out…" : "Sign out everywhere"}
                 </button>
               </div>
@@ -595,8 +582,7 @@ export default function SettingsPage({ initial }: {
                   <button
                     onClick={startEnrollFlow}
                     disabled={twoFactorBusy}
-                    style={btnPrimary}
-                    className="self-start"
+                    className="stg-btn self-start"
                   >
                     {twoFactorBusy ? "Sending code…" : "Enable 2FA"}
                   </button>
@@ -605,7 +591,7 @@ export default function SettingsPage({ initial }: {
                 {!twoFactorEnabled && enrollPending && (
                   <form onSubmit={verifyEnroll} className="flex items-center gap-2.5 settings-inline-form">
                     <input
-                      style={{ ...inputStyle, width: 130, textAlign: "center", letterSpacing: "0.2em" }}
+                      className="stg-input" style={{ width: 130, textAlign: "center", letterSpacing: "0.2em" }}
                       type="text"
                       inputMode="numeric"
                       placeholder="000000"
@@ -613,11 +599,11 @@ export default function SettingsPage({ initial }: {
                       value={enrollCode}
                       onChange={(e) => setEnrollCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     />
-                    <button style={btnPrimary} disabled={twoFactorBusy || enrollCode.length !== 6} type="submit">
+                    <button className="stg-btn" disabled={twoFactorBusy || enrollCode.length !== 6} type="submit">
                       {twoFactorBusy ? "Verifying…" : "Verify"}
                     </button>
                     <button
-                      style={btnGhost}
+                      className="stg-btn stg-btn--quiet"
                       type="button"
                       onClick={() => {
                         setEnrollPending(null);
@@ -632,7 +618,7 @@ export default function SettingsPage({ initial }: {
 
                 {twoFactorEnabled && !disableOpen && (
                   <div className="flex items-center gap-3">
-                    <button style={btnGhost} className="self-start" onClick={() => setDisableOpen(true)}>
+                    <button className="stg-btn stg-btn--quiet self-start" onClick={() => setDisableOpen(true)}>
                       Disable 2FA
                     </button>
                     <p className="m-0 text-[11px]" style={{ color: "#97c459" }}>
@@ -645,7 +631,7 @@ export default function SettingsPage({ initial }: {
                   <form onSubmit={disable2fa} className="flex items-center gap-2.5 settings-inline-form">
                     {hasPasswordIdentity && (
                       <input
-                        style={{ ...inputStyle, width: 200 }}
+                        className="stg-input" style={{ width: 200 }}
                         type="password"
                         placeholder="Current password"
                         autoComplete="current-password"
@@ -654,14 +640,14 @@ export default function SettingsPage({ initial }: {
                       />
                     )}
                     <button
-                      style={btnPrimary}
+                      className="stg-btn"
                       disabled={twoFactorBusy || (hasPasswordIdentity && !disablePw)}
                       type="submit"
                     >
                       {twoFactorBusy ? "Disabling…" : "Confirm disable"}
                     </button>
                     <button
-                      style={btnGhost}
+                      className="stg-btn stg-btn--quiet"
                       type="button"
                       onClick={() => {
                         setDisableOpen(false);
@@ -675,7 +661,7 @@ export default function SettingsPage({ initial }: {
                 )}
 
                 {twoFactorMsg && (
-                  <p className="m-0 text-[11px]" style={{ color: twoFactorMsg.kind === "ok" ? "#97c459" : "#fca5a5" }}>
+                  <p className="m-0 text-[11px]" style={{ color: twoFactorMsg.kind === "ok" ? "#97c459" : "#ff8a80" }}>
                     {twoFactorMsg.text}
                   </p>
                 )}
@@ -737,15 +723,15 @@ export default function SettingsPage({ initial }: {
                         <span style={{ color: "#8b8b94", fontWeight: 400 }}> of {limitGb!.toFixed(0)} GB used</span>
                       </span>
                       {full && (
-                        <span className="text-[11px]" style={{ color: "#f0a5a5" }}>
+                        <span className="text-[11px]" style={{ color: "#ff8a80" }}>
                           Storage full — new discussions aren&rsquo;t recorded
                         </span>
                       )}
                     </div>
-                    <div className="overflow-hidden" style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)" }}>
+                    <div className="overflow-hidden" style={{ height: 6, borderRadius: 3, background: "#1c1c22" }}>
                       <div style={{
                         width: `${pct}%`, height: "100%", borderRadius: 3,
-                        background: full ? "#e05a5a" : pct > 80 ? "#e2b96b" : "#4a9eff",
+                        background: full ? "#ff6b61" : "#ffb700",
                         transition: "width 0.3s ease",
                       }} />
                     </div>
@@ -801,12 +787,12 @@ export default function SettingsPage({ initial }: {
             >
               {emailPrefs?.unsubscribed && (
                 <div className="mx-4 my-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2.5"
-                     style={{ background: "rgba(233,176,64,0.1)", border: "0.5px solid rgba(233,176,64,0.35)" }}>
+                     style={{ background: "#111114", border: "1px solid #26262e" }}>
                   <span className="text-[12.5px]" style={{ color: "#f5f5f0" }}>Unsubscribed from all email</span>
                   <button
                     onClick={() => saveEmailUnsub(false)}
                     className="text-[12px] font-semibold cursor-pointer bg-transparent border-none"
-                    style={{ color: "#4a9eff" }}
+                    style={{ color: "#ffb700" }}
                   >
                     Resubscribe
                   </button>
@@ -888,7 +874,7 @@ export default function SettingsPage({ initial }: {
                 <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 settings-blocked-row">
                   <span
                     className="flex items-center justify-center shrink-0 overflow-hidden"
-                    style={{ width: 32, height: 32, borderRadius: "50%", background: "#3a3a42", color: "#fff", fontSize: 13 }}
+                    style={{ width: 32, height: 32, borderRadius: "50%", background: "#111114", border: "1px solid #26262e", color: "#f5f5f0", fontSize: 13 }}
                   >
                     {u.avatar_url
                       ? // eslint-disable-next-line @next/next/no-img-element
@@ -900,7 +886,7 @@ export default function SettingsPage({ initial }: {
                     <VerifiedMark id={u.id} username={u.username} />{" "}
                     <span className="text-[11px]" style={{ color: "#8b8b94" }}>@{u.username}</span>
                   </span>
-                  <button style={btnGhost} onClick={() => unblock(u)} disabled={unblockBusy === u.id}>
+                  <button className="stg-btn stg-btn--quiet" onClick={() => unblock(u)} disabled={unblockBusy === u.id}>
                     {unblockBusy === u.id ? "Unblocking…" : "Unblock"}
                   </button>
                 </div>
@@ -911,9 +897,9 @@ export default function SettingsPage({ initial }: {
 
       case "danger":
         return (
-          <div style={{ ...card, border: "0.5px solid rgba(239,68,68,0.35)" }} className="mb-4 overflow-hidden">
+          <div style={card} className="mb-4 overflow-hidden">
             <div className="px-4 pt-4 pb-1">
-              <p className="m-0 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#fca5a5" }}>
+              <p className="m-0 text-[14px]" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: "#ff6b61" }}>
                 Delete account
               </p>
               <p className="m-0 mt-1 text-[11px] leading-relaxed" style={{ color: "#9a9aa2" }}>
@@ -924,23 +910,18 @@ export default function SettingsPage({ initial }: {
             </div>
             <div className="px-4 py-3.5 flex flex-col gap-2.5">
               <input
-                style={inputStyle}
+                className="stg-input"
                 placeholder={`Type "${profile.username}" to confirm`}
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 autoComplete="off"
               />
-              {deleteErr && <p className="m-0 text-[11px]" style={{ color: "#fca5a5" }}>{deleteErr}</p>}
+              {deleteErr && <p className="m-0 text-[11px]" style={{ color: "#ff8a80" }}>{deleteErr}</p>}
               <div>
                 <button
                   onClick={deleteAccount}
                   disabled={deleteBusy || deleteConfirm !== profile.username}
-                  style={{
-                    background: "rgba(239,68,68,0.12)", border: "0.5px solid rgba(239,68,68,0.4)",
-                    color: "#fca5a5", borderRadius: 9, padding: "8px 16px", fontSize: 12,
-                    cursor: deleteConfirm === profile.username ? "pointer" : "not-allowed",
-                    opacity: deleteConfirm === profile.username ? 1 : 0.55, fontFamily: "inherit",
-                  }}
+                  className="stg-btn stg-btn--danger"
                 >
                   {deleteBusy ? "Deleting…" : "Delete my account permanently"}
                 </button>
@@ -961,7 +942,7 @@ export default function SettingsPage({ initial }: {
     return (
       <div className="flex flex-col items-center justify-center gap-4 px-6 text-center" style={{ width: "100vw", height: "100vh", background: "var(--bg-primary, #0a0a0c)" }}>
         <p className="m-0 text-[14px]" style={{ color: "#f5f5f0" }}>{loadError}</p>
-        <button style={btnPrimary} onClick={() => { setLoading(true); load(); }}>Try again</button>
+        <button className="stg-btn" onClick={() => { setLoading(true); load(); }}>Try again</button>
       </div>
     );
   }
@@ -973,22 +954,21 @@ export default function SettingsPage({ initial }: {
 
         {/* header */}
         <div className="flex items-center gap-3 mb-5 settings-head">
-          {/* Mobile back: panel → list */}
-          {mobilePanelOpen && (
-            <button
-              className="md:hidden settings-back"
-              style={{ ...btnGhost, padding: "6px 12px" }}
-              onClick={() => setMobilePanelOpen(false)}
-              aria-label="Back to settings sections"
-            >
-              ← Back
-            </button>
-          )}
-          <a href="/" className="hidden md:inline-block" style={{ ...btnGhost, padding: "6px 12px", textDecoration: "none" }}>
-            ← Home
-          </a>
+          {/* No back button. The site's own bar goes anywhere from here;
+              on a phone, inside a section, the title reads "Settings ›
+              Account & security" and its first word is the way back to
+              the list. */}
           <h1 className="m-0 text-[22px] settings-title" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, color: "#f5f5f0" }}>
-            {mobilePanelOpen ? activeMeta?.label : "Settings"}
+            <span className={mobilePanelOpen ? "hidden md:inline" : undefined}>Settings</span>
+            {mobilePanelOpen && (
+              <span className="md:hidden">
+                <button type="button" className="stg-crumb" onClick={() => setMobilePanelOpen(false)} aria-label="Back to settings sections">
+                  Settings
+                </button>
+                <span className="stg-crumb-sep" aria-hidden="true">›</span>
+                {activeMeta?.label}
+              </span>
+            )}
           </h1>
           <span
             className="ml-auto text-[11px] transition-opacity"
@@ -1001,7 +981,7 @@ export default function SettingsPage({ initial }: {
 
         {toggleError && (
           <p className="mb-4 px-4 py-2.5 rounded-lg text-[12px]"
-            style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+            style={{ background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
             {toggleError}
           </p>
         )}
@@ -1009,34 +989,24 @@ export default function SettingsPage({ initial }: {
         <div className="md:grid md:gap-6" style={{ gridTemplateColumns: "230px 1fr" }}>
 
           {/* section nav — full-width list on mobile (hidden once a panel is open) */}
-          <nav className={mobilePanelOpen ? "hidden md:block" : "block"}>
+          <nav className={`stg-nav ${mobilePanelOpen ? "hidden md:block" : "block"}`}>
             {SECTIONS.map((s) => (
               <button
                 key={s.key}
                 onClick={() => { setActive(s.key); setMobilePanelOpen(true); }}
-                className="block w-full text-left cursor-pointer mb-1.5 px-3.5 py-3 border-none"
-                style={{
-                  borderRadius: 10,
-                  background: active === s.key ? "rgba(255,255,255,0.07)" : "transparent",
-                  border: "0.5px solid " + (active === s.key ? "#3a3a44" : "transparent"),
-                }}
+                className={`stg-nav-item${active === s.key ? " is-active" : ""}${s.key === "danger" ? " is-danger" : ""}`}
+                aria-current={active === s.key ? "page" : undefined}
               >
-                <span className="block text-[13px]" style={{ color: s.key === "danger" ? "#fca5a5" : "#f5f5f0" }}>
-                  {s.label}
-                </span>
-                <span className="block text-[10px] mt-0.5" style={{ color: "#7f7f89" }}>{s.sub}</span>
+                <span className="stg-nav-label">{s.label}</span>
+                <span className="stg-nav-sub">{s.sub}</span>
               </button>
             ))}
             {/* Moderators get a link to the report queue; the /mod page and
                 its RPCs enforce the role server-side regardless. */}
             {profile?.is_moderator && (
-              <a
-                href="/mod"
-                className="block w-full text-left mb-1.5 px-3.5 py-3 no-underline"
-                style={{ borderRadius: 10, border: "0.5px solid rgba(244,212,124,0.25)" }}
-              >
-                <span className="block text-[13px]" style={{ color: "#f4d47c" }}>Moderation</span>
-                <span className="block text-[10px] mt-0.5" style={{ color: "#7f7f89" }}>Open the report queue</span>
+              <a href="/mod" className="stg-nav-item is-mod">
+                <span className="stg-nav-label">Moderation</span>
+                <span className="stg-nav-sub">Open the report queue</span>
               </a>
             )}
           </nav>
