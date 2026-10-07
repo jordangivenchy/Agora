@@ -3,10 +3,10 @@
    tabs: Requests (the line, oldest first — bring up next, invite,
    dismiss), Audience (search — invite, make speaker, profile, remove),
    Stage (mute, to audience, co-host), Room (lock requests, mute all,
-   end, the thumbnail, the restream, the HLS broadcast). Every write
+   end, the thumbnail, the HLS broadcast). Every write
    goes to the same rows; realtime brings the result to everyone. */
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -126,12 +126,9 @@ export function HostControlsSheet({ open, onClose, room, seats, meId, myRole, on
     }
   };
 
-  /* The restream and the HLS broadcast: the site's /api/egress, the host's own. */
-  const [rtmpUrl, setRtmpUrl] = useState("");
-  const [portrait, setPortrait] = useState(true);
-  const [egressId, setEgressId] = useState<string | null>(null);
-  const [egressBusy, setEgressBusy] = useState(false);
-  const [egressError, setEgressError] = useState<string | null>(null);
+  /* The HLS broadcast: the site's /api/egress, the host's own. (Sending
+     the room out to TikTok and the like is done from a computer now, with
+     the stream link in the site's call settings; we no longer do it.) */
   const [hlsConfigured, setHlsConfigured] = useState(false);
   const [hlsLive, setHlsLive] = useState(!!room.hls_url);
   const [hlsEgressId, setHlsEgressId] = useState<string | null>(null);
@@ -141,21 +138,11 @@ export function HostControlsSheet({ open, onClose, room, seats, meId, myRole, on
     if (!open || !isPrimaryHost) return;
     void egress(auth, room.id, { action: "status" }).then(({ ok, data }) => {
       if (!ok) return;
-      if (typeof data.egressId !== "undefined") setEgressId((data.egressId as string | null) ?? null);
       if (typeof data.hlsConfigured === "boolean") setHlsConfigured(data.hlsConfigured);
       setHlsLive(!!room.hls_url);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, room.id]);
-  const toggleEgress = async () => {
-    setEgressBusy(true);
-    setEgressError(null);
-    const { ok, data } = await egress(auth, room.id, egressId ? { action: "stop", egressId } : { action: "start", rtmpUrl: rtmpUrl.trim(), portrait });
-    setEgressBusy(false);
-    if (!ok) { setEgressError((data.error as string) || "Restream failed — try again."); return; }
-    if (egressId) setEgressId(null);
-    else { setEgressId((data.egressId as string) ?? null); setRtmpUrl(""); }
-  };
   const toggleHls = async () => {
     setHlsBusy(true);
     setHlsError(null);
@@ -244,25 +231,6 @@ export function HostControlsSheet({ open, onClose, room, seats, meId, myRole, on
                     </View>
                     {thumbError && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 11, marginTop: 5 }}>{thumbError}</Text>}
                     <Hint t="Square art shown on room cards. Center-cropped to 512px — 5MB max." />
-                  </View>
-                )}
-                {isPrimaryHost && (
-                  <View style={{ borderTopWidth: 1, borderColor: "#1f1f26" }}>
-                    <Head t={`Restream${egressId ? " · LIVE" : ""}`} />
-                    {!egressId && (
-                      <>
-                        <TextInput value={rtmpUrl} onChangeText={setRtmpUrl} placeholder="rtmp://… ingest URL + stream key" placeholderTextColor={colors.faint} autoCapitalize="none" autoCorrect={false} style={{ height: 34, borderRadius: 8, paddingHorizontal: 10, backgroundColor: "#111114", borderWidth: 1, borderColor: "#2a2a33", color: colors.text, fontFamily: fonts.body, fontSize: 12 }} />
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
-                          <Switch value={portrait} onValueChange={setPortrait} trackColor={{ true: colors.yellow, false: "#2a2a33" }} thumbColor="#fff" />
-                          <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, flex: 1 }}>Portrait (TikTok) — off for Twitch/YouTube</Text>
-                        </View>
-                      </>
-                    )}
-                    <View style={{ marginTop: 8 }}>
-                      <Act wide label={egressBusy ? "…" : egressId ? "Stop restream" : "Go live on TikTok / RTMP"} danger={!!egressId} disabled={egressBusy || (!egressId && !rtmpUrl.trim())} onPress={() => void toggleEgress()} />
-                    </View>
-                    {egressError && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 11, marginTop: 5 }}>{egressError}</Text>}
-                    <Hint t="Paste the RTMP server URL with your stream key appended (from TikTok LIVE Studio, Twitch, or YouTube). The stage broadcasts until you stop it." />
                   </View>
                 )}
                 {isPrimaryHost && hlsConfigured && (

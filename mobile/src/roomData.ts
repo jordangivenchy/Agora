@@ -263,7 +263,6 @@ export async function fetchCommunityName(supabase: SupabaseClient, communityId: 
 /* ── The site's recording API (/api/egress), the host's own ──────── */
 export type EgressAction =
   | { action: "status" }
-  | { action: "start"; rtmpUrl: string; portrait: boolean }
   | { action: "start_hls" }
   | { action: "stop"; egressId: string }
   | { action: "stop_all" };
