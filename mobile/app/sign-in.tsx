@@ -174,13 +174,10 @@ export default function SignIn() {
               </>
             ) : (
               <>
-                {/* Google: filled with Google's own blue, words in white. Google lets its G appear in its
-                    four colours only, so it sits on a white disc, the way Google draws its own blue button. */}
-                <Pressable onPress={() => void google()} disabled={googleBusy} accessibilityRole="button" style={({ pressed }) => ({ height: 46, borderRadius: 999, flexDirection: "row", gap: 9, backgroundColor: pressed ? "#185abc" : "#1a73e8", alignItems: "center", justifyContent: "center", marginBottom: 10, opacity: googleBusy ? 0.6 : 1 })}>
-                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
-                    <GoogleMark size={18} />
-                  </View>
-                  <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 14.5 }}>{googleBusy ? "Opening Google…" : "Continue with Google"}</Text>
+                {/* Google: a white pill with its G in its four colours, the button people know. */}
+                <Pressable onPress={() => void google()} disabled={googleBusy} accessibilityRole="button" style={({ pressed }) => ({ height: 46, borderRadius: 999, flexDirection: "row", gap: 9, backgroundColor: pressed ? "#f1f1f1" : "#ffffff", alignItems: "center", justifyContent: "center", marginBottom: 10, opacity: googleBusy ? 0.6 : 1 })}>
+                  <GoogleMark size={17} />
+                  <Text style={{ color: "#1f1f1f", fontFamily: fonts.semi, fontSize: 14.5 }}>{googleBusy ? "Opening Google…" : "Continue with Google"}</Text>
                 </Pressable>
                 {/* Discord, under Google: filled with Discord's own colour, its mark and words in white. */}
                 <Pressable onPress={() => void discord()} disabled={discordBusy} accessibilityRole="button" style={({ pressed }) => ({ height: 46, borderRadius: 999, flexDirection: "row", gap: 9, backgroundColor: pressed ? "#4752c4" : "#5865f2", alignItems: "center", justifyContent: "center", marginBottom: 14, opacity: discordBusy ? 0.6 : 1 })}>
