@@ -205,19 +205,18 @@ const pillBlue: React.CSSProperties = {
 };
 const pillGreen: React.CSSProperties = {
   ...pillBase,
-  background: "rgba(0,184,148,0.1)",
-  border: "1px solid rgba(0,184,148,0.4)", color: "#35d3ab",
+  background: "#111114",
+  border: "1px solid #26262e", color: "#35d3ab",
 };
 const pillAmber: React.CSSProperties = {
   ...pillBase,
-  background: "rgba(226,185,107,0.08)",
-  border: "1px solid rgba(226,185,107,0.35)", color: "#e2b96b",
+  background: "#111114",
+  border: "1px solid #26262e", color: "#e2b96b",
 };
 const pillGlass: React.CSSProperties = {
   ...pillBase,
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.12)", color: "rgba(238,238,245,0.8)",
-  backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+  background: "#111114",
+  border: "1px solid #26262e", color: "#c9c9d2",
 };
 const liftIn = (e: React.MouseEvent<HTMLButtonElement>) => {
   e.currentTarget.style.transform = "translateY(-1px)";
@@ -1841,7 +1840,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                       <button
                         onClick={() => submitComment(c.id, replyText, replyImage, replyGifUrl)}
                         disabled={busy || !replyText.trim()}
-                        className="cm-send cursor-pointer text-[12px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+                        className="cm-send cursor-pointer text-[12px] shrink-0 off-solid disabled:cursor-default"
                         style={{ ...btnBlue, height: 34, borderRadius: 999, padding: "0 16px", fontWeight: 600 }}
                       >
                         Reply
@@ -2113,7 +2112,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
 
         {error && (
           <p className="mb-3 px-4 py-2.5 rounded-lg text-[12px]"
-            style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+            style={{ background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
             {error}
             <button onClick={() => setError(null)} className="ml-3 cursor-pointer bg-transparent border-none text-[11px]" style={{ color: "rgba(238,238,245,0.5)" }}>
               dismiss
@@ -2421,7 +2420,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                                 key={d.id}
                                 href={`/agora/${d.id}`}
                                 className="block mb-1 px-3.5 py-2 no-underline"
-                                style={{ borderRadius: 10, background: "rgba(232,64,64,0.06)", border: "0.5px solid rgba(232,64,64,0.3)" }}
+                                style={{ borderRadius: 10, background: "#111114", border: "1px solid #26262e" }}
                               >
                                 {railInner(d, true)}
                               </a>
@@ -2609,7 +2608,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                           <button
                             onClick={() => { void saveEdit(); }}
                             disabled={busy}
-                            className="cursor-pointer text-[12.5px] disabled:opacity-50 disabled:cursor-default"
+                            className="cursor-pointer text-[12.5px] off-solid disabled:cursor-default"
                             style={{ background: "#ffb700", border: "1px solid #ffb700", color: "#1a0e00", borderRadius: 999, height: 34, padding: "0 16px", fontWeight: 700, fontFamily: "inherit" }}
                           >
                             {busy ? "Saving…" : "Save"}
@@ -2687,7 +2686,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                     <button
                       onClick={() => submitComment(null, commentText, commentImage, commentGifUrl)}
                       disabled={busy || !commentText.trim()}
-                      className="cm-send cursor-pointer text-[12.5px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+                      className="cm-send cursor-pointer text-[12.5px] shrink-0 off-solid disabled:cursor-default"
                       style={{ ...btnBlue, height: 36, borderRadius: 999, padding: "0 18px", fontWeight: 600 }}
                     >
                       Comment
@@ -3227,7 +3226,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                               </label>
                             )}
                             <button onClick={saveSettings} disabled={busy}
-                              className="cursor-pointer text-[11.5px] px-3.5 py-1.5 rounded-lg ml-auto disabled:opacity-50 disabled:cursor-default" style={btnBlue}>
+                              className="cursor-pointer text-[11.5px] px-3.5 py-1.5 rounded-lg ml-auto off-solid disabled:cursor-default" style={btnBlue}>
                               Save changes
                             </button>
                           </div>
@@ -3279,7 +3278,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                               ))}
                             </span>
                             <button onClick={createTag} disabled={!newTagName.trim()}
-                              className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-default" style={btnBlue}>
+                              className="cursor-pointer text-[11.5px] px-3 py-1.5 rounded-lg off-solid disabled:cursor-default" style={btnBlue}>
                               Add
                             </button>
                           </div>
@@ -3444,8 +3443,8 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
             {applyFor.application_prompt && (
               <p className="m-0 mb-2 text-[12.5px]" style={{
                 color: "#e2b96b", lineHeight: 1.5, whiteSpace: "pre-wrap",
-                padding: "8px 10px", background: "rgba(226,185,107,0.07)",
-                border: "0.5px solid rgba(226,185,107,0.25)", borderRadius: 10,
+                padding: "8px 10px", background: "#111114",
+                border: "1px solid #26262e", borderRadius: 10,
               }}>
                 {applyFor.application_prompt}
               </p>
@@ -3472,7 +3471,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                   loadCommunities();
                 }}
                 disabled={applyBusy || (!!applyFor.application_prompt && !applyMessage.trim())}
-                className="cursor-pointer text-[12.5px] font-semibold px-4 py-2 disabled:opacity-50"
+                className="cursor-pointer text-[12.5px] font-semibold px-4 py-2 off-solid"
                 style={btnBlue}
               >
                 {applyBusy ? "Sending…" : "Send application"}
@@ -3533,7 +3532,7 @@ export default function CommunitiesPage({ open = true, onClose, onStartDiscussio
                   <button
                     onClick={submitRepost}
                     disabled={busy || !repostCommunity}
-                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-default"
+                    className="cursor-pointer text-[12px] px-4 py-2 rounded-lg off-solid disabled:cursor-default"
                     style={btnBlue}
                   >
                     {busy ? "Reposting…" : "Repost"}

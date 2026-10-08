@@ -62,13 +62,9 @@ export default function WelcomePage() {
       setAvatarUrl(data.avatar_url || "");
       setBio(data.bio || "");
       // Prefill display name from the profile, falling back to the name
-      // Google provided at sign-up.
-      setDisplayName(
-        data.display_name ||
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          ""
-      );
+      // Google or Discord provided at sign-up (Discord's can end in "#0").
+      const given = user.user_metadata?.custom_claims?.global_name || user.user_metadata?.full_name || user.user_metadata?.name || "";
+      setDisplayName(data.display_name || String(given).replace(/#\d+$/, ""));
     }
     setLoaded(true);
   }, [router, supabase]);

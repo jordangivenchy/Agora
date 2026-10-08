@@ -109,6 +109,16 @@ describe("where a line ends", () => {
     expect(lineEnd(10, undefined, "Yes.", undefined)).toBeCloseTo(11.2, 1);
   });
 
+  it("doesn't believe an end far later than the words could take", () => {
+    // five words, and the model said they lasted thirty seconds
+    const end = lineEnd(2462.8, 2492.8, "Is that a hiking bag?", 2504.3);
+    expect(end - 2462.8).toBeGreaterThan(3);
+    expect(end - 2462.8).toBeLessThan(7);
+    // a long sentence may still take its time
+    const long = "word ".repeat(30).trim();
+    expect(lineEnd(100, 118, long, undefined)).toBe(118);
+  });
+
   it("is always after the start", () => {
     expect(lineEnd(10, 10, "Yes.", 10.1)).toBeGreaterThan(10);
     expect(lineEnd(10, 9, "Yes.", undefined)).toBeGreaterThan(10);

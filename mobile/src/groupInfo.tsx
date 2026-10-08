@@ -68,7 +68,7 @@ export function GroupInfoSheet({ open, chatId, name, me, members, onClose, onRen
             {label("Name")}
             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
               <TextInput value={draft} onChangeText={(t) => setDraft(t.slice(0, GROUP_NAME_MAX))} editable={isOwner} placeholderTextColor={colors.faint} style={{ flex: 1, height: 38, borderRadius: 10, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#0b0b0d", color: "#fff", fontFamily: fonts.body, fontSize: 13.5, paddingHorizontal: 12, opacity: isOwner ? 1 : 0.7 }} />
-              {isOwner && <Pressable onPress={() => void rename()} disabled={busy === "rename" || !draft.trim() || draft.trim() === name} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.yellow, opacity: !draft.trim() || draft.trim() === name ? 0.45 : 1 }}><Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 12.5 }}>Save</Text></Pressable>}
+              {isOwner && <Pressable onPress={() => void rename()} disabled={busy === "rename" || !draft.trim() || draft.trim() === name} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: !draft.trim() || draft.trim() === name ? colors.off : colors.yellow }}><Text style={{ color: !draft.trim() || draft.trim() === name ? colors.offInk : colors.ink, fontFamily: fonts.bold, fontSize: 12.5 }}>Save</Text></Pressable>}
             </View>
             {!isOwner && <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11.5, marginTop: 6 }}>Only the group's owner can rename it.</Text>}
             {label(`Members · ${members.length}`)}

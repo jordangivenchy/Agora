@@ -151,9 +151,9 @@ export default function FollowListModal({
           <div
             className="text-sm rounded-lg px-3 py-2 mb-3"
             style={{
-              background: "rgba(232,64,64,0.1)",
-              border: "1px solid rgba(232,64,64,0.3)",
-              color: "#ff6b6b",
+              background: "#111114",
+              border: "1px solid #26262e",
+              color: "#ff8a80",
               fontSize: 12,
             }}
           >

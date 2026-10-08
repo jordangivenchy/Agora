@@ -746,7 +746,7 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
       {/* Composer */}
       <div className="dm-composer" style={{ position: "relative", padding: page ? "10px 14px" : "8px 10px", flexShrink: 0 }}>
         {replyTo && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, padding: "4px 8px", borderLeft: `2px solid ${YELLOW}`, borderRadius: 6, background: "rgba(255,183,0,0.08)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, padding: "4px 8px", borderLeft: `2px solid ${YELLOW}`, borderRadius: 6, background: "#111114" }}>
             <div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.3 }}>
               <span style={{ display: "block", color: "#c9c9d4", fontWeight: 700 }}>
                 Replying to {replyTo.sender_id === me ? "yourself" : displayName(who(replyTo.sender_id))}
@@ -890,8 +890,9 @@ const GroupThread = forwardRef<DmThreadHandle, Props>(function GroupThread(
             aria-label="Send"
             style={{
               ...dmIconBtn,
-              background: canSend ? YELLOW : "rgba(255,183,0,0.3)",
-              color: canSend ? YELLOW_INK : "rgba(255,255,255,0.55)",
+              /* Nothing to send yet: a solid quiet disc, not a faded yellow one. */
+              background: canSend ? YELLOW : "#1c1c22",
+              color: canSend ? YELLOW_INK : "#6f6f7c",
               cursor: canSend ? "pointer" : "default",
             }}
           >

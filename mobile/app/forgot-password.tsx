@@ -58,7 +58,7 @@ export default function ForgotPassword() {
             </>
           ) : (
             <>
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#0f2a1a", borderWidth: 1, borderColor: "#1f5a35", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#141418", borderWidth: 1, borderColor: "#23232b", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                 <Ionicons name="mail-outline" size={24} color="#22c55e" />
               </View>
               <Title>Check your inbox</Title>

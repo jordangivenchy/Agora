@@ -152,7 +152,7 @@ export default function ModPage({ initial }: {
 
         {(loadError || actionError) && (
           <p className="mb-4 px-4 py-2.5 rounded-lg text-[12px]"
-            style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+            style={{ background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
             {loadError || actionError}
           </p>
         )}
@@ -233,14 +233,14 @@ export default function ModPage({ initial }: {
                   {r.status !== "actioned" && (
                     <button onClick={() => resolve(r, "actioned")} disabled={busyId === r.id}
                       className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg"
-                      style={{ background: "rgba(30,60,30,0.5)", border: "0.5px solid #3a5a3a", color: "#97c459", fontFamily: "inherit" }}>
+                      style={{ background: "#111114", border: "1px solid #33333c", color: "#97c459", fontFamily: "inherit" }}>
                       Mark actioned
                     </button>
                   )}
                   {r.status === "open" && (
                     <button onClick={() => resolve(r, "reviewed")} disabled={busyId === r.id}
                       className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg"
-                      style={{ background: "rgba(24,48,82,0.5)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontFamily: "inherit" }}>
+                      style={{ background: "#111114", border: "1px solid #33333c", color: "#f5f5f0", fontFamily: "inherit" }}>
                       Mark reviewed
                     </button>
                   )}

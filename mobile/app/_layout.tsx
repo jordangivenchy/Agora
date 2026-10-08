@@ -92,6 +92,8 @@ export default function RootLayout() {
                     <Stack.Screen name="sign-in" options={{ headerShown: false }} />
                     <Stack.Screen name="auth" options={{ headerShown: false }} />
                     <Stack.Screen name="welcome" options={{ headerShown: false }} />
+                    <Stack.Screen name="agree" options={{ headerShown: false, gestureEnabled: false }} />
+                    <Stack.Screen name="legal/[doc]" options={{ title: "", headerBackTitle: "Back" }} />
                     <Stack.Screen name="forgot-password" options={{ title: "", headerBackTitle: "Back" }} />
                     <Stack.Screen name="room/[id]" options={{ headerShown: false, gestureEnabled: false }} />
                     <Stack.Screen name="you" options={{ headerShown: false }} />

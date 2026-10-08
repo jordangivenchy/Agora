@@ -2056,7 +2056,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
               <button
                 onClick={submitGateCode}
                 disabled={gateCodeBusy || gateCode.trim().length < 6}
-                className="cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                className="cursor-pointer off-solid disabled:cursor-default"
                 style={{
                   background: "#d9a238",
                   border: "none",

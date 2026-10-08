@@ -57,8 +57,8 @@ function sectionLabel(text: string, accent?: React.ReactNode) {
 
 const liveRow: React.CSSProperties = {
   borderRadius: 10,
-  background: "rgba(232,64,64,0.06)",
-  border: "0.5px solid rgba(232,64,64,0.3)",
+  background: "#111114",
+  border: "1px solid #26262e",
 };
 const quietRow: React.CSSProperties = {
   borderRadius: 10,
@@ -219,9 +219,9 @@ export default function FeedRail({ userId }: { userId: string | null }) {
               <button
                 onClick={() => toggleQueue(t)}
                 disabled={queue.busy}
-                className="cursor-pointer text-[10px] font-semibold px-2.5 py-1 rounded-md shrink-0 disabled:opacity-60"
+                className="cursor-pointer text-[10px] font-semibold px-2.5 py-1 rounded-md shrink-0 off-solid"
                 style={queue.entries.some((e) => e.topicId === t.id)
-                  ? { background: "#1d4f8c", border: "none", color: "#fff", fontFamily: "inherit" }
+                  ? { background: "#1c1c22", border: "none", color: "#f5f5f0", fontFamily: "inherit" }
                   : t.queue_count > 0
                     ? { background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }
                     : { background: "#2f7fe0", border: "none", color: "#fff", fontFamily: "inherit" }}

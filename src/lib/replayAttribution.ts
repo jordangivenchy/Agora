@@ -143,11 +143,15 @@ export function pickSpeakers(
 
 /** When a line ends, in seconds on its own clock: where the model said,
     else where a person speaking those words would be done — never past
-    the next line's start, never unreasonably long. */
+    the next line's start, and never longer than those words could take
+    said slowly (a model's end for a short line is sometimes the start of
+    the next thing it heard, half a minute on: "Is that a hiking bag?"
+    came back as thirty seconds). */
 export function lineEnd(start: number, end: number | undefined, text: string, nextStart: number | undefined): number {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   const spoken = start + Math.min(20, Math.max(1.2, words / 2.4));
-  let to = end !== undefined && end > start ? Math.min(end, start + 30) : spoken;
+  const slowest = start + Math.min(30, Math.max(3, words / 1.2 + 2));
+  let to = end !== undefined && end > start ? Math.min(end, slowest) : spoken;
   if (nextStart !== undefined && nextStart > start) to = Math.min(to, nextStart);
   return Math.max(to, start + 0.4);
 }

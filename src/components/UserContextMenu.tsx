@@ -639,7 +639,7 @@ function ModerationPanel({
         </div>
 
         {error && (
-          <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, color: "#fca5a5", fontSize: 12.5, padding: "9px 12px", marginBottom: 14 }}>
+          <div style={{ background: "#111114", border: "1px solid #26262e", borderRadius: 10, color: "#ff8a80", fontSize: 12.5, padding: "9px 12px", marginBottom: 14 }}>
             {error}
           </div>
         )}
@@ -651,7 +651,7 @@ function ModerationPanel({
         {data && (
           <>
             {suspended && (
-              <div className="flex items-center justify-between gap-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "9px 12px", marginBottom: 14 }}>
+              <div className="flex items-center justify-between gap-3" style={{ background: "#111114", border: "1px solid #26262e", borderRadius: 10, padding: "9px 12px", marginBottom: 14 }}>
                 <span style={{ color: "#fca5a5", fontSize: 12.5 }}>
                   Suspended until{" "}
                   {new Date(data.suspended_until!).getFullYear() > 9000
@@ -719,7 +719,7 @@ function ModerationPanel({
               <button
                 onClick={addNote}
                 disabled={saving || !note.trim()}
-                className="cursor-pointer disabled:opacity-50 shrink-0"
+                className="cursor-pointer off-solid shrink-0"
                 style={{ padding: "0 18px", borderRadius: 100, background: "var(--accent-blue)", border: "none", color: "#fff", fontSize: 13, fontWeight: 600 }}
               >
                 {saving ? "…" : "Add"}

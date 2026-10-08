@@ -394,8 +394,8 @@ export function NewRoomCard({ prefill, onClose, onCreateCommunity }: { prefill: 
                 <Ionicons name="arrow-back" size={14} color={MUTED} />
                 <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5 }}>Back</Text>
               </Pressable>
-              <Pressable onPress={() => void joinByCode()} disabled={busy || code.length < 6} style={({ pressed }) => ({ paddingHorizontal: 26, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#e2ad45" : "#d9a238", opacity: busy || code.length < 6 ? 0.5 : 1 })}>
-                <Text style={{ color: "#2b1a02", fontFamily: fonts.semi, fontSize: 14 }}>{busy ? "Joining…" : "Join room"}</Text>
+              <Pressable onPress={() => void joinByCode()} disabled={busy || code.length < 6} style={({ pressed }) => ({ paddingHorizontal: 26, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: busy || code.length < 6 ? colors.off : pressed ? "#e2ad45" : "#d9a238" })}>
+                <Text style={{ color: busy || code.length < 6 ? colors.offInk : "#2b1a02", fontFamily: fonts.semi, fontSize: 14 }}>{busy ? "Joining…" : "Join room"}</Text>
               </Pressable>
             </View>
           </View>
@@ -403,10 +403,10 @@ export function NewRoomCard({ prefill, onClose, onCreateCommunity }: { prefill: 
           <View style={[CARD, { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 20 }]}>
             <Text style={{ color: TEXT, fontFamily: fonts.bold, fontSize: 20, letterSpacing: -0.4, marginBottom: 6 }}>Private room created</Text>
             <Text style={{ color: MUTED, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20, marginBottom: 20 }}>{inviteNote(access)}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 16, borderRadius: 14, backgroundColor: "#0d0b07", borderWidth: 1, borderColor: "rgba(226,185,107,0.35)", marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 16, borderRadius: 14, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38", marginBottom: 16 }}>
               <Text selectable style={{ color: "#ffdd85", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 26, fontWeight: "700", letterSpacing: 5.5 }}>{invite.code}</Text>
-              <Pressable onPress={() => void copyCode()} accessibilityLabel="Copy the invite code" style={({ pressed }) => ({ paddingHorizontal: 14, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#241c0c" : "#1a1508", borderWidth: 1, borderColor: "rgba(226,185,107,0.45)" })}>
-                <Text style={{ color: "#ffdd85", fontFamily: fonts.semi, fontSize: 12 }}>{copied ? "Copied!" : "Copy"}</Text>
+              <Pressable onPress={() => void copyCode()} accessibilityLabel="Copy the invite code" style={({ pressed }) => ({ paddingHorizontal: 14, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#26262e" : "#1c1c22", borderWidth: 1, borderColor: "#33333c" })}>
+                <Text style={{ color: "#f5f5f0", fontFamily: fonts.semi, fontSize: 12 }}>{copied ? "Copied!" : "Copy"}</Text>
               </Pressable>
             </View>
             <View style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: "#060607", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginBottom: 18 }}>
@@ -487,9 +487,9 @@ function YellowButton({ label, disabled, onPress }: { label: string; disabled: b
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => ({ height: 38, paddingHorizontal: 18, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "#ffc22e" : colors.yellow, opacity: disabled ? 0.5 : 1 })}
+      style={({ pressed }) => ({ height: 38, paddingHorizontal: 18, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: disabled ? colors.off : pressed ? "#ffc22e" : colors.yellow })}
     >
-      <Text style={{ color: INK, fontFamily: fonts.bold, fontSize: 13.5 }}>{label}</Text>
+      <Text style={{ color: disabled ? colors.offInk : INK, fontFamily: fonts.bold, fontSize: 13.5 }}>{label}</Text>
     </Pressable>
   );
 }

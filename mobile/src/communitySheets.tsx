@@ -25,8 +25,8 @@ function Sheet({ open, onClose, title, action, children }: { open: boolean; onCl
             <Pressable onPress={onClose} hitSlop={8}><Text style={{ color: "#c3c3ce", fontFamily: fonts.body, fontSize: 15 }}>{action ? "Cancel" : "Close"}</Text></Pressable>
             <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.text, fontFamily: fonts.title, fontSize: 15, marginHorizontal: 8 }}>{title}</Text>
             {action ? (
-              <Pressable onPress={action.onPress} disabled={action.disabled} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: action.danger ? colors.red : colors.yellow, alignItems: "center", justifyContent: "center", opacity: action.disabled ? 0.45 : 1 }}>
-                <Text style={{ color: action.danger ? "#fff" : colors.ink, fontFamily: fonts.bold, fontSize: 13 }}>{action.label}</Text>
+              <Pressable onPress={action.onPress} disabled={action.disabled} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: action.disabled ? colors.off : action.danger ? colors.red : colors.yellow, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: action.disabled ? colors.offInk : action.danger ? "#fff" : colors.ink, fontFamily: fonts.bold, fontSize: 13 }}>{action.label}</Text>
               </Pressable>
             ) : <View style={{ width: 44 }} />}
           </View>
@@ -70,7 +70,7 @@ export function ApplySheet({ community, onClose, onApplied }: { community: Targe
         {prompt ? "A moderator reviews every application — answer their questions below." : "A moderator reviews every application. A line about why you want in helps."}
       </Text>
       {prompt && (
-        <View style={{ padding: 10, borderRadius: 10, backgroundColor: "#17150e", borderWidth: 1, borderColor: "#4a4127", marginBottom: 10 }}>
+        <View style={{ padding: 10, borderRadius: 10, backgroundColor: "#141418", borderWidth: 1, borderColor: "#2e2e38", marginBottom: 10 }}>
           <Text style={{ color: "#e2b96b", fontFamily: fonts.body, fontSize: 13, lineHeight: 19 }}>{prompt}</Text>
         </View>
       )}

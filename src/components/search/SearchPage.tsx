@@ -791,7 +791,7 @@ export default function SearchPage({ open, pinned, query: rawQuery, setQuery: se
                 </div>
               )}
               {status === "error" && (
-                <p className="text-[12px] px-4 py-3 mb-3 rounded-xl" style={{ background: "rgba(226,120,120,0.08)", border: "0.5px solid rgba(226,120,120,0.3)", color: "#f09595" }}>
+                <p className="text-[12px] px-4 py-3 mb-3 rounded-xl" style={{ background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
                   Couldn&apos;t search right now — try again.
                 </p>
               )}

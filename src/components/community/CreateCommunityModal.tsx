@@ -347,7 +347,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           {/* Gate: the database would refuse this account right now. */}
           {gate && !gate.allowed && gate.reason && (
             <div className="ccm-gate" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "26px 12px 18px" }}>
-              <span style={{ width: 54, height: 54, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "rgba(255,183,0,0.12)", color: "#ffb700", border: "1px solid rgba(255,183,0,0.25)" }}>
+              <span style={{ width: 54, height: 54, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "#141418", color: "#ffb700", border: "1px solid #23232b" }}>
                 <Icon name={gate.reason === "email_unverified" ? "mail" : gate.reason === "not_verified" ? "user-check" : gate.reason === "account_too_new" ? "clock" : "landmark"} size={22} />
               </span>
               <p style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#f5f5f0" }}>
@@ -429,7 +429,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
                           color: on ? "#1a0e00" : "#eeeef5", fontFamily: "inherit",
                         }}
                       >
-                        <span style={{ width: 30, height: 30, borderRadius: 9, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: on ? "#1a0e00" : "#16161a", color: on ? "#ffb700" : "#c0c0c8" }}>
+                        <span style={{ width: 30, height: 30, borderRadius: 9, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#16161a", color: on ? "#ffb700" : "#c0c0c8" }}>
                           <Icon name={k.icon} size={15} />
                         </span>
                         <span style={{ minWidth: 0 }}>
@@ -599,7 +599,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
           )}
 
           {error && (
-            <p className="m-0 px-4 py-2.5 rounded-lg" style={{ fontSize: 12.5, background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+            <p className="m-0 px-4 py-2.5 rounded-lg" style={{ fontSize: 12.5, background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
               {error}
             </p>
           )}
@@ -635,7 +635,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               type="button"
               onClick={() => canNext && go(step + 1)}
               disabled={!canNext}
-              className="cursor-pointer disabled:cursor-default disabled:opacity-50"
+              className="cursor-pointer disabled:cursor-default off-solid"
               style={{ fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }}
             >
               Next
@@ -645,7 +645,7 @@ export default function CreateCommunityModal({ open, onClose, onCreated, onCreat
               type="button"
               onClick={create}
               disabled={!canCreate || busy}
-              className="cursor-pointer disabled:cursor-default disabled:opacity-50"
+              className="cursor-pointer disabled:cursor-default off-solid"
               style={{ fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 999, background: "#ffb700", border: "none", color: "#1a0e00", fontFamily: "inherit" }}
             >
               {busy ? "Creating…" : "Create community"}

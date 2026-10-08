@@ -1,5 +1,5 @@
 /* Sign in, the site's login page (app/login): sign in or create an
-   account, Google, the emailed code for two-factor accounts, the way to
+   account, Google or Discord, the emailed code for two-factor accounts, the way to
    a forgotten password. A brand-new account goes on to the welcome flow. */
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
@@ -9,17 +9,20 @@ import { isNewAccount, useSession } from "../src/session";
 import { colors, fonts } from "../src/theme";
 import { Button, Field, Note, Screen, Sub, Title } from "../src/ui";
 import { goHome } from "../src/goHome";
+import { DiscordMark } from "../src/discordMark";
+import { GoogleMark } from "../src/googleMark";
 
 type Mode = "signin" | "signup" | "2fa";
 
 export default function SignIn() {
-  const { signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, listenAsGuest } = useSession();
+  const { signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, listenAsGuest } = useSession();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [discordBusy, setDiscordBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
@@ -54,6 +57,16 @@ export default function SignIn() {
     setError(null);
     const err = await signInWithGoogle();
     setGoogleBusy(false);
+    if (err) setError(err);
+    else await finish();
+  }
+
+  async function discord() {
+    if (discordBusy) return;
+    setDiscordBusy(true);
+    setError(null);
+    const err = await signInWithDiscord();
+    setDiscordBusy(false);
     if (err) setError(err);
     else await finish();
   }
@@ -161,8 +174,18 @@ export default function SignIn() {
               </>
             ) : (
               <>
-                <Pressable onPress={() => void google()} disabled={googleBusy} style={({ pressed }) => ({ height: 46, borderRadius: 999, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center", marginBottom: 14, opacity: googleBusy ? 0.6 : pressed ? 0.9 : 1 })}>
-                  <Text style={{ color: "#1f1f1f", fontFamily: fonts.semi, fontSize: 14.5 }}>{googleBusy ? "Opening Google…" : "Continue with Google"}</Text>
+                {/* Google: filled with Google's own blue, words in white. Google lets its G appear in its
+                    four colours only, so it sits on a white disc, the way Google draws its own blue button. */}
+                <Pressable onPress={() => void google()} disabled={googleBusy} accessibilityRole="button" style={({ pressed }) => ({ height: 46, borderRadius: 999, flexDirection: "row", gap: 9, backgroundColor: pressed ? "#185abc" : "#1a73e8", alignItems: "center", justifyContent: "center", marginBottom: 10, opacity: googleBusy ? 0.6 : 1 })}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
+                    <GoogleMark size={18} />
+                  </View>
+                  <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 14.5 }}>{googleBusy ? "Opening Google…" : "Continue with Google"}</Text>
+                </Pressable>
+                {/* Discord, under Google: filled with Discord's own colour, its mark and words in white. */}
+                <Pressable onPress={() => void discord()} disabled={discordBusy} accessibilityRole="button" style={({ pressed }) => ({ height: 46, borderRadius: 999, flexDirection: "row", gap: 9, backgroundColor: pressed ? "#4752c4" : "#5865f2", alignItems: "center", justifyContent: "center", marginBottom: 14, opacity: discordBusy ? 0.6 : 1 })}>
+                  <DiscordMark size={18} color="#fff" />
+                  <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 14.5 }}>{discordBusy ? "Opening Discord…" : "Continue with Discord"}</Text>
                 </Pressable>
                 <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11.5, textAlign: "center", marginBottom: 12 }}>or with email</Text>
                 {mode === "signup" && (
@@ -179,7 +202,7 @@ export default function SignIn() {
                 <Button onPress={() => void submit()} disabled={!email.trim() || !password || (mode === "signup" && !username.trim())} busy={busy}>{mode === "signin" ? "Sign in" : "Create account"}</Button>
                 <View style={{ height: 10 }} />
                 <Button kind="secondary" onPress={() => { listenAsGuest(); goHome(); }}>Browse discussions without signing in</Button>
-                <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 16 }}>By continuing, you agree to AgoraSphere's Terms of Service and acknowledge our Privacy Policy.</Text>
+                <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 16 }}>By continuing, you agree to AgoraSphere's <Text onPress={() => router.push("/legal/terms")} accessibilityRole="link" style={{ color: "#c9c9d2", textDecorationLine: "underline" }}>Terms</Text> and acknowledge our <Text onPress={() => router.push("/legal/privacy")} accessibilityRole="link" style={{ color: "#c9c9d2", textDecorationLine: "underline" }}>Privacy Policy</Text>.</Text>
               </>
             )}
           </View>

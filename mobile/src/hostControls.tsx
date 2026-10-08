@@ -25,8 +25,8 @@ const MIGRATION_HINT = "This needs the stage-roles migration applied to the data
 
 function Act({ label, onPress, primary, danger, disabled, wide }: { label: string; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean; wide?: boolean }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={{ paddingHorizontal: 10, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", alignSelf: wide ? "stretch" : "auto", backgroundColor: primary ? colors.yellow : "#141418", borderWidth: 1, borderColor: primary ? colors.yellow : danger ? colors.red : "#2a2a33", opacity: disabled ? 0.45 : 1 }}>
-      <Text style={{ color: primary ? colors.ink : danger ? "#ff9d92" : colors.text, fontFamily: fonts.semi, fontSize: 12 }}>{label}</Text>
+    <Pressable onPress={onPress} disabled={disabled} style={{ paddingHorizontal: 10, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", alignSelf: wide ? "stretch" : "auto", backgroundColor: primary ? (disabled ? colors.off : colors.yellow) : "#141418", borderWidth: 1, borderColor: primary ? (disabled ? colors.off : colors.yellow) : danger ? colors.red : "#2a2a33", opacity: disabled && !primary ? 0.45 : 1 }}>
+      <Text style={{ color: primary ? (disabled ? colors.offInk : colors.ink) : danger ? "#ff9d92" : colors.text, fontFamily: fonts.semi, fontSize: 12 }}>{label}</Text>
     </Pressable>
   );
 }

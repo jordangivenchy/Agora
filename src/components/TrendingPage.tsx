@@ -360,7 +360,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                   className="inline-flex items-center justify-center cursor-pointer"
                   style={{
                     width: 46, height: 46, borderRadius: "50%",
-                    background: hearted[activeShort.id] ? "rgba(240,96,94,0.15)" : "rgba(255,255,255,0.06)",
+                    background: "#111114",
                     border: "0.5px solid #3a3a42",
                     color: hearted[activeShort.id] ? "#f0605e" : "#d5d5dc", fontSize: 18,
                   }}
@@ -393,7 +393,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                 <button
                   onClick={() => window.dispatchEvent(new CustomEvent("agora:tab", { detail: "battle" }))}
                   className="inline-flex items-center justify-center cursor-pointer"
-                  style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(24,48,82,0.9)", border: "0.5px solid #2c5382", color: "#9cc4f0", fontSize: 16 }}
+                  style={{ width: 46, height: 46, borderRadius: "50%", background: "#111114", border: "0.5px solid #3a3a42", color: "#d5d5dc", fontSize: 16 }}
                   title="Discuss this topic"
                 >
                   <Icon name="sparkles" size={18} />
@@ -514,7 +514,7 @@ export default function TrendingPage({ open = true, onClose }: Props) {
                           <span className="feed-live-dot" aria-hidden="true" style={{ background: "#fff", boxShadow: "none", width: 6, height: 6, marginRight: 4 }} />LIVE
                         </span>
                       ) : r.status === "created" ? (
-                        <span className="absolute top-2 left-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full" style={{ background: "rgba(51,41,26,0.95)", border: "0.5px solid #6b5a30", color: "#f4d47c" }}>
+                        <span className="absolute top-2 left-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full" style={{ background: "#111114", border: "0.5px solid #3a3a42", color: "#f4d47c" }}>
                           OPEN — JOIN
                         </span>
                       ) : (

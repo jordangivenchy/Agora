@@ -371,7 +371,7 @@ function MenuSheet({ open, onClose, name, sub, who, sections, rowLabel, rowDisab
     const meta = ROW_META[id];
     const off = rowDisabled(id);
     return (
-      <Pressable key={id} onPress={() => onRun(id)} disabled={off} accessibilityRole="menuitem" style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10, backgroundColor: pressed ? (meta.danger ? "#2a1414" : "#1a1a20") : "transparent", opacity: off ? 0.45 : 1 })}>
+      <Pressable key={id} onPress={() => onRun(id)} disabled={off} accessibilityRole="menuitem" style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10, backgroundColor: pressed ? "#1a1a20" : "transparent", opacity: off ? 0.45 : 1 })}>
         <Ionicons name={meta.icon} size={16} color={meta.danger ? "#f08a8a" : colors.muted} />
         <Text style={{ color: meta.danger ? "#f08a8a" : colors.text, fontFamily: fonts.medium, fontSize: 14 }}>{rowLabel(id)}</Text>
       </Pressable>
@@ -451,7 +451,7 @@ function ModPanel({ target, onClose }: { target: MenuTarget; onClose: () => void
           {data && (
             <>
               {suspended && (
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, backgroundColor: "#1c1010", borderWidth: 1, borderColor: "#5a2a2a", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, backgroundColor: "#141418", borderWidth: 1, borderColor: "#2e2e38", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 14 }}>
                   <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, flex: 1 }}>Suspended until {new Date(data.suspended_until!).getFullYear() > 9000 ? "forever (banned)" : new Date(data.suspended_until!).toLocaleString()}</Text>
                   <Pressable onPress={() => void supabase.rpc("mod_unsuspend_user", { p_user: target.userId }).then(() => load())} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }}>
                     <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 11.5 }}>Lift suspension</Text>
@@ -477,8 +477,8 @@ function ModPanel({ target, onClose }: { target: MenuTarget; onClose: () => void
               ))}
               <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                 <TextInput value={note} onChangeText={(t) => setNote(t.slice(0, 2000))} placeholder="Add a moderator note…" placeholderTextColor={colors.faint} onSubmitEditing={() => void addNote()} style={{ flex: 1, height: 38, paddingHorizontal: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, color: colors.text, fontFamily: fonts.body, fontSize: 13 }} />
-                <Pressable onPress={() => void addNote()} disabled={saving || !note.trim()} style={{ paddingHorizontal: 18, borderRadius: 999, backgroundColor: colors.blue, alignItems: "center", justifyContent: "center", opacity: saving || !note.trim() ? 0.5 : 1 }}>
-                  <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 13 }}>{saving ? "…" : "Add"}</Text>
+                <Pressable onPress={() => void addNote()} disabled={saving || !note.trim()} style={{ paddingHorizontal: 18, borderRadius: 999, backgroundColor: saving || !note.trim() ? colors.off : colors.blue, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: saving || !note.trim() ? colors.offInk : "#fff", fontFamily: fonts.semi, fontSize: 13 }}>{saving ? "…" : "Add"}</Text>
                 </Pressable>
               </View>
             </>

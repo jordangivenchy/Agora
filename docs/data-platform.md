@@ -52,6 +52,31 @@ Functions: `has_data_consent(user_id, category)`, `export_user_data()`,
 style + positions) · `personalization` (recommendations) · `coaching` (profile
 synthesis + coach notes). Each write path gates on exactly one.
 
+`research` (2026-10-07) is a different kind of switch: it says whether what a
+person says in **public** rooms may be counted in the anonymous totals the
+terms describe (`src/components/agora/legal.ts`, Terms §6: no names, no quotes,
+nothing from fewer than 25 people). It is on unless switched off, in Settings →
+Data & Coach. Nothing works such totals out yet; whatever does must check
+`hasConsent(userId, "research")` first, use public rooms only, and never emit a
+row that can be traced to a person. Since 20260819 the other four are also on
+by default (seeded at signup), not opt-in as principle 1 above still says.
+
+## What a person tells us about themselves
+
+`user_details` (2026-10-07, migration `20261007_terms_agreement.sql`) holds
+three things asked once, when a person agrees to the terms: the **year** they
+were born (the full date is checked for 18+ by `accept_terms()` and never
+stored), their **country** (ISO 3166-1, `US`) and, in the United States, their
+**state** (ISO 3166-2, `US-CA`). It is private: read by its owner only, written
+only through `accept_terms()` and `set_my_place()`, never shown on a profile.
+A date of birth under 18 stores nothing but `under_age_at`, which holds the
+account at the agreement step until it is cleared by hand.
+
+The terms allow a total to be split by age group, or by country or state, with
+the same limits on every part of it. Whatever works totals out must therefore
+apply the 25-person floor to each cell of a breakdown, not just to the whole,
+and must derive an age *group* from `birth_year`, never emit the year itself.
+
 ## Libraries (the workstreams)
 
 All types and the consent gate live in `src/lib/dataPlatform/contract.ts`.

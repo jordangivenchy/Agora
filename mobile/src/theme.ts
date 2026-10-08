@@ -11,6 +11,10 @@ export const colors = {
   faint: "#7f7f89",
   yellow: "#ffb700",
   ink: "#1a0e00",
+  /* A coloured button that can't be pressed yet: a solid quiet fill with
+     dim words, never its colour faded to a tint (the site's .off-solid). */
+  off: "#1c1c22",
+  offInk: "#6f6f7c",
   blue: "#3b82f6",
   blueText: "#4a9eff",
   purple: "#a99df2",

@@ -44,12 +44,13 @@ export default function Welcome() {
     void supabase.from("users").select("username, display_name, avatar_url, bio").eq("id", uid).maybeSingle().then(({ data }) => {
       if (!on) return;
       const r = data as { username: string | null; display_name: string | null; avatar_url: string | null; bio: string | null } | null;
-      const meta = (session?.user.user_metadata ?? {}) as { full_name?: string; name?: string };
+      const meta = (session?.user.user_metadata ?? {}) as { full_name?: string; name?: string; custom_claims?: { global_name?: string } };
       setInitialUsername(r?.username || "");
       setUsername(r?.username || "");
       setAvatarUrl(r?.avatar_url || "");
       setBio(r?.bio || "");
-      setDisplayName(r?.display_name || meta.full_name || meta.name || "");
+      // the name Google or Discord gave us (Discord's can end in "#0")
+      setDisplayName(r?.display_name || (meta.custom_claims?.global_name || meta.full_name || meta.name || "").replace(/#\d+$/, ""));
       setLoaded(true);
     });
     return () => { on = false; };

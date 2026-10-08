@@ -48,11 +48,16 @@ export function Input(props: TextInputProps) {
 }
 
 export function Btn({ label, onPress, kind = "primary", disabled, style }: { label: string; onPress: () => void; kind?: "primary" | "ghost" | "danger"; disabled?: boolean; style?: object }) {
-  const bg = kind === "primary" ? "#183052" : kind === "danger" ? "#2a1414" : "transparent";
-  const border = kind === "primary" ? "#2c5382" : kind === "danger" ? "#6b2a2a" : "#3a3a42";
-  const color = kind === "primary" ? "#9cc4f0" : kind === "danger" ? "#fca5a5" : "#c0c0c8";
+  /* One solid button, as the site's settings draw theirs (.stg-btn): what
+     kind it is shows in the words — red for what can't be undone, quieter
+     for the lesser choice — never in a colour washed behind them. Off, it
+     is a darker tile with dim words, not a faded one. */
+  const ghost = kind === "ghost";
+  const color = disabled ? "#5d5d66" : kind === "danger" ? "#ff6b61" : ghost ? "#c0c0c8" : "#f5f5f0";
+  const rest = ghost ? "transparent" : disabled ? "#141418" : "#1c1c22";
+  const border = ghost ? "#3a3a42" : disabled ? "#26262e" : "#33333c";
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [{ alignSelf: "flex-start", backgroundColor: bg, borderWidth: StyleSheet.hairlineWidth, borderColor: border, borderRadius: 9, paddingHorizontal: 16, paddingVertical: 9, opacity: disabled ? 0.5 : pressed ? 0.8 : 1 }, style]}>
+    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [{ alignSelf: "flex-start", backgroundColor: pressed && !disabled ? "#26262e" : rest, borderWidth: StyleSheet.hairlineWidth, borderColor: border, borderRadius: 9, paddingHorizontal: 16, paddingVertical: 9 }, style]}>
       <Text style={{ color, fontFamily: fonts.semi, fontSize: 12.5 }}>{label}</Text>
     </Pressable>
   );

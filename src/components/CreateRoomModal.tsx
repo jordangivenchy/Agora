@@ -360,8 +360,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
             className="outline-none w-full text-center uppercase"
             style={{
               padding: "13px 12px",
-              background: "rgba(226,185,107,0.06)",
-              border: `1px solid ${joinErr ? "rgba(239,68,68,0.5)" : "rgba(226,185,107,0.35)"}`,
+              background: "#0b0b0d",
+              border: `1px solid ${joinErr ? "#ff6b61" : "#33333c"}`,
               borderRadius: "14px",
               color: "#f5f5f0",
               fontFamily: "'DM Mono', monospace",
@@ -387,7 +387,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
             <button
               onClick={handleJoinByCode}
               disabled={joinBusy || joinCode.trim().length < 6}
-              className="cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer off-solid disabled:cursor-not-allowed"
               style={{
                 background: "#d9a238", border: "none", color: "#2b1a02",
                 fontFamily: "'DM Sans', sans-serif", fontSize: "13.5px", fontWeight: 600,
@@ -450,8 +450,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           <div
             className="flex items-center justify-between"
             style={{
-              background: "rgba(226,185,107,0.06)",
-              border: "1px solid rgba(226,185,107,0.35)",
+              background: "#111114",
+              border: "1px solid #26262e",
               borderRadius: "14px",
               padding: "18px 20px",
               marginBottom: "18px",
@@ -476,9 +476,9 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               }}
               className="cursor-pointer transition-all"
               style={{
-                background: "rgba(226,185,107,0.14)",
-                border: "1px solid rgba(226,185,107,0.45)",
-                color: "#ffdd85",
+                background: "#0b0b0d",
+                border: "1px solid #33333c",
+                color: "#f5f5f0",
                 fontFamily: "'DM Sans', sans-serif",
                 fontSize: "12px",
                 fontWeight: 600,
@@ -650,9 +650,9 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
               <div
                 className="text-sm rounded-lg px-4 py-2"
                 style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  color: "#fca5a5",
+                  background: "#111114",
+                  border: "1px solid #26262e",
+                  color: "#ff8a80",
                 }}
               >
                 {error}
@@ -732,8 +732,8 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
                 <p
                   className="m-0 mb-2 px-3 py-2 rounded-lg text-[11.5px]"
                   style={{
-                    background: "rgba(201,176,106,0.08)",
-                    border: "1px solid rgba(201,176,106,0.25)",
+                    background: "#111114",
+                    border: "1px solid #26262e",
                     color: "#c9b06a",
                   }}
                 >
@@ -1001,7 +1001,7 @@ export default function CreateRoomModal({ open, onClose, initialMotion, initialT
           <button
             onClick={handleCreate}
             disabled={loading || navigating || !motion.trim() || !!motionIssue}
-            className="cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="cursor-pointer transition-all off-solid disabled:cursor-not-allowed"
             style={{
               background: "#ffb700",
               border: "none",

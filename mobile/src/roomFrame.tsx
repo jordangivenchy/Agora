@@ -87,8 +87,8 @@ export function RoomFrameSheet({ open, onClose, room, seats, myRole, onChange }:
                     {aboutLen}/{ABOUT_MAX} · {aboutLinesN}/{FRAME_MAX_LINES} lines{aboutLen > ABOUT_MAX ? " · too long" : aboutLinesN > FRAME_MAX_LINES ? " · too many lines" : framing?.about_at ? ` · updated ${timeAgo(framing.about_at)}` : ""}
                   </Text>
                   <View style={{ flex: 1 }} />
-                  <Pressable onPress={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy} style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.yellow, opacity: !aboutDirty || aboutOver || busy ? 0.45 : 1 }}>
-                    <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 12.5 }}>{busy ? "Saving…" : "Save"}</Text>
+                  <Pressable onPress={() => void saveAbout()} disabled={!aboutDirty || aboutOver || busy} style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: !aboutDirty || aboutOver || busy ? colors.off : colors.yellow }}>
+                    <Text style={{ color: !aboutDirty || aboutOver || busy ? colors.offInk : colors.ink, fontFamily: fonts.bold, fontSize: 12.5 }}>{busy ? "Saving…" : "Save"}</Text>
                   </Pressable>
                 </View>
               </View>

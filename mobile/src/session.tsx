@@ -58,6 +58,8 @@ interface SessionState {
   resendConfirmation(email: string): Promise<string | null>;
   /** Google through Supabase, in the system browser. Resolves to an error message, or null. */
   signInWithGoogle(): Promise<string | null>;
+  /** Discord, the same way. */
+  signInWithDiscord(): Promise<string | null>;
   signOut(): Promise<void>;
   /** Trade a beta key for a pass. Resolves to an error message, or null. */
   redeemKey(code: string): Promise<string | null>;
@@ -176,40 +178,43 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return error ? friendlyError(error.message) : null;
   }, []);
 
-  /* The same Google provider the website uses. Supabase hands back a URL
-     for Google's consent screen; the system browser opens it and returns
+  /* The same Google and Discord sign-ins the website uses. Supabase hands
+     back a URL for their consent screen; the system browser opens it and returns
      to the app at the redirect (exp://… in Expo Go, agorasphere://auth in
      the build; both must be on Supabase's redirect allow-list) carrying
      the session in the fragment. */
   const listenAsGuest = useCallback(() => setGuest(true), []);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithProvider = useCallback(async (provider: "google" | "discord") => {
+    const who = provider === "google" ? "Google" : "Discord";
     const fromExpoGo = Linking.createURL("/auth");
     const redirectTo = /^exps?:\/\//.test(fromExpoGo) ? fromExpoGo : "agorasphere://auth";
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
+        provider,
         options: { redirectTo, skipBrowserRedirect: true },
       });
-      if (error || !data.url) return error?.message ?? "Couldn't start Google sign-in.";
+      if (error || !data.url) return error?.message ?? `Couldn't start ${who} sign-in.`;
       if (Platform.OS === "web") {
         window.location.assign(data.url);
         return null;
       }
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      if (result.type !== "success") return result.type === "cancel" || result.type === "dismiss" ? "Sign-in was cancelled." : "Google sign-in didn't finish.";
+      if (result.type !== "success") return result.type === "cancel" || result.type === "dismiss" ? "Sign-in was cancelled." : `${who} sign-in didn't finish.`;
       const back = new URL(result.url);
       const params = new URLSearchParams(back.search);
       new URLSearchParams(back.hash.replace(/^#/, "")).forEach((v, k) => params.set(k, v));
       const access_token = params.get("access_token");
       const refresh_token = params.get("refresh_token");
-      if (!access_token || !refresh_token) return params.get("error_description") ?? "Google sent nothing back.";
+      if (!access_token || !refresh_token) return params.get("error_description") ?? `${who} sent nothing back.`;
       const { error: sessionErr } = await supabase.auth.setSession({ access_token, refresh_token });
       return sessionErr ? sessionErr.message : null;
     } catch (e) {
-      return e instanceof Error ? e.message : "Google sign-in failed.";
+      return e instanceof Error ? e.message : `${who} sign-in failed.`;
     }
   }, []);
+  const signInWithGoogle = useCallback(() => signInWithProvider("google"), [signInWithProvider]);
+  const signInWithDiscord = useCallback(() => signInWithProvider("discord"), [signInWithProvider]);
 
   const signOut = useCallback(async () => {
     setGuest(false);
@@ -230,8 +235,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signOut, redeemKey }),
-    [ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signOut, redeemKey]
+    () => ({ ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, signOut, redeemKey }),
+    [ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, signOut, redeemKey]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

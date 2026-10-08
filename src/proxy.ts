@@ -22,6 +22,9 @@ const BETA_EXEMPT = [
   "/discord", // the door to the Discord server: visitors have no pass yet
   "/api/discord", // its OAuth round trip
 
+  "/terms", // the documents people are asked to agree to: readable by anyone
+  "/privacy",
+
   "/auth",
   "/app/open", // the phone app handing its login to the website inside it
   "/logo.png",

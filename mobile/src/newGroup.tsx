@@ -86,10 +86,10 @@ export function NewGroupSheet({ open, onClose, onCreated, initialMembers }: { op
               );
             }}
           />
-          {error && <Text style={{ color: "#ff9d92", fontFamily: fonts.body, fontSize: 12, marginTop: 10, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: "#1a0b0b", borderWidth: 1, borderColor: "#5a2a2a" }}>{error}</Text>}
+          {error && <Text style={{ color: "#ff9d92", fontFamily: fonts.body, fontSize: 12, marginTop: 10, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: "#141418", borderWidth: 1, borderColor: "#2e2e38" }}>{error}</Text>}
           <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
             <Pressable onPress={onClose} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2e2e38" }}><Text style={{ color: "#c9c9d2", fontFamily: fonts.bold, fontSize: 12.5 }}>Cancel</Text></Pressable>
-            <Pressable onPress={() => void create()} disabled={!canCreate} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.yellow, opacity: canCreate ? 1 : 0.45 }}><Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 12.5 }}>{busy ? "Creating…" : "Create group"}</Text></Pressable>
+            <Pressable onPress={() => void create()} disabled={!canCreate} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: canCreate ? colors.yellow : colors.off }}><Text style={{ color: canCreate ? colors.ink : colors.offInk, fontFamily: fonts.bold, fontSize: 12.5 }}>{busy ? "Creating…" : "Create group"}</Text></Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>

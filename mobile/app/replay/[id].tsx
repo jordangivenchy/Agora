@@ -420,7 +420,7 @@ export default function ReplayScreen() {
                         disabled={!canSeek}
                         accessibilityRole={canSeek ? "button" : undefined}
                         accessibilityHint={canSeek ? "Jumps to this moment" : undefined}
-                        style={({ pressed }) => ({ flexDirection: "row", gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderLeftWidth: 2, borderLeftColor: current ? "#3b6cf6" : "transparent", backgroundColor: current ? "#141c33" : pressed ? "#18181f" : "transparent" })}
+                        style={({ pressed }) => ({ flexDirection: "row", gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderLeftWidth: 2, borderLeftColor: current ? "#3b6cf6" : "transparent", backgroundColor: current ? "#17171c" : pressed ? "#18181f" : "transparent" })}
                       >
                         <Avatar url={l.avatar_url} name={l.username} size={24} />
                         <View style={{ flex: 1, minWidth: 0 }}>

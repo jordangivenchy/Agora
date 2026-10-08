@@ -172,7 +172,7 @@ export default function EditProfile() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={90}>
         {!row ? <LoadingLine /> : (
           <ScrollView contentContainerStyle={{ paddingTop: 14, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-            {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginBottom: 14, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#5a2a2a", backgroundColor: "#1c1010" }}>{error}</Text>}
+            {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginBottom: 14, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#141418" }}>{error}</Text>}
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 18 }}>
               <Pressable onPress={() => setSheet("avatar")} disabled={!!uploading} accessibilityLabel="Change photo">
@@ -245,8 +245,8 @@ export default function EditProfile() {
               <Pressable onPress={() => router.back()} disabled={saving} style={{ flex: 1, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }}>
                 <Text style={{ color: colors.muted, fontFamily: fonts.semi, fontSize: 13.5 }}>Cancel</Text>
               </Pressable>
-              <Pressable onPress={() => void save()} disabled={!canSave} style={{ flex: 1, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.blue, opacity: canSave ? 1 : 0.5 }}>
-                <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 13.5 }}>{saving ? "Saving…" : "Save changes"}</Text>
+              <Pressable onPress={() => void save()} disabled={!canSave} style={{ flex: 1, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: canSave ? colors.blue : colors.off }}>
+                <Text style={{ color: canSave ? "#fff" : colors.offInk, fontFamily: fonts.semi, fontSize: 13.5 }}>{saving ? "Saving…" : "Save changes"}</Text>
               </Pressable>
             </View>
           </ScrollView>

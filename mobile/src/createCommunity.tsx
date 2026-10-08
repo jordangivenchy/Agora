@@ -225,7 +225,7 @@ export function CreateCommunityCard({ onClose, onCreateDiscussion }: { onClose: 
           <ScrollView ref={scrollRef} onScroll={reveal.onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, gap: 14 }}>
             {gate && !gate.allowed && gate.reason && (
               <View style={{ alignItems: "center", paddingTop: 26, paddingBottom: 18, paddingHorizontal: 12 }}>
-                <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#1f1807", borderWidth: 1, borderColor: "#4d3a08", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#141418", borderWidth: 1, borderColor: "#23232b", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
                   <Ionicons name={gate.reason === "email_unverified" ? "mail-outline" : gate.reason === "not_verified" ? "person-circle-outline" : gate.reason === "account_too_new" ? "time-outline" : "business-outline"} size={22} color={colors.yellow} />
                 </View>
                 <Text style={{ color: "#f5f5f0", fontFamily: fonts.title, fontSize: 16, textAlign: "center" }}>
@@ -453,10 +453,10 @@ function FootButton({ label, onPress, primary, disabled, icon }: { label: string
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: primary ? 18 : 14, borderRadius: 19, backgroundColor: primary ? (pressed ? "#ffc22e" : colors.yellow) : pressed ? "#141418" : FIELD, borderWidth: primary ? 0 : 1, borderColor: EDGE, opacity: disabled ? 0.5 : 1 })}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: primary ? 18 : 14, borderRadius: 19, backgroundColor: primary ? (disabled ? colors.off : pressed ? "#ffc22e" : colors.yellow) : pressed ? "#141418" : FIELD, borderWidth: primary ? 0 : 1, borderColor: EDGE, opacity: disabled && !primary ? 0.5 : 1 })}
     >
       {icon && <Ionicons name={icon} size={13} color="#e8e8ee" />}
-      <Text style={{ color: primary ? INK : "#e8e8ee", fontFamily: primary ? fonts.bold : fonts.semi, fontSize: 13.5 }}>{label}</Text>
+      <Text style={{ color: primary ? (disabled ? colors.offInk : INK) : "#e8e8ee", fontFamily: primary ? fonts.bold : fonts.semi, fontSize: 13.5 }}>{label}</Text>
     </Pressable>
   );
 }

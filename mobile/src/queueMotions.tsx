@@ -93,9 +93,9 @@ export function QueueMotions({ story }: { story: QueueStory }) {
           <Pressable
             onPress={() => pickMotion(own.trim().replace(/\s+/g, " "))}
             disabled={!!problem}
-            style={{ height: 42, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.yellow, opacity: problem ? 0.5 : 1 }}
+            style={{ height: 42, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: problem ? colors.off : colors.yellow }}
           >
-            <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 }}>Use this question</Text>
+            <Text style={{ color: problem ? colors.offInk : colors.ink, fontFamily: fonts.bold, fontSize: 13.5 }}>Use this question</Text>
           </Pressable>
         </View>
       )}

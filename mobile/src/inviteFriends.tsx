@@ -51,7 +51,7 @@ export function InviteFriends({ communityId, communityName, isPrivate }: { commu
       <Text style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>
         {isPrivate ? `Invites let friends into ${communityName} without applying. ` : `Friends you invite get a message with a one-tap join for ${communityName}. `}Friends are people who follow you back.
       </Text>
-      {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: "#1a0b0b", borderWidth: 1, borderColor: "#5a2a2a" }}>{error}</Text>}
+      {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: "#141418", borderWidth: 1, borderColor: "#2e2e38" }}>{error}</Text>}
       {rows === null ? <Text style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12 }}>Finding friends…</Text> : rows.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 18, borderRadius: 12, backgroundColor: "#0b0b0d", borderWidth: 1, borderColor: "#2a2a34" }}>
           <Ionicons name="people-outline" size={18} color="rgba(238,238,245,0.5)" />

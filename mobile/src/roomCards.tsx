@@ -17,8 +17,8 @@ const CARD = { backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33
 
 function Btn({ label, onPress, primary, danger, disabled }: { label: string; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: danger ? "#c0392b" : primary ? colors.yellow : "#141418", borderWidth: 1, borderColor: danger ? "#c0392b" : primary ? colors.yellow : "#2a2a33", opacity: disabled ? 0.5 : pressed ? 0.85 : 1 })}>
-      <Text style={{ color: danger ? "#fff" : primary ? colors.ink : colors.text, fontFamily: fonts.bold, fontSize: 13 }}>{label}</Text>
+    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: disabled && (danger || primary) ? colors.off : danger ? "#c0392b" : primary ? colors.yellow : "#141418", borderWidth: 1, borderColor: disabled && (danger || primary) ? colors.off : danger ? "#c0392b" : primary ? colors.yellow : "#2a2a33", opacity: disabled && !(danger || primary) ? 0.5 : pressed ? 0.85 : 1 })}>
+      <Text style={{ color: disabled && (danger || primary) ? colors.offInk : danger ? "#fff" : primary ? colors.ink : colors.text, fontFamily: fonts.bold, fontSize: 13 }}>{label}</Text>
     </Pressable>
   );
 }
@@ -169,8 +169,8 @@ export function DeniedDoor({ gate, roomId, signedIn, onEntered }: { gate: Gate; 
           <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 12 }}>Have an invite code?</Text>
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
             <TextInput value={code} onChangeText={(t) => { setCode(t.toUpperCase().slice(0, 6)); setErr(null); }} placeholder="ABC123" placeholderTextColor={colors.faint} autoCapitalize="characters" autoCorrect={false} maxLength={6} onSubmitEditing={() => void submit()} style={{ width: 130, height: 42, borderRadius: 10, textAlign: "center", letterSpacing: 4, fontSize: 15, fontFamily: fonts.semi, color: colors.text, backgroundColor: "#111114", borderWidth: 1, borderColor: err ? colors.red : "#2a2a33" }} />
-            <Pressable onPress={() => void submit()} disabled={busy || code.trim().length < 6} style={{ height: 42, paddingHorizontal: 18, borderRadius: 999, backgroundColor: "#d9a238", alignItems: "center", justifyContent: "center", opacity: busy || code.trim().length < 6 ? 0.5 : 1 }}>
-              <Text style={{ color: "#2b1a02", fontFamily: fonts.bold, fontSize: 13 }}>{busy ? "Joining…" : "Enter"}</Text>
+            <Pressable onPress={() => void submit()} disabled={busy || code.trim().length < 6} style={{ height: 42, paddingHorizontal: 18, borderRadius: 999, backgroundColor: busy || code.trim().length < 6 ? colors.off : "#d9a238", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: busy || code.trim().length < 6 ? colors.offInk : "#2b1a02", fontFamily: fonts.bold, fontSize: 13 }}>{busy ? "Joining…" : "Enter"}</Text>
             </Pressable>
           </View>
           {err && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12 }}>{err}</Text>}

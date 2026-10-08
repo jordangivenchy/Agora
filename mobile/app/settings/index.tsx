@@ -8,7 +8,7 @@ import { useMe } from "../../src/me";
 import { colors, fonts } from "../../src/theme";
 import { Button, Screen, Sub, Title } from "../../src/ui";
 
-export type SectionKey = "profile" | "account" | "discussion" | "recordings" | "notifications" | "appearance" | "privacy" | "data" | "blocked" | "danger";
+export type SectionKey = "profile" | "account" | "discussion" | "recordings" | "notifications" | "appearance" | "privacy" | "data" | "terms" | "blocked" | "danger";
 
 export const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "profile", label: "Profile", sub: "Name, username, bio, avatar" },
@@ -19,6 +19,7 @@ export const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "appearance", label: "Appearance & motion", sub: "Animation preferences" },
   { key: "privacy", label: "Privacy", sub: "What others see" },
   { key: "data", label: "Data & Coach", sub: "Your data controls; the coach is coming soon" },
+  { key: "terms", label: "Terms & privacy", sub: "What you agreed to, and when" },
   { key: "blocked", label: "Blocked users", sub: "Manage your block list" },
   { key: "danger", label: "Danger zone", sub: "Delete your account" },
 ];

@@ -326,8 +326,8 @@ function RepostSheet({ target, uid, onClose }: { target: { post: MenuPost; h?: P
               <Ionicons name="repeat-outline" size={16} color={colors.text} />
               <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>Repost</Text>
             </View>
-            <Pressable onPress={() => void submit()} disabled={!canSend} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.yellow, alignItems: "center", justifyContent: "center", opacity: canSend ? 1 : 0.45 }}>
-              <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13 }}>{busy ? "Reposting…" : "Repost"}</Text>
+            <Pressable onPress={() => void submit()} disabled={!canSend} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: canSend ? colors.yellow : colors.off, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: canSend ? colors.ink : colors.offInk, fontFamily: fonts.bold, fontSize: 13 }}>{busy ? "Reposting…" : "Repost"}</Text>
             </Pressable>
           </View>
           {post && <Text numberOfLines={1} style={{ color: "rgba(238,238,245,0.5)", fontFamily: fonts.body, fontSize: 12.5, marginTop: 6 }}>“{plainPreview(post.title)}”</Text>}

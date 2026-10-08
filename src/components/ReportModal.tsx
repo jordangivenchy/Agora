@@ -118,8 +118,8 @@ export default function ReportModal({
                 width: 52,
                 height: 52,
                 borderRadius: "50%",
-                background: "rgba(34,197,94,0.1)",
-                border: "1px solid rgba(34,197,94,0.3)",
+                background: "#141418",
+                border: "1px solid #23232b",
               }}
             >
               <Icon name="check" size={22} style={{ color: "#22c55e" }} />
@@ -215,8 +215,8 @@ export default function ReportModal({
             {error && (
               <div
                 style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.3)",
+                  background: "#111114",
+                  border: "1px solid #26262e",
                   borderRadius: 10,
                   color: "#fca5a5",
                   fontSize: 12.5,
@@ -246,10 +246,11 @@ export default function ReportModal({
                       fontSize: 12.5,
                       fontWeight: active ? 600 : 500,
                       fontFamily: "'DM Sans', sans-serif",
-                      background: active ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.03)",
+                      /* Chosen: a red hairline and red words, on the same solid tile. */
+                      background: "#111114",
                       border: active
-                        ? "1px solid rgba(239,68,68,0.45)"
-                        : "1px solid var(--border)",
+                        ? "1px solid #ff6b61"
+                        : "1px solid #26262e",
                       color: active ? "#fca5a5" : "var(--text-muted)",
                     }}
                   >
@@ -305,7 +306,7 @@ export default function ReportModal({
               <button
                 onClick={handleSubmit}
                 disabled={busy || !reason}
-                className="flex-1 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 cursor-pointer transition-all off-solid disabled:cursor-not-allowed"
                 style={{
                   padding: "11px 16px",
                   borderRadius: 100,

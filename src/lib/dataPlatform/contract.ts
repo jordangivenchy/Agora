@@ -11,13 +11,17 @@
  * BEFORE collecting or deriving anything. Consent defaults to all-false.
  */
 
-export type ConsentCategory = "analytics" | "debate_analysis" | "personalization" | "coaching";
+/* "research": what the person says in public rooms may be counted in the
+   anonymous totals the terms describe (components/agora/legal, section 6).
+   On unless switched off; whatever works those totals out checks it first. */
+export type ConsentCategory = "analytics" | "debate_analysis" | "personalization" | "coaching" | "research";
 
 export interface UserDataConsent {
   analytics: boolean;
   debate_analysis: boolean;
   personalization: boolean;
   coaching: boolean;
+  research: boolean;
 }
 
 /* ── Workstream 1: behavioral signals ── */

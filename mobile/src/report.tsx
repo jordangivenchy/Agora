@@ -74,7 +74,7 @@ export function ReportSheet({ target, onClose }: { target: ReportTarget | null; 
         <View style={{ backgroundColor: "#121215", borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16 + insets.bottom }}>
           {done ? (
             <View style={{ alignItems: "center" }}>
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#0f2a1a", borderWidth: 1, borderColor: "#1f5a35", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#141418", borderWidth: 1, borderColor: "#23232b", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
                 <Ionicons name="checkmark" size={24} color="#22c55e" />
               </View>
               <Text style={{ color: colors.text, fontFamily: fonts.bold, fontSize: 17, marginBottom: 6 }}>Report submitted</Text>
@@ -100,12 +100,12 @@ export function ReportSheet({ target, onClose }: { target: ReportTarget | null; 
                   <Text numberOfLines={3} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>“{target.messagePreview}”</Text>
                 </View>
               )}
-              {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginBottom: 14, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: "#5a2a2a", backgroundColor: "#1c1010" }}>{error}</Text>}
+              {error && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18, marginBottom: 14, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#141418" }}>{error}</Text>}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                 {REASONS.map((r) => {
                   const active = reason === r.value;
                   return (
-                    <Pressable key={r.value} onPress={() => setReason(r.value)} style={{ width: "48.5%", paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: active ? "#2a1414" : colors.surface, borderWidth: 1, borderColor: active ? "#7a3535" : colors.border }}>
+                    <Pressable key={r.value} onPress={() => setReason(r.value)} style={{ width: "48.5%", paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: active ? "#ff6b61" : colors.border }}>
                       <Text style={{ color: active ? "#fca5a5" : colors.muted, fontFamily: active ? fonts.semi : fonts.medium, fontSize: 12.5 }}>{r.label}</Text>
                     </Pressable>
                   );
@@ -123,8 +123,8 @@ export function ReportSheet({ target, onClose }: { target: ReportTarget | null; 
                 <Pressable onPress={onClose} disabled={busy} style={{ flex: 1, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }}>
                   <Text style={{ color: colors.muted, fontFamily: fonts.semi, fontSize: 13.5 }}>Cancel</Text>
                 </Pressable>
-                <Pressable onPress={() => void submit()} disabled={busy || !reason} style={{ flex: 1, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", opacity: busy || !reason ? 0.5 : 1 }}>
-                  <Text style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 13.5 }}>{busy ? "Submitting…" : "Submit report"}</Text>
+                <Pressable onPress={() => void submit()} disabled={busy || !reason} style={{ flex: 1, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: busy || !reason ? colors.off : "#ef4444" }}>
+                  <Text style={{ color: busy || !reason ? colors.offInk : "#fff", fontFamily: fonts.semi, fontSize: 13.5 }}>{busy ? "Submitting…" : "Submit report"}</Text>
                 </Pressable>
               </View>
             </ScrollView>

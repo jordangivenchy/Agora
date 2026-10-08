@@ -466,7 +466,7 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
 
       {error && (
         <p className="mt-3 mb-0 px-4 py-2.5 rounded-lg text-[12px]"
-          style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.3)", color: "#fca5a5" }}>
+          style={{ background: "#111114", border: "1px solid #26262e", color: "#ff8a80" }}>
           {error}
         </p>
       )}
@@ -797,8 +797,8 @@ export default function TopicsHome({ container, onCreateLobby }: Props) {
                     <span
                       className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full"
                       style={{
-                        background: "rgba(226,185,107,0.1)",
-                        border: "0.5px solid rgba(226,185,107,0.4)",
+                        background: "#111114",
+                        border: "1px solid #26262e",
                         color: "#f4d47c",
                         fontWeight: 600,
                         letterSpacing: "0.02em",

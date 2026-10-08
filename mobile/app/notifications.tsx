@@ -146,8 +146,8 @@ export default function Notifications() {
           {NOTIF_FILTERS.map((f) => {
             const on = filter === f.id;
             return (
-              <Pressable key={f.id} onPress={() => setFilter(f.id)} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: on ? "#2a2410" : colors.surface2, borderWidth: 1, borderColor: on ? "#6b5a2a" : colors.border }}>
-                <Text style={{ color: on ? colors.gold : "#b8b8c2", fontFamily: on ? fonts.semi : fonts.medium, fontSize: 12.5 }}>{f.label}</Text>
+              <Pressable key={f.id} onPress={() => setFilter(f.id)} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: on ? colors.yellow : colors.surface2, borderWidth: 1, borderColor: on ? colors.yellow : colors.border }}>
+                <Text style={{ color: on ? colors.ink : "#b8b8c2", fontFamily: on ? fonts.semi : fonts.medium, fontSize: 12.5 }}>{f.label}</Text>
               </Pressable>
             );
           })}

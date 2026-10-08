@@ -23,6 +23,8 @@ type Consent = Record<ConsentCategory, boolean>;
    nothing is written for them. */
 const CATEGORIES: { key: ConsentCategory; title: string; blurb: string; ai?: boolean }[] = [
   { key: "analytics", title: "Activity analytics", blurb: "What you view, watch, like, and follow in the app — to personalize your feed." },
+  /* The switch the terms promise (section 6): leave my words out. */
+  { key: "research", title: "Anonymous totals", blurb: "Count what I say in public rooms in totals about what people discuss. No names, no quotes, and never anything about you personally." },
   { key: "debate_analysis", title: "In-discussion analysis", blurb: "Agora analyzes how you argue and the positions you express on stage, to build your profile and coaching. The listening indicator always shows when this is active.", ai: true },
   { key: "personalization", title: "Personalized recommendations", blurb: "Use your profile to rank rooms, topics, and people for you — with a visible reason for each.", ai: true },
   { key: "coaching", title: "Persona notes & coach", blurb: "Turn your profile into specific, constructive coaching on how you argue and learn.", ai: true },
@@ -30,8 +32,11 @@ const CATEGORIES: { key: ConsentCategory; title: string; blurb: string; ai?: boo
 
 // On by default — consent is granted when the user accepts the app's terms
 // (seeded at signup). This panel is where they can turn any of it OFF.
-const DEFAULT_CONSENT: Consent = { analytics: true, debate_analysis: true, personalization: true, coaching: true };
-const ALL_OFF: Consent = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
+const DEFAULT_CONSENT: Consent = { analytics: true, debate_analysis: true, personalization: true, coaching: true, research: true };
+/* What "Delete my derived data" leaves switched off (erase_user_data). The
+   anonymous totals are not derived data about a person, so that switch
+   stays where it was. */
+const ERASED = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
 
 export default function DataAndCoachPanel() {
   const [consent, setConsent] = useState<Consent>(DEFAULT_CONSENT);
@@ -46,10 +51,10 @@ export default function DataAndCoachPanel() {
       if (!user) { setLoaded(true); return; }
       const { data } = await supabase
         .from("user_data_consent")
-        .select("analytics, debate_analysis, personalization, coaching")
+        .select("analytics, debate_analysis, personalization, coaching, research")
         .eq("user_id", user.id)
         .maybeSingle();
-      const c = (data as Consent) ?? DEFAULT_CONSENT;
+      const c = { ...DEFAULT_CONSENT, ...((data as Partial<Consent> | null) ?? {}) };
       setConsent(c);
       setCaptureEnabled(c.analytics);
       setLoaded(true);
@@ -88,7 +93,7 @@ export default function DataAndCoachPanel() {
     setBusy(true);
     try {
       await fetch("/api/me/data", { method: "DELETE" });
-      setConsent(ALL_OFF);
+      setConsent((c) => ({ ...c, ...ERASED }));
       setCaptureEnabled(false);
     } finally {
       setBusy(false);

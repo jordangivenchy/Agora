@@ -1159,7 +1159,8 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
                         cursor: "pointer",
                         fontFamily: "inherit",
                         border: g.mine ? `1px solid ${YELLOW}` : "1px solid rgba(255,255,255,0.12)",
-                        background: g.mine ? "rgba(255,183,0,0.15)" : "rgba(255,255,255,0.07)",
+                        /* Mine is told by its yellow edge, not by a wash. */
+                        background: "#17171c",
                         color: "#e6e6ec",
                       }}
                     >
@@ -1225,7 +1226,7 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
               padding: "4px 8px",
               borderLeft: `2px solid ${YELLOW}`,
               borderRadius: 6,
-              background: "rgba(255,183,0,0.08)",
+              background: "#111114",
             }}
           >
             <div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.3 }}>
@@ -1420,8 +1421,9 @@ const DmThread = forwardRef<DmThreadHandle, Props>(function DmThread(
             aria-label="Send"
             style={{
               ...dmIconBtn,
-              background: canSend ? YELLOW : "rgba(255,183,0,0.3)",
-              color: canSend ? YELLOW_INK : "rgba(255,255,255,0.55)",
+              /* Nothing to send yet: a solid quiet disc, not a faded yellow one. */
+              background: canSend ? YELLOW : "#1c1c22",
+              color: canSend ? YELLOW_INK : "#6f6f7c",
               cursor: canSend ? "pointer" : "default",
             }}
           >

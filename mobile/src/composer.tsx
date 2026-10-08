@@ -169,8 +169,8 @@ export function ComposerPanel({ kind, initialBody, context, contextName, communi
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 36 }}>
             <Pressable onPress={onClose} hitSlop={8}><Text style={{ color: "#c3c3ce", fontFamily: fonts.body, fontSize: 15 }}>Cancel</Text></Pressable>
             <Text style={{ color: colors.text, fontFamily: fonts.title, fontSize: 15 }}>{kind === "post" ? (clip ? "Post clip" : "New post") : kind === "edit" ? "Edit post" : "Comment"}</Text>
-            <Pressable onPress={() => void send()} disabled={!canSend} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.yellow, alignItems: "center", justifyContent: "center", opacity: canSend ? 1 : 0.45 }}>
-              <Text style={{ color: colors.ink, fontFamily: fonts.bold, fontSize: 13 }}>{busy ? (kind === "edit" ? "Saving…" : "Sending…") : kind === "post" ? "Post" : kind === "edit" ? "Save" : "Comment"}</Text>
+            <Pressable onPress={() => void send()} disabled={!canSend} style={{ height: 34, paddingHorizontal: 16, borderRadius: 999, backgroundColor: canSend ? colors.yellow : colors.off, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: canSend ? colors.ink : colors.offInk, fontFamily: fonts.bold, fontSize: 13 }}>{busy ? (kind === "edit" ? "Saving…" : "Sending…") : kind === "post" ? "Post" : kind === "edit" ? "Save" : "Comment"}</Text>
             </Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>

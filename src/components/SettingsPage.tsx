@@ -24,6 +24,9 @@ import type { User } from "@supabase/supabase-js";
 import { displayName } from "@/lib/names";
 import { PREF_GROUPS } from "@/lib/notifications";
 import VerifiedMark from "@/components/VerifiedMark";
+import { LEGAL, legalReady } from "@/components/agora/legal";
+import { agreement, details, saveMyPlace, type Agreement, type Details } from "@/lib/terms";
+import { COUNTRIES, COUNTRIES_FIRST, US_STATES, countryName, needsState, stateName } from "@/components/agora/places";
 
 /* ── types ─────────────────────────────────────────────────── */
 
@@ -38,6 +41,7 @@ type SectionKey =
   | "appearance"
   | "privacy"
   | "data"
+  | "terms"
   | "blocked"
   | "danger";
 
@@ -50,6 +54,7 @@ const SECTIONS: { key: SectionKey; label: string; sub: string }[] = [
   { key: "appearance", label: "Appearance & motion",    sub: "Animation preferences" },
   { key: "privacy",    label: "Privacy",                sub: "What others see" },
   { key: "data",       label: "Data & Coach",           sub: "Your data controls" },
+  { key: "terms",      label: "Terms & privacy",        sub: "What you agreed to, and when" },
   { key: "blocked",    label: "Blocked users",          sub: "Manage your block list" },
   { key: "danger",     label: "Danger zone",            sub: "Delete your account" },
 ];
@@ -96,6 +101,43 @@ export default function SettingsPage({ initial }: {
     });
     return () => { cancelled = true; };
   }, [active, authUser, supabase]);
+  /* What this person agreed to, and what they told us about themselves
+     when they did — asked for when the Terms section opens. */
+  const [terms, setTerms] = useState<Agreement | null>(null);
+  const [about, setAbout] = useState<Details | null>(null);
+  const [place, setPlace] = useState({ country: "", region: "" });
+  const [placeBusy, setPlaceBusy] = useState(false);
+  const [placeMsg, setPlaceMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  useEffect(() => {
+    if (active !== "terms" || !authUser) return;
+    let cancelled = false;
+    agreement(supabase, authUser.id).then((found) => {
+      if (!cancelled) setTerms(found);
+    });
+    details(supabase, authUser.id).then((found) => {
+      if (cancelled) return;
+      setAbout(found);
+      if (found.state === "known") setPlace({ country: found.country ?? "", region: found.region ?? "" });
+    });
+    return () => { cancelled = true; };
+  }, [active, authUser, supabase]);
+
+  /* A move: the country and, in the United States, the state. */
+  async function savePlace(e: React.FormEvent) {
+    e.preventDefault();
+    if (placeBusy || about?.state !== "known") return;
+    const region = needsState(place.country) ? place.region : null;
+    setPlaceBusy(true);
+    setPlaceMsg(null);
+    const saved = await saveMyPlace(supabase, place.country, region);
+    setPlaceBusy(false);
+    if (!saved) {
+      setPlaceMsg({ kind: "err", text: "That didn't save. Check your connection and try again." });
+      return;
+    }
+    setAbout({ ...about, country: place.country, region });
+    setPlaceMsg({ kind: "ok", text: "Saved." });
+  }
   // Mobile is list ⇄ panel; desktop always shows both.
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
@@ -771,6 +813,131 @@ export default function SettingsPage({ initial }: {
 
       case "data":
         return <DataAndCoachPanel />;
+
+      case "terms": {
+        const ready = legalReady();
+        const agreedOn = terms?.state === "agreed"
+          ? new Date(terms.at).toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" })
+          : null;
+        const termsCard = (
+          <SectionCard title="Terms & privacy" sub="The agreement between you and AgoraSphere.">
+            <div className="stg-row">
+              <span className="stg-row-text">
+                <span className="stg-row-label">Terms</span>
+                <span className="stg-row-sub">Version of {LEGAL.effective}</span>
+              </span>
+              <a className="stg-btn stg-btn--quiet" href="/terms" target="_blank" rel="noopener">Read</a>
+            </div>
+            <div className="stg-row">
+              <span className="stg-row-text">
+                <span className="stg-row-label">Privacy policy</span>
+                <span className="stg-row-sub">What we hold about you, and your choices</span>
+              </span>
+              <a className="stg-btn stg-btn--quiet" href="/privacy" target="_blank" rel="noopener">Read</a>
+            </div>
+            <div className="stg-row">
+              <span className="stg-row-text">
+                <span className="stg-row-label">
+                  {!ready ? "A draft, not yet in force"
+                    : terms === null ? "Checking…"
+                    : agreedOn ? "You agreed to these terms"
+                    : terms.state === "not" ? "You haven't agreed to this version yet"
+                    : "Couldn't check just now"}
+                </span>
+                <span className="stg-row-sub">
+                  {!ready ? "Nobody is asked to agree until the terms are final."
+                    : agreedOn ? `On ${agreedOn}`
+                    : terms?.state === "not" ? "You'll be asked before you carry on."
+                    : terms?.state === "unknown" ? "Check your connection and open this section again."
+                    : " "}
+                </span>
+              </span>
+              {ready && terms?.state === "not" && (
+                <a className="stg-btn" href="/agree?next=%2Fsettings">Review and agree</a>
+              )}
+            </div>
+          </SectionCard>
+        );
+        if (!ready) return termsCard;
+
+        /* What they told us when they agreed. The year can't be changed
+           here (it was checked once); where they live can. */
+        const known = about?.state === "known" ? about : null;
+        const placeReady = Boolean(countryName(place.country)) && (!needsState(place.country) || Boolean(stateName(place.region)));
+        const placeChanged = known !== null
+          && (place.country !== (known.country ?? "") || (needsState(place.country) ? place.region : "") !== (known.region ?? ""));
+        return (
+          <>
+            {termsCard}
+            <SectionCard title="About you" sub="Asked once, when you agree to the terms. Only you can see it.">
+              {!known?.checked ? (
+                <div className="stg-row">
+                  <span className="stg-row-text">
+                    <span className="stg-row-label">
+                      {about === null ? "Checking…" : about.state === "unknown" ? "Couldn't check just now" : "Not asked yet"}
+                    </span>
+                    <span className="stg-row-sub">
+                      {about === null ? " "
+                        : about.state === "unknown" ? "Check your connection and open this section again."
+                        : "Your date of birth and where you live, when you agree to the terms."}
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="stg-row">
+                    <span className="stg-row-text">
+                      <span className="stg-row-label">Year of birth</span>
+                      <span className="stg-row-sub">We keep the year, not the date. To correct it, write to {LEGAL.contact}.</span>
+                    </span>
+                    <span className="stg-value">{known.birthYear ?? "—"}</span>
+                  </div>
+                  <form className="stg-row is-stack" onSubmit={savePlace}>
+                    <span className="stg-row-text">
+                      <span className="stg-row-label">Where you live</span>
+                      <span className="stg-row-sub">Your country and, in the United States, your state. Change it if you move.</span>
+                    </span>
+                    <div className="stg-inline">
+                      <select
+                        className="stg-input stg-select"
+                        aria-label="Country"
+                        value={place.country}
+                        onChange={(e) => {
+                          setPlaceMsg(null);
+                          setPlace({ country: e.target.value, region: needsState(e.target.value) ? place.region : "" });
+                        }}
+                      >
+                        <option value="" disabled>Choose a country</option>
+                        {COUNTRIES_FIRST.map((code) => <option key={`first-${code}`} value={code}>{countryName(code)}</option>)}
+                        <option disabled>──────────</option>
+                        {COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+                      </select>
+                      {needsState(place.country) && (
+                        <select
+                          className="stg-input stg-select"
+                          aria-label="State"
+                          value={place.region}
+                          onChange={(e) => {
+                            setPlaceMsg(null);
+                            setPlace({ ...place, region: e.target.value });
+                          }}
+                        >
+                          <option value="" disabled>Choose a state</option>
+                          {US_STATES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+                        </select>
+                      )}
+                      <button className="stg-btn" type="submit" disabled={placeBusy || !placeReady || !placeChanged}>
+                        {placeBusy ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                    {placeMsg && <p className={`stg-msg is-${placeMsg.kind}`} role="status">{placeMsg.text}</p>}
+                  </form>
+                </>
+              )}
+            </SectionCard>
+          </>
+        );
+      }
 
       case "privacy":
         return (

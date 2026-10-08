@@ -13,6 +13,7 @@ import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/session";
+import { useTermsGate } from "../../src/terms";
 import { MiniPlayer } from "../../src/miniPlayer";
 import { QueueDock } from "../../src/queue";
 import { tabBarTop } from "../../src/tabBar";
@@ -70,9 +71,12 @@ export default function TabsLayout() {
   const { ready, session, pass, gated, guest } = useSession();
   const insets = useSafeAreaInsets();
   const { openMenu } = useCreate();
+  const terms = useTermsGate(session?.user.id ?? null);
   if (!ready) return <Spinner />;
   if (gated && !pass) return <Redirect href="/beta" />;
   if (!session && !guest) return <Redirect href="/sign-in" />;
+  /* A signed-in person agrees to the terms in force once (src/terms.ts). */
+  if (terms === "ask") return <Redirect href="/agree" />;
   const aboveBar = tabBarTop(insets.bottom);
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

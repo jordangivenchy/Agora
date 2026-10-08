@@ -6,6 +6,7 @@ import { SKY_SPLASH_JS } from "@/lib/skySplash";
 import UserMenuProvider from "@/components/UserContextMenu";
 import SettingsBoot from "@/components/SettingsBoot";
 import PresenceBoot from "@/components/PresenceBoot";
+import TermsBoot from "@/components/TermsBoot";
 import MessagesDock from "@/components/messages/MessagesDock";
 import ImageLightbox from "@/components/ImageLightbox";
 import CreateMenu from "@/components/CreateMenu";
@@ -65,6 +66,7 @@ export default function RootLayout({
         <BootSplash />
         <SettingsBoot />
         <PresenceBoot />
+        <TermsBoot />
         <UserMenuProvider>
           {/* The page. No box of its own (the body's flex layout sees the
               page's own elements, as before); it exists so a live room

@@ -54,7 +54,7 @@ export function Dropdown({ open, onClose, top, right = 16, name, sub, person, it
             <Pressable
               onPress={() => { onClose(); setTimeout(it.onPress, 160); }}
               accessibilityRole="menuitem"
-              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10, backgroundColor: pressed ? (it.danger ? "#2a1414" : "#1a1a20") : "transparent" })}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10, backgroundColor: pressed ? "#1a1a20" : "transparent" })}
             >
               {({ pressed }) => (
                 <>

@@ -837,7 +837,7 @@ export default function DebateReplay({
               <button
                 onClick={() => { void submitReplayComment(); }}
                 disabled={commentBusy || !commentDraft.trim()}
-                className="cm-send cursor-pointer text-[12.5px] shrink-0 disabled:opacity-50 disabled:cursor-default"
+                className="cm-send cursor-pointer text-[12.5px] shrink-0 off-solid disabled:cursor-default"
                 style={{ background: "#2f7fe0", border: "none", color: "#fff", borderRadius: 999, height: 36, padding: "0 18px", fontWeight: 600, fontFamily: "inherit" }}
               >
                 {commentBusy ? "Posting…" : "Comment"}

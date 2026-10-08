@@ -17,10 +17,17 @@ import { VerifiedMark } from "../../src/verifiedMark";
 import { LoadingLine } from "../../src/sky";
 import { colors, fonts } from "../../src/theme";
 import { Screen } from "../../src/ui";
+import { agreement, details, saveMyPlace, type Agreement, type Details } from "../../src/terms";
+import { PlacePicker } from "../../src/placePicker";
+import { Ionicons } from "@expo/vector-icons";
+import { LEGAL, legalReady } from "../../../src/components/agora/legal";
+import { COUNTRIES, COUNTRIES_FIRST, US_STATES, countryName, needsState, stateName } from "../../../src/components/agora/places";
 
 /* The coach and the analysis built on it are coming soon (lib/features.ts). */
 const AGORA_AI = false;
-const ALL_OFF: Consent = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
+/* What "Delete my derived data" leaves switched off (erase_user_data); the
+   anonymous-totals switch is not derived data and stays where it was. */
+const ERASED = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
 type M = { kind: "ok" | "err"; text: string } | null;
 
 export default function SettingsSection() {
@@ -148,6 +155,8 @@ export default function SettingsSection() {
   const [pwMsg, setPwMsg] = useState<M>(null);
   const [pwBusy, setPwBusy] = useState(false);
   const hasPasswordIdentity = (user?.identities ?? []).some((i) => i.provider === "email");
+  /* Who signs them in instead: Google, Discord, or both. */
+  const signsInWith = [["google", "Google"], ["discord", "Discord"]].filter(([p]) => (user?.identities ?? []).some((i) => i.provider === p)).map(([, name]) => name).join(" or ") || "another account";
   async function changePassword() {
     if (!user?.email) return;
     const policyError = validateNewPassword(newPw, confirmPw);
@@ -252,6 +261,42 @@ export default function SettingsSection() {
     router.replace("/sign-in");
   }
 
+  /* Terms & privacy: when this person agreed to the version in force,
+     and what they told us about themselves when they did. */
+  const [terms, setTerms] = useState<Agreement | null>(null);
+  const [about, setAbout] = useState<Details | null>(null);
+  const [place, setPlace] = useState({ country: "", region: "" });
+  const [placeBusy, setPlaceBusy] = useState(false);
+  const [placeMsg, setPlaceMsg] = useState<M>(null);
+  const [picking, setPicking] = useState<"country" | "state" | null>(null);
+  useEffect(() => {
+    if (key !== "terms" || !user) return;
+    let on = true;
+    void agreement(user.id).then((found) => { if (on) setTerms(found); });
+    void details(user.id).then((found) => {
+      if (!on) return;
+      setAbout(found);
+      if (found.state === "known") setPlace({ country: found.country ?? "", region: found.region ?? "" });
+    });
+    return () => { on = false; };
+  }, [key, user]);
+
+  /* A move: the country and, in the United States, the state. */
+  async function savePlace() {
+    if (placeBusy || about?.state !== "known") return;
+    const region = needsState(place.country) ? place.region : null;
+    setPlaceBusy(true);
+    setPlaceMsg(null);
+    const saved = await saveMyPlace(place.country, region);
+    setPlaceBusy(false);
+    if (!saved) {
+      setPlaceMsg({ kind: "err", text: "That didn't save. Check your connection and try again." });
+      return;
+    }
+    setAbout({ ...about, country: place.country, region });
+    setPlaceMsg({ kind: "ok", text: "Saved." });
+  }
+
   /* Data & coach: consent, download, erase. */
   const [consent, setConsent] = useState<Consent>(DEFAULT_CONSENT);
   const [consentLoaded, setConsentLoaded] = useState(false);
@@ -260,9 +305,9 @@ export default function SettingsSection() {
   useEffect(() => {
     if (key !== "data" || !user) return;
     let on = true;
-    void supabase.from("user_data_consent").select("analytics, debate_analysis, personalization, coaching").eq("user_id", user.id).maybeSingle().then(({ data: d }) => {
+    void supabase.from("user_data_consent").select("analytics, debate_analysis, personalization, coaching, research").eq("user_id", user.id).maybeSingle().then(({ data: d }) => {
       if (!on) return;
-      setConsent((d as Consent | null) ?? DEFAULT_CONSENT);
+      setConsent({ ...DEFAULT_CONSENT, ...((d as Partial<Consent> | null) ?? {}) });
       setConsentLoaded(true);
     });
     return () => { on = false; };
@@ -296,7 +341,7 @@ export default function SettingsSection() {
         { text: "Delete", style: "destructive", onPress: () => {
           setDataBusy(true);
           apiFetch("/api/me/data", auth, { method: "DELETE" })
-            .then((res) => { if (!res.ok) throw new Error(`Couldn't delete (${res.status}).`); setConsent(ALL_OFF); setDataMsg({ kind: "ok", text: "Deleted everything Agora had derived about you." }); })
+            .then((res) => { if (!res.ok) throw new Error(`Couldn't delete (${res.status}).`); setConsent((c) => ({ ...c, ...ERASED })); setDataMsg({ kind: "ok", text: "Deleted everything Agora had derived about you." }); })
             .catch((e: unknown) => setDataMsg({ kind: "err", text: e instanceof Error ? e.message : "Couldn't delete." }))
             .finally(() => setDataBusy(false));
         } },
@@ -340,7 +385,7 @@ export default function SettingsSection() {
                 <Btn label={emailBusy ? "Sending…" : "Change email"} onPress={() => void changeEmail()} disabled={emailBusy || !newEmail.trim()} />
               </Pad>
             </SectionCard>
-            <SectionCard title="Password" sub={hasPasswordIdentity ? "Requires your current password." : "You sign in with Google. To add a password, reset it from the sign-in screen."}>
+            <SectionCard title="Password" sub={hasPasswordIdentity ? "Requires your current password." : `You sign in with ${signsInWith}. To add a password, reset it from the sign-in screen.`}>
               <Pad>
                 <Input value={curPw} onChangeText={setCurPw} placeholder="Current password" secureTextEntry textContentType="password" />
                 <Input value={newPw} onChangeText={setNewPw} placeholder="New password" secureTextEntry textContentType="newPassword" />
@@ -437,7 +482,7 @@ export default function SettingsSection() {
             </SectionCard>
             <SectionCard title="Email" sub={emailPrefs === null ? "Email preferences aren't available yet." : `Sent to ${profile.email || "your address"}. Several at once are grouped into one message. Security emails always arrive.`}>
               {emailPrefs?.unsubscribed && (
-                <View style={{ marginHorizontal: 16, marginVertical: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#1f1a0e", borderWidth: 1, borderColor: "#5a4a1e" }}>
+                <View style={{ marginHorizontal: 16, marginVertical: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#1c1c22", borderWidth: 1, borderColor: "#33333c" }}>
                   <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 12.5 }}>Unsubscribed from all email</Text>
                   <Pressable onPress={() => void applyEmailRpc("set_email_unsubscribed", { p_on: false }, (p) => ({ ...p, unsubscribed: false }))}><Text style={{ color: colors.blueText, fontFamily: fonts.semi, fontSize: 12 }}>Resubscribe</Text></Pressable>
                 </View>
@@ -501,6 +546,134 @@ export default function SettingsSection() {
           </SectionCard>
         );
 
+      case "terms": {
+        const ready = legalReady();
+        const agreedOn = terms?.state === "agreed" ? new Date(terms.at).toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" }) : null;
+        const row = { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: "#16161b" };
+        const label = { color: colors.text, fontFamily: fonts.body, fontSize: 13 };
+        const small = { color: colors.muted, fontFamily: fonts.body, fontSize: 11, lineHeight: 16, marginTop: 2 };
+        const termsCard = (
+          <SectionCard title="Terms & privacy" sub="The agreement between you and AgoraSphere.">
+            <View style={[row, { marginTop: 8 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={label}>Terms</Text>
+                <Text style={small}>Version of {LEGAL.effective}</Text>
+              </View>
+              <Btn kind="ghost" label="Read" onPress={() => router.push("/legal/terms")} />
+            </View>
+            <View style={row}>
+              <View style={{ flex: 1 }}>
+                <Text style={label}>Privacy policy</Text>
+                <Text style={small}>What we hold about you, and your choices</Text>
+              </View>
+              <Btn kind="ghost" label="Read" onPress={() => router.push("/legal/privacy")} />
+            </View>
+            <View style={row}>
+              <View style={{ flex: 1 }}>
+                <Text style={label}>
+                  {!ready ? "A draft, not yet in force"
+                    : terms === null ? "Checking…"
+                    : agreedOn ? "You agreed to these terms"
+                    : terms.state === "not" ? "You haven't agreed to this version yet"
+                    : "Couldn't check just now"}
+                </Text>
+                <Text style={small}>
+                  {!ready ? "Nobody is asked to agree until the terms are final."
+                    : agreedOn ? `On ${agreedOn}`
+                    : terms?.state === "not" ? "You'll be asked before you carry on."
+                    : terms?.state === "unknown" ? "Check your connection and open this again."
+                    : " "}
+                </Text>
+              </View>
+              {ready && terms?.state === "not" && <Btn label="Review and agree" onPress={() => router.push("/agree")} />}
+            </View>
+          </SectionCard>
+        );
+        if (!ready) return termsCard;
+
+        /* What they told us when they agreed. The year can't be changed
+           here (it was checked once); where they live can. */
+        const known = about?.state === "known" ? about : null;
+        const placeReady = Boolean(countryName(place.country)) && (!needsState(place.country) || Boolean(stateName(place.region)));
+        const placeChanged = known !== null
+          && (place.country !== (known.country ?? "") || (needsState(place.country) ? place.region : "") !== (known.region ?? ""));
+        const placeField = (what: string, chosen: string | null, placeholder: string, onPress: () => void) => (
+          <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityLabel={`${what}: ${chosen ?? placeholder}`}
+            style={({ pressed }) => ({ flex: 1, minWidth: 0, minHeight: 40, flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 12, paddingRight: 9, borderRadius: 9, borderWidth: 1, borderColor: pressed ? "#4a4a56" : "#34343c", backgroundColor: "#0a0a0e" })}
+          >
+            <Text numberOfLines={1} style={{ flex: 1, color: chosen ? colors.text : colors.faint, fontFamily: fonts.body, fontSize: 14 }}>{chosen ?? placeholder}</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.muted} />
+          </Pressable>
+        );
+        return (
+          <>
+            {termsCard}
+            <SectionCard title="About you" sub="Asked once, when you agree to the terms. Only you can see it.">
+              {!known?.checked ? (
+                <View style={[row, { marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={label}>{about === null ? "Checking…" : about.state === "unknown" ? "Couldn't check just now" : "Not asked yet"}</Text>
+                    <Text style={small}>
+                      {about === null ? " "
+                        : about.state === "unknown" ? "Check your connection and open this again."
+                        : "Your date of birth and where you live, when you agree to the terms."}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <View style={[row, { marginTop: 8 }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={label}>Year of birth</Text>
+                      <Text style={small}>We keep the year, not the date. To correct it, write to {LEGAL.contact}.</Text>
+                    </View>
+                    <Text style={{ color: colors.text, fontFamily: fonts.semi, fontSize: 13 }}>{known.birthYear ?? "—"}</Text>
+                  </View>
+                  <View style={[row, { flexDirection: "column", alignItems: "stretch", gap: 10 }]}>
+                    <View>
+                      <Text style={label}>Where you live</Text>
+                      <Text style={small}>Your country and, in the United States, your state. Change it if you move.</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      {placeField("Country", countryName(place.country), "Choose a country", () => setPicking("country"))}
+                      {needsState(place.country) && placeField("State", stateName(place.region), "Choose a state", () => setPicking("state"))}
+                    </View>
+                    <Msg msg={placeMsg} />
+                    <Btn label={placeBusy ? "Saving…" : "Save"} onPress={() => void savePlace()} disabled={placeBusy || !placeReady || !placeChanged} />
+                  </View>
+                </>
+              )}
+            </SectionCard>
+            <PlacePicker
+              open={picking === "country"}
+              title="Country"
+              places={COUNTRIES}
+              first={COUNTRIES_FIRST}
+              value={place.country}
+              onPick={(code) => {
+                setPlaceMsg(null);
+                setPlace({ country: code, region: needsState(code) ? place.region : "" });
+              }}
+              onClose={() => setPicking(null)}
+            />
+            <PlacePicker
+              open={picking === "state"}
+              title="State"
+              places={US_STATES}
+              value={place.region}
+              onPick={(code) => {
+                setPlaceMsg(null);
+                setPlace({ ...place, region: code });
+              }}
+              onClose={() => setPicking(null)}
+            />
+          </>
+        );
+      }
+
       case "blocked":
         return (
           <SectionCard title="Blocked users" sub="Blocked users can't see your profile details or interact with you.">
@@ -534,7 +707,7 @@ export default function SettingsSection() {
       <Stack.Screen options={{ title: meta?.label ?? "Settings", headerRight: () => (saved ? <Text style={{ color: "#97c459", fontFamily: fonts.body, fontSize: 11.5 }}>✓ Saved</Text> : null) }} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={90}>
         <ScrollView contentContainerStyle={{ paddingTop: 10, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-          {toggleError && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#5a2a2a", backgroundColor: "#1c1010" }}>{toggleError}</Text>}
+          {toggleError && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#141418" }}>{toggleError}</Text>}
           {body()}
         </ScrollView>
       </KeyboardAvoidingView>

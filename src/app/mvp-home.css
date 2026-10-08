@@ -430,7 +430,7 @@ body {
 }
 
 .avatar-menu-item--danger:hover {
-  background: rgba(220, 60, 60, 0.12);
+  background: #1a1a20;
   color: rgba(255, 110, 110, 0.95);
 }
 
@@ -809,9 +809,9 @@ body {
   align-items: center;
   gap: 6px;
   margin-top: 12px;
-  background: rgba(255,183,0,0.85);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,221,100,0.35);
+  /* The brand yellow, solid: no see-through and no blur behind it. */
+  background: #ffb700;
+  border: 1px solid #ffb700;
   color: #1a0e00;
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
@@ -821,13 +821,13 @@ body {
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
 }
-.carousel-watch-btn:hover { background: rgba(255,123,0,0.95); transform: translateY(-1px); }
+.carousel-watch-btn:hover { background: #ffc22e; border-color: #ffc22e; transform: translateY(-1px); }
 a.carousel-watch-btn { text-decoration: none; }
 
 /* ── News slides (interleaved with live rooms by mvp-adapter) ── */
 .carousel-live-badge.news {
-  background: rgba(226,185,107,0.14);
-  border: 1px solid rgba(226,185,107,0.4);
+  background: #111114;
+  border: 1px solid #26262e;
   color: #f4d47c;
 }
 .carousel-news-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
@@ -1703,7 +1703,7 @@ a.carousel-watch-btn { text-decoration: none; }
 }
 .create-btn:active {
   border-color: hsla(var(--highlight-hue), 100%, 80%, 0.7);
-  background-color: hsla(var(--highlight-hue), 50%, 20%, 0.5);
+  background-color: #1c1c22;
 }
 .create-btn:active::after {
   opacity: 1;
@@ -2462,9 +2462,11 @@ body { background: transparent; }
   box-shadow: 0 3px 10px rgba(0,0,0,0.12);
   transition: border-color 0.2s, background 0.2s, filter 0.2s;
 }
+/* Where you are: a solid tile with a brighter edge; the gold is the
+   icon's, not a wash behind it. */
 .sidebar-link.active .nav-icon-wrap {
-  border-color: rgba(226,185,107,0.4);
-  background: rgba(226,185,107,0.20);
+  border-color: #4a4a56;
+  background: #1c1c22;
   filter: brightness(1.55);
 }
 .sidebar-link:hover:not(.active) .nav-icon-wrap {

@@ -259,7 +259,7 @@ function NewsSlide({ story, ground, onMeasure }: { story: NewsStory; ground: str
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
           <Pressable
             onPress={queue}
-            style={({ pressed }) => ({ height: 34, paddingHorizontal: 14, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: inQueue ? "#1d4f8c" : pressed ? "#3d8bea" : "#2f7fe0" })}
+            style={({ pressed }) => ({ height: 34, paddingHorizontal: 14, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: inQueue ? "#1c1c22" : pressed ? "#3d8bea" : "#2f7fe0" })}
           >
             <Text numberOfLines={1} style={{ color: "#fff", fontFamily: fonts.semi, fontSize: 13 }}>{inQueue ? "In queue — open the panel" : "Queue a discussion"}</Text>
           </Pressable>

@@ -2071,7 +2071,7 @@
 }
 
 .ag-invite-join:hover:not(:disabled) { background: #ffc22e; border-color: #ffc22e; }
-.ag-invite-join:disabled { opacity: 0.5; cursor: default; }
+.ag-invite-join:disabled { background: #1c1c22; border-color: #26262e; color: #6f6f7c; cursor: default; }
 
 .ag-invite-decline {
   height: 36px;
@@ -2678,9 +2678,9 @@
   max-width: 520px;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(46, 16, 16, 0.95);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #fca5a5;
+  background: #0e0e11;
+  border: 1px solid #2a2a33;
+  color: #ff8a80;
   font-size: 12.5px;
   line-height: 1.45;
   z-index: 30;

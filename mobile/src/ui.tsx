@@ -29,6 +29,9 @@ export function Button({
   children, onPress, disabled, busy, kind = "primary",
 }: { children: ReactNode; onPress: () => void; disabled?: boolean; busy?: boolean; kind?: "primary" | "secondary" | "danger" }) {
   const off = disabled || busy;
+  /* The yellow button, not ready yet: a solid quiet pill, not the yellow
+     faded. Busy, it keeps its colour and shows the wheel. */
+  const quiet = kind === "primary" && !!disabled && !busy;
   return (
     <Pressable
       onPress={onPress}
@@ -38,14 +41,15 @@ export function Button({
         kind === "primary" && styles.btnPrimary,
         kind === "secondary" && styles.btnSecondary,
         kind === "danger" && styles.btnDanger,
-        off && { opacity: 0.45 },
+        quiet && { backgroundColor: colors.off },
+        off && kind !== "primary" && { opacity: 0.45 },
         pressed && !off && { transform: [{ scale: 0.99 }] },
       ]}
     >
       {busy ? (
         <ActivityIndicator color={kind === "primary" ? colors.ink : colors.text} />
       ) : (
-        <Text style={[styles.btnText, kind === "primary" ? { color: colors.ink } : { color: colors.text }]}>{children}</Text>
+        <Text style={[styles.btnText, kind === "primary" ? { color: quiet ? colors.offInk : colors.ink } : { color: colors.text }]}>{children}</Text>
       )}
     </Pressable>
   );

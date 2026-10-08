@@ -204,7 +204,7 @@ export function ChatThread(p: ChatThreadProps) {
         {rx.length > 0 && (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, alignSelf: mine ? "flex-end" : "flex-start", marginTop: 2, marginLeft: mine ? 0 : 28 }}>
             {rx.map(([emoji, g]) => (
-              <Pressable key={emoji} onPress={() => p.onReact?.(m.id, emoji)} style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, borderWidth: 1, borderColor: g.mine ? YELLOW : "#2e2e38", backgroundColor: g.mine ? "#2a2410" : "#17171c" }}>
+              <Pressable key={emoji} onPress={() => p.onReact?.(m.id, emoji)} style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, borderWidth: 1, borderColor: g.mine ? YELLOW : "#2e2e38", backgroundColor: "#17171c" }}>
                 <Text style={{ fontSize: 14 }}>{emoji}</Text>
                 {g.count > 1 && <Text style={{ color: "#e6e6ec", fontFamily: fonts.body, fontSize: 12 }}>{g.count}</Text>}
               </Pressable>
@@ -271,8 +271,8 @@ export function ChatThread(p: ChatThreadProps) {
           <Pressable onPress={() => setPicker("emoji")} hitSlop={6} accessibilityLabel="Add emoji" style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}><Ionicons name="happy-outline" size={20} color="rgba(255,255,255,0.6)" /></Pressable>
           <Pressable onPress={() => void attachPhoto()} hitSlop={6} accessibilityLabel="Attach image" style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}><Ionicons name="image-outline" size={20} color="rgba(255,255,255,0.6)" /></Pressable>
           {giphyEnabled && <Pressable onPress={() => setPicker("gif")} hitSlop={6} accessibilityLabel="Add a GIF" style={{ height: 34, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "rgba(255,255,255,0.6)", fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5 }}>GIF</Text></Pressable>}
-          <Pressable onPress={() => void send()} disabled={!canSend} accessibilityLabel="Send" style={{ width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: canSend ? YELLOW : "#3d3200" }}>
-            <Ionicons name="send" size={15} color={canSend ? INK : "rgba(255,255,255,0.55)"} />
+          <Pressable onPress={() => void send()} disabled={!canSend} accessibilityLabel="Send" style={{ width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: canSend ? YELLOW : "#1c1c22" }}>
+            <Ionicons name="send" size={15} color={canSend ? INK : "#6f6f7c"} />
           </Pressable>
         </View>
       </View>
@@ -321,7 +321,7 @@ function MessageMenu({ msg, mine, reactions, myReactions, canUnsend, showDelete,
           {reactions.length > 0 && (
             <View style={{ flexDirection: "row", justifyContent: "space-around", paddingVertical: 6, marginBottom: 4, borderBottomWidth: 1, borderColor: colors.hairline }}>
               {reactions.map((e) => (
-                <Pressable key={e} onPress={() => onReact(e)} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: myReactions.has(e) ? "#2a2410" : "transparent", borderWidth: myReactions.has(e) ? 1 : 0, borderColor: YELLOW }}>
+                <Pressable key={e} onPress={() => onReact(e)} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: myReactions.has(e) ? "#1c1c22" : "transparent", borderWidth: myReactions.has(e) ? 1 : 0, borderColor: YELLOW }}>
                   <Text style={{ fontSize: 24 }}>{e}</Text>
                 </Pressable>
               ))}

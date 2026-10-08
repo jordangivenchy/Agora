@@ -95,7 +95,7 @@ export default function Mod() {
       {!checked ? <LoadingLine /> : (
         <ScrollView contentContainerStyle={{ paddingTop: 10, paddingBottom: 40 }}>
           <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginBottom: 12 }}>Report queue · every action is audit-logged</Text>
-          {(loadError || actionError) && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#5a2a2a", backgroundColor: "#1c1010" }}>{loadError || actionError}</Text>}
+          {(loadError || actionError) && <Text style={{ color: "#fca5a5", fontFamily: fonts.body, fontSize: 12, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#2e2e38", backgroundColor: "#141418" }}>{loadError || actionError}</Text>}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 14 }}>
             {STATUSES.map((s) => (
               <Pressable key={s} onPress={() => setTab(s)} style={{ flexDirection: "row", gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: tab === s ? "#26262e" : colors.surface2, borderWidth: 1, borderColor: tab === s ? "#4a4a54" : "#34343c" }}>
@@ -129,8 +129,8 @@ export default function Mod() {
               {!!r.description && <Text style={{ color: "#c0c0c8", fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginTop: 6 }}>“{r.description}”</Text>}
               {!!r.message_content && <Text style={{ color: "#9a9aa2", fontFamily: fonts.body, fontSize: 11, marginTop: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#0a0a0e", borderWidth: 1, borderColor: colors.border }}>Reported message: “{r.message_content}”</Text>}
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-                {r.status !== "actioned" && chip("Mark actioned", () => void resolve(r, "actioned"), { bg: "#15261a", border: "#3a5a3a", color: "#97c459" }, busyId === r.id)}
-                {r.status === "open" && chip("Mark reviewed", () => void resolve(r, "reviewed"), { bg: "#14233a", border: "#2c5382", color: "#9cc4f0" }, busyId === r.id)}
+                {r.status !== "actioned" && chip("Mark actioned", () => void resolve(r, "actioned"), { bg: "#1c1c22", border: "#33333c", color: "#97c459" }, busyId === r.id)}
+                {r.status === "open" && chip("Mark reviewed", () => void resolve(r, "reviewed"), { bg: "#1c1c22", border: "#33333c", color: "#f5f5f0" }, busyId === r.id)}
                 {r.status !== "dismissed" && chip("Dismiss", () => void resolve(r, "dismissed"), { bg: "transparent", border: "#3a3a42", color: colors.muted }, busyId === r.id)}
                 {r.status !== "open" && chip("Reopen", () => void resolve(r, "open"), { bg: "transparent", border: "#3a3a42", color: colors.muted }, busyId === r.id)}
               </View>
