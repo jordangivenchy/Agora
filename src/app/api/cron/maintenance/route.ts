@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { EgressClient } from "livekit-server-sdk";
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { readHlsEnv, writeReplayPlaylist } from "@/lib/recordingEgress";
+import { configuredProviders, generateAnswer } from "@/lib/ai/provider";
+import { runReadings } from "@/lib/totals/readRun";
 
 /* Daily housekeeping (see vercel.json):
      1. sweep ghost seats — participants whose tab died without stamping
@@ -12,8 +14,14 @@ import { readHlsEnv, writeReplayPlaylist } from "@/lib/recordingEgress";
      3. stop any egress still running against an ended room (belt-and-braces
         behind the close-stage stop_all — a leaked egress bills minutes)
      4. prune expired 2FA challenges/gates and day-old attempt audit rows
+     5. read a few public rooms for the anonymous totals (lib/totals):
+        nothing to do, and no model call, until someone who may be
+        counted has spoken in one
 
    Auth: same CRON_SECRET bearer scheme as refresh-traits. */
+
+/* The reading (5) waits on a model: give the run room for it. */
+export const maxDuration = 120;
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -152,6 +160,15 @@ export async function GET(req: Request) {
     report.twoFactorPruned = true;
   } catch (e) {
     report.twoFactorPruned = `error: ${e instanceof Error ? e.message : "unknown"}`;
+  }
+
+  // 5. Rooms waiting to be read for the anonymous totals
+  try {
+    report.totalsRead = configuredProviders().length
+      ? await runReadings(admin, { generate: generateAnswer, limit: 5, budgetMs: 45_000 })
+      : "no_model";
+  } catch (e) {
+    report.totalsRead = `error: ${e instanceof Error ? e.message : "unknown"}`;
   }
 
   return NextResponse.json({ ok: true, ...report });

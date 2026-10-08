@@ -25,9 +25,10 @@ import { COUNTRIES, COUNTRIES_FIRST, US_STATES, countryName, needsState, stateNa
 
 /* The coach and the analysis built on it are coming soon (lib/features.ts). */
 const AGORA_AI = false;
-/* What "Delete my derived data" leaves switched off (erase_user_data); the
-   anonymous-totals switch is not derived data and stays where it was. */
-const ERASED = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
+/* What "Delete my derived data" leaves switched off (erase_user_data):
+   every kind of working-out, the anonymous totals among them (what was
+   read from a person's rooms for the totals is deleted too). */
+const ERASED = { analytics: false, debate_analysis: false, personalization: false, coaching: false, research: false };
 type M = { kind: "ok" | "err"; text: string } | null;
 
 export default function SettingsSection() {

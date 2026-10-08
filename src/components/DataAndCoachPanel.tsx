@@ -33,10 +33,11 @@ const CATEGORIES: { key: ConsentCategory; title: string; blurb: string; ai?: boo
 // On by default — consent is granted when the user accepts the app's terms
 // (seeded at signup). This panel is where they can turn any of it OFF.
 const DEFAULT_CONSENT: Consent = { analytics: true, debate_analysis: true, personalization: true, coaching: true, research: true };
-/* What "Delete my derived data" leaves switched off (erase_user_data). The
-   anonymous totals are not derived data about a person, so that switch
-   stays where it was. */
-const ERASED = { analytics: false, debate_analysis: false, personalization: false, coaching: false };
+/* What "Delete my derived data" leaves switched off (erase_user_data):
+   every kind of working-out, the anonymous totals among them, since what
+   was read from a person's rooms for the totals is deleted too and would
+   only be read again. */
+const ERASED = { analytics: false, debate_analysis: false, personalization: false, coaching: false, research: false };
 
 export default function DataAndCoachPanel() {
   const [consent, setConsent] = useState<Consent>(DEFAULT_CONSENT);

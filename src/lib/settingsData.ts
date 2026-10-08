@@ -45,19 +45,21 @@ export type BlockedUser = { id: string; username: string; display_name?: string 
 export type SettingsInitial =
   | { status: "login" }
   | { status: "error"; message: string }
-  | { status: "ok"; authUser: User; profile: ProfileRow; settings: SettingsRow; blocked: BlockedUser[] };
+  | { status: "ok"; authUser: User; profile: ProfileRow; settings: SettingsRow; blocked: BlockedUser[]; totalsStaff: boolean };
 
 export async function fetchSettingsInitial(supabase: SupabaseClient): Promise<SettingsInitial> {
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user;
   if (!user) return { status: "login" };
 
-  const [profRes, setRes, blockRes] = await Promise.all([
+  const [profRes, setRes, blockRes, staffRes] = await Promise.all([
     supabase.from("users")
       .select("id, username, display_name, avatar_url, bio, username_changed_at, created_at, is_moderator")
       .eq("id", user.id).maybeSingle(),
     supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_blocks").select("blocked_id").eq("blocker_id", user.id),
+    // on the totals desk's list? (/totals checks again itself)
+    supabase.rpc("is_totals_staff"),
   ]);
   if (profRes.error || !profRes.data) return { status: "error", message: profRes.error?.message || "Profile not found" };
   // users.email is not client-readable (column grants); the auth user is
@@ -86,5 +88,5 @@ export async function fetchSettingsInitial(supabase: SupabaseClient): Promise<Se
       .from("users").select("id, username, display_name, avatar_url").in("id", ids);
     blocked = (blockedUsers ?? []) as BlockedUser[];
   }
-  return { status: "ok", authUser: user, profile, settings, blocked };
+  return { status: "ok", authUser: user, profile, settings, blocked, totalsStaff: staffRes.data === true };
 }

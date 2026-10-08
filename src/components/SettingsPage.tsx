@@ -1096,6 +1096,14 @@ export default function SettingsPage({ initial }: {
                 <span className="stg-nav-sub">Open the report queue</span>
               </a>
             )}
+            {/* The few people on the totals desk's list get its link; /totals
+                checks the list itself. */}
+            {seed?.totalsStaff && (
+              <a href="/totals" className="stg-nav-item is-mod">
+                <span className="stg-nav-label">Totals</span>
+                <span className="stg-nav-sub">Counts to share or sell</span>
+              </a>
+            )}
           </nav>
 
           <main className="stg-main">

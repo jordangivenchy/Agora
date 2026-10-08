@@ -9,7 +9,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { REACTION_EMOJI, type CallApi } from "./roomCall";
-import { diag } from "./diag"; // TEMP-DIAG
 import type { Layout } from "./roomTiles";
 import { showToast } from "./toast";
 import { colors, fonts } from "./theme";
@@ -61,7 +60,6 @@ export function RoomControls(p: ControlsProps) {
   const publishOff = !p.onStage || !call.connected || call.mediaBusy || !call.live;
   /* The mic is a mute switch once it's warmed up: a camera starting never holds it. */
   const micOff = !p.onStage || !call.connected || !call.live;
-  useEffect(() => { diag("controls", { onStage: p.onStage, connected: call.connected, reconnecting: call.reconnecting, mediaBusy: call.mediaBusy, live: call.live, hls: !!call.hls, micOn: call.micOn, camOn: call.camOn, canPublish: call.canPublish, mediaError: call.mediaError }); }, [p.onStage, call.connected, call.reconnecting, call.mediaBusy, call.live, call.hls, call.micOn, call.camOn, call.canPublish, call.mediaError]); // TEMP-DIAG
   const bottom = 8 + insets.bottom;
   return (
     <>
