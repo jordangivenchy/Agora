@@ -354,7 +354,7 @@ function Room({ roomId }: { roomId: string }) {
   const goHome = () => (router.canGoBack() ? router.back() : router.navigate("/"));
   const walkOut = async () => {
     leftRef.current = true;
-    if (mySeat) await vacateSeat(supabase, mySeat.id).catch(() => undefined);
+    if (mySeat) await vacateSeat(supabase, auth, roomId, mySeat.id).catch(() => undefined);
     leave();
     goHome();
   };
@@ -440,7 +440,7 @@ function Room({ roomId }: { roomId: string }) {
               onToggleFollow={() => void toggleFollow()}
               onFraming={onFraming}
               ended={ended}
-              onWatchReplay={() => { leftRef.current = true; if (mySeat) void vacateSeat(supabase, mySeat.id).catch(() => undefined); router.replace({ pathname: "/replay/[id]", params: { id: roomId } }); }}
+              onWatchReplay={() => { leftRef.current = true; if (mySeat) void vacateSeat(supabase, auth, roomId, mySeat.id).catch(() => undefined); router.replace({ pathname: "/replay/[id]", params: { id: roomId } }); }}
               onHome={() => void walkOut()}
             />
           </>

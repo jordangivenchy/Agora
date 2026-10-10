@@ -4,8 +4,11 @@
    active call; the native audio session is opened for the call's
    lifetime so playback continues with the screen off. */
 import { useEffect, type ReactNode } from "react";
-import { loadLiveKit } from "./livekit";
+import { ConnectionState, RoomEvent } from "livekit-client";
+import { loadLiveKit, type LiveKit } from "./livekit";
 import { useCall } from "./callSession";
+import { noteCall, noteCallGone } from "./callPresence";
+import { countGuests } from "../../src/components/agora/roomPresence";
 
 export function CallHost({ children }: { children: ReactNode }) {
   const { active, dropCall } = useCall();
@@ -30,7 +33,33 @@ export function CallHost({ children }: { children: ReactNode }) {
   const Room = lk.LiveKitRoom;
   return (
     <Room serverUrl={active?.serverUrl} token={active?.token} connect={!!active} audio={false} video={false} onDisconnected={dropCall}>
+      <Presence lk={lk} roomId={roomId} />
       {children}
     </Room>
   );
+}
+
+/* What the call knows that the seats don't, told to the rest of the app
+   (callPresence): which connection is this phone's, and how many people
+   are listening without an account. */
+function Presence({ lk, roomId }: { lk: LiveKit; roomId: string | null }) {
+  const room = lk.useRoomContext();
+  useEffect(() => {
+    if (!roomId) return;
+    const note = () => {
+      if (room.state !== ConnectionState.Connected) return;
+      noteCall(roomId, room.localParticipant.sid, countGuests([room.localParticipant.identity, ...[...room.remoteParticipants.values()].map((p) => p.identity)]));
+    };
+    const changed = (state: ConnectionState) => {
+      if (state === ConnectionState.Disconnected) noteCallGone();
+      else note();
+    };
+    note();
+    room.on(RoomEvent.ConnectionStateChanged, changed).on(RoomEvent.ParticipantConnected, note).on(RoomEvent.ParticipantDisconnected, note);
+    return () => {
+      room.off(RoomEvent.ConnectionStateChanged, changed).off(RoomEvent.ParticipantConnected, note).off(RoomEvent.ParticipantDisconnected, note);
+      noteCallGone();
+    };
+  }, [room, roomId]);
+  return null;
 }

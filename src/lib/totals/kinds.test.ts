@@ -3,11 +3,14 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { COUNTRIES } from "@/components/agora/places";
 import { TOPICS } from "@/types/database";
+import { deriveStageRole } from "@/components/agora/stage";
 import { AGE_GROUPS, KINDS, KIND_KEYS, LEFT_OUT, MEASURES, MEASURE_ORDER, STANCES, isKind, isStance } from "./kinds";
 
 /* The lists the totals are made of live in two places: here, and in the
    database that checks every row against them. These hold the two equal. */
 const sql = readFileSync(path.resolve(__dirname, "../../../supabase/migrations/20261008_totals.sql"), "utf8");
+/* The counting itself (totals_cells) as it stands now: a later file replaced it. */
+const counting = readFileSync(path.resolve(__dirname, "../../../supabase/migrations/20261009_totals_on_stage.sql"), "utf8");
 const quoted = (text: string) => [...text.matchAll(/'([^']+)'/g)].map((m) => m[1]);
 
 describe("the lists behind the totals", () => {
@@ -56,6 +59,37 @@ describe("the lists behind the totals", () => {
     }
     expect(sql).toMatch(/then 'spoke' else 'listened' end/);
     expect(sql).toMatch(/when 'PRO' then 'for' else 'against' end/);
+    // the later file counts the same four things
+    for (const m of MEASURE_ORDER) {
+      const row = new RegExp(`'${m}'(?:::text)?(?: as measure)?, '(topic|motion)'`).exec(counting);
+      expect(row?.[1], m).toBe(MEASURES[m].about);
+    }
+    expect(counting).toMatch(/when 'PRO' then 'for' else 'against' end/);
+    expect(counting).toContain("where x.stance in ('for', 'against', 'mixed')");
+  });
+
+  it("counts as having spoken exactly the people the room puts on its stage", () => {
+    /* The database's reading, word for word… */
+    const reading = /case when (.+)\n\s+then 'spoke' else 'listened' end as category/.exec(counting);
+    expect(reading?.[1]).toBe("p.stage_role in ('host', 'cohost', 'speaker') or p.user_id = r.host_id or p.role = 'debater'");
+    expect(counting).toContain("select r.id, r.started_at, r.topic_key, r.host_id,");
+    /* …and the same reading here, held against the room's own rule for
+       every seat there can be. A host's stored stage_role is 'audience'
+       (the column's default): the first version of the counting trusted
+       it, and counted every host as a listener in their own room. */
+    const spoke = (p: { stage_role: string | null; user_id: string; role: string }, hostId: string) =>
+      ["host", "cohost", "speaker"].includes(p.stage_role ?? "") || p.user_id === hostId || p.role === "debater";
+    for (const stage_role of ["host", "cohost", "speaker", "audience", null]) {
+      for (const role of ["debater", "spectator"]) {
+        for (const user_id of ["the-host", "someone-else"]) {
+          const seat = { stage_role, user_id, role };
+          const onStage = deriveStageRole(seat as Parameters<typeof deriveStageRole>[0], { host_id: "the-host" }) !== "audience";
+          expect(spoke(seat, "the-host"), JSON.stringify(seat)).toBe(onStage);
+        }
+      }
+    }
+    expect(spoke({ stage_role: "audience", user_id: "the-host", role: "debater" }, "the-host")).toBe(true);
+    expect(spoke({ stage_role: "audience", user_id: "someone-else", role: "spectator" }, "the-host")).toBe(false);
   });
 
   it("tells a kind and a side from anything else", () => {
@@ -80,6 +114,11 @@ describe("the lists behind the totals", () => {
       expect(sql, table).toContain(`revoke all on public.${table} from anon, authenticated;`);
       expect(sql, table).toContain(`alter table public.${table} enable row level security;`);
     }
+    // replacing the counting left it where it was
+    expect(counting).toContain("revoke execute on function public.totals_cells(date, date) from public, anon, authenticated;");
+    expect(counting).toContain("grant execute on function public.totals_cells(date, date) to service_role;");
+    expect(counting).toContain("security definer");
+    expect(counting).toContain("set search_path to 'public'");
     // a person can read what was read from their own rooms, and nothing else of it
     expect(sql).toContain("using (auth.uid() = user_id);");
     expect(sql).toContain("grant select on public.room_readings to authenticated;");

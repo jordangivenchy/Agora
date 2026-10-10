@@ -855,6 +855,8 @@ function AgoraRoom({ roomId }: { roomId: string }) {
   useEffect(() => {
     setLiveTileCount(call.videoTiles.length);
   }, [call.videoTiles.length]);
+  /* Which connection to the call is this page's (stable; read on leaving). */
+  const callSid = call.sid;
 
   /* ── HLS audience mode ─────────────────────────────────────────────
      Over the spectator ceiling the token API answers "watch the
@@ -1331,12 +1333,27 @@ function AgoraRoom({ roomId }: { roomId: string }) {
     logRoomEvent(roomId, "leave");
     try { sessionStorage.removeItem(`agora:live:${roomId}`); } catch { /* private mode */ }
     if (!currentUser || !myParticipation) return;
-    supabase
-      .from("debate_participants")
-      .update({ left_at: new Date().toISOString(), hand_raised_at: null })
-      .eq("id", myParticipation.id)
-      .then(undefined, () => {});
-  }, [currentUser, myParticipation, supabase]);
+    /* Through the server, which asks the call first: someone still in the
+       room on another device keeps their seat (api/rooms/leave). If the
+       server can't be asked, the seat is stamped from here as it used to be. */
+    const seatId = myParticipation.id;
+    fetch("/api/rooms/leave", {
+      method: "POST",
+      keepalive: true,
+      body: JSON.stringify({ roomId, sid: callSid(), seatOnly: true }),
+    })
+      .then(async (res) => {
+        const answer = res.ok ? ((await res.json().catch(() => null)) as { signedIn?: boolean } | null) : null;
+        if (!answer || answer.signedIn === false) throw new Error("not asked");
+      })
+      .catch(() => {
+        supabase
+          .from("debate_participants")
+          .update({ left_at: new Date().toISOString(), hand_raised_at: null })
+          .eq("id", seatId)
+          .then(undefined, () => {});
+      });
+  }, [currentUser, myParticipation, roomId, callSid, supabase]);
 
   /* …but a closed tab CAN stamp out: sendBeacon outlives the page. On
      pagehide (with beforeunload as the fallback for browsers that skip
@@ -1361,7 +1378,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       seatedRef.current = false; // pagehide + beforeunload can both fire
       logRoomEvent(roomId, "pagehide_beacon");
       try {
-        navigator.sendBeacon("/api/rooms/leave", JSON.stringify({ roomId }));
+        navigator.sendBeacon("/api/rooms/leave", JSON.stringify({ roomId, sid: callSid() }));
       } catch {
         /* best effort — the webhook sweep catches what the beacon misses */
       }
@@ -1372,7 +1389,7 @@ function AgoraRoom({ roomId }: { roomId: string }) {
       window.removeEventListener("pagehide", beacon);
       window.removeEventListener("beforeunload", beacon);
     };
-  }, [roomId, broadcast]);
+  }, [roomId, broadcast, callSid]);
 
   /* ── Unclean exits ─────────────────────────────────────────
      A marker rides in sessionStorage while the call is up and is cleared
@@ -1617,12 +1634,13 @@ function AgoraRoom({ roomId }: { roomId: string }) {
 
   const topic = TOPICS.find((t) => t.key === room?.topic_key);
   /* Who is listening now: everyone in the room who isn't on the stage or
-     at the mic — a raised hand is still listening. (viewer_count is
-     everyone who has been in the room while it was live, the host and the
-     speakers among them, so on its own a host read as their own audience;
-     it still sizes the amphitheatre's crowd.) */
+     at the mic — a raised hand is still listening — and the people
+     listening without an account, who hold no seat and are known only to
+     the call. (viewer_count is everyone who has been in the room while it
+     was live, the host and the speakers among them, so on its own a host
+     read as their own audience; it still sizes the amphitheatre's crowd.) */
   const audienceCount = room
-    ? participants.filter((p) => !p.left_at && deriveStageRole(p, room) === "audience" && p.user_id !== room.mic_user_id).length
+    ? participants.filter((p) => !p.left_at && deriveStageRole(p, room) === "audience" && p.user_id !== room.mic_user_id).length + call.guests
     : 0;
 
   /* ── Minimized: the call carries on while you browse ─────────────

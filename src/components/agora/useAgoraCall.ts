@@ -31,6 +31,7 @@ import {
   type ScreenShareCaptureOptions,
   type TrackPublishOptions,
 } from "livekit-client";
+import { countGuests } from "./roomPresence";
 
 /* iOS unlocks audio without LiveKit's startAudio(). LiveKit's iOS path
    builds a silent MediaStream track out of a Web Audio oscillator and
@@ -193,6 +194,11 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
   }, [highQuality, canPublish]);
 
   const roomRef = useRef<Room | null>(null);
+  /* Who else the call knows of that the seats don't: people listening
+     without an account. And which connection is ours, kept after it ends,
+     so leaving can say which one left (components/agora/roomPresence). */
+  const [guests, setGuests] = useState(0);
+  const sidRef = useRef<string | null>(null);
 
   const unlockRef = useRef<() => void>(() => {});
   /* One guest identity per mount, so reconnects don't multiply "viewers". */
@@ -354,6 +360,12 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       if (!IOS_TOUCH) room.startAudio().catch(() => {});
     }
 
+    const notePeople = () => {
+      if (cancelled || room.state !== ConnectionState.Connected) return;
+      sidRef.current = room.localParticipant.sid || sidRef.current;
+      setGuests(countGuests([room.localParticipant.identity, ...[...room.remoteParticipants.values()].map((p) => p.identity)]));
+    };
+
     const attachAudio = (track: RemoteTrack) => {
       if (track.kind !== Track.Kind.Audio) return;
       const el = track.attach();
@@ -394,6 +406,8 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           .on(RoomEvent.TrackMuted, refreshTiles)
           .on(RoomEvent.TrackUnmuted, refreshTiles)
           .on(RoomEvent.ParticipantDisconnected, refreshTiles)
+          .on(RoomEvent.ParticipantConnected, notePeople)
+          .on(RoomEvent.ParticipantDisconnected, notePeople)
           .on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
             setSpeakingIds(new Set(speakers.map((s) => s.identity)));
           })
@@ -410,6 +424,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           .on(RoomEvent.ConnectionStateChanged, (s) => {
             setConnected(s === ConnectionState.Connected);
             if (s === ConnectionState.Connected) {
+              notePeople();
               retriesRef.current = 0;
               if (everConnectedRef.current && recovering) setReconnects((n) => n + 1);
               everConnectedRef.current = true;
@@ -422,6 +437,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
                screen locks — so remember it for the return handler and,
                if we're still on screen, come straight back. */
             if (cancelled) return;
+            setGuests(0); // out of the call, this page can't see who is listening
             logRoomEvent(roomId, "disconnected", reason === undefined ? "unknown" : DisconnectReason[reason] ?? String(reason), {
               retries: retriesRef.current, everConnected: everConnectedRef.current,
             });
@@ -454,6 +470,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
             return;
           }
           setConnected(true);
+          notePeople();
           refreshTiles();
           watchPlayback();
           return;
@@ -493,6 +510,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
           return;
         }
         setConnected(true);
+        notePeople();
         logRoomEvent(roomId, "connected", null, { canPublish, nonce: connectNonce, recovering });
         refreshTiles();
 
@@ -516,6 +534,7 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
       setCamOn(false);
       setSpeakingIds(new Set());
       setVideoTiles([]);
+      setGuests(0);
     };
     // `external` is stable for the life of a broadcast page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -762,8 +781,15 @@ export function useAgoraCall({ roomId, userId, username, canPublish, ready, high
     [pushReaction, username]
   );
 
+  const sid = useCallback(() => sidRef.current, []);
+
   return {
     connected,
+    /* People in the call without an account (they hold no seat). */
+    guests,
+    /* Our own connection to the call, the last one if it has ended; null
+       if there never was one. */
+    sid,
     /* Non-null → the audience-overflow broadcast view is in effect. */
     hlsMode,
     /* Re-run the token request / connection attempt (used to leave HLS

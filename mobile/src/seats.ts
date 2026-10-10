@@ -4,6 +4,8 @@
    through Supabase realtime. */
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import type { Seat } from "./stageModel";
+import { apiFetch, type ApiAuth } from "./api";
+import { callSid } from "./callPresence";
 
 const SEAT_COLUMNS = "id, room_id, user_id, role, stance, joined_at, left_at, hand_raised_at, mic_muted, stage_role, user:users(username, display_name, avatar_url)";
 
@@ -23,7 +25,14 @@ export async function takeSeat(supabase: SupabaseClient, roomId: string, userId:
   }
 }
 
-export async function vacateSeat(supabase: SupabaseClient, seatId: string): Promise<void> {
+/** Stand up. Through the website, which asks the call first: someone still
+    in the room on another device keeps their seat (the site's
+    api/rooms/leave). If the site can't be asked, the row is stamped from
+    here as it used to be. */
+export async function vacateSeat(supabase: SupabaseClient, auth: ApiAuth, roomId: string, seatId: string): Promise<void> {
+  const res = await apiFetch("/api/rooms/leave", auth, { method: "POST", body: JSON.stringify({ roomId, sid: callSid(), seatOnly: true }) }).catch(() => null);
+  const answer = res?.ok ? ((await res.json().catch(() => null)) as { signedIn?: boolean } | null) : null;
+  if (answer && answer.signedIn !== false) return;
   await supabase.from("debate_participants").update({ left_at: new Date().toISOString(), hand_raised_at: null }).eq("id", seatId);
 }
 
