@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { BETA_COOKIE, verifyPass } from "@/lib/betaGate";
+import { BETA_COOKIE, admitPass, passCookieOptions } from "@/lib/betaGate";
+import { keyStillStands } from "@/lib/betaKeys";
 
 /* Everything asks for the pass while the beta is closed — reading
    included. Opening a door for readers is src/lib/readingGate.ts away:
@@ -32,6 +33,14 @@ const BETA_EXEMPT = [
 ];
 
 export async function proxy(request: NextRequest) {
+  /* A browser's pass, renewed on this visit: it goes out on whichever
+     answer leaves here (lib/betaGate). */
+  let renewedPass: string | null = null;
+  const keepPass = (response: NextResponse) => {
+    if (renewedPass) response.cookies.set(BETA_COOKIE, renewedPass, passCookieOptions());
+    return response;
+  };
+
   /* ── Closed-beta gate (armed only while BETA_INVITE_CODE is set) ── */
   const betaCode = process.env.BETA_INVITE_CODE;
   if (betaCode && request.method !== "OPTIONS") {
@@ -46,8 +55,15 @@ export async function proxy(request: NextRequest) {
     if (!exempt) {
       /* The browser carries the pass as a cookie; the phone app sends the
          same pass in a header, since it has no cookie jar. */
-      const pass = request.cookies.get(BETA_COOKIE)?.value ?? request.headers.get("x-agora-beta") ?? undefined;
-      if (!(await verifyPass(pass, betaCode))) {
+      const cookiePass = request.cookies.get(BETA_COOKIE)?.value;
+      const pass = cookiePass ?? request.headers.get("x-agora-beta") ?? undefined;
+      /* Opening a page keeps a browser's pass alive (the requests a page
+         then makes ride on the fresh one). The app has no cookie jar: it
+         renews its own when it opens (api/beta/pass). */
+      const opensPage = request.method === "GET" && (request.headers.get("sec-fetch-dest") === "document" || (request.headers.get("accept") ?? "").includes("text/html"));
+      const check = await admitPass(pass, betaCode, { mayRenew: keyStillStands, renew: !!cookiePass && opensPage });
+      if (check.valid && cookiePass) renewedPass = check.renew;
+      if (!check.valid) {
         const url = request.nextUrl.clone();
         url.pathname = "/beta";
         url.search = "";
@@ -63,7 +79,7 @@ export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/@")) {
     const url = request.nextUrl.clone();
     url.pathname = "/users/" + request.nextUrl.pathname.slice(2);
-    return NextResponse.rewrite(url);
+    return keepPass(NextResponse.rewrite(url));
   }
 
   let supabaseResponse = NextResponse.next({ request });
@@ -96,7 +112,7 @@ export async function proxy(request: NextRequest) {
      the auth server on every request — half a second of every page. */
   await supabase.auth.getClaims();
 
-  return supabaseResponse;
+  return keepPass(supabaseResponse);
 }
 
 export const config = {

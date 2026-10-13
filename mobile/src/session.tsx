@@ -3,7 +3,7 @@
    and answers the two questions every screen asks: signed in? past the
    gate? Password sign-in goes through the site's route so accounts with
    two-factor get their emailed code; the route hands the app its tokens. */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
@@ -11,9 +11,11 @@ import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { apiFetch } from "./api";
+import { apiFetch, onPassRefused } from "./api";
 
 const PASS_KEY = "agora_beta_pass";
+/* How often an open app asks the site to keep its pass alive. */
+const KEEP_PASS_EVERY_MS = 12 * 60 * 60 * 1000;
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -46,6 +48,8 @@ interface SessionState {
   pass: string | null;
   /** Whether the site's gate is armed: null until probed. */
   gated: boolean | null;
+  /** The pass this phone held has run out: the door says so instead of just asking for a key. */
+  lapsed: boolean;
   /** Listening without an account, like a visitor on the website. */
   guest: boolean;
   listenAsGuest(): void;
@@ -86,8 +90,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pass, setPass] = useState<string | null>(null);
   const [gated, setGated] = useState<boolean | null>(null);
+  const [lapsed, setLapsed] = useState(false);
   const [guest, setGuest] = useState(false);
   const [ready, setReady] = useState(false);
+
+  /* The pass is kept alive from here. A pass lasts 30 days from the last
+     time the site saw it: asked (api/beta/pass), the site hands back a
+     fresh one for any pass more than a day old, and says so when one no
+     longer opens the door. Then the pass is dropped and the door asks
+     for a key again; before, every call to the site was turned away
+     without a word and rooms could not be joined. No answer (offline)
+     changes nothing. */
+  const passRef = useRef<string | null>(null);
+  const keptAt = useRef(0);
+  const holdPass = useCallback((next: string | null) => {
+    passRef.current = next;
+    setPass(next);
+    void writePass(next);
+  }, []);
+  const dropPass = useCallback(() => {
+    if (!passRef.current) return;
+    holdPass(null);
+    setLapsed(true);
+  }, [holdPass]);
+  const keepPass = useCallback(async () => {
+    const current = passRef.current;
+    if (!current) return;
+    keptAt.current = Date.now();
+    const res = await apiFetch("/api/beta/pass", {}, { method: "POST", body: JSON.stringify({ pass: current }) }).catch(() => null);
+    if (!res || passRef.current !== current) return;
+    if (res.status === 401) { dropPass(); return; }
+    if (!res.ok) return;
+    const body = (await res.json().catch(() => ({}))) as { pass?: string };
+    if (body.pass && body.pass !== current && passRef.current === current) holdPass(body.pass);
+  }, [dropPass, holdPass]);
 
   useEffect(() => {
     let alive = true;
@@ -95,7 +131,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const [{ data }, storedPass] = await Promise.all([supabase.auth.getSession(), readPass()]);
       if (!alive) return;
       setSession(data.session);
+      passRef.current = storedPass;
       setPass(storedPass);
+      void keepPass();
       /* A pass already opens the door whatever the gate says, so the app
          stands up now and the probe below only fills in the answer; the
          door waits on it only for those without one. */
@@ -110,19 +148,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (alive) setReady(true);
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
-    /* Refresh the token only while the app is up front. */
+    /* Refresh the token only while the app is up front; and an app left
+       open for days still keeps its pass. */
     const app = AppState.addEventListener("change", (state) => {
-      if (state === "active") supabase.auth.startAutoRefresh();
-      else supabase.auth.stopAutoRefresh();
+      if (state === "active") {
+        supabase.auth.startAutoRefresh();
+        if (Date.now() - keptAt.current > KEEP_PASS_EVERY_MS) void keepPass();
+      } else supabase.auth.stopAutoRefresh();
     });
     supabase.auth.startAutoRefresh();
+    /* A call the door turned away anyway (the pass ended between two checks). */
+    const offRefused = onPassRefused(dropPass);
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
       app.remove();
+      offRefused();
       supabase.auth.stopAutoRefresh();
     };
-  }, []);
+  }, [keepPass, dropPass]);
 
   const signIn = useCallback(async (email: string, password: string): Promise<SignInResult> => {
     const clean = email.trim();
@@ -228,15 +272,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!res.ok) return "Something went wrong on our end. Try again.";
     const body = (await res.json().catch(() => ({}))) as { pass?: string };
     const next = body.pass ?? null;
+    passRef.current = next;
+    keptAt.current = Date.now();
     setPass(next);
+    setLapsed(false);
     await writePass(next);
     if (!next) setGated(false);
     return null;
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, signOut, redeemKey }),
-    [ready, session, pass, gated, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, signOut, redeemKey]
+    () => ({ ready, session, pass, gated, lapsed, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, signOut, redeemKey }),
+    [ready, session, pass, gated, lapsed, guest, listenAsGuest, signIn, verifyTwoFactor, resendTwoFactor, signUp, resendConfirmation, signInWithGoogle, signInWithDiscord, signOut, redeemKey]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

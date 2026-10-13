@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BETA_COOKIE, BETA_COOKIE_MAX_AGE, issuePass } from "@/lib/betaGate";
+import { BETA_COOKIE, issuePass, passCookieOptions } from "@/lib/betaGate";
 import { redeemBetaKey } from "@/lib/betaKeys";
 
 /* Closed-beta pass issuance: POST { code } → sets the pass cookie when the
@@ -33,13 +33,7 @@ export async function POST(req: Request) {
 
   const pass = await issuePass(expected, who);
   const res = NextResponse.json({ ok: true, pass });
-  res.cookies.set(BETA_COOKIE, pass, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: BETA_COOKIE_MAX_AGE,
-    path: "/",
-  });
+  res.cookies.set(BETA_COOKIE, pass, passCookieOptions());
   return res;
 }
 

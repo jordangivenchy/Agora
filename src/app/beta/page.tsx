@@ -61,7 +61,7 @@ function BetaGateForm() {
     <AuthShell
       width={400}
       brandHref={null}
-      footer={<p className="beta-fine">Each key lets one device in for 30 days.</p>}
+      footer={<p className="beta-fine">Each key lets one device in. It lapses after 30 days away.</p>}
     >
       <form onSubmit={submit} className="beta-form" noValidate>
         <span className="beta-pill"><i aria-hidden="true" />Closed beta</span>

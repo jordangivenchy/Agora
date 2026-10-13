@@ -9,6 +9,21 @@ export interface ApiAuth {
   pass?: string | null;
 }
 
+/* The site's door answers a pass it no longer accepts by sending the call
+   to its key page instead of to where it was going. The app used to miss
+   that: the call simply failed, and a room that had just been made could
+   not be joined ("Couldn't join (405)"). Whoever keeps the pass (the
+   session) listens here and asks for a key again. */
+const turnedAway = new Set<() => void>();
+export function onPassRefused(fn: () => void): () => void {
+  turnedAway.add(fn);
+  return () => {
+    turnedAway.delete(fn);
+  };
+}
+/** Did this answer come from the site's key page? */
+export const atTheDoor = (url: string | null | undefined): boolean => !!url && /^https?:\/\/[^/]+\/beta(\?|$)/.test(url);
+
 export async function apiFetch(path: string, auth: ApiAuth, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -16,5 +31,7 @@ export async function apiFetch(path: string, auth: ApiAuth, init: RequestInit = 
   };
   if (auth.token) headers.Authorization = `Bearer ${auth.token}`;
   if (auth.pass) headers["x-agora-beta"] = auth.pass;
-  return fetch(`${SITE}${path}`, { ...init, headers });
+  const res = await fetch(`${SITE}${path}`, { ...init, headers });
+  if (auth.pass && !path.startsWith("/api/beta") && atTheDoor(res.url)) turnedAway.forEach((fn) => fn());
+  return res;
 }

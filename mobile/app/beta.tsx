@@ -22,7 +22,7 @@ const LOGO_RATIO = 2039 / 274;
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 export default function Beta() {
-  const { redeemKey } = useSession();
+  const { redeemKey, lapsed } = useSession();
   const { width, height } = useWindowDimensions();
   const reduce = useReduceMotion();
   const [code, setCode] = useState("");
@@ -76,7 +76,7 @@ export default function Beta() {
               </View>
               <Text style={{ marginTop: 16, textAlign: "center", color: colors.text, fontFamily: fonts.title, fontSize: 25, lineHeight: 30, letterSpacing: -0.5 }}>Enter your beta key</Text>
               <Text style={{ marginTop: 8, marginBottom: 22, textAlign: "center", color: colors.muted, fontFamily: fonts.body, fontSize: 13.5, lineHeight: 20 }}>
-                AgoraSphere is invite-only for now. We&apos;re letting people in a few at a time.
+                {lapsed ? "This phone's pass ran out. Enter your key to carry on." : "AgoraSphere is invite-only for now. We're letting people in a few at a time."}
               </Text>
 
               <Animated.View
@@ -136,7 +136,7 @@ export default function Beta() {
                 <Text onPress={() => void Linking.openURL(DISCORD_INVITE)} accessibilityRole="link" style={{ color: colors.yellow, fontFamily: fonts.semi }}>Discord</Text>.
               </Text>
             </View>
-            <Text style={{ marginTop: 18, textAlign: "center", color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>Each key lets one device in for 30 days.</Text>
+            <Text style={{ marginTop: 18, textAlign: "center", color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>Each key lets one device in. It lapses after 30 days away.</Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

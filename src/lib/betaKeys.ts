@@ -7,8 +7,9 @@
    so a double press burns nothing. Revoking a person is one row update:
      update beta_keys set revoked_at = now() where discord_user_id = '…';
    after which they can neither mint nor redeem. Passes already on their
-   devices run out on their own within 30 days; a real ban is the
-   account's suspension, which is immediate. */
+   devices are no longer renewed (keyStillStands) and run out on their
+   own within 30 days; a real ban is the account's suspension, which is
+   immediate. */
 
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase-admin";
 import { BETA_KEY_TTL_MS, hashBetaKey, keysPerTester, looksLikeBetaKey, newBetaKey } from "@/lib/betaGate";
@@ -74,6 +75,18 @@ export async function redeemBetaKey(plain: string): Promise<{ id: string } | nul
     .select("id")
     .maybeSingle();
   return data?.id ? { id: data.id as string } : null;
+}
+
+/**
+ * May the pass that came from this key be renewed? Not once its person has
+ * been revoked, and not when the key is unknown or the desk can't be
+ * asked: the pass then simply runs out (lib/betaGate, admitPass).
+ */
+export async function keyStillStands(id: string): Promise<boolean> {
+  if (!hasAdminCredentials() || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return false;
+  const { data, error } = await createAdminClient().from("beta_keys").select("revoked_at").eq("id", id).maybeSingle();
+  if (error || !data) return false;
+  return !(data as { revoked_at: string | null }).revoked_at;
 }
 
 /** For the morning digest: keys handed out and used since `sinceIso`. */
