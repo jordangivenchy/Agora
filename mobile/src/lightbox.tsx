@@ -2,7 +2,8 @@
    root; openImage(url) from any picture worth seeing big. Pinch to
    zoom, tap the corner to close. */
 import { useEffect, useState } from "react";
-import { Image, Modal, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Image, Modal, ScrollView, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

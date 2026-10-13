@@ -4,7 +4,8 @@
    carries state: yellow for transmitting, red for leave. The reaction
    tray and the More drawer hang off the row. */
 import { useEffect, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -110,7 +111,7 @@ function MoreDrawer({ open, onClose, bottom, hlsAudience, duel, layout, onLayout
   );
   return (
     <Pressable onPress={onClose} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} accessibilityLabel="Close">
-      <Pressable onPress={() => undefined} style={{ position: "absolute", left: 10, right: 10, bottom: bottom + CONTROLS_H + 8, borderRadius: 16, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33", padding: 10 }}>
+      <Pressable quiet onPress={() => undefined} style={{ position: "absolute", left: 10, right: 10, bottom: bottom + CONTROLS_H + 8, borderRadius: 16, backgroundColor: "#0e0e11", borderWidth: 1, borderColor: "#2a2a33", padding: 10 }}>
         {!hlsAudience && !duel && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 10, marginBottom: 10, borderBottomWidth: 1, borderColor: "#1f1f26" }}>
             <Text style={{ color: "#8a8f9c", fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.4 }}>Layout</Text>

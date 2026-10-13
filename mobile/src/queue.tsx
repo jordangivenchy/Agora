@@ -5,7 +5,8 @@
    polling for a match; a match opens the room. On launch the entries
    the account is already waiting on are restored and heartbeated. */
 import { useEffect, useReducer, useState, useSyncExternalStore } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "./supabase";

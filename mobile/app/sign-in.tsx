@@ -2,7 +2,8 @@
    account, Google or Discord, the emailed code for two-factor accounts, the way to
    a forgotten password. A brand-new account goes on to the welcome flow. */
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { router } from "expo-router";
 import { supabase } from "../src/supabase";
 import { isNewAccount, useSession } from "../src/session";
@@ -11,6 +12,7 @@ import { Button, Field, Note, Screen, Sub, Title } from "../src/ui";
 import { goHome } from "../src/goHome";
 import { DiscordMark } from "../src/discordMark";
 import { GoogleMark } from "../src/googleMark";
+import { felt } from "../src/haptics";
 
 type Mode = "signin" | "signup" | "2fa";
 
@@ -199,7 +201,7 @@ export default function SignIn() {
                 <Button onPress={() => void submit()} disabled={!email.trim() || !password || (mode === "signup" && !username.trim())} busy={busy}>{mode === "signin" ? "Sign in" : "Create account"}</Button>
                 <View style={{ height: 10 }} />
                 <Button kind="secondary" onPress={() => { listenAsGuest(); goHome(); }}>Browse discussions without signing in</Button>
-                <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 16 }}>By continuing, you agree to AgoraSphere's <Text onPress={() => router.push("/legal/terms")} accessibilityRole="link" style={{ color: "#c9c9d2", textDecorationLine: "underline" }}>Terms</Text> and acknowledge our <Text onPress={() => router.push("/legal/privacy")} accessibilityRole="link" style={{ color: "#c9c9d2", textDecorationLine: "underline" }}>Privacy Policy</Text>.</Text>
+                <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 16 }}>By continuing, you agree to AgoraSphere's <Text onPress={felt(() => router.push("/legal/terms"))} accessibilityRole="link" style={{ color: "#c9c9d2", textDecorationLine: "underline" }}>Terms</Text> and acknowledge our <Text onPress={felt(() => router.push("/legal/privacy"))} accessibilityRole="link" style={{ color: "#c9c9d2", textDecorationLine: "underline" }}>Privacy Policy</Text>.</Text>
               </>
             )}
           </View>

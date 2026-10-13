@@ -8,6 +8,7 @@ import { Text, type StyleProp, type TextStyle } from "react-native";
 import { URL_RE, openLink } from "./siteLinks";
 import { LINK_STYLE } from "./richText";
 import { AFTER_SHEET_MS } from "./itemSheet";
+import { felt } from "./haptics";
 
 export function LinkedText({ text, style, linkStyle, numberOfLines, onLongPress, beforeOpen }: { text: string; style?: StyleProp<TextStyle>; linkStyle?: StyleProp<TextStyle>; numberOfLines?: number; onLongPress?: () => void; beforeOpen?: () => void }) {
   const open = (url: string) => {
@@ -23,7 +24,7 @@ export function LinkedText({ text, style, linkStyle, numberOfLines, onLongPress,
     if (start > last) parts.push(<Fragment key={`t${i++}`}>{text.slice(last, start)}</Fragment>);
     const url = m[0];
     parts.push(
-      <Text key={`u${i++}`} style={[LINK_STYLE, linkStyle]} onPress={() => open(url)} onLongPress={onLongPress} accessibilityRole="link">
+      <Text key={`u${i++}`} style={[LINK_STYLE, linkStyle]} onPress={felt(() => open(url))} onLongPress={felt(onLongPress)} accessibilityRole="link">
         {url}
       </Text>,
     );

@@ -3,7 +3,8 @@
    rules gate before the first message (remembered on this phone), and
    the composer. Tap a name for the person. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { useUserMenu } from "./userMenu";
 import { BODY_MIN, cleanTextError } from "./cleanText";
 import { LinkedText } from "./linkText";
 import { colors, fonts } from "./theme";
+import { felt } from "./haptics";
 
 interface Message {
   id: string;
@@ -137,7 +139,7 @@ export function RoomChatSheet({ open, onClose, roomId, meId, messages }: { open:
                   </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-                      <Text onPress={() => person(m)} numberOfLines={1} style={{ color: userColor(m.user_id), fontFamily: fonts.semi, fontSize: 12.5, flexShrink: 1 }}>{name}</Text>
+                      <Text onPress={felt(() => person(m))} numberOfLines={1} style={{ color: userColor(m.user_id), fontFamily: fonts.semi, fontSize: 12.5, flexShrink: 1 }}>{name}</Text>
                       <Text style={{ color: colors.faint, fontFamily: fonts.body, fontSize: 10 }}>{fmtTime(m.created_at)}</Text>
                     </View>
                     <LinkedText text={m.content} beforeOpen={onClose} style={{ color: "#e6e6ee", fontFamily: fonts.body, fontSize: 13, lineHeight: 18 }} />

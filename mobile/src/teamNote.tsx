@@ -8,7 +8,8 @@
    the team's mark, two sentences, a way to read the rest, and an ×
    that puts it away until the team writes a new one. */
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";

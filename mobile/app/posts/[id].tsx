@@ -4,12 +4,12 @@
    hanging off a rail — and the dock to take the floor. A link to one
    comment (#comment-id) opens the way to it and lights it. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { FlatList, Image, Pressable, Text, View } from "react-native";
+import { FlatList, Image, Text, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Img } from "../../src/img";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as Haptics from "expo-haptics";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { useMe } from "../../src/me";
@@ -171,7 +171,7 @@ export default function ThreadScreen() {
       <View style={{ paddingTop: 10 }}>
         <Pressable
           onPress={() => toggle(c.id)}
-          onLongPress={() => { void Haptics.selectionAsync().catch(() => undefined); commentMenu(c, isCollapsed); }}
+          onLongPress={() => commentMenu(c, isCollapsed)}
           delayLongPress={350}
           style={{ borderRadius: 10, marginHorizontal: -6, paddingHorizontal: 6, backgroundColor: flash === c.id ? "#1a1708" : "transparent" }}
         >

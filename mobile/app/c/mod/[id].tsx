@@ -7,7 +7,8 @@
    owner promotes, demotes and changes privacy. The database enforces all
    of it; this screen only hides what a role can't do. */
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Pressable } from "../../../src/pressable";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../../src/supabase";

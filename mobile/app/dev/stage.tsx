@@ -3,7 +3,8 @@
    Discord's square grid for any number of cameras, a shared screen, or
    multi-speaker. Development only. */
 import { useState } from "react";
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Amphitheater, type AmphiPerson, type AmphiStagePerson, type AmphiView } from "../../src/amphitheater";

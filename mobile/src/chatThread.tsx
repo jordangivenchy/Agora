@@ -8,7 +8,8 @@
    its menu. A name carries its verified mark wherever it shows — but
    never on your own yellow bubble, where the yellow seal would vanish. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -312,7 +313,7 @@ function MessageMenu({ msg, mine, reactions, myReactions, canUnsend, showDelete,
   return (
     <Modal visible={!!msg} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, padding: 10, paddingBottom: insets.bottom + 8 }}>
+        <Pressable quiet onPress={() => {}} style={{ backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, padding: 10, paddingBottom: insets.bottom + 8 }}>
           {!!msg && (
             <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
               <Text numberOfLines={2} style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12 }}>{msg.content.trim() || (msg.image_url ? "Photo" : "")} · {fmtTime(msg.created_at)}</Text>

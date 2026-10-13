@@ -12,7 +12,8 @@
    its discussion. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvent, useEventListener } from "expo";
-import { Animated, Image, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Image, Modal, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Img } from "../../src/img";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

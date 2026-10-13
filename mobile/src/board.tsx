@@ -3,7 +3,8 @@
    bell, the most awaited first, as TopicsHome.tsx sorts them), and its
    daily topics. */
 import { useEffect, useState, type ReactNode } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

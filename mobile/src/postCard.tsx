@@ -6,11 +6,11 @@
    menu sits at the top right, where a phone's width has room for it
    (press and hold opens it too, as on the site's phones). The thread
    view uses it whole. */
-import { Image, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Image, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as Haptics from "expo-haptics";
 import { timeAgo, type PostRow } from "./communities";
 import { RichText } from "./richText";
 import { SITE } from "./api";
@@ -20,6 +20,7 @@ import { PostTopicQueue } from "./postTopic";
 import { openPostMenu, startRepost, type PostHandlers } from "./postMenu";
 import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";
+import { felt } from "./haptics";
 
 export const META = "rgba(238,238,245,0.5)";
 export const CARD = { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline, borderRadius: 14 } as const;
@@ -108,7 +109,7 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
   const body = stripClipLink(p.body);
   const origBody = stripClipLink(p.orig_body);
   return (
-    <Pressable onPress={onOpen} onLongPress={() => { void Haptics.selectionAsync().catch(() => undefined); menu(); }} delayLongPress={350} style={({ pressed }) => [CARD, { padding: 14, marginBottom: 12, opacity: pressed && onOpen ? 0.92 : 1 }]}>
+    <Pressable onPress={onOpen} onLongPress={menu} delayLongPress={350} style={({ pressed }) => [CARD, { padding: 14, marginBottom: 12, opacity: pressed && onOpen ? 0.92 : 1 }]}>
       {/* One rail, not two: the picture with the score under it. The
           votes used to have a gutter of their own beside the tile, which
           cost a phone forty points of width and left the score floating
@@ -131,8 +132,8 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
             <Text style={{ color: META, fontFamily: fonts.body, fontSize: 10.5 }}>
-              {showCommunity && <Text style={{ color: colors.gold }} onPress={onOpenCommunity}>{p.community_name} · </Text>}
-              <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: p.author_username } })}>@{p.author_username}</Text>
+              {showCommunity && <Text style={{ color: colors.gold }} onPress={felt(onOpenCommunity)}>{p.community_name} · </Text>}
+              <Text onPress={felt(() => router.push({ pathname: "/u/[username]", params: { username: p.author_username } }))}>@{p.author_username}</Text>
               <VerifiedMark inline id={p.author_id} username={p.author_username} size={11} /> · {timeAgo(p.created_at)}{p.edited_at ? " · edited" : ""}
             </Text>
             <RoleBadge role={p.author_role} />
@@ -164,7 +165,7 @@ export function PostCard({ post: p, communityArt, showCommunity, full, onVote, o
                     <Ionicons name="repeat-outline" size={10} color={META} /> from <Text style={{ color: colors.gold }}>{p.orig_community_name}</Text> · @{p.orig_author_username}
                     <VerifiedMark inline username={p.orig_author_username} size={10} />
                   </Text>
-                  {!!p.orig_title && <Text onPress={() => router.push({ pathname: "/posts/[id]", params: { id: p.repost_of! } })} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, marginTop: 5 }}>{p.orig_title}</Text>}
+                  {!!p.orig_title && <Text onPress={felt(() => router.push({ pathname: "/posts/[id]", params: { id: p.repost_of! } }))} style={{ color: "rgba(238,238,245,0.88)", fontFamily: fonts.medium, fontSize: 12.5, marginTop: 5 }}>{p.orig_title}</Text>}
                   {!!origBody && <RichText text={origBody} numberOfLines={2} style={{ color: "rgba(238,238,245,0.55)", fontFamily: fonts.body, fontSize: 11.5, lineHeight: 16, marginTop: 3 }} />}
                   <ClipChip clipId={clipIdInBody(p.orig_body)} small />
                   {p.orig_image_url && <Pressable onPress={() => openImage(p.orig_image_url!)}><Image source={{ uri: p.orig_image_url }} style={{ marginTop: 6, borderRadius: 8, width: "100%", height: 140 }} resizeMode="cover" /></Pressable>}

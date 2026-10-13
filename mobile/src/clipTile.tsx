@@ -1,7 +1,8 @@
 /* One clip in a grid (components/clips/ClipTile.tsx): the picture or
    the clip's colours, the duration, the title, who clipped it (with
    their verified mark), views. */
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./avatar";

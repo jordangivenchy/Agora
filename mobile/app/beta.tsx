@@ -6,9 +6,10 @@
    the field. */
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Animated, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View,
+  ActivityIndicator, Animated, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, View,
   useWindowDimensions,
 } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../src/session";
 import { Starfield } from "../src/starfield";
@@ -16,6 +17,7 @@ import { useReduceMotion } from "../src/motion";
 import { DISCORD_INVITE } from "../src/links";
 import { colors, fonts } from "../src/theme";
 import { goHome } from "../src/goHome";
+import { felt } from "../src/haptics";
 
 const LOGO_RATIO = 2039 / 274;
 /* The key reads best in a fixed-width face; the phone's own. */
@@ -133,7 +135,7 @@ export default function Beta() {
 
               <Text style={{ marginTop: 20, textAlign: "center", color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }}>
                 No key yet? Get one on our{" "}
-                <Text onPress={() => void Linking.openURL(DISCORD_INVITE)} accessibilityRole="link" style={{ color: colors.yellow, fontFamily: fonts.semi }}>Discord</Text>.
+                <Text onPress={felt(() => void Linking.openURL(DISCORD_INVITE))} accessibilityRole="link" style={{ color: colors.yellow, fontFamily: fonts.semi }}>Discord</Text>.
               </Text>
             </View>
             <Text style={{ marginTop: 18, textAlign: "center", color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>Each key lets one device in. It lapses after 30 days away.</Text>

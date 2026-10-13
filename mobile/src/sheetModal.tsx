@@ -6,7 +6,8 @@
    a dark wall climbing the screen. Panels sharing one modal trade places
    with CardSwitch, the scrim staying put. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Easing, Keyboard, Modal, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import { Animated, Easing, Keyboard, Modal, StyleSheet, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 
 const PANEL_IN = Easing.bezier(0.25, 0.46, 0.45, 0.94);
 

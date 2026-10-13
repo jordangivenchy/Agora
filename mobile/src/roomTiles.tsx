@@ -12,7 +12,8 @@
    pinned, then the last to speak) over a strip of square windows. Tap a
    tile for the person; hold it to pin. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { LayoutAnimation, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "./avatar";
 import { TileVideo } from "./tileVideo";

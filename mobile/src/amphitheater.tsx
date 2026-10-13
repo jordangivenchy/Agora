@@ -14,7 +14,8 @@
    camera climbs to the seats. A queue-matched duel never gets this view:
    its two speakers, face to face, are the whole room. */
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AmphitheaterScene from "./amphitheaterScene";
 import { Avatar } from "./avatar";

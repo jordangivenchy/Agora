@@ -12,7 +12,8 @@
 
    The site's src/components/QueueMotions.tsx, in the app's clothes. */
 import { useEffect, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { fetchMotions, motionProblem, shapeLabel, MOTION_MAX, type DraftedMotion } from "./motions";
 import { pickMotion, type QueueStory } from "./queue";

@@ -3,7 +3,8 @@
    then the host with their mark and "12 views · 3 days ago". The length
    pill stands on its own too, for the lists that draw their own
    pictures (trending, a profile's discussions, the feed). */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { Img } from "./img";
 import { VerifiedMark } from "./verifiedMark";

@@ -3,7 +3,8 @@
    your name (and your verified mark) up top, the items, a divider, and
    Log out in red. Tap anywhere else to close. */
 import { useEffect, useRef, type ComponentProps } from "react";
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Modal, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { VerifiedMark } from "./verifiedMark";
 import { colors, fonts } from "./theme";

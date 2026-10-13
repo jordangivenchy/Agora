@@ -8,7 +8,8 @@
    the bookmarks, the rules and the moderators. A round back button floats
    on the banner; a solid title bar takes over once the banner scrolls away. */
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { Alert, Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Alert, Animated, Image, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Img } from "../../src/img";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,6 +39,7 @@ import { VerifiedMark } from "../../src/verifiedMark";
 import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 import { FloatingBack } from "../../src/floatingBack";
+import { felt } from "../../src/haptics";
 
 const SORTS: { key: PostSort; label: string }[] = [{ key: "best", label: "Best" }, { key: "new", label: "New" }, { key: "top", label: "Top" }];
 const GOLD = "#e2b96b";
@@ -243,7 +245,7 @@ export default function CommunityScreen() {
               <>
                 <Text numberOfLines={longAbout && !aboutOpen ? 3 : undefined} style={{ color: "#c9c9d2", fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 8 }}>{c.description}</Text>
                 {longAbout && (
-                  <Text onPress={() => setAboutOpen((v) => !v)} style={{ color: GOLD, fontFamily: fonts.semi, fontSize: 11.5, marginTop: 4 }}>{aboutOpen ? "Show less ▴" : "Read more ▾"}</Text>
+                  <Text onPress={felt(() => setAboutOpen((v) => !v))} style={{ color: GOLD, fontFamily: fonts.semi, fontSize: 11.5, marginTop: 4 }}>{aboutOpen ? "Show less ▴" : "Read more ▾"}</Text>
                 )}
               </>
             )}
@@ -309,7 +311,7 @@ export default function CommunityScreen() {
                 <Text style={{ color: GOLD, fontFamily: fonts.bold, fontSize: 11 }}>{i + 1}  </Text>{r}
               </Text>
             ))}
-            {rules.length > 3 && <Text onPress={() => setRulesOpen((v) => !v)} style={{ color: GOLD, fontFamily: fonts.semi, fontSize: 11.5, marginTop: 8 }}>{rulesOpen ? "Show less ▴" : `Show all ${rules.length} rules ▾`}</Text>}
+            {rules.length > 3 && <Text onPress={felt(() => setRulesOpen((v) => !v))} style={{ color: GOLD, fontFamily: fonts.semi, fontSize: 11.5, marginTop: 8 }}>{rulesOpen ? "Show less ▴" : `Show all ${rules.length} rules ▾`}</Text>}
           </View>
         </>
       )}

@@ -4,7 +4,8 @@
    rules — standard, then the host's controls in a room, then the
    moderator's — and run the same RPCs. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
-import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Alert, Modal, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

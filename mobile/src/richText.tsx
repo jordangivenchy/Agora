@@ -9,6 +9,7 @@ import { Text, type StyleProp, type TextStyle } from "react-native";
 import { router } from "expo-router";
 import { openLink } from "./siteLinks";
 import { colors, fonts } from "./theme";
+import { felt } from "./haptics";
 
 const INLINE = new RegExp(
   [
@@ -52,7 +53,7 @@ function Spoiler({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return (
     <Text
-      onPress={open ? undefined : () => setOpen(true)}
+      onPress={felt(open ? undefined : () => setOpen(true))}
       accessibilityRole={open ? undefined : "button"}
       accessibilityLabel={open ? undefined : "Spoiler, tap to reveal"}
       style={open ? { backgroundColor: "#1f1f26" } : { backgroundColor: "#34343d", color: "transparent" }}
@@ -88,11 +89,11 @@ function inline(text: string, key: string): ReactNode[] {
       const label = tok.slice(1, cut);
       const href = tok.slice(cut + 2, -1);
       /* Only http(s) links survive, as on the site; anything else is its label. */
-      if (/^https?:\/\//i.test(href)) out.push(<Text key={`${key}-l${i++}`} style={LINK_STYLE} onPress={() => void openLink(href)} accessibilityRole="link">{label}</Text>);
+      if (/^https?:\/\//i.test(href)) out.push(<Text key={`${key}-l${i++}`} style={LINK_STYLE} onPress={felt(() => void openLink(href))} accessibilityRole="link">{label}</Text>);
       else out.push(<Fragment key={`${key}-l${i++}`}>{label}</Fragment>);
     } else if (tok.startsWith(">!")) out.push(<Spoiler key={`${key}-x${i++}`} text={tok.slice(2, -2)} />);
-    else if (tok.startsWith("http")) out.push(<Text key={`${key}-u${i++}`} style={LINK_STYLE} onPress={() => void openLink(tok)} accessibilityRole="link">{tok}</Text>);
-    else if (tok.startsWith("@")) out.push(<Text key={`${key}-m${i++}`} style={MENTION_STYLE} onPress={() => openMention(tok.slice(1))} accessibilityRole="link">{tok}</Text>);
+    else if (tok.startsWith("http")) out.push(<Text key={`${key}-u${i++}`} style={LINK_STYLE} onPress={felt(() => void openLink(tok))} accessibilityRole="link">{tok}</Text>);
+    else if (tok.startsWith("@")) out.push(<Text key={`${key}-m${i++}`} style={MENTION_STYLE} onPress={felt(() => openMention(tok.slice(1)))} accessibilityRole="link">{tok}</Text>);
     else out.push(<Text key={`${key}-i${i++}`} style={{ fontStyle: "italic" }}>{tok.slice(1, -1)}</Text>);
     last = start + tok.length;
   }

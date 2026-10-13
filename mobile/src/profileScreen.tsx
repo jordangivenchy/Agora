@@ -4,7 +4,8 @@
    then the name, the handle, the bio, the counts, and the tabs —
    past discussions, scheduled, posts, reposts, comments, communities. */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Image, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, Platform, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

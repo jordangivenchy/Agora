@@ -1,6 +1,7 @@
 /* Settings: the site's list of sections on a phone; each opens its
    panel. Moderators get the report queue at the end. */
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/session";

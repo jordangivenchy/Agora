@@ -2,7 +2,8 @@
    — a photo, a display name, the @handle, a bio — then follow a few
    people. Skippable at every step. */
 import { useEffect, useRef, useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../src/supabase";

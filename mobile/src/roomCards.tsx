@@ -3,7 +3,8 @@
    community note request, the discussion ended, and the doors to a
    room this visitor can't enter yet. */
 import { useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Text, TextInput, View } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

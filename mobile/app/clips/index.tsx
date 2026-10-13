@@ -1,6 +1,7 @@
 /* Clips: the most watched across the Agora, two across, and yours. */
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { FlatList, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";

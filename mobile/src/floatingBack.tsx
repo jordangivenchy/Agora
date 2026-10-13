@@ -3,7 +3,8 @@
    clip). One button, four pages — and on iOS 26 it is glass, since it
    floats over a picture: the phones' full-bleed heads are the case the
    material was made for. Elsewhere, the solid disc it always was. */
-import { Pressable, type StyleProp, type ViewStyle } from "react-native";
+import { type StyleProp, type ViewStyle } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Glass } from "./glass";

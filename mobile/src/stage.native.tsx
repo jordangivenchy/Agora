@@ -1,8 +1,9 @@
 /* Who is audibly speaking, the mic, and the connection state, all from
    LiveKit, rendered inside the call host so the hooks see the room. */
 import type { ReactNode } from "react";
-import { Pressable, Text } from "react-native";
-import * as Haptics from "expo-haptics";
+import { Text } from "react-native";
+import { Pressable } from "./pressable";
+import { thump } from "./haptics";
 import { ConnectionState } from "livekit-client";
 import { loadLiveKit, type LiveKit } from "./livekit";
 import { useCall } from "./callSession";
@@ -45,7 +46,7 @@ function NativeMic({ lk, compact }: { lk: LiveKit; compact?: boolean }) {
   const canPublish = localParticipant.permissions?.canPublish ?? false;
   if (!canPublish) return null;
   const toggle = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    thump();
     void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
   };
   if (compact) {

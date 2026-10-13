@@ -22,9 +22,10 @@
    is tapped, its backdrop fading in over the page while the menu melts
    back into the + beneath it. */
 import { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { tap } from "./haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, glassAvailable } from "./glass";
 import { tabBarTop } from "./tabBar";
@@ -54,7 +55,7 @@ export function CreateMenu({ open, items, onClose }: { open: boolean; items: Cre
 
   useEffect(() => {
     if (open) {
-      void Haptics.selectionAsync().catch(() => undefined);
+      tap();
       /* A frame after it mounts: an animation started in the same moment
          its view appears never drew on iOS (sheetModal.tsx), and the
          glass is laid out before its material is asked for. */

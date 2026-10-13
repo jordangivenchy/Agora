@@ -4,7 +4,8 @@
    volume, a mic test with a level meter), and the words about the
    display, sharing and accessibility, adapted to a phone. */
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
+import { Modal, ScrollView, Text, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

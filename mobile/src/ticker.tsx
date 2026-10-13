@@ -5,7 +5,8 @@
    cost the UI thread a frame's work 120 times a second — and resumes
    from where it stopped. */
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, Text, View } from "react-native";
+import { Animated, Easing, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { useIsFocused } from "expo-router";
 import type { NewsStory } from "./home";
 import { openUrl } from "./web";

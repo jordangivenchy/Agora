@@ -8,7 +8,8 @@
    goes at its head — the switch, or the page's title — is the caller's
    (`top`), and so is how far its foot is padded. */
 import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
-import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

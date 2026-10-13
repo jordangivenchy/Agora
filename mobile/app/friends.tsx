@@ -3,7 +3,8 @@
    back; and a search to add more. A friend opens their page, or a
    message on the web. */
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../src/supabase";

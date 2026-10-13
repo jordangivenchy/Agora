@@ -1,7 +1,8 @@
 /* The site's top bar on a phone: the wordmark, search, and you, with
    the yellow loading bar along its bottom edge (progress.tsx). */
 import { useEffect, useState } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

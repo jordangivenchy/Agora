@@ -11,7 +11,8 @@
    found by searching is shown honestly: you can open their profile and
    follow them, and message them once they follow back. */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, FlatList, InteractionManager, Modal, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, FlatList, InteractionManager, Modal, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";

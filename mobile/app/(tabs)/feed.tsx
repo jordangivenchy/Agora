@@ -3,7 +3,8 @@
    reposts, comments, replays and what's coming up — with why each is
    here. A guest gets the way in. */
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
-import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Img } from "../../src/img";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +29,7 @@ import { colors, fonts } from "../../src/theme";
 import { Note } from "../../src/ui";
 import { lazyTab } from "../../src/tabBar";
 import { TrendingList } from "../../src/trendingList";
+import { felt } from "../../src/haptics";
 
 const card = { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline, borderRadius: 14 } as const;
 
@@ -148,7 +150,7 @@ function Feed() {
           <Pressable onPress={() => router.push({ pathname: "/posts/[id]", params: { id: c.post_id } })} style={[card, { padding: 14 }]}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
               <Avatar url={c.author.avatar_url} name={c.author.username} size={22} />
-              <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }} onPress={() => router.push({ pathname: "/u/[username]", params: { username: c.author.username } })}>@{c.author.username}</Text>
+              <Text style={{ color: "#c3c3ce", fontFamily: fonts.semi, fontSize: 12 }} onPress={felt(() => router.push({ pathname: "/u/[username]", params: { username: c.author.username } }))}>@{c.author.username}</Text>
               <VerifiedMark id={c.author.id} username={c.author.username} size={12} style={{ marginLeft: -3 }} />
               <Text style={{ color: "#7f7f89", fontFamily: fonts.body, fontSize: 11.5 }}>· {timeAgo(c.created_at)}</Text>
             </View>

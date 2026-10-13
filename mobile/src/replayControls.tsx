@@ -11,7 +11,8 @@
    The dim, the bottom row and the discs' icons do; the discs' material
    is turned on a frame after they mount and off as the rest goes. */
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { Animated, Platform, Pressable, Text, View, type GestureResponderEvent } from "react-native";
+import { Animated, Platform, Text, View, type GestureResponderEvent } from "react-native";
+import { Pressable } from "./pressable";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useEvent } from "expo";

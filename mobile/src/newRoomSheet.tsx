@@ -12,7 +12,8 @@
    thumbnail follows once the room exists. The card lives in create.tsx's
    modal, trading places with the community card from the header's tabs. */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Animated, Image, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Image, KeyboardAvoidingView, LayoutAnimation, Platform, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

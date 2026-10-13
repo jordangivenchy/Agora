@@ -4,7 +4,7 @@
    an in-app notification, an email and a web push. The bell is gold once
    set; the count is how many are waiting. */
 import { useCallback, useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable } from "./pressable";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";

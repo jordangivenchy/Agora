@@ -1,7 +1,8 @@
 /* A sheet from the bottom with a few choices, on a solid card. When the
    title (or the line under it) names a person, their verified mark rides
    after it. */
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { VerifiedMark } from "./verifiedMark";
 import { colors } from "./theme";
 
@@ -28,7 +29,7 @@ export function ActionSheet({ open, title, sub, titlePerson, subPerson, actions,
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16, paddingBottom: 28 }}>
+        <Pressable quiet onPress={() => {}} style={{ backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16, paddingBottom: 28 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <Text style={{ flexShrink: 1, color: colors.text, fontSize: 16, fontWeight: "800" }}>{title}</Text>
             {titlePerson && <VerifiedMark id={titlePerson.id} username={titlePerson.username} size={16} />}

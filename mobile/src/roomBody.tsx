@@ -12,7 +12,8 @@
    face, are the whole room. Under both: the queue pill and the host's
    button, the cards, the control pill; the sheets hang off it. */
 import { useEffect, useMemo, useState } from "react";
-import { LayoutAnimation, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { LayoutAnimation, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -1,7 +1,8 @@
 /* The site's emoji picker (components/EmojiPicker.tsx) as a sheet: a
    search, the recent row, the categories. */
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, Modal, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EMOJI_CATEGORIES } from "./emojiData";

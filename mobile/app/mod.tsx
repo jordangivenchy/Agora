@@ -3,7 +3,8 @@
    gated on the server. The gate here just keeps non-moderators out of
    an empty shell. */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Stack, router } from "expo-router";
 import { supabase } from "../src/supabase";
 import { useSession } from "../src/session";
@@ -12,6 +13,7 @@ import { VerifiedMark } from "../src/verifiedMark";
 import { colors, fonts } from "../src/theme";
 import { Screen } from "../src/ui";
 import { goHome } from "../src/goHome";
+import { felt } from "../src/haptics";
 
 interface Report {
   id: string; reason: string; context: string; description: string | null; message_content: string | null;
@@ -121,7 +123,7 @@ export default function Mod() {
                 <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 11 }}>in {r.context} · {timeAgo(r.created_at)}</Text>
               </View>
               <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>
-                <Text onPress={() => router.push({ pathname: "/u/[username]", params: { username: r.reported_username } })} style={{ color: "#9cc4f0" }}>@{r.reported_username}</Text>
+                <Text onPress={felt(() => router.push({ pathname: "/u/[username]", params: { username: r.reported_username } }))} style={{ color: "#9cc4f0" }}>@{r.reported_username}</Text>
                 <VerifiedMark inline username={r.reported_username} size={13} />
                 <Text style={{ color: colors.muted }}> reported by </Text>@{r.reporter_username}
                 <VerifiedMark inline username={r.reporter_username} size={13} />

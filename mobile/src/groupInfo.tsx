@@ -1,7 +1,8 @@
 /* Group info (the site's GroupInfoModal): the name (the owner renames
    it), the members (the owner removes), friends to add, Leave. */
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";

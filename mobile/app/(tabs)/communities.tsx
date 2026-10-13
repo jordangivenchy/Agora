@@ -3,7 +3,8 @@
    ones to discover, and the live and scheduled discussions your
    communities host. Communities you blocked stay out of all of it. */
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";

@@ -2,7 +2,8 @@
    with a title and a line under it, a row with a switch, the dark
    field, the blue and the ghost buttons, an ok/error line. */
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { Pressable } from "./pressable";
 import { colors, fonts } from "./theme";
 
 export function SectionCard({ title, sub, children, danger }: { title: string; sub?: string; children?: ReactNode; danger?: boolean }) {

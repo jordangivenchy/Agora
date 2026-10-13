@@ -4,7 +4,8 @@
    player's own position; the player loops the selection while it's
    open; title it, save, and the clip's link is ready. */
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, Share, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Share, Text, TextInput, View } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

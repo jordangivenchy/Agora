@@ -1,7 +1,8 @@
 /* GIPHY search (components/community/GifPicker.tsx): dormant until
    EXPO_PUBLIC_GIPHY_KEY is set, as on the site. */
 import { useEffect, useState } from "react";
-import { FlatList, Image, Modal, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, Image, Modal, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "./theme";
 

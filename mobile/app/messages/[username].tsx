@@ -2,7 +2,8 @@
    receipts, reactions, replies, pictures and invites, the typing strip,
    the composer; the ⋯ up top with the site's chat options. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { RealtimeChannel } from "@supabase/supabase-js";

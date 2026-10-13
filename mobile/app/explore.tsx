@@ -1,7 +1,8 @@
 /* Explore, as the site's page: the figures, the search, the category,
    status and language pills, and the discussions as square blocks. */
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "../src/pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../src/supabase";

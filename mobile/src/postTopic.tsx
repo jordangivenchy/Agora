@@ -3,7 +3,8 @@
    Queue — through the queue panel; Leave drops the line. Cards ask in
    one batched get_post_topics call. */
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "./supabase";

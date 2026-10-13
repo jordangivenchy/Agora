@@ -2,7 +2,8 @@
    gives a phone browser its wheels: iOS draws its compact date and time
    buttons, Android opens the date dialog and then the time one. The web
    build has no picker (dateField.tsx), and the caller offers presets. */
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { colors, fonts } from "./theme";
 

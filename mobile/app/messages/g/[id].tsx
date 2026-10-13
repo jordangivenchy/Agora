@@ -2,7 +2,8 @@
    runs and system lines for membership, the typing strip with names,
    the composer; the group's info up top — rename, members, add, leave. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { Pressable } from "../../../src/pressable";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { RealtimeChannel } from "@supabase/supabase-js";

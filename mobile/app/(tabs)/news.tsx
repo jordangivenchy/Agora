@@ -4,7 +4,8 @@
    a story in the home hero arrives with ?story=<id>: that card scrolls
    into view and wears a yellow ring for a moment (NewsPage.tsx). */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Animated, FlatList, Image, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Img } from "../../src/img";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";

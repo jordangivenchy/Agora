@@ -3,12 +3,14 @@
    discussion defaults, recordings, notifications, appearance, privacy,
    data & coach, blocked users, the danger zone. */
 import { useCallback, useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Share, Text, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
 import { apiFetch } from "../../src/api";
 import { setReduceMotion } from "../../src/motion";
+import { setHaptics, useHaptics } from "../../src/haptics";
 import { fetchSettings, saveSettings, validateNewPassword, CONSENT_CATEGORIES, DEFAULT_CONSENT, DEFAULT_SETTINGS, PREF_GROUPS, type BlockedUser, type Consent, type ConsentCategory, type EmailPrefs, type SettingsData, type SettingsRow } from "../../src/settings";
 import { SECTIONS, type SectionKey } from "./index";
 import { Btn, Input, Msg, Pad, SectionCard, Toggle } from "../../src/settingsUi";
@@ -41,6 +43,8 @@ export default function SettingsSection() {
 
   const [data, setData] = useState<SettingsData | null>(null);
   const [settings, setSettings] = useState<SettingsRow>(DEFAULT_SETTINGS);
+  /* Kept on this phone, not on the account: the site has nothing to shake. */
+  const haptics = useHaptics();
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -505,9 +509,14 @@ export default function SettingsSection() {
 
       case "appearance":
         return (
-          <SectionCard title="Motion" sub="AgoraSphere uses a single dark theme by design.">
-            <Toggle on={settings.reduce_motion} onChange={(v) => void saveToggle("reduce_motion", v)} label="Reduce motion" sub="Holds the sky, the starfield and the interface animations still" />
-          </SectionCard>
+          <>
+            <SectionCard title="Motion" sub="AgoraSphere uses a single dark theme by design.">
+              <Toggle on={settings.reduce_motion} onChange={(v) => void saveToggle("reduce_motion", v)} label="Reduce motion" sub="Holds the sky, the starfield and the interface animations still" />
+            </SectionCard>
+            <SectionCard title="Touch" sub="On this phone only.">
+              <Toggle on={haptics} onChange={setHaptics} label="Haptics" sub="A light tap under your finger with every press" />
+            </SectionCard>
+          </>
         );
 
       case "privacy":

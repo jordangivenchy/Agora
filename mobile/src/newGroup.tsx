@@ -1,7 +1,8 @@
 /* Start a group chat: a name and at least one friend (people who follow
    each other, as for DMs). The site's NewGroupModal as a sheet. */
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, InteractionManager, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, InteractionManager, KeyboardAvoidingView, Modal, Platform, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "./supabase";

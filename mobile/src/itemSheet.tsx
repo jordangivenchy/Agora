@@ -7,7 +7,8 @@
    wait any longer than that. A row that is a person carries their
    verified mark after the name. */
 import { useRef } from "react";
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SheetModal } from "./sheetModal";

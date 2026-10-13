@@ -1,7 +1,8 @@
 /* The site's square discussion block (components/RoomCard.tsx): the
    picture, the status badge, the field up top, the motion and the host
    on a solid panel below. Explore renders these two across. */
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { personName, type Person } from "./home";
 import { topicOf } from "./topics";

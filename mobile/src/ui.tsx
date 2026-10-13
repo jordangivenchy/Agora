@@ -1,7 +1,8 @@
 /* The few controls every screen uses: the site's yellow pill, its dark
    field, a screen with the ground colour, and text at the site's sizes. */
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
+import { Pressable } from "./pressable";
 import { colors } from "./theme";
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {

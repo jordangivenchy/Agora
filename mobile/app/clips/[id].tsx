@@ -4,7 +4,8 @@
    Post to community; the host's card with the friend button; more
    clips — this discussion's first, then the most watched. */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Linking, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

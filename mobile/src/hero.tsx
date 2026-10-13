@@ -11,7 +11,8 @@
    is as tall as its words and the picture takes the rest, and the hero
    grows to its fullest slide. */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { FlatList, Image, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Pressable } from "./pressable";
 import { Img } from "./img";
 import { router, useIsFocused } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

@@ -12,7 +12,7 @@
    token that can publish; a drop that wasn't ours comes straight back. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Animated, AppState, StyleSheet, View } from "react-native";
-import * as Haptics from "expo-haptics";
+import { success } from "../../src/haptics";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../src/supabase";
 import { useSession } from "../../src/session";
@@ -228,7 +228,7 @@ function Room({ roomId }: { roomId: string }) {
       reminting.current = false;
       if (!m.ok || !m.minted) return;
       update({ token: m.minted.token, onStage: m.minted.onStage });
-      if (m.minted.onStage) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (m.minted.onStage) success();
     })();
   }, [myRole, active, inThisRoom, room, roomId, auth, update]);
 
@@ -328,7 +328,6 @@ function Room({ roomId }: { roomId: string }) {
   async function toggleHand() {
     if (!meId || handBusy || !room) return;
     setHandBusy(true);
-    void Haptics.selectionAsync();
     const err = await raiseHand(supabase, roomId, !handRaised);
     setHandBusy(false);
     if (err) showToast(err);

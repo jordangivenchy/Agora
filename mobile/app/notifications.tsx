@@ -3,7 +3,8 @@
    Accept and Dismiss on the row; realtime brings new ones in. The
    person a sentence opens with carries their verified mark. */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../src/supabase";
@@ -15,6 +16,7 @@ import { LoadingLine } from "../src/sky";
 import { showToast } from "../src/toast";
 import { colors, fonts } from "../src/theme";
 import { Button, Screen, Sub, Title } from "../src/ui";
+import { felt } from "../src/haptics";
 
 type Row = { kind: "label"; key: string; label: string } | { kind: "row"; key: string; n: NotifRow; first: boolean };
 
@@ -141,7 +143,7 @@ export default function Notifications() {
         </Pressable>
       ) }} />
       <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }}>{unread > 0 ? `${unread} unread` : "You're all caught up"} · <Text onPress={() => router.push({ pathname: "/settings/[section]", params: { section: "notifications" } })} style={{ color: "#9cc4f0" }}>Preferences</Text></Text>
+        <Text style={{ color: colors.muted, fontFamily: fonts.body, fontSize: 12.5 }}>{unread > 0 ? `${unread} unread` : "You're all caught up"} · <Text onPress={felt(() => router.push({ pathname: "/settings/[section]", params: { section: "notifications" } }))} style={{ color: "#9cc4f0" }}>Preferences</Text></Text>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginTop: 12, marginBottom: 8 }}>
           {NOTIF_FILTERS.map((f) => {
             const on = filter === f.id;

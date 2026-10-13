@@ -2,7 +2,8 @@
    friends who aren't members yet; Invite sends them a message that
    renders as a join card. */
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "./supabase";
 import { SITE } from "./api";

@@ -6,7 +6,8 @@
    stay above the keyboard. The list runs to the screen's edge, its last
    row clear of the home bar. */
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { FlatList, KeyboardAvoidingView, Platform, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SheetModal } from "./sheetModal";

@@ -7,7 +7,8 @@
    goes, then the same composer the community page uses, the two sharing
    one sheet the same way. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { LayoutAnimation, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { LayoutAnimation, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -2,7 +2,8 @@
    MessagesPage.tsx) — direct messages and groups in one list, newest
    activity first, unread counts, a search, New group. */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Text, TextInput, View } from "react-native";
+import { Pressable } from "../../src/pressable";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/supabase";

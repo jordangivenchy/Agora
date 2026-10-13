@@ -12,6 +12,7 @@ import { ToastHost } from "../src/toast";
 import { LightboxHost } from "../src/lightbox";
 import { BootSplash } from "../src/boot";
 import { loadReduceMotion, setReduceMotion } from "../src/motion";
+import { loadHaptics } from "../src/haptics";
 import { ensurePresence } from "../src/presence";
 import { useCall } from "../src/callSession";
 import { supabase } from "../src/supabase";
@@ -45,7 +46,7 @@ SystemUI.setBackgroundColorAsync("#000000").catch(() => undefined);
 function Boot({ fontsReady, screenIn }: { fontsReady: boolean; screenIn: boolean }) {
   const { ready, session } = useSession();
   const { active } = useCall();
-  useEffect(() => { void loadReduceMotion(); }, []);
+  useEffect(() => { void loadReduceMotion(); void loadHaptics(); }, []);
   useEffect(() => { ensurePresence(session?.user.id ?? null, active?.roomId ?? null); }, [session?.user.id, active?.roomId]);
   useEffect(() => {
     const id = session?.user.id;

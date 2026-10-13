@@ -1,7 +1,8 @@
 /* The bar above the tabs while a call is on: the room's title, the host,
    the mic for speakers, Leave. Tap it to go back to the room. (No
    verified mark in a call.) */
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { Pressable } from "./pressable";
 import { router } from "expo-router";
 import { useCall } from "./callSession";
 import { MicButton } from "./stage";

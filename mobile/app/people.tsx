@@ -2,7 +2,8 @@
    (components/FollowListModal.tsx): get_followers / get_following, a
    filter, each row to the person's page. */
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Text, TextInput, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/supabase";
 import { Avatar } from "../src/avatar";

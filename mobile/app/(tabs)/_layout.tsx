@@ -20,6 +20,7 @@ import { tabBarTop } from "../../src/tabBar";
 import { CreateMenuHost, useCreate } from "../../src/create";
 import type { IconName } from "../../src/topics";
 import { colors } from "../../src/theme";
+import { tap } from "../../src/haptics";
 import { Spinner } from "../../src/ui";
 
 /* The + keeps the brand's solid yellow and its ink: an image drawn as
@@ -34,6 +35,8 @@ const CREATE_ICON = require("../../assets/tab-create.png");
 const ICON_SIZE = 26;
 const sized = { getImageSource: (name: IconName, _size: number, color: Parameters<typeof Ionicons.getImageSource>[2]) => Ionicons.getImageSource(name, ICON_SIZE, color) };
 const icon = (name: IconName) => <NativeTabs.Trigger.VectorIcon family={sized} name={name} />;
+/* A tab answers the finger like everything else (the + has its own: the menu rising). */
+const FELT = { tabPress: tap };
 
 function AppTabs({ onCreate }: { onCreate: () => void }) {
   return (
@@ -41,11 +44,11 @@ function AppTabs({ onCreate }: { onCreate: () => void }) {
        bar the app used to draw, so the system's inset is turned off:
        both would leave a gap the height of a second bar. */
     <NativeTabs tintColor={colors.yellow}>
-      <NativeTabs.Trigger name="index" accessibilityLabel="Home" disableAutomaticContentInsets>
+      <NativeTabs.Trigger name="index" accessibilityLabel="Home" disableAutomaticContentInsets listeners={FELT}>
         <NativeTabs.Trigger.Icon src={icon("home-outline")} renderingMode="template" />
         <NativeTabs.Trigger.Label hidden />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="feed" accessibilityLabel="Feed" disableAutomaticContentInsets>
+      <NativeTabs.Trigger name="feed" accessibilityLabel="Feed" disableAutomaticContentInsets listeners={FELT}>
         <NativeTabs.Trigger.Icon src={icon("sparkles-outline")} renderingMode="template" />
         <NativeTabs.Trigger.Label hidden />
       </NativeTabs.Trigger>
@@ -55,11 +58,11 @@ function AppTabs({ onCreate }: { onCreate: () => void }) {
         <NativeTabs.Trigger.Icon src={CREATE_ICON} renderingMode="original" />
         <NativeTabs.Trigger.Label hidden />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="communities" accessibilityLabel="Communities" disableAutomaticContentInsets>
+      <NativeTabs.Trigger name="communities" accessibilityLabel="Communities" disableAutomaticContentInsets listeners={FELT}>
         <NativeTabs.Trigger.Icon src={icon("people-outline")} renderingMode="template" />
         <NativeTabs.Trigger.Label hidden />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="news" accessibilityLabel="News" disableAutomaticContentInsets>
+      <NativeTabs.Trigger name="news" accessibilityLabel="News" disableAutomaticContentInsets listeners={FELT}>
         <NativeTabs.Trigger.Icon src={icon("newspaper-outline")} renderingMode="template" />
         <NativeTabs.Trigger.Label hidden />
       </NativeTabs.Trigger>

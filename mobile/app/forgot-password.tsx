@@ -3,7 +3,8 @@
    and per network and answers the same way whether or not the address
    has an account. The link in the email opens the site's reset page. */
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { Pressable } from "../src/pressable";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../src/api";
